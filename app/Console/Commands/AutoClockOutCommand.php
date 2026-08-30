@@ -8,6 +8,7 @@ use App\Models\AttendanceLog;
 use App\Models\Shift;
 use App\Models\UserShift;
 use App\Services\Attendance\AttendanceCalculator;
+use App\Services\Attendance\LatePolicyService;
 use App\Services\AttendanceSummaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,7 @@ class AutoClockOutCommand extends Command
     public function __construct(
         protected AttendanceCalculator $calc,
         protected AttendanceSummaryService $summaryService,
+        protected LatePolicyService $latePolicyService,
     ) {
         parent::__construct();
     }
@@ -155,6 +157,7 @@ class AutoClockOutCommand extends Command
                 foreach ($users as $userId => $months) {
                     foreach (array_keys($months) as $ym) {
                         try {
+                            $this->latePolicyService->recalculateMonth((int) $userId, (int) $tenantId, $ym);
                             $this->summaryService->updateMonthlySummary($userId, $ym, $tenantId);
                         } catch (\Throwable $e) {
                             Log::error('Summary refresh after auto clock-out failed', [

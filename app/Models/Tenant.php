@@ -35,12 +35,17 @@ class Tenant extends Model
         'subscription_plan',
         'max_employees',
         'settings',
+        'leaves',
+        'notice_period',
+        'late_halfday_enabled',
+        'monthly_late_allowance',
         'created_by'
     ];
 
     protected $casts = [
         'settings' => 'array',
-        'deleted_at' => 'datetime'
+        'deleted_at' => 'datetime',
+        'late_halfday_enabled' => 'boolean',
     ];
 
     protected static function boot()

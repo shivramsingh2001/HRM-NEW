@@ -684,6 +684,19 @@ class AttendanceRegularizationController extends Controller
                 throw $e;
             }
 
+            // Refresh the policy-resolved status + monthly summary for the day.
+            if ($request->status == 'approved') {
+                try {
+                    $ym = \Carbon\Carbon::parse($regularization->date)->format('Y-m');
+                    app(\App\Services\Attendance\LatePolicyService::class)
+                        ->recalculateMonth((int) $regularization->user_id, (int) $regularization->tenant_id, $ym);
+                    app(\App\Services\AttendanceSummaryService::class)
+                        ->updateMonthlySummary((int) $regularization->user_id, $ym, (int) $regularization->tenant_id);
+                } catch (\Throwable $e) {
+                    Log::error('Post-regularization recompute failed: ' . $e->getMessage());
+                }
+            }
+
             // Notifications after commit so a delivery failure cannot undo a valid approval.
             try {
                 if ($request->status == 'approved') {

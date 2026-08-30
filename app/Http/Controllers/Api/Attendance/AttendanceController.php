@@ -265,6 +265,31 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Recompute the policy-resolved status (Feature B) and the monthly summary
+     * for a user after an attendance row changes. Never throws — a failure here
+     * must not fail the clock-in/out itself.
+     */
+    private function refreshAttendanceDerived($userId, $tenantId, $date): void
+    {
+        try {
+            $tenantId = (int) ($tenantId ?: optional(Auth::user())->tenant_id);
+            if (!$tenantId || !$userId) {
+                return;
+            }
+            $ym = Carbon::parse($date)->format('Y-m');
+
+            app(\App\Services\Attendance\LatePolicyService::class)
+                ->recalculateMonth((int) $userId, $tenantId, $ym);
+            app(\App\Services\AttendanceSummaryService::class)
+                ->updateMonthlySummary((int) $userId, $ym, $tenantId);
+        } catch (\Throwable $e) {
+            Log::error('refreshAttendanceDerived failed', [
+                'user_id' => $userId, 'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Return $value as a strict Y-m-d string, or $default when it is not a valid date.
      * Guarantees the result matches ^\d{4}-\d{2}-\d{2}$ so it is safe to inline in SQL.
      */
@@ -709,13 +734,15 @@ class AttendanceController extends Controller
                 ]);
     
                 DB::commit();
-    
+
+                $this->refreshAttendanceDerived($attendance->user_id, $attendance->tenant_id, $attendance->date);
+
                 try {
                     $this->notificationService->notifyClockIn($attendance, $user);
                 } catch (Exception $e) {
                     Log::error('Clock-in notification failed: ' . $e->getMessage());
                 }
-    
+
                 return response()->json([
                     'status' => true,
                     'message' => 'Clock-In successful.',
@@ -1128,7 +1155,9 @@ class AttendanceController extends Controller
                 ]);
     
                 DB::commit();
-    
+
+                $this->refreshAttendanceDerived($attendance->user_id, $attendance->tenant_id, $attendance->date);
+
                 try {
                     $this->notificationService->notifyClockOut($attendance, $user);
                 } catch (Exception $e) {
@@ -1811,6 +1840,10 @@ class AttendanceController extends Controller
             } catch (\Throwable $e) {
                 DB::rollBack();
                 throw $e;
+            }
+
+            if ($request->status == 'approved') {
+                $this->refreshAttendanceDerived($regularization->user_id, $regularization->tenant_id, $regularization->date);
             }
 
             return response()->json([

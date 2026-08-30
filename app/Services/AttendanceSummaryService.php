@@ -302,6 +302,7 @@ class AttendanceSummaryService
         $lateMin = $hoursData['late_minutes'] ?? 0;
         $earlyMin = $hoursData['early_departure_minutes'] ?? 0;
         $expectedSeconds = $hoursData['expected_seconds'] ?? 0;
+        $effectiveStatus = $hoursData['effective_status'] ?? null;
         $hasCompletedWork = ($hoursData['completed'] ?? false) && $worked > 0;
 
         if (isset($holidays[$date])) {
@@ -313,13 +314,16 @@ class AttendanceSummaryService
         }
 
         if ($hasCompletedWork) {
-            return $this->result(
-                $this->classifyByHours($worked, $expectedSeconds),
-                $worked,
-                $lateMin,
-                $earlyMin,
-                $expectedSeconds
-            );
+            // LatePolicyService's resolved status wins over the raw hours ladder
+            // for the present / half_day / late distinction (Feature B).
+            $status = match ($effectiveStatus) {
+                'half_day' => 'half_day',
+                'present', 'late', 'overtime', 'early_departure' => 'present',
+                'absent' => 'absent',
+                default => $this->classifyByHours($worked, $expectedSeconds),
+            };
+
+            return $this->result($status, $worked, $lateMin, $earlyMin, $expectedSeconds);
         }
 
         // Approved leave covering this date (checked BEFORE treating an empty
@@ -391,6 +395,7 @@ class AttendanceSummaryService
         $totalEarlyDepartureMinutes = 0;
         $expectedSeconds = 0;
         $completed = false;
+        $effectiveStatus = null;
 
         // A single session cannot sanely exceed 24h — clamp obvious bad data
         // (missed clock-out closed days later) so one row can't wreck the month.
@@ -425,6 +430,11 @@ class AttendanceSummaryService
                     'end_time' => $entry->scheduled_shift_end,
                 ]));
             }
+
+            // effective_status is set by LatePolicyService; the last non-null wins.
+            if (!empty($entry->effective_status)) {
+                $effectiveStatus = $entry->effective_status;
+            }
         }
 
         return [
@@ -435,6 +445,7 @@ class AttendanceSummaryService
             'early_departure_minutes' => $totalEarlyDepartureMinutes,
             'expected_seconds' => $expectedSeconds,
             'completed' => $completed,
+            'effective_status' => $effectiveStatus,
         ];
     }
 

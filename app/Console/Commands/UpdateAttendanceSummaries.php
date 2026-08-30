@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Services\Attendance\LatePolicyService;
 use App\Services\AttendanceSummaryService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -21,6 +22,7 @@ class UpdateAttendanceSummaries extends Command
 
     public function __construct(
         protected AttendanceSummaryService $summaryService,
+        protected LatePolicyService $latePolicyService,
     ) {
         parent::__construct();
     }
@@ -67,6 +69,7 @@ class UpdateAttendanceSummaries extends Command
                         ->delete();
                 }
 
+                $this->latePolicyService->recalculateMonth($user->id, (int) $user->tenant_id, $month);
                 $result = $this->summaryService->updateMonthlySummary($user->id, $month, $user->tenant_id);
 
                 if ($result === false) {

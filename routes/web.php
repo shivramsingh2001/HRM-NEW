@@ -37,6 +37,7 @@ use App\Http\Controllers\offboarding\OffboardingController;
 use App\Http\Controllers\Recruitment\JobOpeningController;
 use App\Http\Controllers\Recruitment\RecruitmentController;
 use App\Http\Controllers\Report\AttendanceReportController;
+use App\Http\Controllers\Settings\AttendancePolicyController;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -448,6 +449,12 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::put('/settings/update', [OvertimeSettingController::class, 'update'])->name('overtime.settings.update');
                 Route::post('/settings/reset', [OvertimeSettingController::class, 'reset'])->name('overtime.settings.reset');
             });
+        });
+
+        // Tenant attendance policy (per-tenant monthly late allowance)
+        Route::middleware('role:admin,hr')->prefix('attendance-policy')->name('attendance-policy.')->group(function () {
+            Route::get('/', [AttendancePolicyController::class, 'index'])->name('index');
+            Route::put('/', [AttendancePolicyController::class, 'update'])->name('update');
         });
         
         Route::prefix('loan')->group(function () {
