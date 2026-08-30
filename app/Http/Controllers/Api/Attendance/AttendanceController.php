@@ -1685,11 +1685,11 @@ class AttendanceController extends Controller
 
     public function regularizationApproval(Request $request)
     {
-        DB::beginTransaction();
         try {
             $authUser = Auth::user();
+            $tenantId = $authUser->tenant_id;
 
-            if (!in_array($authUser->role, ['manager', 'admin'])) {
+            if (!in_array($authUser->role, ['manager', 'admin'], true)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Only managers, admins can approve requests.'
@@ -1710,6 +1710,7 @@ class AttendanceController extends Controller
 
             $regularizationId = $request->id;
 
+            // Tenant-scoped lookup — never trust a bare id.
             $regularization = DB::table('attendance_regularizations as ar')
                 ->select([
                     'ar.*',
@@ -1723,6 +1724,8 @@ class AttendanceController extends Controller
                 ->leftJoin('user_job_details as jd', 'u.id', '=', 'jd.user_id')
                 ->leftJoin('users as rh', 'jd.reporting_head', '=', 'rh.id')
                 ->where('ar.id', $regularizationId)
+                ->where('ar.tenant_id', $tenantId)
+                ->where('u.tenant_id', $tenantId)
                 ->first();
 
             if (!$regularization) {
@@ -1753,62 +1756,71 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
-            $attendanceRegularization = AttendanceRegularization::find($regularizationId);
-            $attendanceRegularization->status = $request->status;
-            $attendanceRegularization->approved_by = $authUser->id;
-            $attendanceRegularization->approved_date = now();
-            $attendanceRegularization->save();
-
-            if ($request->status == 'rejected') {
-                DB::commit();
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Regularization request rejected successfully.'
-                ], 200);
-            }
-
+            // Reject a future-dated approval BEFORE any write.
             $regularizationDate = Carbon::parse($regularization->date);
-
-            if ($regularizationDate->isFuture()) {
+            if ($request->status == 'approved' && $regularizationDate->isFuture()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cannot create attendance for future date.'
                 ], 200);
             }
 
-            $date = Carbon::parse($regularization->date);
+            DB::beginTransaction();
+            try {
+                $attendanceRegularization = AttendanceRegularization::where('id', $regularizationId)
+                    ->where('tenant_id', $tenantId)
+                    ->first();
+                $attendanceRegularization->status = $request->status;
+                $attendanceRegularization->approved_by = $authUser->id;
+                $attendanceRegularization->approved_date = now();
+                $attendanceRegularization->save();
 
-            $attendance = Attendance::firstOrNew([
-                'user_id' => $regularization->user_id,
-                'date'    => $regularization->date
-            ]);
+                if ($request->status == 'approved') {
+                    $date = $regularizationDate;
 
-            $attendance->regularization_id = $regularization->id;
-            $attendance->status = 1;
+                    $attendance = Attendance::firstOrNew([
+                        'tenant_id' => $regularization->tenant_id,
+                        'user_id'   => $regularization->user_id,
+                        'date'      => $regularization->date
+                    ]);
 
-            if ($regularization->in_time) {
-                $attendance->clock_in = Carbon::parse($date->format('Y-m-d') . ' ' . $regularization->in_time);
+                    $attendance->tenant_id = $regularization->tenant_id;
+                    $attendance->regularization_id = $regularization->id;
+                    $attendance->is_regularized = 1;
+                    $attendance->regularized_by = $authUser->id;
+                    $attendance->regularized_at = now();
+                    $attendance->status = 1;
+
+                    if ($regularization->in_time) {
+                        $attendance->clock_in = Carbon::parse($date->format('Y-m-d') . ' ' . $regularization->in_time);
+                    }
+
+                    if ($regularization->out_time) {
+                        $attendance->clock_out = Carbon::parse($date->format('Y-m-d') . ' ' . $regularization->out_time);
+                    }
+
+                    if ($regularization->in_time && $regularization->out_time) {
+                        $seconds = (int) Carbon::parse($attendance->clock_in)
+                            ->diffInSeconds(Carbon::parse($attendance->clock_out));
+                        $attendance->total_hours = gmdate('H:i:s', $seconds);
+                    }
+
+                    $attendance->save();
+                }
+
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                throw $e;
             }
-
-            if ($regularization->out_time) {
-                $attendance->clock_out = Carbon::parse($date->format('Y-m-d') . ' ' . $regularization->out_time);
-            }
-
-            if ($regularization->in_time && $regularization->out_time) {
-                $seconds = Carbon::parse($attendance->clock_in)
-                    ->diffInSeconds(Carbon::parse($attendance->clock_out));
-                $attendance->total_hours = gmdate('H:i:s', $seconds);
-            }
-
-            $attendance->save();
-            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Attendance Regularizations status updated successfully.',
+                'message' => $request->status == 'rejected'
+                    ? 'Regularization request rejected successfully.'
+                    : 'Attendance Regularizations status updated successfully.',
             ], 200);
         } catch (Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'

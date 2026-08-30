@@ -598,13 +598,11 @@ class AttendanceRegularizationController extends Controller
      */
     public function regularizationApproval(Request $request)
     {
-        DB::beginTransaction();
-        
         try {
             $authUser = Auth::user();
-            
+
             // Check authorization
-            if (!in_array($authUser->role, ['manager', 'admin', 'hr'])) {
+            if (!in_array($authUser->role, ['manager', 'admin', 'hr'], true)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Only managers, admins, and HR can process requests.'
@@ -625,13 +623,13 @@ class AttendanceRegularizationController extends Controller
                 ], 422);
             }
 
-            // Get regularization with relationships using Eloquent
+            // Get regularization with relationships using Eloquent (tenant-scoped
+            // via the model's global scope on the web guard).
             $regularization = AttendanceRegularization::with(['user', 'user.jobDetails'])
                 ->where('id', $request->id)
                 ->first();
 
             if (!$regularization) {
-                DB::rollBack();
                 return response()->json([
                     'success' => false,
                     'message' => 'Regularization request not found.'
@@ -640,7 +638,6 @@ class AttendanceRegularizationController extends Controller
 
             // Check if request is already processed
             if ($regularization->status != 'pending') {
-                DB::rollBack();
                 return response()->json([
                     'success' => false,
                     'message' => 'This request has already been ' . $regularization->status . '.'
@@ -650,9 +647,8 @@ class AttendanceRegularizationController extends Controller
             // For managers, verify they are the reporting head
             if ($authUser->role == 'manager') {
                 $reportingHead = $regularization->user->jobDetails->reporting_head ?? null;
-                
+
                 if (!$reportingHead) {
-                    DB::rollBack();
                     return response()->json([
                         'success' => false,
                         'message' => 'User does not have a reporting head assigned. Please contact admin.'
@@ -660,7 +656,6 @@ class AttendanceRegularizationController extends Controller
                 }
 
                 if ($reportingHead != $authUser->id) {
-                    DB::rollBack();
                     return response()->json([
                         'success' => false,
                         'message' => 'You are not authorized to process this request. Only the reporting head can process it.'
@@ -668,32 +663,46 @@ class AttendanceRegularizationController extends Controller
                 }
             }
 
-            // Update regularization status using Eloquent
-            $regularization->status = $request->status;
-            $regularization->approved_by = $authUser->id;
-            $regularization->approved_date = now();
-            $regularization->approval_remarks = $request->remarks;
-            $regularization->save();
+            // Approval + attendance creation must be atomic: if
+            // createAttendanceFromRegularization() throws (e.g. future date),
+            // the status change is rolled back too.
+            DB::beginTransaction();
+            try {
+                $regularization->status = $request->status;
+                $regularization->approved_by = $authUser->id;
+                $regularization->approved_date = now();
+                $regularization->approval_remarks = $request->remarks;
+                $regularization->save();
 
-             DB::commit();
-            if ($request->status == 'approved') {
-                $this->createAttendanceFromRegularization($regularization);
-                // Send approval notification
-                $this->notificationService->notifyRegularizationApproved($regularization, $request->remarks);
-            } else {
-                // Send rejection notification
-                $this->notificationService->notifyRegularizationRejected($regularization, $request->remarks);
+                if ($request->status == 'approved') {
+                    $this->createAttendanceFromRegularization($regularization);
+                }
+
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+            // Notifications after commit so a delivery failure cannot undo a valid approval.
+            try {
+                if ($request->status == 'approved') {
+                    $this->notificationService->notifyRegularizationApproved($regularization, $request->remarks);
+                } else {
+                    $this->notificationService->notifyRegularizationRejected($regularization, $request->remarks);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Regularization notification failed: ' . $e->getMessage());
             }
 
             $action = $request->status == 'approved' ? 'approved' : 'rejected';
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Regularization request {$action} successfully."
             ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Regularization approval error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
@@ -717,13 +726,18 @@ class AttendanceRegularizationController extends Controller
             throw new \Exception('Cannot create attendance for future date.');
         }
 
-        // Find or create attendance record
+        // Find or create attendance record (scoped to the regularization's tenant)
         $attendance = Attendance::firstOrNew([
+            'tenant_id' => $regularization->tenant_id,
             'user_id' => $regularization->user_id,
             'date' => $regularization->date
         ]);
 
+        $attendance->tenant_id = $regularization->tenant_id;
         $attendance->regularization_id = $regularization->id;
+        $attendance->is_regularized = 1;
+        $attendance->regularized_by = Auth::id();
+        $attendance->regularized_at = now();
         $attendance->status = 1; // Mark as present/processed
         
         // Set clock in time if provided

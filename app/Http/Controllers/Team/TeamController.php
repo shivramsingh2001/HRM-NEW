@@ -3012,22 +3012,35 @@ class TeamController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $tenantId = session('tenant_id');
+            $tenantId = $authUser->tenant_id ?? session('tenant_id');
 
             // Check if user is admin or HR
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (!in_array($authUser->role, ['admin', 'hr'], true)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized. Only admin and HR can mark attendance.'
                 ], 403);
             }
 
+            if (!$tenantId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to resolve your company. Please sign in again.'
+                ], 422);
+            }
+
             $validator = Validator::make($request->all(), [
-                'user_id' => 'required|exists:users,id',
+                // user_id must belong to the caller's tenant
+                'user_id' => [
+                    'required',
+                    \Illuminate\Validation\Rule::exists('users', 'id')->where('tenant_id', $tenantId),
+                ],
                 'date' => 'required|date',
                 'clock_in' => 'required|date_format:H:i',
                 'clock_out' => 'required|date_format:H:i',
                 'remarks' => 'nullable|string|max:500'
+            ], [
+                'user_id.exists' => 'Employee not found in your company.',
             ]);
 
             if ($validator->fails()) {
