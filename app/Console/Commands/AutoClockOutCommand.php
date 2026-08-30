@@ -5,172 +5,141 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
-use App\Models\AttendanceTrack;
+use App\Models\Shift;
 use App\Models\UserShift;
+use App\Services\Attendance\AttendanceCalculator;
+use App\Services\AttendanceSummaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class AutoClockOutCommand extends Command
 {
-    protected $signature = 'attendance:auto-clockout 
-                            {--hours=15 : Max hours before auto clockout}
+    protected $signature = 'attendance:auto-clockout
+                            {--hours=15 : Max hours before auto clock-out}
                             {--dry-run : Test mode}
                             {--user-id= : Specific user ID}';
 
-    protected $description = 'Auto clock-out users exceeding allowed working hours';
+    protected $description = 'Auto clock-out users who never clocked out, capping the day at a sane time';
 
-    public function handle()
+    public function __construct(
+        protected AttendanceCalculator $calc,
+        protected AttendanceSummaryService $summaryService,
+    ) {
+        parent::__construct();
+    }
+
+    public function handle(): int
     {
-        $this->info('🚀 Starting auto clock-out process...');
-        $this->newLine();
-
-        $maxHours = (int) $this->option('hours');
-        $isDryRun = $this->option('dry-run');
+        $maxHours = max(1, (int) $this->option('hours'));
+        $isDryRun = (bool) $this->option('dry-run');
         $specificUserId = $this->option('user-id');
         $now = Carbon::now();
 
-        if ($isDryRun) {
-            $this->warn('⚠️ DRY RUN MODE - No database changes');
-        }
+        $this->info('Auto clock-out — cap ' . $maxHours . 'h' . ($isDryRun ? '  [DRY RUN]' : ''));
 
-        $this->line("Max Hours: {$maxHours}");
-        $this->line("Current Time: " . $now->format('Y-m-d H:i:s'));
-        $this->line("User Filter: " . ($specificUserId ?? 'All'));
-        $this->newLine();
-
-        /**
-         * Step 1: Fetch active attendances
-         */
-        $query = Attendance::whereNotNull('clock_in')
+        // Global job: TenantTrait's scope is a no-op in the CLI, so this covers
+        // every tenant. Each row carries its own tenant_id.
+        $records = Attendance::withoutGlobalScopes()
+            ->whereNotNull('clock_in')
             ->where(function ($q) {
                 $q->whereNull('clock_out')
-                    ->orWhere('clock_out', '0000-00-00 00:00:00')
-                    ->orWhere('clock_out', '');
-            });
+                    ->orWhere('clock_out', '')
+                    ->orWhere('clock_out', '0000-00-00 00:00:00');
+            })
+            ->when($specificUserId, fn ($q) => $q->where('user_id', $specificUserId))
+            ->get();
 
-        if ($specificUserId) {
-            $query->where('user_id', $specificUserId);
-        }
-
-        $records = $query->get();
-
-        /**
-         * Step 2: Filter by hours (FIXED for night shifts)
-         */
-        $activeAttendances = $records->filter(function ($attendance) use ($maxHours, $now) {
+        $due = $records->filter(function ($a) use ($maxHours, $now) {
             try {
-                $clockIn = Carbon::parse($attendance->clock_in);
-                
-                // For night shifts that cross midnight, adjust the calculation
-                $calculationNow = clone $now;
-                if ($calculationNow->lt($clockIn)) {
-                    $calculationNow->addDay();
-                }
-                
-                $hoursWorked = $clockIn->diffInHours($calculationNow);
-                return $hoursWorked >= $maxHours;
-            } catch (\Exception $e) {
+                $clockIn = Carbon::parse($a->clock_in);
+                return $now->getTimestamp() - $clockIn->getTimestamp() >= $maxHours * 3600;
+            } catch (\Throwable $e) {
                 return false;
             }
         })->values();
 
-        $total = $activeAttendances->count();
-
-        if ($total === 0) {
-            $this->info('✅ No users exceed working hours.');
-            return Command::SUCCESS;
+        if ($due->isEmpty()) {
+            $this->info('Nothing to close.');
+            return self::SUCCESS;
         }
 
-        $this->info("📊 Found {$total} records");
-        $bar = $this->output->createProgressBar($total);
+        $this->info("Closing {$due->count()} open attendance row(s)");
+        $bar = $this->output->createProgressBar($due->count());
         $bar->start();
 
-        $success = 0;
+        $ok = 0;
         $errors = 0;
+        $touched = []; // [tenant_id][user_id][Y-m] => true, for summary refresh
 
-        /**
-         * Step 3: Process records
-         */
-        foreach ($activeAttendances as $attendance) {
+        foreach ($due as $attendance) {
             try {
                 $clockIn = Carbon::parse($attendance->clock_in);
-                $clockOut = $now;
-                
-                // FIXED: Calculate worked hours correctly for night shifts
-                // Create a copy for calculation
-                $calculationClockOut = clone $clockOut;
-                
-                // If clock_out time is less than clock_in time, it means it crossed midnight
-                // Add a day to clock_out for correct calculation
-                if ($calculationClockOut->lt($clockIn)) {
-                    $calculationClockOut->addDay();
+
+                // Close at the earliest sane moment: clock_in + maxHours, or the
+                // scheduled shift end (with overnight handling) when that is earlier.
+                $cap = $clockIn->copy()->addHours($maxHours);
+                $shiftEnd = $this->scheduledShiftEnd($attendance, $clockIn);
+                $clockOut = ($shiftEnd && $shiftEnd->greaterThan($clockIn) && $shiftEnd->lessThan($cap))
+                    ? $shiftEnd
+                    : $cap;
+
+                $workedSeconds = $this->calc->workedSeconds($clockIn, $clockOut);
+                $workedHours = $this->calc->decimalHours($workedSeconds);
+                $totalHours = $this->calc->formatDuration($workedSeconds);
+                $status = $this->classify($attendance, $workedHours);
+
+                if ($isDryRun) {
+                    $ok++;
+                    $bar->advance();
+                    continue;
                 }
-                
-                // Calculate difference in seconds
-                $workedSeconds = $clockIn->diffInSeconds($calculationClockOut);
-                $workedHours = round($workedSeconds / 3600, 2);
-                
-                // FIXED: Format total hours correctly for any duration (including >24 hours)
-                $hours = floor($workedSeconds / 3600);
-                $minutes = floor(($workedSeconds % 3600) / 60);
-                $seconds = $workedSeconds % 60;
-                $totalHoursFormatted = sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
-                
-                // Log for debugging
-                $this->line("\n📝 Processing: Attendance ID: {$attendance->id}");
-                $this->line("   Clock In: {$clockIn->format('Y-m-d H:i:s')}");
-                $this->line("   Clock Out: {$clockOut->format('Y-m-d H:i:s')}");
-                $this->line("   Worked Seconds: {$workedSeconds}");
-                $this->line("   Total Hours: {$totalHoursFormatted}");
-                $this->line("   Worked Hours: {$workedHours}");
 
-                if (!$isDryRun) {
-                    DB::beginTransaction();
+                DB::transaction(function () use ($attendance, $clockOut, $totalHours, $workedHours, $status, $maxHours, $now, $clockIn, $workedSeconds) {
+                    $attendance->clock_out = $clockOut->format('Y-m-d H:i:s');
+                    $attendance->total_hours = $totalHours;
+                    $attendance->worked_hours = $workedHours;
+                    $attendance->attendance_status = $status;
+                    $attendance->remarks = trim(($attendance->remarks ? $attendance->remarks . ' | ' : '')
+                        . "Auto clock-out (cap {$maxHours}h) on " . $now->format('Y-m-d H:i'));
+                    $attendance->save();
 
-                    // Update attendance with correct calculations
-                    $attendance->update([
-                        'clock_out' => $clockOut,
-                        'total_hours' => $totalHoursFormatted, // FIXED: Now shows correct hours
-                        'worked_hours' => $workedHours,
-                        'attendance_status' => 'present',
-                        'remarks' => "Auto clocked out after {$maxHours} hrs on " . $now->format('Y-m-d H:i:s'),
+                    // Not wrapped in its own try/catch — if the audit log fails the
+                    // whole close is rolled back rather than silently committed.
+                    AttendanceLog::create([
+                        'tenant_id' => $attendance->tenant_id,
+                        'user_id' => $attendance->user_id,
+                        'attendance_id' => $attendance->id,
+                        'event_type' => 'manual_adjustment',
+                        'event_time' => $clockOut->format('Y-m-d H:i:s'),
+                        'latitude' => $attendance->clock_in_lat,
+                        'longitude' => $attendance->clock_in_long,
+                        'address' => 'Auto clock-out',
+                        'verification_method' => 'system',
+                        'user_agent' => 'AutoClockOutCommand',
+                        'raw_data' => json_encode([
+                            'reason' => "exceeded {$maxHours}h without clock-out",
+                            'clock_in' => $clockIn->format('Y-m-d H:i:s'),
+                            'clock_out' => $clockOut->format('Y-m-d H:i:s'),
+                            'worked_hours' => $workedHours,
+                            'worked_seconds' => $workedSeconds,
+                        ]),
                     ]);
 
-                    // Create log with correct data
-                    $this->createLog($attendance, $maxHours, $now, $totalHoursFormatted, $workedHours);
-
-                    // Update shift
-                    UserShift::where('user_id', $attendance->user_id)
+                    UserShift::withoutGlobalScopes()
+                        ->where('tenant_id', $attendance->tenant_id)
+                        ->where('user_id', $attendance->user_id)
                         ->where('date', $attendance->date)
                         ->update(['status' => 'complete']);
+                });
 
-                    DB::commit();
-
-                    Log::info('Auto clock-out success', [
-                        'attendance_id' => $attendance->id,
-                        'user_id' => $attendance->user_id,
-                        'clock_in' => $clockIn->format('Y-m-d H:i:s'),
-                        'clock_out' => $clockOut->format('Y-m-d H:i:s'),
-                        'total_hours' => $totalHoursFormatted,
-                        'worked_hours' => $workedHours,
-                        'worked_seconds' => $workedSeconds
-                    ]);
-                }
-
-                $success++;
-
-            } catch (\Exception $e) {
+                $touched[$attendance->tenant_id][$attendance->user_id][Carbon::parse($attendance->date)->format('Y-m')] = true;
+                $ok++;
+            } catch (\Throwable $e) {
                 $errors++;
-
-                if (!$isDryRun) {
-                    DB::rollBack();
-                }
-
                 Log::error('Auto clock-out failed', [
                     'attendance_id' => $attendance->id ?? null,
-                    'user_id' => $attendance->user_id ?? null,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
 
@@ -180,51 +149,86 @@ class AutoClockOutCommand extends Command
         $bar->finish();
         $this->newLine(2);
 
-        /**
-         * Summary
-         */
-        $this->info("✅ Completed");
-        $this->line("Processed: {$total}");
-        $this->line("Success: {$success}");
+        // Refresh affected monthly summaries.
+        if (!$isDryRun) {
+            foreach ($touched as $tenantId => $users) {
+                foreach ($users as $userId => $months) {
+                    foreach (array_keys($months) as $ym) {
+                        try {
+                            $this->summaryService->updateMonthlySummary($userId, $ym, $tenantId);
+                        } catch (\Throwable $e) {
+                            Log::error('Summary refresh after auto clock-out failed', [
+                                'user_id' => $userId, 'month' => $ym, 'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->info("Closed: {$ok}");
         $this->line("Errors: {$errors}");
 
-        return Command::SUCCESS;
+        return $errors ? self::FAILURE : self::SUCCESS;
     }
 
     /**
-     * Create log with complete details
+     * Scheduled shift end as a datetime on the attendance date (or the next day
+     * for an overnight shift). Null when no shift info is available.
      */
-    private function createLog($attendance, $maxHours, $now, $totalHoursFormatted, $workedHours)
+    private function scheduledShiftEnd($attendance, Carbon $clockIn): ?Carbon
     {
-        try {
-            $clockIn = Carbon::parse($attendance->clock_in);
-            
-            AttendanceLog::create([
-                'user_id' => $attendance->user_id,
-                'attendance_id' => $attendance->id,
-                'event_type' => 'auto_check_out',
-                'event_time' => $now,
-                'latitude' => $attendance->clock_in_lat,
-                'longitude' => $attendance->clock_in_long,
-                'address' => 'Auto clock-out',
-                'verification_method' => 'system',
-                'user_agent' => 'AutoClockOutCommand',
-                'raw_data' => json_encode([
-                    'reason' => "{$maxHours} hours exceeded",
-                    'clock_in' => $clockIn->format('Y-m-d H:i:s'),
-                    'clock_out' => $now->toDateTimeString(),
-                    'total_hours' => $totalHoursFormatted,
-                    'worked_hours' => $workedHours,
-                    'worked_seconds' => $clockIn->diffInSeconds($now),
-                    'max_hours_allowed' => $maxHours,
-                    'night_shift' => $now->lt($clockIn)
-                ])
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Log creation failed', [
-                'attendance_id' => $attendance->id,
-                'error' => $e->getMessage()
+        $start = $attendance->scheduled_shift_start;
+        $end = $attendance->scheduled_shift_end;
+
+        if ((!$start || !$end) && $attendance->shift_id) {
+            $shift = Shift::withoutGlobalScopes()->find($attendance->shift_id);
+            $start = $shift->start_time ?? null;
+            $end = $shift->end_time ?? null;
+        }
+
+        if (!$end) {
+            return null;
+        }
+
+        $date = Carbon::parse($attendance->date)->format('Y-m-d');
+        $endAt = Carbon::parse($date . ' ' . $end);
+
+        // Overnight shift -> end is on the following day.
+        if ($start && $this->calc->isOvernight(['start_time' => $start, 'end_time' => $end])) {
+            $endAt->addDay();
+        }
+
+        return $endAt;
+    }
+
+    /**
+     * present / half_day / absent / overtime for the closed day.
+     */
+    private function classify($attendance, float $workedHours): string
+    {
+        $expected = 0;
+        if ($attendance->scheduled_shift_start && $attendance->scheduled_shift_end) {
+            $expected = $this->calc->expectedWorkSeconds([
+                'start_time' => $attendance->scheduled_shift_start,
+                'end_time' => $attendance->scheduled_shift_end,
             ]);
         }
+
+        if ($expected > 0) {
+            $ratio = ($workedHours * 3600) / $expected;
+            if ($ratio >= 1.0) {
+                return 'overtime';
+            }
+            if ($ratio >= (float) config('attendance.ratio.present', 0.9)) {
+                return 'present';
+            }
+            return $ratio >= (float) config('attendance.ratio.half', 0.5) ? 'half_day' : 'absent';
+        }
+
+        if ($workedHours >= (float) config('attendance.fallback_hours.present', 8)) {
+            return 'present';
+        }
+        return $workedHours >= (float) config('attendance.fallback_hours.half', 4) ? 'half_day' : 'absent';
     }
 }

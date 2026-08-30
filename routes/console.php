@@ -34,6 +34,22 @@ Schedule::command('attendance:auto-clockout --hours=15')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/auto-clockout.log'));
+
+// Rebuild the current month's attendance summaries nightly, and on the 1st also
+// finalise the month that just ended.
+Schedule::command('attendance:update-summaries')
+    ->dailyAt('01:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/attendance-summaries.log'));
+
+Schedule::call(function () {
+    // Evaluated at fire time so it always targets the month that just ended.
+    \Illuminate\Support\Facades\Artisan::call('attendance:update-summaries', [
+        '--month' => now()->subMonthNoOverflow()->format('Y-m'),
+        '--force' => true,
+    ]);
+})->monthlyOn(1, '02:00')->name('attendance-summaries-prev-month')->withoutOverlapping();
     
 Schedule::command('performance:calculate')
 ->monthlyOn(1, '02:00')

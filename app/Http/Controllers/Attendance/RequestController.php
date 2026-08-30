@@ -674,7 +674,7 @@ class RequestController extends Controller
                 // Admin/HR can view all requests
             } else {
                 // Manager can only view their team's requests
-                $teamUserIds = User::where('reporting_head_id', $user->id)->pluck('id')->toArray();
+                $teamUserIds = User::whereHas('jobDetails', fn ($q) => $q->where('reporting_head', $user->id))->pluck('id')->toArray();
                 $teamUserIds[] = $user->id;
 
                 if (!in_array($request->user_id, $teamUserIds)) {
@@ -702,8 +702,8 @@ class RequestController extends Controller
             if ($user->role == 'admin' || $user->role == 'hr') {
                 // Admin/HR can approve any request
             } else {
-                // Manager can only approve their team's requests
-                if ($existingRequest->user->reporting_head_id != $user->id) {
+                // Manager can only approve requests from their own reportees
+                if (optional($existingRequest->user->jobDetails)->reporting_head != $user->id) {
                     return response()->json([
                         'success' => false,
                         'message' => 'You are not authorized to approve this request.'
@@ -743,15 +743,11 @@ class RequestController extends Controller
 
             DB::commit();
 
-            // Send notifications based on status
+            // This action always approves — notify the employee accordingly.
             try {
-                if ($request->status == 'APPROVED') {
-                    $this->notificationService->notifyRequestApproved($existingRequest, $request->remarks);
-                } else {
-                    $this->notificationService->notifyRequestRejected($existingRequest, $request->remarks);
-                }
+                $this->notificationService->notifyRequestApproved($existingRequest, $validated['comments'] ?? null);
             } catch (\Exception $e) {
-                \Log::error('Failed to send request status notification: ' . $e->getMessage());
+                \Log::error('Failed to send request approved notification: ' . $e->getMessage());
             }
 
             return response()->json([
@@ -785,8 +781,8 @@ class RequestController extends Controller
             if ($user->role == 'admin' || $user->role == 'hr') {
                 // Admin/HR can reject any request
             } else {
-                // Manager can only reject their team's requests
-                if ($existingRequest->user->reporting_head_id != $user->id) {
+                // Manager can only reject requests from their own reportees
+                if (optional($existingRequest->user->jobDetails)->reporting_head != $user->id) {
                     return response()->json([
                         'success' => false,
                         'message' => 'You are not authorized to reject this request.'
@@ -870,7 +866,7 @@ class RequestController extends Controller
 
                 // Check permissions
                 if ($user->role != 'admin' && $user->role != 'hr') {
-                    if ($existingRequest->user->reporting_head_id != $user->id) {
+                    if (optional($existingRequest->user->jobDetails)->reporting_head != $user->id) {
                         $failCount++;
                         continue;
                     }
@@ -935,7 +931,7 @@ class RequestController extends Controller
                 // Admin and HR can see all requests
             } else {
                 // Manager - see only their team members
-                $teamUserIds = User::where('reporting_head_id', $user->id)->pluck('id')->toArray();
+                $teamUserIds = User::whereHas('jobDetails', fn ($q) => $q->where('reporting_head', $user->id))->pluck('id')->toArray();
                 $teamUserIds[] = $user->id;
                 $query->whereIn('user_id', $teamUserIds);
             }
@@ -1028,7 +1024,7 @@ class RequestController extends Controller
                 // Admin and HR - all requests
             } else {
                 // Manager - only team requests
-                $teamUserIds = User::where('reporting_head_id', $user->id)->pluck('id')->toArray();
+                $teamUserIds = User::whereHas('jobDetails', fn ($q) => $q->where('reporting_head', $user->id))->pluck('id')->toArray();
                 $teamUserIds[] = $user->id;
                 $query->whereIn('user_id', $teamUserIds);
             }
