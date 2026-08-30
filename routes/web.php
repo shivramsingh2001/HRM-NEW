@@ -434,15 +434,20 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::put('/update/{id}', [OvertimeController::class, 'update'])->name('overtime.update');
             Route::delete('/destroy/{id}', [OvertimeController::class, 'destroy'])->name('overtime.destroy');
 
-            Route::get('/view-all', [OvertimeController::class, 'viewAll'])->name('overtime.view-all');
-            Route::get('/show/{id}', [OvertimeController::class, 'show'])->name('overtime.show');
-            Route::post('/approve/{id}', [OvertimeController::class, 'approve'])->name('overtime.approve');
-            Route::post('/reject/{id}', [OvertimeController::class, 'reject'])->name('overtime.reject');
+            // Approver Routes - admin / hr / manager only
+            Route::middleware('role:admin,hr,manager')->group(function () {
+                Route::get('/view-all', [OvertimeController::class, 'viewAll'])->name('overtime.view-all');
+                Route::get('/show/{id}', [OvertimeController::class, 'show'])->name('overtime.show');
+                Route::post('/approve/{id}', [OvertimeController::class, 'approve'])->name('overtime.approve');
+                Route::post('/reject/{id}', [OvertimeController::class, 'reject'])->name('overtime.reject');
+            });
 
-            // Admin Routes
-            Route::get('/settings', [OvertimeSettingController::class, 'index'])->name('overtime.settings');
-            Route::put('/settings/update', [OvertimeSettingController::class, 'update'])->name('overtime.settings.update');
-            Route::post('/settings/reset', [OvertimeSettingController::class, 'reset'])->name('overtime.settings.reset');
+            // Admin Routes - tenant overtime policy
+            Route::middleware('role:admin,hr')->group(function () {
+                Route::get('/settings', [OvertimeSettingController::class, 'index'])->name('overtime.settings');
+                Route::put('/settings/update', [OvertimeSettingController::class, 'update'])->name('overtime.settings.update');
+                Route::post('/settings/reset', [OvertimeSettingController::class, 'reset'])->name('overtime.settings.reset');
+            });
         });
         
         Route::prefix('loan')->group(function () {
@@ -579,7 +584,7 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::get('/export', [ManagerPerformanceReviewController::class, 'export'])->name('export');
         });
         
-        Route::prefix('report')->name('report.')->group(function () {
+        Route::prefix('report')->name('report.')->middleware('role:admin,hr,manager')->group(function () {
             Route::get('/attendance', [AttendanceReportController::class, 'index'])->name('attendance.index');
             Route::get('/attendance/detail', [AttendanceReportController::class, 'detailAttendanceReport'])->name('attendance.detail.index');
             Route::get('/attendance/detail/export', [AttendanceReportController::class, 'detailExportAttendance'])->name('attendance.detail.export');

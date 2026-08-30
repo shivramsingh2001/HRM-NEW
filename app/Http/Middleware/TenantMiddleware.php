@@ -26,61 +26,82 @@ class TenantMiddleware
     }
 
     /**
-     * Handle API requests - tenant comes from authenticated user or request header
+     * Routes that are hit BEFORE authentication and legitimately need the caller
+     * to name their tenant (login / password reset / OTP must disambiguate
+     * employee_id / email / contact, which are only unique per tenant).
+     */
+    private const TENANT_SELECTABLE_ROUTES = [
+        'api/login',
+        'api/forgot-password',
+        'api/reset-password',
+        'api/send-otp',
+        'api/login-otp',
+    ];
+
+    /**
+     * Handle API requests.
+     *
+     * For authenticated requests the tenant is taken *only* from the JWT user —
+     * never from a client-supplied header or body param. JWT is stateless so the
+     * `api` guard can resolve the user here even though this middleware runs
+     * before the `auth:api` middleware.
      */
     private function handleApiRequest($request, $next)
     {
-        // Method 1: From authenticated user (after login)
-        if ($request->user()) {
-            $tenantId = $request->user()->tenant_id;
-            
-            if ($tenantId) {
-                $tenant = Tenant::find($tenantId);
-                
-                if ($tenant && $tenant->status == 'active') {
+        $user = null;
+
+        try {
+            $user = auth('api')->user();
+        } catch (\Throwable $e) {
+            // Malformed / expired / blacklisted token — leave $user null and let
+            // the downstream auth:api middleware return the 401.
+            $user = null;
+        }
+
+        if ($user) {
+            $tenant = $user->tenant_id ? Tenant::find($user->tenant_id) : null;
+
+            if ($tenant && $tenant->status === 'active') {
+                $this->setTenantContext($tenant, $request);
+            } else {
+                Log::warning('🏢 Authenticated API user has no active tenant', [
+                    'user_id' => $user->id ?? null,
+                    'tenant_id' => $user->tenant_id ?? null,
+                ]);
+            }
+
+            return $next($request);
+        }
+
+        // Unauthenticated: only the pre-auth allowlist may name its tenant.
+        if ($this->isTenantSelectableRoute($request)) {
+            $identifier = $request->header('X-Tenant')
+                ?? $request->header('X-Tenant-ID')
+                ?? $request->input('tenant_id');
+
+            if ($identifier) {
+                $tenant = Tenant::where('status', 'active')
+                    ->where(function ($q) use ($identifier) {
+                        $q->where('subdomain', $identifier)
+                          ->orWhere('id', $identifier);
+                    })
+                    ->first();
+
+                if ($tenant) {
                     $this->setTenantContext($tenant, $request);
-                 
-                    
-                    return $next($request);
                 }
             }
         }
 
-        // Method 2: From request header (for login/register before authentication)
-        if ($request->hasHeader('X-Tenant') || $request->hasHeader('X-Tenant-ID')) {
-            $tenantIdentifier = $request->header('X-Tenant') ?? $request->header('X-Tenant-ID');
-            
-            // Try to find by subdomain or ID
-            $tenant = Tenant::where('subdomain', $tenantIdentifier)
-                ->orWhere('id', $tenantIdentifier)
-                ->where('status', 'active')
-                ->first();
-            
-            if ($tenant) {
-                $this->setTenantContext($tenant, $request);
-                
-               
-                return $next($request);
-            }
-        }
-
-        // Method 3: From request payload (for login/register)
-        if ($request->has('tenant_id')) {
-            $tenant = Tenant::where('id', $request->tenant_id)
-                ->where('status', 'active')
-                ->first();
-            
-            if ($tenant) {
-                $this->setTenantContext($tenant, $request);
-              
-                
-                return $next($request);
-            }
-        }
-
-       
-        
         return $next($request);
+    }
+
+    /**
+     * Is this one of the pre-auth routes allowed to select a tenant by header/body?
+     */
+    private function isTenantSelectableRoute($request): bool
+    {
+        return $request->is(...self::TENANT_SELECTABLE_ROUTES);
     }
 
     /**

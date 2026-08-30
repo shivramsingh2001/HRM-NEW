@@ -10,16 +10,49 @@ use Illuminate\Support\Facades\Validator;
 class OvertimeSettingController extends Controller
 {
     /**
+     * Roles allowed to change tenant overtime policy.
+     */
+    private const MANAGER_ROLES = ['admin', 'hr'];
+
+    /**
+     * Reject the request (JSON 403) if the current user may not manage settings.
+     * Route middleware (role:admin,hr) is the primary guard; this is defence in depth.
+     */
+    private function ensureCanManage(): ?\Illuminate\Http\JsonResponse
+    {
+        $user = auth()->user();
+
+        if (!$user || !in_array($user->role, self::MANAGER_ROLES, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only admin and HR can manage overtime settings.',
+            ], 403);
+        }
+
+        return null;
+    }
+
+    /**
+     * Current tenant id, or null when it cannot be resolved.
+     */
+    private function currentTenantId(): ?int
+    {
+        return auth()->user()->tenant_id ?? null;
+    }
+
+    /**
      * Display overtime settings page
      */
     public function index()
     {
-        $tenantId = auth()->user()->tenant_id ?? null;
-        
+        $tenantId = $this->currentTenantId();
+
+        // Prefer the tenant-specific row; fall back to the global default.
         $settings = OvertimeSetting::where('tenant_id', $tenantId)
             ->orWhereNull('tenant_id')
+            ->orderByRaw('tenant_id IS NULL') // tenant-specific row first
             ->first();
-        
+
         return view('client.overtime.settings', compact('settings'));
     }
 
@@ -28,6 +61,19 @@ class OvertimeSettingController extends Controller
      */
     public function update(Request $request)
     {
+        if ($denied = $this->ensureCanManage()) {
+            return $denied;
+        }
+
+        $tenantId = $this->currentTenantId();
+
+        if (!$tenantId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to resolve your company. Please sign in again.',
+            ], 422);
+        }
+
         $validator = Validator::make($request->all(), [
             'rate_multiplier' => 'required|numeric|min:1|max:5',
             'max_hours_per_day' => 'nullable|numeric|min:0|max:24',
@@ -43,8 +89,6 @@ class OvertimeSettingController extends Controller
             ], 422);
         }
 
-        $tenantId = auth()->user()->tenant_id ?? null;
-        
         $settings = OvertimeSetting::updateOrCreate(
             ['tenant_id' => $tenantId],
             [
@@ -68,8 +112,19 @@ class OvertimeSettingController extends Controller
      */
     public function reset(Request $request)
     {
-        $tenantId = auth()->user()->tenant_id ?? null;
-        
+        if ($denied = $this->ensureCanManage()) {
+            return $denied;
+        }
+
+        $tenantId = $this->currentTenantId();
+
+        if (!$tenantId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to resolve your company. Please sign in again.',
+            ], 422);
+        }
+
         $defaultSettings = [
             'rate_multiplier' => 1.50,
             'max_hours_per_day' => 4.00,
