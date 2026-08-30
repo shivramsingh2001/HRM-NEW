@@ -15,27 +15,34 @@ class AttendanceController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $tenantId = Session::get('tenant_id') ?? $authUser->tenant_id ?? null;
-            
+            $tenantId = (int) ($authUser->tenant_id ?? Session::get('tenant_id') ?? 0);
+
             if (!$tenantId) {
                 return response()->json(['success' => false, 'message' => 'Tenant not found'], 400);
             }
 
             // Check role access
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager', 'employee'])) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 200);
+            if (!in_array($authUser->role, ['admin', 'hr', 'manager', 'employee'], true)) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
             }
 
-            // Get date range
-            $startDate = $request->start_date ?? date('Y-m-01');
-            $endDate = $request->end_date ?? date('Y-m-d');
-            $includeTracks = $request->include_tracks ?? true;
+            // Get date range (validated to strict Y-m-d, capped to 366 days)
+            $startDate = $this->safeDate($request->input('start_date'), date('Y-m-01'));
+            $endDate = $this->safeDate($request->input('end_date'), date('Y-m-d'));
+            if ($startDate > $endDate) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            }
+            if ((strtotime($endDate) - strtotime($startDate)) / 86400 > 366) {
+                $endDate = date('Y-m-d', strtotime($startDate . ' +366 days'));
+            }
 
-            // Build role-based user filter
-            $userFilter = $this->buildUserFilter($authUser, $request->user_id);
+            $includeTracks = filter_var($request->input('include_tracks', true), FILTER_VALIDATE_BOOLEAN);
+
+            // Build role-based user filter (parameterised)
+            [$userFilterSql, $userFilterBindings] = $this->buildUserFilter($authUser, $request->input('user_id'));
 
             // Get attendance data
-            $attendances = $this->getAttendanceData($tenantId, $authUser->id, $startDate, $endDate, $userFilter);
+            $attendances = $this->getAttendanceData($tenantId, $startDate, $endDate, $userFilterSql, $userFilterBindings);
 
             // Format the data
             $processedData = $this->formatAttendanceData($attendances, $includeTracks);
@@ -49,53 +56,78 @@ class AttendanceController extends Controller
                 'data' => $processedData,
                 'summary' => $summary
             ], 200);
-            
+
         } catch (Exception $e) {
+            \Log::error('AI attendance view_ai_all failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Unable to fetch attendance data. Please try again later.'
             ], 500);
         }
     }
 
     /**
-     * Build user filter based on role
+     * Return $value as a strict Y-m-d string, or $default when it is not a valid date.
      */
-    private function buildUserFilter($authUser, $requestUserId)
+    private function safeDate($value, string $default): string
     {
-        if ($authUser->role === 'employee') {
-            return "AND u.id = {$authUser->id}";
+        if (!is_string($value) || $value === '') {
+            return $default;
         }
-        
-        if ($authUser->role === 'manager') {
-            if ($requestUserId) {
-                return "AND u.id = $requestUserId AND (jd.reporting_head = {$authUser->id} OR u.id = {$authUser->id})";
-            }
-            return "AND (jd.reporting_head = {$authUser->id} OR u.id = {$authUser->id})";
+        try {
+            $parsed = \Carbon\Carbon::createFromFormat('Y-m-d', $value);
+            return ($parsed && $parsed->format('Y-m-d') === $value) ? $value : $default;
+        } catch (\Throwable $e) {
+            return $default;
         }
-        
-        // Admin/HR
-        if ($requestUserId) {
-            return "AND u.id = $requestUserId";
-        }
-        
-        return "";
     }
 
     /**
-     * Get attendance data from database
+     * Build a role-based user filter as [sqlFragment, bindings].
      */
-   private function getAttendanceData($tenantId, $userId, $startDate, $endDate, $userFilter)
-{
-    $query = "
+    private function buildUserFilter($authUser, $requestUserId): array
+    {
+        $requestUserId = (is_scalar($requestUserId) && ctype_digit((string) $requestUserId) && (int) $requestUserId > 0)
+            ? (int) $requestUserId
+            : null;
+
+        $me = (int) $authUser->id;
+
+        if ($authUser->role === 'employee') {
+            return [' AND u.id = ? ', [$me]];
+        }
+
+        if ($authUser->role === 'manager') {
+            if ($requestUserId) {
+                return [' AND u.id = ? AND (jd.reporting_head = ? OR u.id = ?) ', [$requestUserId, $me, $me]];
+            }
+            return [' AND (jd.reporting_head = ? OR u.id = ?) ', [$me, $me]];
+        }
+
+        // Admin / HR
+        if ($requestUserId) {
+            return [' AND u.id = ? ', [$requestUserId]];
+        }
+
+        return ['', []];
+    }
+
+    /**
+     * Get attendance data from database.
+     * $startDate / $endDate are guaranteed ^\d{4}-\d{2}-\d{2}$ by safeDate();
+     * every other value is a bound parameter.
+     */
+    private function getAttendanceData($tenantId, $startDate, $endDate, $userFilterSql, array $userFilterBindings)
+    {
+        $query = "
         WITH RECURSIVE dates AS (
-            SELECT DATE('$startDate') as date
+            SELECT DATE('{$startDate}') as date
             UNION ALL
             SELECT DATE_ADD(date, INTERVAL 1 DAY)
             FROM dates
-            WHERE DATE_ADD(date, INTERVAL 1 DAY) <= DATE('$endDate')
+            WHERE DATE_ADD(date, INTERVAL 1 DAY) <= DATE('{$endDate}')
         )
-        SELECT 
+        SELECT
             u.id as user_id,
             u.name,
             u.employee_id,
@@ -108,26 +140,27 @@ class AttendanceController extends Controller
             a.clock_out_address,
             a.id as attendance_id,
             wo.id as weekoff_id,
-            -- Add track count subquery for efficiency
             (SELECT COUNT(*) FROM attendance_tracks at WHERE at.attendance_id = a.id) as track_count
         FROM dates d
         CROSS JOIN users u
-        LEFT JOIN attendances a ON u.id = a.user_id AND a.date = d.date AND a.tenant_id = $tenantId
-        LEFT JOIN user_weekoffs wo ON u.id = wo.user_id 
-            AND wo.tenant_id = $tenantId
+        LEFT JOIN attendances a ON u.id = a.user_id AND a.date = d.date AND a.tenant_id = ?
+        LEFT JOIN user_weekoffs wo ON u.id = wo.user_id
+            AND wo.tenant_id = ?
             AND wo.status = 1
             AND (
                 (wo.off_type = 'date_based' AND d.date BETWEEN wo.start_date AND wo.end_date)
                 OR (wo.off_type = 'day_based' AND wo.day_name = DAYNAME(d.date))
             )
-        LEFT JOIN user_job_details jd ON u.id = jd.user_id AND jd.tenant_id = $tenantId
-        WHERE u.status = 1 AND u.tenant_id = $tenantId
-        $userFilter
+        LEFT JOIN user_job_details jd ON u.id = jd.user_id AND jd.tenant_id = ?
+        WHERE u.status = 1 AND u.tenant_id = ?
+        {$userFilterSql}
         ORDER BY d.date DESC, u.id
     ";
-    
-    return DB::select($query);
-}
+
+        $bindings = array_merge([$tenantId, $tenantId, $tenantId, $tenantId], $userFilterBindings);
+
+        return DB::select($query, $bindings);
+    }
 
     /**
      * Format attendance data
