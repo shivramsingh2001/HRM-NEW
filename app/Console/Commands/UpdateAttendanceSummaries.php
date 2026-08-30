@@ -153,7 +153,6 @@ class UpdateAttendanceSummaries extends Command
         $attendances = \App\Models\Attendance::where('user_id', $userId)
             ->where('date', '>=', $startDate)
             ->where('date', '<=', $endDate)
-            ->where('is_parent', false)
             ->get()
             ->groupBy('date');
 

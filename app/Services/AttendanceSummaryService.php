@@ -38,11 +38,10 @@ class AttendanceSummaryService
                 return false;
             }
 
-            // Get all attendance records for the month (child entries only)
+            // Get all attendance records for the month (one row per user/day)
             $attendances = Attendance::where('user_id', $userId)
                 ->where('date', '>=', $startDate)
                 ->where('date', '<=', $endDate)
-                ->where('is_parent', false)
                 ->get()
                 ->groupBy('date');
 

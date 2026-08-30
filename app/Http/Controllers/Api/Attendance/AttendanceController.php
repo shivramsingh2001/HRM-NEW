@@ -1038,24 +1038,19 @@ class AttendanceController extends Controller
             // END OF CHANGED: ENHANCED BRANCH HANDLING
             // =============================================
     
-            // FIX: Properly handle night shifts crossing midnight
+            // Properly handle night shifts crossing midnight
+            $calc = new \App\Services\Attendance\AttendanceCalculator();
             $clockIn = Carbon::parse($attendance->clock_in);
             $clockOut = $currentDateTime;
-            
-            // If clock_out time is less than clock_in time, it means it crossed midnight
-            // Add a day to clock_out for correct calculation
+
+            // If clock_out is before clock_in the punch crossed midnight.
             if ($clockOut->lt($clockIn)) {
                 $clockOut->addDay();
             }
-            
-            $workedSeconds = $clockIn->diffInSeconds($clockOut);
-            $workedHours = round($workedSeconds / 3600, 2);
-            
-            // Format total hours as H:i:s (e.g., "21:25:00" for 21 hours 25 minutes)
-            $totalHoursFormatted = floor($workedSeconds / 3600) . ':' . 
-                                   floor(($workedSeconds % 3600) / 60) . ':' . 
-                                   ($workedSeconds % 60);
-    
+
+            $workedSeconds = $calc->workedSeconds($clockIn, $clockOut);
+            $workedHours = $calc->decimalHours($workedSeconds);
+
             $earlyDepartureMinutes = 0;
             $overtimeMinutes = 0;
             $attendanceStatus = $attendance->attendance_status;
@@ -1075,13 +1070,13 @@ class AttendanceController extends Controller
                     $graceMinutes = $shift->grace_minutes ?? 0;
     
                     if ($clockOut->lt($scheduledEnd)) {
-                        $minutesEarly = $clockOut->diffInMinutes($scheduledEnd);
+                        $minutesEarly = (int) floor($clockOut->diffInSeconds($scheduledEnd) / 60);
                         if ($minutesEarly > $graceMinutes) {
                             $earlyDepartureMinutes = $minutesEarly;
                             $attendanceStatus = 'early_departure';
                         }
                     } elseif ($clockOut->gt($scheduledEnd)) {
-                        $overtimeMinutes = $scheduledEnd->diffInMinutes($clockOut);
+                        $overtimeMinutes = (int) floor($scheduledEnd->diffInSeconds($clockOut) / 60);
                         $attendanceStatus = 'overtime';
                     }
                 }
@@ -1106,7 +1101,7 @@ class AttendanceController extends Controller
                 $attendance->clock_out_address = $request->address;
                 $attendance->check_out_distance = $checkOutDistance ?? null;
                 $attendance->location_verification = $locationVerification;
-                $attendance->total_hours = gmdate('H:i:s', $workedSeconds);
+                $attendance->total_hours = $calc->formatDuration($workedSeconds);
                 $attendance->worked_hours = $workedHours;
                 $attendance->early_departure_minutes = $earlyDepartureMinutes;
                 $attendance->overtime_minutes = $overtimeMinutes;
@@ -1800,9 +1795,13 @@ class AttendanceController extends Controller
                     }
 
                     if ($regularization->in_time && $regularization->out_time) {
-                        $seconds = (int) Carbon::parse($attendance->clock_in)
-                            ->diffInSeconds(Carbon::parse($attendance->clock_out));
-                        $attendance->total_hours = gmdate('H:i:s', $seconds);
+                        $calc = new \App\Services\Attendance\AttendanceCalculator();
+                        $seconds = $calc->workedSeconds(
+                            Carbon::parse($attendance->clock_in),
+                            Carbon::parse($attendance->clock_out)
+                        );
+                        $attendance->total_hours = $calc->formatDuration($seconds);
+                        $attendance->worked_hours = $calc->decimalHours($seconds);
                     }
 
                     $attendance->save();

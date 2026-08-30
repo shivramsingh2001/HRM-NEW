@@ -752,9 +752,13 @@ class AttendanceRegularizationController extends Controller
 
         // Calculate total hours if both times are set
         if ($regularization->in_time && $regularization->out_time) {
-            $seconds = Carbon::parse($attendance->clock_in)
-                ->diffInSeconds(Carbon::parse($attendance->clock_out));
-            $attendance->total_hours = gmdate('H:i:s', $seconds);
+            $calc = new \App\Services\Attendance\AttendanceCalculator();
+            $seconds = $calc->workedSeconds(
+                Carbon::parse($attendance->clock_in),
+                Carbon::parse($attendance->clock_out)
+            );
+            $attendance->total_hours = $calc->formatDuration($seconds);
+            $attendance->worked_hours = $calc->decimalHours($seconds);
         }
 
         $attendance->save();
