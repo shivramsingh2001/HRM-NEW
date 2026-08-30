@@ -1,0 +1,241 @@
+@extends('client.layout.master')
+
+@section('style')
+@endsection
+
+@php
+ $user = Auth::user();
+ $role = $user->role;
+ @endphp
+ 
+@section('content-area')
+    <!-- [ Main Content ] start -->
+
+    <div class="content-area-header sticky-top">
+        <div class="page-header-left d-flex align-items-center gap-2">
+            <div class="page-header-title">
+                <h5 class="m-b-10">Department Management</h5>
+            </div>
+            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
+                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
+                <li class="breadcrumb-item">Department</li>
+            </ul>
+        </div>
+        <div class="page-header-right ms-auto">
+            <div class="hstack gap-2">
+                <div class="hstack">
+
+                </div>
+                  @if(in_array($role,['admin','hr']))
+                <div class="dropdown d-none d-sm-flex">
+                    <a href="javascript:void(0)" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                        data-bs-target="#addDepartments">Add Department</a>
+                </div>
+                @endif
+            </div>
+        </div>
+    </div>
+    <div class="content-area-body pb-0 h-100">
+        <div class="row note-has-grid" id="note-full-container">
+            <!--! BEGIN: [Single Note Item] !-->
+            @foreach ($departments as $department)
+                <div class="col-xxl-4 col-xl-6 col-lg-4 col-sm-6 single-note-item">
+                    <div class="card card-body mb-4 stretch stretch-full position-relative shadow-sm border-0">
+
+                        <!-- Top Right Actions -->
+                        <div class="position-absolute top-0 end-0 d-flex align-items-center gap-2 m-4">
+
+                            <!-- Status Badge -->
+                            <span class="badge {{ $department->status ? 'bg-success' : 'bg-danger' }}">
+                                {{ $department->status ? 'Active' : 'Inactive' }}
+                            </span>
+                            @if(in_array($role,['admin','hr']))
+                            <!-- View Icon -->
+                            <a href="{{ route('department.detail', ['id' => encrypt($department->id)]) }}"
+                                class="text-decoration-none">
+                                <i class="bi bi-eye-fill fs-5 text-muted"></i>
+                            </a>
+                            @endif
+
+                        </div>
+
+                        <span class="side-stick"></span>
+
+                        <!-- Department Name -->
+                        <h5 class="note-title text-truncate w-75 mb-1">
+                            {{ $department->name }}
+                            {{-- <i class="point bi bi-circle-fill ms-1 fs-7 text-primary"></i> --}}
+                        </h5>
+
+                        <!-- Created Date -->
+                        <p class="fs-11 text-muted mb-2">
+                            <i class="bi bi-calendar-event me-1"></i>
+                            {{ date('d M Y', strtotime($department->created_at)) }}
+                        </p>
+                        @php
+                            $depthead = DB::table('users')->where('id',$department->department_head)->first();
+                        @endphp
+                        <!-- Info Row -->
+                        <div class="d-flex justify-content-between align-items-center bg-light rounded-3 px-3 py-1 mb-2">
+
+                            <!-- Department Head -->
+                            <div>
+                                <small class="text-muted d-block fs-10">Department Head</small>
+                                <span class="fw-semibold  fs-11">
+                                    <i class="bi bi-person-badge fs-14 me-1 text-primary"></i>
+                                    {{ $depthead->name ?? 'NA' }}
+                                </span>
+                            </div>
+
+                            <!-- Employee Count -->
+                            <div class="text-end">
+                                <small class="text-muted d-block fs-10">Employees</small>
+                                <span class="fw-bold text-dark">
+                                    <i class="bi bi-people-fill text-success me-1"></i>
+                                    {{ $department->employees_count ?? 0 }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="note-content flex-grow-1">
+                            <p class="text-muted fs-12 text-truncate-3-line">
+                                {{ $department->description ?? 'No description available.' }}
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+            @endforeach
+            <!--! BEGIN: [Single Note Item] !-->
+
+        </div>
+    </div>
+@endsection
+@section('create-modal')
+    <div class="modal fade-scale" id="addDepartments" tabindex="-1" aria-labelledby="addDepartments" aria-hidden="true"
+        data-bs-dismiss="ou">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h2 class="d-flex flex-column mb-0">
+                        <span class="fs-18 fw-bold mb-1">Add Department</span>
+                        <small class="d-block fs-11 fw-normal text-muted">Department must have a head!</small>
+                    </h2>
+                    <a href="javascript:void(0)" class="avatar-text avatar-md bg-soft-danger close-icon"
+                        data-bs-dismiss="modal">
+                        <i class="feather-x text-danger"></i>
+                    </a>
+                </div>
+
+                <div class="modal-body p-0">
+                    <div class="card m-0">
+                        <div class="card-body">
+                            <form action="#" id="addDepartmentForm">
+                                <div id="formError" class="alert alert-danger d-none"></div>
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="department_name">Department Name *</label>
+                                            <input type="text" class="form-control" name="name" required
+                                                id="department_name" placeholder="Enter Department name">
+                                            <small class="text-danger error-text name_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="department_head">Department Head *</label>
+                                            <select class="form-control" name="department_head" id="department_head"
+                                                required>
+                                                <option value="" disabled selected>-- Select Department Head --
+                                                </option>
+                                                @foreach ($users as $user)
+                                                    <option value="{{ $user->id }}" data-icon="feather-user">
+                                                        {{ $user->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <small class="text-danger error-text department_head_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="department_description">Department Description
+                                            </label>
+                                            <textarea class="form-control" name="description" id="department_description" rows="3"
+                                                placeholder="Enter Department Description..."></textarea>
+                                            <small class="text-danger error-text description_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <button class="btn btn-primary" type="submit">Save</button>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <a href="javascript:void(0)" class="btn btn-danger text-warning float-end"
+                                            data-bs-dismiss="modal">
+                                            Cancel
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
+
+@section('script-area')
+    <script>
+        $(document).ready(function() {
+
+            $('#addDepartmentForm').on('submit', function(e) {
+
+                e.preventDefault();
+                // Reset errors
+                $('.error-text').text('');
+                $('#formError').addClass('d-none').text('');
+
+                $.ajax({
+                    url: "{{ route('department.create') }}",
+                    type: "POST",
+                    data: $(this).serialize(),
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addDepartments').modal('hide');
+                            location.reload();
+                        }
+                    },
+                    error: function(xhr) {
+
+                        // ✅ Validation error
+                        if (xhr.status === 422) {
+                            let errors = xhr.responseJSON.errors;
+                            $.each(errors, function(key, value) {
+                                $('.' + key + '_error').text(value[0]);
+                            });
+                        }
+
+                        // ✅ Server error
+                        else {
+                            $('#formError')
+                                .removeClass('d-none')
+                                .text(xhr.responseJSON?.message || 'Something went wrong.');
+                        }
+                    }
+                });
+
+            });
+
+        });
+    </script>
+@endsection

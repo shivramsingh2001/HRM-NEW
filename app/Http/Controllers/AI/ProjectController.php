@@ -1,0 +1,251 @@
+<?php
+
+namespace App\Http\Controllers\AI;
+
+use App\Http\Controllers\Controller;
+use App\Models\Designation;
+use App\Models\Project;
+use App\Models\ProjectAssign;
+use App\Models\User;
+use App\Models\UserJobDetail;
+use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+class ProjectController extends Controller
+{
+    public function view_ai_all()
+    {
+        try {
+            $authUser = Auth::user();
+
+            // Base query using Project model
+            $query = Project::select([
+                'projects.id',
+                'projects.project_code',
+                'projects.name',
+                'projects.start_date',
+                'projects.deadline_date',
+                'projects.description',
+                'projects.status',
+                'users.name as project_head',
+                'users.id as project_head_id'
+            ])
+                ->leftJoin('users', 'projects.project_head', '=', 'users.id');
+
+            // Add subqueries for counts
+            $query->selectRaw('(SELECT COUNT(*) FROM project_assigns WHERE project_id = projects.id) as total_members');
+            $query->selectRaw('(SELECT COUNT(*) FROM project_assigns WHERE project_id = projects.id AND status = "1") as active_members');
+
+            // Role-based filtering
+            switch ($authUser->role) {
+                case 'admin':
+                case 'hr':
+                    // Admin/HR: See all projects (no filter)
+                    break;
+
+                case 'manager':
+                    // Manager: See all projects with assignment flags
+                    $query->selectRaw('EXISTS(SELECT 1 FROM project_assigns WHERE project_id = projects.id AND user_id = ' . $authUser->id . ') as is_assigned');
+                    $query->selectRaw('EXISTS(SELECT 1 FROM project_assigns WHERE project_id = projects.id AND user_id = ' . $authUser->id . ' AND is_head = "1") as is_project_head');
+                    break;
+
+                case 'employee':
+                    // Employee: See only projects they're assigned to
+                    $query->join('project_assigns as pa', function ($join) use ($authUser) {
+                        $join->on('projects.id', '=', 'pa.project_id')
+                            ->where('pa.user_id', '=', $authUser->id);
+                    });
+                    $query->selectRaw('true as is_assigned');
+                    $query->selectRaw('pa.is_head as is_project_head');
+                    break;
+
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unauthorized access. Invalid role.'
+                    ], 403);
+            }
+
+            // Add task counts if tasks table exists
+            if (Schema::hasTable('tasks')) {
+                $query->selectRaw('(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id) as total_tasks');
+                $query->selectRaw('(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND status = "completed") as completed_tasks');
+                $query->selectRaw('ROUND((SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND status = "completed") * 100.0 / NULLIF((SELECT COUNT(*) FROM tasks WHERE project_id = projects.id), 0), 2) as progress_percentage');
+            }
+
+            // Apply ordering
+            $query->orderBy('projects.status')
+                ->orderBy('projects.name');
+
+            $projects = $query->get();
+
+            // Enhance the response with additional details
+            $enhancedProjects = $projects->map(function ($project) use ($authUser) {
+
+                // Get project members using ProjectAssign model
+                $members = ProjectAssign::where('project_id', $project->id)
+                    ->where('status', '1')
+                    ->get()
+                    ->map(function ($assign) {
+                        // Get user details from User model
+                        $user = User::where('id', $assign->user_id)
+                            ->select(['id', 'employee_id', 'name', 'email', 'role'])
+                            ->first();
+
+                        // Get user job details from UserJobDetail model
+                        $jobDetail = UserJobDetail::where('user_id', $assign->user_id)->first();
+
+                        // Get designation from Designation model
+                        $designation = null;
+                        if ($jobDetail && $jobDetail->designation) {
+                            $designationObj = Designation::where('id', $jobDetail->designation)->first();
+                            $designation = $designationObj ? $designationObj->name : null;
+                        }
+
+                        return [
+                            'id' => $user ? $user->id : null,
+                            'employee_id' => $user ? $user->employee_id : null,
+                            'name' => $user ? $user->name : null,
+                            'email' => $user ? $user->email : null,
+                            'role' => $user ? $user->role : null,
+                            'designation' => $designation,
+                            'is_head' => $assign->is_head,
+                            'is_project_head' => $assign->is_head == '1' ? true : false
+                        ];
+                    })
+                    ->filter()
+                    ->values();
+
+                // For employee role, only show minimal member info
+                if ($authUser->role === 'employee') {
+                    $members = $members->map(function ($member) {
+                        return [
+                            'id' => $member['id'],
+                            'name' => $member['name'],
+                            'designation' => $member['designation'],
+                            'is_project_head' => $member['is_project_head']
+                        ];
+                    });
+                }
+
+                // Calculate project status color and label
+                $statusInfo = $this->getProjectStatusInfo($project->status);
+
+                return [
+                    'project' => [
+                        'id' => $project->id,
+                        'code' => $project->project_code,
+                        'name' => $project->name,
+                        'description' => $project->description,
+                        'start_date' => $project->start_date,
+                        'deadline' => $project->deadline_date,
+                        'status' => [
+                            'code' => $project->status,
+                            'label' => $statusInfo['label'],
+                           
+                        ],
+                        'project_head' => [
+                            'id' => $project->project_head_id,
+                            'name' => $project->project_head
+                        ]
+                    ],
+                    'team' => [
+                        'total_members' => $project->total_members,
+                        'active_members' => $project->active_members ?? $project->total_members,
+                        'members' => $members
+                    ],
+                    'progress' => [
+                        'total_tasks' => $project->total_tasks ?? 0,
+                        'completed_tasks' => $project->completed_tasks ?? 0,
+                        'percentage' => $project->progress_percentage ?? 0
+                    ],
+                    'user_assignment' => [
+                        'is_assigned' => $project->is_assigned ?? false,
+                        'is_project_head' => $project->is_project_head ?? false,
+                        'role_in_project' => $this->getUserProjectRole($project, $authUser->id)
+                    ]
+                ];
+            });
+
+            // Summary statistics
+            $summary = [
+                'total_projects' => $projects->count(),
+                'by_status' => $projects->groupBy('status')->map->count(),
+                'assigned_to_me' => $projects->where('is_assigned', true)->count(),
+                'where_i_am_head' => $projects->where('is_project_head', true)->count()
+            ];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Projects fetched successfully',
+                'data' => $enhancedProjects,
+                'summary' => $summary,
+                'user_role' => $authUser->role,
+                'viewing_as' => [
+                    'role' => $authUser->role,
+                    'can_view_all' => in_array($authUser->role, ['admin', 'hr', 'manager'])
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            Log::error('View AI All Projects Error: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred. Please try again later.'
+            ], 500);
+        }
+    }
+    private function getProjectStatusInfo($status)
+    {
+        $statusMap = [
+            'ongoing' => [
+                'label' => 'Ongoing',
+               
+            ],
+            'pending' => [
+                'label' => 'Pending',
+               
+            ],
+            'hold' => [
+                'label' => 'On Hold',
+               
+            ],
+            'completed' => [
+                'label' => 'Completed',
+               
+            ],
+            'cancelled' => [
+                'label' => 'Cancelled',
+                
+            ]
+        ];
+
+        return $statusMap[$status] ?? [
+            'label' => ucfirst($status),
+            
+        ];
+    }
+
+    private function getUserProjectRole($project, $userId)
+    {
+        if ($project->project_head_id == $userId) {
+            return 'project_head';
+        }
+
+        if (isset($project->is_project_head) && $project->is_project_head) {
+            return 'project_head';
+        }
+
+        if (isset($project->is_assigned) && $project->is_assigned) {
+            return 'team_member';
+        }
+
+        return 'not_assigned';
+    }
+}
