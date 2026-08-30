@@ -75,156 +75,38 @@ class AttendanceController extends Controller
         }
     }
 
-    public function index(Request $request)
-    {
-        try {
-            $startDate     = $request->start_date ?? '2025-11-25';
-            $endDate       = $request->end_date ?? date('Y-m-d');
-            $userId        = $request->user_id;
-            $departmentId  = $request->department_id;
-            $teamId        = $request->team_id;
-
-            $data = DB::select("
-            WITH RECURSIVE dates AS (
-                SELECT DATE('$startDate') AS date
-                UNION ALL
-                SELECT DATE_ADD(date, INTERVAL 1 DAY)
-                FROM dates
-                WHERE date < DATE('$endDate')
-            )
-
-            SELECT 
-                u.id AS user_id,
-                u.name,
-                u.email,
-                d.date,
-                DAYNAME(d.date) AS day_name,
-                a.clock_in,
-                a.clock_out,
-                a.total_hours,
-                a.worked_hours,
-                a.scheduled_shift_start,
-                a.scheduled_shift_end,
-                l.leave_type,
-                l.reason AS leave_reason,
-                l.start_session AS leave_session,
-                h.name AS holiday_name,
-                CASE 
-                    WHEN wo.id IS NOT NULL THEN 'Week Off'
-                    ELSE NULL
-                END AS week_off,
-                -- UPDATED STATUS PRIORITY WITH SHIFT-BASED LOGIC
-                CASE 
-                    -- HIGHEST PRIORITY: Attendance on THIS SPECIFIC date with shift-based calculation
-                    WHEN a.id IS NOT NULL AND a.clock_in IS NOT NULL AND a.clock_out IS NOT NULL THEN
-                        CASE 
-                            WHEN a.scheduled_shift_start IS NOT NULL AND a.scheduled_shift_end IS NOT NULL THEN
-                                CASE 
-                                    WHEN a.worked_hours IS NOT NULL THEN
-                                        CASE 
-                                            WHEN (a.worked_hours / (TIMESTAMPDIFF(HOUR, a.scheduled_shift_start, 
-                                                CASE 
-                                                    WHEN a.scheduled_shift_end < a.scheduled_shift_start 
-                                                    THEN DATE_ADD(a.scheduled_shift_end, INTERVAL 1 DAY)
-                                                    ELSE a.scheduled_shift_end
-                                                END
-                                            )) * 100) < 20 THEN 'Absent'
-                                            WHEN (a.worked_hours / (TIMESTAMPDIFF(HOUR, a.scheduled_shift_start, 
-                                                CASE 
-                                                    WHEN a.scheduled_shift_end < a.scheduled_shift_start 
-                                                    THEN DATE_ADD(a.scheduled_shift_end, INTERVAL 1 DAY)
-                                                    ELSE a.scheduled_shift_end
-                                                END
-                                            )) * 100) < 60 THEN 'Half Day'
-                                            ELSE 'Present'
-                                        END
-                                    ELSE 
-                                        CASE 
-                                            WHEN CAST(a.total_hours AS DECIMAL(10,2)) < 2 THEN 'Absent'
-                                            WHEN CAST(a.total_hours AS DECIMAL(10,2)) < 6 THEN 'Half Day'
-                                            ELSE 'Present'
-                                        END
-                                END
-                            ELSE
-                                CASE 
-                                    WHEN CAST(a.total_hours AS DECIMAL(10,2)) < 2 THEN 'Absent'
-                                    WHEN CAST(a.total_hours AS DECIMAL(10,2)) < 6 THEN 'Half Day'
-                                    ELSE 'Present'
-                                END
-                        END
-                    WHEN a.id IS NOT NULL AND a.clock_in IS NOT NULL AND a.clock_out IS NULL THEN 'Checked In Only'
-                    -- THEN: Holiday
-                    WHEN h.id IS NOT NULL THEN 'Holiday'
-                    -- THEN: Leave
-                    WHEN l.id IS NOT NULL AND l.start_session = 1 THEN 'First Half Leave'
-                    WHEN l.id IS NOT NULL AND l.start_session = 2 THEN 'Second Half Leave'
-                    WHEN l.id IS NOT NULL THEN 'Full Day Leave'
-                    -- THEN: Week Off
-                    WHEN wo.id IS NOT NULL THEN 'Week Off'
-                    -- FINALLY: Absent
-                    ELSE 'Absent'
-                END AS day_status
-
-            FROM users u
-            CROSS JOIN dates d
-            LEFT JOIN attendances a 
-                ON u.id = a.user_id AND a.date = d.date
-            LEFT JOIN leaves l 
-                ON u.id = l.user_id 
-                AND d.date BETWEEN l.start_date AND l.start_date
-                AND l.status = 'approved'
-            LEFT JOIN holidays h
-                ON h.start_date = d.date
-                AND h.status = 1
-            LEFT JOIN user_weekoffs wo 
-                ON u.id = wo.user_id 
-                AND wo.status = 1
-                AND d.date BETWEEN wo.start_date AND wo.end_date
-                AND (
-                    (wo.off_type = 'date_based')
-                    OR 
-                    (wo.off_type = 'day_based' AND wo.day_name = DAYNAME(d.date))
-                )
-            LEFT JOIN user_job_details j
-                ON j.user_id = u.id
-            WHERE u.status = 1
-            " . ($userId ? " AND u.id = $userId " : "") . "
-            " . ($departmentId ? " AND j.department_id = $departmentId " : "") . "
-            " . ($teamId ? " AND j.team_id = $teamId " : "") . "
-            ORDER BY d.date DESC, u.id
-        ");
-
-            return response()->json([
-                'status'  => true,
-                'message' => 'data fetched successfully',
-                'data' => $data
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => "An error occured. Please try again later."
-            ], 500);
-        }
-    }
-
     public function history(Request $request)
     {
         try {
-            $startDate     = $request->start_date ?? date('Y-m-01', strtotime('-30 days'));
-            $endDate       = $request->end_date ?? date('Y-m-28', strtotime('+30 days'));
-            $userId        = Auth::id();
-            $departmentId  = $request->department_id;
-            $teamId        = $request->team_id;
-            $tenantId = session('tenant_id');
-            $today = date('Y-m-d');
+            // --- validate & normalise every input so the raw SQL below is injection-safe ---
+            $startDate = $this->safeDate($request->input('start_date'), date('Y-m-01', strtotime('-30 days')));
+            $endDate   = $this->safeDate($request->input('end_date'), date('Y-m-28', strtotime('+30 days')));
 
-            $data = DB::select("
+            if ($startDate > $endDate) {
+                [$startDate, $endDate] = [$endDate, $startDate];
+            }
+
+            // Cap the span so the recursive CTE cannot exceed MySQL's recursion limit
+            // or explode the users x dates cross join.
+            if ((strtotime($endDate) - strtotime($startDate)) / 86400 > 366) {
+                $endDate = date('Y-m-d', strtotime($startDate . ' +366 days'));
+            }
+
+            $userId   = (int) Auth::id();
+            $tenantId = (int) (optional($request->user())->tenant_id ?? session('tenant_id') ?? 0);
+            $today    = date('Y-m-d');
+
+            // Only $startDate/$endDate are inlined and both are guaranteed to match
+            // ^\d{4}-\d{2}-\d{2}$ (see safeDate). Everything else is bound.
+            $holidayTenantClause = $tenantId ? ' AND h.tenant_id = ? ' : '';
+
+            $sql = "
             WITH RECURSIVE dates AS (
-                SELECT DATE('$startDate') AS date
+                SELECT DATE('{$startDate}') AS date
                 UNION ALL
                 SELECT DATE_ADD(date, INTERVAL 1 DAY)
                 FROM dates
-                WHERE date < DATE('$endDate')
+                WHERE date < DATE('{$endDate}')
             )
 
             SELECT 
@@ -233,7 +115,7 @@ class AttendanceController extends Controller
                 u.email,
                 d.date,
                 DAYNAME(d.date) AS day_name,
-                CASE WHEN d.date > '$today' THEN 1 ELSE 0 END AS is_future_date,
+                CASE WHEN d.date > ? THEN 1 ELSE 0 END AS is_future_date,
                 (
                     SELECT COUNT(DISTINCT t.id)
                     FROM tasks t
@@ -258,9 +140,9 @@ class AttendanceController extends Controller
                     ELSE NULL
                 END AS week_off,
                 -- UPDATED STATUS PRIORITY WITH SHIFT-BASED LOGIC
-                CASE 
-                    WHEN d.date > '$today' THEN
-                        CASE 
+                CASE
+                    WHEN d.date > ? THEN
+                        CASE
                             WHEN h.id IS NOT NULL THEN 'Holiday'
                             WHEN l.id IS NOT NULL AND l.start_session = 1 THEN 'First Half Leave'
                             WHEN l.id IS NOT NULL AND l.start_session = 2 THEN 'Second Half Leave'
@@ -331,25 +213,31 @@ class AttendanceController extends Controller
                 AND l.status = 'approved'
             LEFT JOIN holidays h
                 ON h.start_date = d.date
-                AND h.status = 1 
-                " . ($tenantId ? " AND h.tenant_id = '$tenantId' " : "") . "
-            LEFT JOIN user_weekoffs wo 
-                ON wo.user_id = u.id 
+                AND h.status = 1
+                {$holidayTenantClause}
+            LEFT JOIN user_weekoffs wo
+                ON wo.user_id = u.id
                 AND wo.status = 1
                 AND d.date BETWEEN wo.start_date AND wo.end_date
                 AND (
                     (wo.off_type = 'date_based')
-                    OR 
+                    OR
                     (wo.off_type = 'day_based' AND wo.day_name = DAYNAME(d.date))
                 )
-            LEFT JOIN user_job_details j
-                ON j.user_id = u.id
             WHERE u.status = 1
-            AND u.id = $userId
-            " . ($departmentId ? " AND j.department_id = $departmentId " : "") . "
-            " . ($teamId ? " AND j.team_id = $teamId " : "") . "
+            AND u.id = ?
             ORDER BY d.date DESC
-        ");
+        ";
+
+            // Positional bindings, in SQL order:
+            //   is_future_date CASE, day_status CASE, [holiday tenant], user id
+            $bindings = [$today, $today];
+            if ($tenantId) {
+                $bindings[] = $tenantId;
+            }
+            $bindings[] = $userId;
+
+            $data = DB::select($sql, $bindings);
 
             $uniqueData = [];
             $seenDates = [];
@@ -368,10 +256,30 @@ class AttendanceController extends Controller
                 'data' => $uniqueData
             ]);
         } catch (Exception $e) {
+            Log::error('Attendance history failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
             return response()->json([
                 'status' => false,
                 'message' => "An error occured. Please try again later."
             ], 500);
+        }
+    }
+
+    /**
+     * Return $value as a strict Y-m-d string, or $default when it is not a valid date.
+     * Guarantees the result matches ^\d{4}-\d{2}-\d{2}$ so it is safe to inline in SQL.
+     */
+    private function safeDate($value, string $default): string
+    {
+        if (!is_string($value) || $value === '') {
+            return $default;
+        }
+
+        try {
+            $parsed = Carbon::createFromFormat('Y-m-d', $value);
+
+            return ($parsed && $parsed->format('Y-m-d') === $value) ? $value : $default;
+        } catch (\Throwable $e) {
+            return $default;
         }
     }
 
