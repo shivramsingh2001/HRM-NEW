@@ -533,10 +533,36 @@ class OvertimeController extends Controller
 
         return view('admin.overtime-approvals', compact('pendingRequests'));
     }
+    /**
+     * Roles allowed to approve/reject overtime.
+     */
+    private const APPROVER_ROLES = ['admin', 'hr', 'manager'];
+
+    /**
+     * A manager may only act on overtime raised by their own reportees.
+     * Admin / HR may act on any request in their tenant.
+     */
+    private function managerMayAct($authUser, OvertimeRequest $overtimeRequest): bool
+    {
+        if (in_array($authUser->role, ['admin', 'hr'], true)) {
+            return true;
+        }
+
+        if ($authUser->role === 'manager') {
+            return \App\Models\UserJobDetail::where('user_id', $overtimeRequest->user_id)
+                ->where('tenant_id', $authUser->tenant_id)
+                ->where('reporting_head', $authUser->id)
+                ->exists();
+        }
+
+        return false;
+    }
+
     public function approve(Request $request, $id)
     {
-        // Check if user is admin or manager
-        if (!in_array(auth()->user()->role, ['admin', 'manager'])) {
+        $authUser = auth()->user();
+
+        if (!in_array($authUser->role, self::APPROVER_ROLES, true)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized to approve requests'
@@ -555,7 +581,7 @@ class OvertimeController extends Controller
             ], 422);
         }
 
-        $tenantId = auth()->user()->tenant_id ?? null;
+        $tenantId = $authUser->tenant_id ?? null;
 
         $overtimeRequest = OvertimeRequest::where('id', $id)
             ->where('tenant_id', $tenantId)
@@ -566,6 +592,13 @@ class OvertimeController extends Controller
                 'success' => false,
                 'message' => 'Request not found'
             ], 404);
+        }
+
+        if (!$this->managerMayAct($authUser, $overtimeRequest)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only approve overtime for your own team members.'
+            ], 403);
         }
 
         if ($overtimeRequest->status != 'pending') {
@@ -609,8 +642,9 @@ class OvertimeController extends Controller
      */
     public function reject(Request $request, $id)
     {
-        // Check if user is admin or manager
-        if (!in_array(auth()->user()->role, ['admin', 'manager'])) {
+        $authUser = auth()->user();
+
+        if (!in_array($authUser->role, self::APPROVER_ROLES, true)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized to reject requests'
@@ -628,7 +662,7 @@ class OvertimeController extends Controller
             ], 422);
         }
 
-        $tenantId = auth()->user()->tenant_id ?? null;
+        $tenantId = $authUser->tenant_id ?? null;
 
         $overtimeRequest = OvertimeRequest::where('id', $id)
             ->where('tenant_id', $tenantId)
@@ -639,6 +673,13 @@ class OvertimeController extends Controller
                 'success' => false,
                 'message' => 'Request not found'
             ], 404);
+        }
+
+        if (!$this->managerMayAct($authUser, $overtimeRequest)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only reject overtime for your own team members.'
+            ], 403);
         }
 
         if ($overtimeRequest->status != 'pending') {
@@ -667,8 +708,9 @@ class OvertimeController extends Controller
      */
     public function bulkApprove(Request $request)
     {
-        // Check if user is admin or manager
-        if (!in_array(auth()->user()->role, ['admin', 'manager'])) {
+        $authUser = auth()->user();
+
+        if (!in_array($authUser->role, self::APPROVER_ROLES, true)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized to approve requests'
@@ -687,16 +729,29 @@ class OvertimeController extends Controller
             ], 422);
         }
 
-        $tenantId = auth()->user()->tenant_id ?? null;
+        $tenantId = $authUser->tenant_id ?? null;
 
-        $updatedCount = OvertimeRequest::where('tenant_id', $tenantId)
+        $query = OvertimeRequest::where('tenant_id', $tenantId)
             ->whereIn('id', $request->request_ids)
-            ->where('status', 'pending')
-            ->update([
-                'status' => 'approved',
-                'approved_by' => auth()->user()->id,
-                'approved_at' => now(),
-            ]);
+            ->where('status', 'pending');
+
+        // Managers may only bulk-approve their own reportees.
+        if ($authUser->role === 'manager') {
+            $query->whereIn('user_id', function ($q) use ($authUser, $tenantId) {
+                $q->select('user_id')
+                    ->from('user_job_details')
+                    ->where('reporting_head', $authUser->id)
+                    ->where('tenant_id', $tenantId);
+            });
+        }
+
+        $updatedCount = $query->update([
+            'status' => 'approved',
+            'approved_by' => $authUser->id,
+            // populate approved_hours so payroll does not fall back to the raw request
+            'approved_hours' => DB::raw('COALESCE(approved_hours, overtime_hours)'),
+            'approved_at' => now(),
+        ]);
 
         return response()->json([
             'success' => true,
