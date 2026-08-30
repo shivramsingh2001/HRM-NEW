@@ -7,7 +7,6 @@ use App\Notifications\MissedCheckInNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class CheckMissedCheckIns extends Command
@@ -86,9 +85,11 @@ class CheckMissedCheckIns extends Command
                 ->join('shifts', 'shifts.id', '=', 'user_shifts.shift_id')
                 ->whereDate('user_shifts.date', $checkDate)
                 ->where('user_shifts.status', 'upcoming')
+                ->where('users.status', 1) // don't alert about deactivated staff
                 ->select(
                     'user_shifts.id as user_shift_id',
                     'user_shifts.user_id',
+                    'user_shifts.missed_checkin_notified',
                     'users.name as user_name',
                     'users.tenant_id as tenant_id',
                     'shifts.start_time',
@@ -152,10 +153,9 @@ class CheckMissedCheckIns extends Command
                     continue;
                 }
 
-                // Check if we've already sent a notification today (unless force send)
-                $notificationSent = $this->checkIfNotificationSent($userShift->user_id, $checkDate);
-
-                if ($notificationSent && !$forceSend) {
+                // Already notified for this shift row? (persistent per-day flag on
+                // user_shifts — survives cache flushes / the array cache driver.)
+                if ($userShift->missed_checkin_notified && !$forceSend) {
                     $alreadyNotified++;
                     continue;
                 }
@@ -166,10 +166,9 @@ class CheckMissedCheckIns extends Command
                 if ($successCount > 0) {
                     $notificationsSent++;
 
-                    // Only cache as "sent" once something actually succeeded.
-                    // Prevents a failed run from permanently blocking retries
-                    // for the rest of the day.
-                    $this->markNotificationSent($userShift->user_id, $checkDate);
+                    // Only mark once something actually succeeded, so a fully
+                    // failed run does not permanently block retries.
+                    $this->markNotificationSent($userShift->user_shift_id);
 
                     Log::warning('Missed check-in detected and notified', [
                         'user_id' => $userShift->user_id,
@@ -236,30 +235,19 @@ class CheckMissedCheckIns extends Command
     }
 
     /**
-     * Check if notification was already sent for this user on this date
+     * Mark the user_shift row as notified (persistent per-day dedupe).
      */
-    private function checkIfNotificationSent($userId, $date)
+    private function markNotificationSent($userShiftId)
     {
-        $cacheKey = "missed_checkin_{$userId}_{$date->format('Y-m-d')}";
-        return Cache::has($cacheKey);
-    }
+        DB::table('user_shifts')
+            ->where('id', $userShiftId)
+            ->update([
+                'missed_checkin_notified' => 1,
+                'missed_checkin_notified_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-    /**
-     * Mark that notification was sent for this user on this date
-     */
-    private function markNotificationSent($userId, $date)
-    {
-        $cacheKey = "missed_checkin_{$userId}_{$date->format('Y-m-d')}";
-        // Store for 24 hours (until end of day)
-        $expiresAt = $date->copy()->endOfDay();
-        Cache::put($cacheKey, true, $expiresAt);
-
-        Log::info('Marked notification as sent', [
-            'user_id' => $userId,
-            'date' => $date->toDateString(),
-            'cache_key' => $cacheKey,
-            'expires_at' => $expiresAt->toDateTimeString()
-        ]);
+        Log::info('Marked missed check-in notification as sent', ['user_shift_id' => $userShiftId]);
     }
 
     /**
