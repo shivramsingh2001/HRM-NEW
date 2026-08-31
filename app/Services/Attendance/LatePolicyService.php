@@ -92,8 +92,19 @@ class LatePolicyService
     {
         $status = $row->attendance_status;
 
-        // Manual leave markings (Feature A) pass straight through.
-        if (in_array($status, ['on_leave'], true)) {
+        // A row set by hand (admin / HR / manager via the mark-attendance
+        // screen) is authoritative — never reclassify it from worked hours.
+        $isManual = ($row->attendance_type === 'manual') || !empty($row->marked_by);
+        if ($isManual) {
+            return match ($status) {
+                'on_leave', 'absent' => [$status, 0.00],
+                'half_day', 'first_half_leave', 'second_half_leave' => [$status, 0.50],
+                default => [$status ?: 'present', 1.00],
+            };
+        }
+
+        // Auto-captured leave markings pass straight through too.
+        if ($status === 'on_leave') {
             return ['on_leave', 0.00];
         }
         if (in_array($status, ['first_half_leave', 'second_half_leave'], true)) {
