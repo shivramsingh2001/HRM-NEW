@@ -265,7 +265,9 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::get('/attendance-summary', [TeamController::class, 'attendanceSummary'])->name('attendance-summary');
             Route::get('/attendance-summary/export', [TeamController::class, 'exportAttendanceSummary'])->name('attendance-summary.export');
             Route::get('/attendance-summary/quick', [TeamController::class, 'getQuickSummary'])->name('attendance-summary.quick');
-             Route::post('/attendance-mark', [TeamController::class, 'markAttendance'])->name('mark-attendance');
+             Route::post('/attendance-mark', [TeamController::class, 'markAttendance'])
+                ->middleware('role:admin,hr,manager')
+                ->name('mark-attendance');
         });
 
         Route::prefix('branches')->name('branch.')->group(function () {

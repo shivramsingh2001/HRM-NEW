@@ -3006,286 +3006,54 @@ class TeamController extends Controller
     }
 
     /**
-     * Mark attendance for a user (Admin/HR only)
+     * Mark a day's attendance by hand (admin / HR, or a manager for their own
+     * reportees). Supports present / absent / half day / on leave /
+     * first- or second-half leave. Delegates to ManualAttendanceService.
      */
-     public function markAttendance(Request $request)
+    public function markAttendance(\App\Http\Requests\MarkAttendanceRequest $request, \App\Services\Attendance\ManualAttendanceService $service)
     {
         try {
-            $authUser = Auth::user();
-            $tenantId = $authUser->tenant_id ?? session('tenant_id');
+            $actor = Auth::user();
 
-            // Check if user is admin or HR
-            if (!in_array($authUser->role, ['admin', 'hr'], true)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Only admin and HR can mark attendance.'
-                ], 403);
-            }
+            $result = $service->mark([
+                'user_id' => (int) $request->input('user_id'),
+                'tenant_id' => (int) $actor->tenant_id,
+                'date' => $request->input('date'),
+                'status' => $request->attendanceStatus(),
+                'clock_in' => $request->input('clock_in'),
+                'clock_out' => $request->input('clock_out'),
+                'leave_type_id' => $request->input('leave_type_id'),
+                'remarks' => $request->input('remarks'),
+            ], $actor);
 
-            if (!$tenantId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unable to resolve your company. Please sign in again.'
-                ], 422);
-            }
-
-            $validator = Validator::make($request->all(), [
-                // user_id must belong to the caller's tenant
-                'user_id' => [
-                    'required',
-                    \Illuminate\Validation\Rule::exists('users', 'id')->where('tenant_id', $tenantId),
-                ],
-                'date' => 'required|date',
-                'clock_in' => 'required|date_format:H:i',
-                'clock_out' => 'required|date_format:H:i',
-                'remarks' => 'nullable|string|max:500'
-            ], [
-                'user_id.exists' => 'Employee not found in your company.',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $validator->errors()->first()
-                ], 200);
-            }
-
-            $userId = $request->user_id;
-            $date = $request->date;
-            $clockInTimeInput = $request->clock_in;
-            $clockOutTimeInput = $request->clock_out;
-
-            // Get user's shift for the date
-            $userShiftData = $this->getUserShiftForDate($userId, $date, $tenantId);
-            
-            $shift = null;
-            $shiftId = null;
-            $scheduledShiftStart = null;
-            $scheduledShiftEnd = null;
-            $lateMinutes = 0;
-            $attendanceStatus = 'present';
-            $branchId = null;
-
-            if ($userShiftData) {
-                // Get shift details from shifts table
-                $shift = DB::table('shifts')
-                    ->where('id', $userShiftData['shift_id'])
-                    ->where('tenant_id', $tenantId)
-                    ->first();
-
-                if ($shift) {
-                    $shiftId = $shift->id;
-                    $scheduledShiftStart = $shift->start_time;
-                    $scheduledShiftEnd = $shift->end_time;
-                }
-            }
-
-            // Check if shift is overnight
-            $isOvernightShift = false;
-            if ($shift) {
-                $shiftStart = Carbon::parse($shift->start_time);
-                $shiftEnd = Carbon::parse($shift->end_time);
-                // If shift end time is less than or equal to shift start time, it's overnight
-                if ($shiftEnd->lte($shiftStart)) {
-                    $isOvernightShift = true;
-                }
-            }
-
-            // Parse clock in time
-            $clockIn = Carbon::parse($date . ' ' . $clockInTimeInput);
-
-            // Parse clock out time - check if it's next day for overnight shifts
-            if ($isOvernightShift) {
-                // For overnight shifts, clock out is on the next day
-                $clockOutDate = Carbon::parse($date)->addDay()->format('Y-m-d');
-                $clockOut = Carbon::parse($clockOutDate . ' ' . $clockOutTimeInput);
-                
-                // If clock out time is before clock in time on the same date, it's definitely next day
-                $clockInTimeOnly = Carbon::parse($clockInTimeInput);
-                $clockOutTimeOnly = Carbon::parse($clockOutTimeInput);
-                
-                if ($clockOutTimeOnly->lt($clockInTimeOnly)) {
-                    // Already using next day
-                } else {
-                    // Check if the shift actually starts at night and ends next day
-                    $shiftStartHour = Carbon::parse($scheduledShiftStart)->hour;
-                    if ($shiftStartHour >= 18) { // 6 PM or later
-                        // It's a night shift, clock out should be next day
-                        $clockOut = Carbon::parse($date . ' ' . $clockOutTimeInput)->addDay();
-                    }
-                }
-            } else {
-                // Regular shift (same day)
-                $clockOut = Carbon::parse($date . ' ' . $clockOutTimeInput);
-                
-                // If clock out is before clock in, it might be overnight but not marked as overnight
-                if ($clockOut->lt($clockIn)) {
-                    $clockOut->addDay();
-                }
-            }
-
-            // Ensure clock out is after clock in
-            if ($clockOut->lte($clockIn)) {
-                $clockOut->addDay();
-            }
-
-            // Check if attendance already exists
-            $existingAttendance = DB::table('attendances')
-                ->where('user_id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->whereDate('date', $date)
-                ->first();
-
-            // Get user details
-            $user = DB::table('users')
-                ->where('id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->first();
-
-            // Get user job details
-            $userJobDetail = DB::table('user_job_details')
-                ->where('user_id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->first();
-
-            // Calculate late minutes (only if shift exists)
-            if ($shift) {
-                $scheduledStart = Carbon::parse($date . ' ' . $shift->start_time);
-                $graceMinutes = $shift->grace_minutes ?? 0;
-                
-                // For overnight shifts, adjust scheduled start time
-                if ($isOvernightShift) {
-                    // If shift starts at night and ends in morning
-                    $shiftStartHour = Carbon::parse($shift->start_time)->hour;
-                    if ($shiftStartHour >= 18) {
-                        // Night shift starts at 8 PM
-                        $scheduledStart = Carbon::parse($date . ' ' . $shift->start_time);
-                    }
-                }
-                
-                $minutesAfterShift = $scheduledStart->diffInMinutes($clockIn, false);
-                
-                // Check if clock in is after scheduled start
-                if ($clockIn->gt($scheduledStart)) {
-                    // For overnight shifts, compare appropriately
-                    if ($isOvernightShift) {
-                        $shiftStartTime = Carbon::parse($shift->start_time);
-                        $clockInTimeOnly = Carbon::parse($clockInTimeInput);
-                        
-                        // If clock in is before shift start time on the same day, it's late
-                        if ($shiftStartTime->hour >= 18) {
-                            // Night shift: 8 PM start
-                            $scheduledStartForComparison = Carbon::parse($date . ' ' . $shift->start_time);
-                            if ($clockIn->gt($scheduledStartForComparison)) {
-                                $minutesAfterShift = $scheduledStartForComparison->diffInMinutes($clockIn, false);
-                                if ($minutesAfterShift > $graceMinutes) {
-                                    $lateMinutes = $minutesAfterShift;
-                                    $attendanceStatus = 'late';
-                                }
-                            }
-                        }
-                    } else {
-                        // Regular shift
-                        if ($minutesAfterShift > $graceMinutes) {
-                            $lateMinutes = $minutesAfterShift;
-                            $attendanceStatus = 'late';
-                        } else {
-                            $lateMinutes = 0;
-                            $attendanceStatus = 'present';
-                        }
-                    }
-                } else {
-                    $lateMinutes = 0;
-                    $attendanceStatus = 'present';
-                }
-            }
-
-            // Get branch ID
-            if ($userJobDetail) {
-                $branchId = $userJobDetail->office_branch ?? null;
-            }
-
-            // Calculate total hours
-            $diff = $clockIn->diff($clockOut);
-            $totalHoursDecimal = $diff->h + ($diff->i / 60) + ($diff->s / 3600);
-            $totalHoursDecimal = round($totalHoursDecimal, 2);
-            $totalHoursTime = $diff->format('%H:%I:%S');
-
-            // Prepare attendance data
-            $attendanceData = [
-                'user_id' => $userId,
-                'tenant_id' => $tenantId,
-                'date' => $date,
-                'shift_id' => $shiftId,
-                'branch_id' => $branchId,
-                'clock_in' => $clockIn,
-                'clock_out' => $clockOut,
-                'total_hours' => $totalHoursTime,
-                'worked_hours' => $totalHoursDecimal,
-                'scheduled_shift_start' => $scheduledShiftStart,
-                'scheduled_shift_end' => $scheduledShiftEnd,
-                'late_minutes' => $lateMinutes,
-                'attendance_status' => 'present',
-                'clock_in_address' => 'Admin Marked - ' . $authUser->name,
-                'clock_out_address' => 'Admin Marked - ' . $authUser->name,
-                'status' => 1,
-                'remarks' => $request->remarks ?: 'Attendance marked by: ' . $authUser->name,
-                'marked_by' => $authUser->id,
-                'updated_at' => now()
-            ];
-
-            if ($existingAttendance) {
-                // UPDATE existing attendance record
-                DB::table('attendances')
-                    ->where('id', $existingAttendance->id)
-                    ->where('tenant_id', $tenantId)
-                    ->update($attendanceData);
-
-                $attendanceId = $existingAttendance->id;
-                $message = 'Attendance updated successfully for ' . Carbon::parse($date)->format('d M Y');
-            } else {
-                // CREATE new attendance record
-                $attendanceData['created_at'] = now();
-                $attendanceId = DB::table('attendances')->insertGetId($attendanceData);
-                $message = 'Attendance marked successfully for ' . Carbon::parse($date)->format('d M Y');
-            }
-
-            // Update user_shift status
-            DB::table('user_shifts')
-                ->where('user_id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->where('date', $date)
-                ->update(['status' => 'complete', 'updated_at' => now()]);
-
-            // Get the attendance record
-            $attendance = DB::table('attendances')
-                ->where('id', $attendanceId)
-                ->where('tenant_id', $tenantId)
-                ->first();
+            $attendance = $result['attendance'];
+            $shift = $result['shift'];
+            $dateLabel = \Carbon\Carbon::parse($request->input('date'))->format('d M Y');
 
             return response()->json([
                 'success' => true,
-                'message' => $message,
+                'message' => ($result['is_update'] ? 'Attendance updated' : 'Attendance marked')
+                    . ' successfully for ' . $dateLabel,
                 'data' => $attendance,
-                'is_update' => $existingAttendance ? true : false,
+                'is_update' => $result['is_update'],
+                'leave_created' => $result['leave'] ? $result['leave']->leave_id : null,
                 'shift_details' => $shift ? [
                     'shift_name' => $shift->name ?? null,
-                    'shift_start' => $scheduledShiftStart,
-                    'shift_end' => $scheduledShiftEnd,
-                    'late_minutes' => $lateMinutes,
-                    'attendance_status' => $attendanceStatus,
-                    'is_overnight' => $isOvernightShift,
-                    'clock_in' => $clockIn->format('Y-m-d H:i:s'),
-                    'clock_out' => $clockOut->format('Y-m-d H:i:s')
-                ] : null
+                    'shift_start' => $shift->start_time ?? null,
+                    'shift_end' => $shift->end_time ?? null,
+                    'late_minutes' => $attendance->late_minutes,
+                    'attendance_status' => $attendance->attendance_status,
+                    'effective_status' => $attendance->effective_status,
+                    'clock_in' => $attendance->clock_in,
+                    'clock_out' => $attendance->clock_out,
+                ] : null,
             ], 200);
-
         } catch (Exception $e) {
             Log::error('Error in markAttendance: ' . $e->getMessage());
             Log::error($e->getTraceAsString());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to mark attendance: ' . $e->getMessage()
+                'message' => 'Failed to mark attendance. Please try again.',
             ], 500);
         }
     }
