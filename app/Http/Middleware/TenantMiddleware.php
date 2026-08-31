@@ -21,8 +21,64 @@ class TenantMiddleware
             return $this->handleApiRequest($request, $next);
         }
 
+        // Local development: no *.shurttech.com host available.
+        if ($this->isLocalHost($host)) {
+            return $this->handleLocalRequest($request, $next);
+        }
+
         // Handle web requests with subdomain
         return $this->handleWebRequest($request, $next, $host, $mainDomain);
+    }
+
+    /**
+     * localhost / 127.0.0.1 / *.localhost / *.test / bare IPs — i.e. any host
+     * that can't carry a real tenant subdomain.
+     */
+    private function isLocalHost(string $host): bool
+    {
+        $host = strtolower($host);
+
+        return in_array($host, ['localhost', '127.0.0.1', '0.0.0.0', '::1'], true)
+            || str_ends_with($host, '.localhost')
+            || str_ends_with($host, '.test')
+            || filter_var($host, FILTER_VALIDATE_IP) !== false;
+    }
+
+    /**
+     * Resolve a tenant for a local-dev request. Tries, in order: the
+     * authenticated user, ?tenant=, the X-Tenant header, the session, the
+     * LOCAL_TENANT_ID env var, then the first active tenant. Never 404s.
+     */
+    private function handleLocalRequest($request, $next)
+    {
+        $identifier = $request->query('tenant')
+            ?? $request->header('X-Tenant')
+            ?? $request->session()->get('tenant_id')
+            ?? env('LOCAL_TENANT_ID');
+
+        $tenant = null;
+
+        if ($request->user()) {
+            $tenant = Tenant::find($request->user()->tenant_id);
+        }
+
+        if (!$tenant && $identifier) {
+            $tenant = Tenant::where('status', 'active')
+                ->where(function ($q) use ($identifier) {
+                    $q->where('id', $identifier)->orWhere('subdomain', $identifier);
+                })
+                ->first();
+        }
+
+        if (!$tenant) {
+            $tenant = Tenant::where('status', 'active')->orderBy('id')->first();
+        }
+
+        if ($tenant) {
+            $this->setTenantContext($tenant, $request);
+        }
+
+        return $next($request);
     }
 
     /**
