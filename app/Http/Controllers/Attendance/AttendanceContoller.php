@@ -733,9 +733,8 @@ class AttendanceContoller extends Controller
                 'message' => null
             ]);
         } catch (Exception $e) {
-            dd($e->getMessage());
             Log::error('Error in viewAttendanceSessions: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to load attendance sessions: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load attendance sessions. Please try again.');
         }
     }
 }

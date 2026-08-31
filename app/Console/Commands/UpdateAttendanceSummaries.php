@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\DB;
 class UpdateAttendanceSummaries extends Command
 {
     protected $signature = 'attendance:update-summaries
-                            {--month= : Month in Y-m format (default: current month)}
+                            {--month= : Single month in Y-m format (default: current month)}
+                            {--from= : Start month Y-m for a range backfill}
+                            {--to= : End month Y-m for a range backfill (default: current month)}
                             {--user= : Specific user ID to update}
                             {--tenant= : Restrict to a single tenant ID}
                             {--force : Delete and recalculate existing summaries}
@@ -29,13 +31,26 @@ class UpdateAttendanceSummaries extends Command
 
     public function handle(): int
     {
-        $month = $this->option('month') ?: Carbon::now()->format('Y-m');
         $userId = $this->option('user');
         $tenantId = $this->option('tenant');
         $force = (bool) $this->option('force');
         $dryRun = (bool) $this->option('dry-run');
 
-        $this->info("Attendance summary recalculation — month: {$month}" . ($dryRun ? '  [DRY RUN]' : ''));
+        // Build the list of months to process.
+        if ($this->option('from')) {
+            $cursor = Carbon::parse($this->option('from') . '-01')->startOfMonth();
+            $end = Carbon::parse(($this->option('to') ?: Carbon::now()->format('Y-m')) . '-01')->startOfMonth();
+            $months = [];
+            while ($cursor->lte($end)) {
+                $months[] = $cursor->format('Y-m');
+                $cursor->addMonth();
+            }
+        } else {
+            $months = [$this->option('month') ?: Carbon::now()->format('Y-m')];
+        }
+
+        $this->info('Attendance summary recalculation — months: ' . implode(', ', $months)
+            . ($dryRun ? '  [DRY RUN]' : ''));
 
         // TenantTrait's global scope is a no-op in the CLI, so this spans every
         // tenant by design; the summary service re-scopes per user internally.
@@ -50,13 +65,14 @@ class UpdateAttendanceSummaries extends Command
             return self::FAILURE;
         }
 
-        $this->info("Processing {$users->count()} user(s)");
-        $bar = $this->output->createProgressBar($users->count());
+        $this->info("Processing {$users->count()} user(s) x " . count($months) . ' month(s)');
+        $bar = $this->output->createProgressBar($users->count() * count($months));
         $bar->start();
 
         $ok = 0;
         $failed = [];
 
+        foreach ($months as $month) {
         foreach ($users as $user) {
             try {
                 DB::beginTransaction();
@@ -85,6 +101,7 @@ class UpdateAttendanceSummaries extends Command
 
             $bar->advance();
         }
+        } // months
 
         $bar->finish();
         $this->newLine(2);

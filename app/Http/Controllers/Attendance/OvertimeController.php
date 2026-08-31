@@ -444,9 +444,8 @@ class OvertimeController extends Controller
 
             return view('client.overtime.view-all-request', $data);
         } catch (\Exception $e) {
-            dd($e->getMessage());
             \Log::error('Error in overtime viewAll: ' . $e->getMessage());
-            return back()->with('error', 'Something went wrong: ' . $e->getMessage());
+            return back()->with('error', 'Something went wrong. Please try again.');
         }
     }
 
