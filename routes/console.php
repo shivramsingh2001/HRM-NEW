@@ -1,15 +1,16 @@
 <?php
 
 use Illuminate\Support\Facades\Schedule;
-use App\Console\Commands\CheckMissedCheckIns;
 
-// Run every 5 minutes to check for missed check-ins
-// Schedule::command('attendance:check-missed-checkins')
-//     ->everyFiveMinutes()
-//     ->withoutOverlapping()
-//     ->runInBackground()
-//     ->appendOutputTo(storage_path('logs/missed-checkin.log'));
-    
+// Alert HR/manager when an employee misses check-in past the grace period.
+// Dedupe is persisted on user_shifts.missed_checkin_notified; FirebaseService
+// degrades gracefully when credentials are absent.
+Schedule::command('attendance:check-missed-checkins')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/missed-checkin.log'));
+
 Schedule::command('leaves:credit-weekly')
     ->weekly()
     ->mondays()
