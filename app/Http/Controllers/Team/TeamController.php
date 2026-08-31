@@ -120,13 +120,20 @@ class TeamController extends Controller
             );
 
 
+            // Leave types for the manual "mark attendance" modal (leave statuses)
+            $leaveTypes = \App\Models\LeaveType::where('tenant_id', $authUser->tenant_id)
+                ->where('status', 1)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
             // Prepare data for view
             $data = [
                 'teamData' => $teamDataPaginated,
                 'statusCount' => $statusCount,
                 'currentDate' => $currentDate,
                 'dayName' => $dayName,
-                'authUser' => $authUser
+                'authUser' => $authUser,
+                'leaveTypes' => $leaveTypes,
             ];
 
             return view('client.team.view-team-member', $data);

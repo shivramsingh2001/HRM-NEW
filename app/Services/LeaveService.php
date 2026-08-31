@@ -50,7 +50,8 @@ class LeaveService
 
         $this->applyLedger($leave, $deduct);
 
-        return $leave;
+        // leave_id (LV-xxxxxx) is set by a BEFORE INSERT trigger — reload it.
+        return $leave->refresh();
     }
 
     private function applyLedger(Leave $leave, bool $deduct): void

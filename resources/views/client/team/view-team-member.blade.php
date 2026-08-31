@@ -1455,13 +1455,30 @@
                         <input type="hidden" name="user_id" id="markUserId">
                         <input type="hidden" name="date" id="attendanceDate" value="{{ request('date', date('Y-m-d')) }}">
 
-                        <div class="row g-3">
+                        <!-- Attendance Status Selection -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="feather-check-circle me-1" style="color: #4f46e5;"></i>
+                                Attendance Status <span class="required">*</span>
+                            </label>
+                            <select class="attendance-status-select form-control" name="status" id="attendanceStatus">
+                                <option value="present">✅ Present (Full Day)</option>
+                                <option value="half_day">🌓 Half Day</option>
+                                <option value="first_half_leave">🌅 First Half Leave (Morning)</option>
+                                <option value="second_half_leave">🌇 Second Half Leave (Afternoon)</option>
+                                <option value="on_leave">📅 On Leave (Full Day)</option>
+                                <option value="absent">❌ Absent</option>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <div class="row g-3" id="clockTimeFields">
                             <div class="col-md-6">
                                 <label class="form-label">
                                     <i class="feather-clock me-1" style="color: #4f46e5;"></i>
                                     Clock In Time <span class="required">*</span>
                                 </label>
-                                <input type="time" class="form-control" name="clock_in" id="clockInTime" required>
+                                <input type="time" class="form-control" name="clock_in" id="clockInTime">
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="col-md-6">
@@ -1469,28 +1486,27 @@
                                     <i class="feather-clock me-1" style="color: #4f46e5;"></i>
                                     Clock Out Time <span class="required">*</span>
                                 </label>
-                                <input type="time" class="form-control" name="clock_out" id="clockOutTime" required>
+                                <input type="time" class="form-control" name="clock_out" id="clockOutTime">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
 
-                        <!-- Attendance Status Selection - Half Day Support -->
-                        <div class="mt-3">
+                        <div class="mt-3" id="leaveTypeField" style="display: none;">
                             <label class="form-label">
-                                <i class="feather-check-circle me-1" style="color: #4f46e5;"></i>
-                                Attendance Status <span class="required">*</span>
+                                <i class="feather-calendar me-1" style="color: #4f46e5;"></i>
+                                Leave Type <span class="required">*</span>
                             </label>
-                            <select class="attendance-status-select" name="attendance_status" id="attendanceStatus">
-                                <option value="present">✅ Present (Full Day)</option>
-                                <!--<option value="halfday">🌓 Half Day</option>-->
-                                <!--<option value="first_half">🌅 First Half (Morning)</option>-->
-                                <!--<option value="second_half">🌇 Second Half (Afternoon)</option>-->
-                                <!--<option value="on_leave">📅 On Leave</option>-->
+                            <select class="form-control" name="leave_type_id" id="leaveTypeId">
+                                <option value="">-- Select leave type --</option>
+                                @foreach (($leaveTypes ?? []) as $lt)
+                                    <option value="{{ $lt->id }}">{{ $lt->name }}</option>
+                                @endforeach
                             </select>
                             <div class="invalid-feedback"></div>
                             <small class="text-muted" style="font-size: 11px; display: block; margin-top: 4px;">
                                 <i class="feather-info me-1"></i>
-                                Select the appropriate attendance status for this employee
+                                An approved leave will be created and the employee's balance deducted
+                                (loss of pay if the balance is short).
                             </small>
                         </div>
 
@@ -1534,8 +1550,10 @@
                 $('#filterForm').submit();
             });
 
-            // Auto-submit on status change
-            $('select[name="status"]').on('change', function() {
+            // Auto-submit the LIST FILTER on status change (scoped to the filter
+            // form so it does not fire for the mark-attendance modal's own
+            // status select, which also uses name="status").
+            $('#filterForm select[name="status"]').on('change', function() {
                 $('#filterForm').submit();
             });
 
@@ -1669,64 +1687,81 @@
         /**
          * Submit the mark attendance form via AJAX
          */
+        // Statuses that need clock in/out; the rest are leave/absent.
+        const CLOCK_STATUSES = ['present', 'half_day'];
+        const LEAVE_STATUSES = ['on_leave', 'first_half_leave', 'second_half_leave'];
+
+        function onMarkStatusChange() {
+            const status = document.getElementById('attendanceStatus').value;
+            const needsClock = CLOCK_STATUSES.includes(status);
+            const isLeave = LEAVE_STATUSES.includes(status);
+            document.getElementById('clockTimeFields').style.display = needsClock ? '' : 'none';
+            document.getElementById('leaveTypeField').style.display = isLeave ? '' : 'none';
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const sel = document.getElementById('attendanceStatus');
+            if (sel) {
+                sel.addEventListener('change', onMarkStatusChange);
+                onMarkStatusChange();
+            }
+        });
+
         function submitMarkAttendance() {
             const form = document.getElementById('markAttendanceForm');
             const formData = new FormData(form);
 
-            // Get time values and format them correctly (HH:MM without seconds)
+            const status = document.getElementById('attendanceStatus').value;
+            if (!status) {
+                toastr.error('Please select an attendance status');
+                return;
+            }
+            const needsClock = CLOCK_STATUSES.includes(status);
+            const isLeave = LEAVE_STATUSES.includes(status);
+
             let clockIn = document.getElementById('clockInTime').value;
             let clockOut = document.getElementById('clockOutTime').value;
-            let attendanceStatus = document.getElementById('attendanceStatus').value;
 
-            // Validate clock in time
-            if (!clockIn) {
-                toastr.error('Please select Clock In time');
-                return;
-            }
-
-            // Validate clock out time
-            if (!clockOut) {
-                toastr.error('Please select Clock Out time');
-                return;
-            }
-
-            // Validate attendance status
-            if (!attendanceStatus) {
-                toastr.error('Please select attendance status');
-                return;
-            }
-
-            // Ensure time format is HH:MM (remove seconds if present)
-            clockIn = clockIn.substring(0, 5);
-            clockOut = clockOut.substring(0, 5);
-
-            // Validate time format
-            const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-            if (!timeRegex.test(clockIn)) {
-                toastr.error('Invalid Clock In time format. Please use HH:MM (24-hour format)');
-                return;
-            }
-            if (!timeRegex.test(clockOut)) {
-                toastr.error('Invalid Clock Out time format. Please use HH:MM (24-hour format)');
-                return;
-            }
-
-            // Check if it's an overnight shift
-            const shiftType = document.getElementById('modalShiftType');
-            const isOvernight = shiftType.textContent.includes('Overnight');
-            
-            // For regular shifts, validate that clock out is after clock in
-            if (!isOvernight) {
-                if (clockOut <= clockIn) {
-                    toastr.error('Clock Out time must be after Clock In time for regular shifts');
+            if (needsClock) {
+                if (!clockIn || !clockOut) {
+                    toastr.error('Clock In and Clock Out are required for ' + status.replace('_', ' '));
                     return;
                 }
+                clockIn = clockIn.substring(0, 5);
+                clockOut = clockOut.substring(0, 5);
+
+                const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+                if (!timeRegex.test(clockIn) || !timeRegex.test(clockOut)) {
+                    toastr.error('Invalid time format. Please use HH:MM (24-hour).');
+                    return;
+                }
+
+                const shiftType = document.getElementById('modalShiftType');
+                const isOvernight = shiftType && shiftType.textContent.includes('Overnight');
+                if (!isOvernight && clockOut <= clockIn) {
+                    toastr.error('Clock Out must be after Clock In for a regular shift');
+                    return;
+                }
+
+                formData.set('clock_in', clockIn);
+                formData.set('clock_out', clockOut);
+            } else {
+                formData.delete('clock_in');
+                formData.delete('clock_out');
             }
 
-            // Update form data with formatted times and status
-            formData.set('clock_in', clockIn);
-            formData.set('clock_out', clockOut);
-            formData.set('attendance_status', attendanceStatus);
+            if (isLeave) {
+                const ltId = document.getElementById('leaveTypeId').value;
+                if (!ltId) {
+                    toastr.error('Please select a leave type');
+                    return;
+                }
+                formData.set('leave_type_id', ltId);
+            } else {
+                formData.delete('leave_type_id');
+            }
+
+            formData.set('status', status);
+            let attendanceStatus = status;
 
             // Show loading state
             const submitBtn = document.querySelector('.btn-primary-custom');
@@ -1770,10 +1805,11 @@
                         // Add status info
                         const statusLabels = {
                             'present': 'Present (Full Day)',
-                            'halfday': 'Half Day',
-                            'first_half': 'First Half (Morning)',
-                            'second_half': 'Second Half (Afternoon)',
-                            'on_leave': 'On Leave'
+                            'half_day': 'Half Day',
+                            'first_half_leave': 'First Half Leave',
+                            'second_half_leave': 'Second Half Leave',
+                            'on_leave': 'On Leave',
+                            'absent': 'Absent'
                         };
                         const statusLabel = statusLabels[attendanceStatus] || attendanceStatus;
                         message += ' | Status: ' + statusLabel;
