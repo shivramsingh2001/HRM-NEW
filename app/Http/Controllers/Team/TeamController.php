@@ -32,6 +32,8 @@ use Carbon\CarbonPeriod;
 
 class TeamController extends Controller
 {
+    use \App\Http\Controllers\Concerns\SanitizesCsv;
+
     /**
      * Display team members based on user role
      */
@@ -840,9 +842,9 @@ class TeamController extends Controller
                     $summary['present']++;
                     break;
                 case 'halfday':
+                    // 0.5 present only — do not also add 0.5 to absent.
                     $summary['halfday']++;
                     $summary['present'] += 0.5;
-                    $summary['absent'] += 0.5;
                     break;
                 case 'Checked In Only':
                     $summary['checked_in_only']++;
@@ -1489,9 +1491,11 @@ class TeamController extends Controller
                     if ($status === 'Present') {
                         $present++;
                     } elseif ($status === 'halfday') {
+                        // A worked half day counts as 0.5 present — it must NOT
+                        // also add 0.5 to absent (that let present + absent
+                        // exceed the number of working days).
                         $halfDayCount++;
                         $present += 0.5;
-                        $absent += 0.5;
                     } else {
                         $absent++;
                     }
@@ -1569,7 +1573,7 @@ class TeamController extends Controller
             $callback = function () use ($summaryData, $selectedDate) {
                 $file = fopen('php://output', 'w');
 
-                fputcsv($file, [
+                $this->writeCsvRow($file, [
                     'Employee ID',
                     'Employee Name',
                     'Email',
@@ -1586,7 +1590,7 @@ class TeamController extends Controller
                 ]);
 
                 foreach ($summaryData as $row) {
-                    fputcsv($file, [
+                    $this->writeCsvRow($file, [
                         $row['employee_id'],
                         $row['name'],
                         $row['email'],
@@ -1603,9 +1607,9 @@ class TeamController extends Controller
                     ]);
                 }
 
-                fputcsv($file, []);
-                fputcsv($file, ['SUMMARY', '', '', '', '', '', '', '', '', '', '', '']);
-                fputcsv($file, [
+                $this->writeCsvRow($file, []);
+                $this->writeCsvRow($file, ['SUMMARY', '', '', '', '', '', '', '', '', '', '', '']);
+                $this->writeCsvRow($file, [
                     'Total Employees: ' . count($summaryData),
                     'Total Present: ' . array_sum(array_column($summaryData, 'present')),
                     'Total halfdays: ' . array_sum(array_column($summaryData, 'halfday') ?? [0]),
@@ -2198,11 +2202,11 @@ class TeamController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
             // Headers
-            fputcsv($handle, [
+            $this->writeCsvRow($handle, [
                 'Branch: ' . $branch->name . ' (' . ($branch->code ?? 'N/A') . ')',
                 'Date: ' . $dateObj->format('d M Y'),
             ]);
-            fputcsv($handle, []);
+            $this->writeCsvRow($handle, []);
 
             // Main header
             $headers = [
@@ -2219,7 +2223,7 @@ class TeamController extends Controller
                 'Late (mins)',
                 'Early Exit (mins)'
             ];
-            fputcsv($handle, $headers);
+            $this->writeCsvRow($handle, $headers);
 
             // Data rows
             $srNo = 1;
@@ -2305,7 +2309,7 @@ class TeamController extends Controller
                     ? number_format((float)$attendance->total_hours, 2) . ' hrs' 
                     : '—';
 
-                fputcsv($handle, [
+                $this->writeCsvRow($handle, [
                     $srNo++,
                     $employee->employee_id ?? 'N/A',
                     $employee->name,
@@ -2322,9 +2326,9 @@ class TeamController extends Controller
             }
 
             // Add summary section
-            fputcsv($handle, []);
-            fputcsv($handle, ['SUMMARY']);
-            fputcsv($handle, [
+            $this->writeCsvRow($handle, []);
+            $this->writeCsvRow($handle, ['SUMMARY']);
+            $this->writeCsvRow($handle, [
                 'Total Employees',
                 'Present',
                 'Absent',
@@ -2332,7 +2336,7 @@ class TeamController extends Controller
                 'Holiday',
                 'Week Off'
             ]);
-            fputcsv($handle, [
+            $this->writeCsvRow($handle, [
                 count($employees),
                 $stats['present'],
                 $stats['absent'],
@@ -2909,7 +2913,7 @@ class TeamController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
             // Headers
-            fputcsv($handle, [
+            $this->writeCsvRow($handle, [
                 'SR NO.',
                 'Employee Name',
                 'Employee ID',
@@ -2966,7 +2970,7 @@ class TeamController extends Controller
                     ? Carbon::parse($row['clock_out'])->format('d M Y h:i A')
                     : '—';
 
-                fputcsv($handle, [
+                $this->writeCsvRow($handle, [
                     $srNo++,
                     $row['employee_name'],
                     $row['employee_id'],

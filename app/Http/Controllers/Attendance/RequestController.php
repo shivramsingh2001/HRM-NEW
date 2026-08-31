@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
 
 class RequestController extends Controller
 {
+    use \App\Http\Controllers\Concerns\SanitizesCsv;
+
      protected $notificationService;
 
     public function __construct(RequestNotificationService $notificationService)
@@ -499,7 +501,7 @@ class RequestController extends Controller
             $handle = fopen('php://temp', 'w+');
 
             // Add headers
-            fputcsv($handle, [
+            $this->writeCsvRow($handle, [
                 'ID',
                 'Request Type',
                 'Start Date',
@@ -513,7 +515,7 @@ class RequestController extends Controller
 
             // Add data
             foreach ($requests as $req) {
-                fputcsv($handle, [
+                $this->writeCsvRow($handle, [
                     $req->id,
                     $req->requestType->type_name,
                     $req->start_date->format('d-m-Y'),
@@ -966,7 +968,7 @@ class RequestController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
             // Add headers
-            fputcsv($handle, [
+            $this->writeCsvRow($handle, [
                 'Request ID',
                 'Employee ID',
                 'Employee Name',
@@ -982,7 +984,7 @@ class RequestController extends Controller
 
             // Add data
             foreach ($requests as $req) {
-                fputcsv($handle, [
+                $this->writeCsvRow($handle, [
                     $req->id,
                     $req->user->employee_id ?? 'N/A',
                     $req->user->name ?? 'N/A',

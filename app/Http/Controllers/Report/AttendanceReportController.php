@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Report;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\SanitizesCsv;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Exception;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class AttendanceReportController extends Controller
 {
+    use SanitizesCsv;
+
     private function getAttendanceStatusByShift($totalHours, $userId, $date, $attendance = null)
     {
         $tenantId = session('tenant_id');
@@ -799,7 +802,7 @@ class AttendanceReportController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
     
             // Headers
-            fputcsv($handle, [
+            $this->writeCsvRow($handle,[
                 'SR NO.',
                 'Employee Name',
                 'Employee ID',
@@ -870,7 +873,7 @@ class AttendanceReportController extends Controller
                     $totalHoursDisplay = $row['total_hours'];
                 }
     
-                fputcsv($handle, [
+                $this->writeCsvRow($handle,[
                     $srNo++,
                     $row['employee_name'],
                     $row['employee_id'],
@@ -1428,7 +1431,7 @@ class AttendanceReportController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
             // Headers
-            fputcsv($handle, [
+            $this->writeCsvRow($handle,[
                 'SR NO.',
                 'Employee Name',
                 'Employee ID',
@@ -1491,7 +1494,7 @@ class AttendanceReportController extends Controller
                     ? Carbon::parse($row['clock_out'])->format('d M Y h:i A')
                     : '—';
 
-                fputcsv($handle, [
+                $this->writeCsvRow($handle,[
                     $srNo++,
                     $row['employee_name'],
                     $row['employee_id'],
@@ -2008,7 +2011,7 @@ class AttendanceReportController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
 
             foreach ($csvData as $row) {
-                fputcsv($handle, $row);
+                $this->writeCsvRow($handle,$row);
             }
 
             rewind($handle);
@@ -2502,7 +2505,7 @@ class AttendanceReportController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
 
             foreach ($csvData as $row) {
-                fputcsv($handle, $row);
+                $this->writeCsvRow($handle,$row);
             }
 
             rewind($handle);
@@ -3542,11 +3545,11 @@ class AttendanceReportController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
     
             // Headers
-            fputcsv($handle, [
+            $this->writeCsvRow($handle,[
                 'Branch: ' . $branch->name . ' (' . ($branch->code ?? 'N/A') . ')',
                 'Date: ' . $dateObj->format('d M Y'),
             ]);
-            fputcsv($handle, []);
+            $this->writeCsvRow($handle,[]);
     
             // Main header
             $headers = [
@@ -3564,7 +3567,7 @@ class AttendanceReportController extends Controller
                 'Late (mins)',
                 'Early Exit (mins)'
             ];
-            fputcsv($handle, $headers);
+            $this->writeCsvRow($handle,$headers);
     
             // Data rows
             $srNo = 1;
@@ -3701,7 +3704,7 @@ class AttendanceReportController extends Controller
                     ? number_format((float)$attendance->worked_hours, 2) . ' hrs' 
                     : '—';
     
-                fputcsv($handle, [
+                $this->writeCsvRow($handle,[
                     $srNo++,
                     $employee->employee_id ?? 'N/A',
                     $employee->name,
@@ -3719,9 +3722,9 @@ class AttendanceReportController extends Controller
             }
     
             // Add summary section
-            fputcsv($handle, []);
-            fputcsv($handle, ['SUMMARY']);
-            fputcsv($handle, [
+            $this->writeCsvRow($handle,[]);
+            $this->writeCsvRow($handle,['SUMMARY']);
+            $this->writeCsvRow($handle,[
                 'Total Employees',
                 'Present',
                 'Half Day',
@@ -3730,7 +3733,7 @@ class AttendanceReportController extends Controller
                 'Holiday',
                 'Week Off'
             ]);
-            fputcsv($handle, [
+            $this->writeCsvRow($handle,[
                 count($employees),
                 $exportStats['present'],
                 $exportStats['halfday'],
