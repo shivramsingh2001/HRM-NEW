@@ -17,6 +17,15 @@ class AttendanceReportController extends Controller
 
     private function getAttendanceStatusByShift($totalHours, $userId, $date, $attendance = null)
     {
+        // A hand-set (admin/HR/manager) or late-policy-resolved status is
+        // authoritative — never recompute it from worked hours.
+        if ($attendance) {
+            $persisted = $this->persistedDayStatus($attendance);
+            if ($persisted !== null) {
+                return $persisted;
+            }
+        }
+
         $tenantId = session('tenant_id');
         $shiftStart = null;
         $shiftEnd = null;
@@ -93,6 +102,30 @@ class AttendanceReportController extends Controller
         } else {
             return 'Present';
         }
+    }
+
+    /**
+     * Display status for a row whose status was set by hand or resolved by the
+     * late-allowance policy. Null => fall through to the hours-based calc.
+     */
+    private function persistedDayStatus($attendance): ?string
+    {
+        $isManual = (($attendance->attendance_type ?? null) === 'manual')
+            || !empty($attendance->marked_by ?? null);
+
+        $status = $isManual
+            ? ($attendance->attendance_status ?? null)
+            : ($attendance->effective_status ?? null);
+
+        return match ($status) {
+            'present', 'late', 'overtime', 'early_departure' => 'Present',
+            'half_day' => 'Halfday',
+            'absent' => 'Absent',
+            'on_leave' => 'Full Day Leave',
+            'first_half_leave' => 'First Half Leave',
+            'second_half_leave' => 'Second Half Leave',
+            default => null,
+        };
     }
 
     /**

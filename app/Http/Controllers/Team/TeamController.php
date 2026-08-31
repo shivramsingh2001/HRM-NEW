@@ -251,6 +251,15 @@ class TeamController extends Controller
      */
     private function getAttendanceStatusByShift($totalHours, $userId, $date, $attendance = null)
     {
+        // A hand-set (admin/HR/manager) or policy-resolved status is
+        // authoritative — do not recompute it from worked hours.
+        if ($attendance) {
+            $persisted = $this->persistedDayStatus($attendance);
+            if ($persisted !== null) {
+                return $persisted;
+            }
+        }
+
         // Use scheduled shift times from attendance record
         if ($attendance && $attendance->scheduled_shift_start && $attendance->scheduled_shift_end) {
             $shiftStart = Carbon::parse($attendance->scheduled_shift_start);
@@ -299,10 +308,43 @@ class TeamController extends Controller
     }
 
     /**
+     * Display status for a row whose status was set by hand or resolved by the
+     * late-allowance policy. Returns null when neither applies (fall through to
+     * the hours-based calculation).
+     */
+    private function persistedDayStatus($attendance): ?string
+    {
+        $isManual = (($attendance->attendance_type ?? null) === 'manual')
+            || !empty($attendance->marked_by ?? null);
+
+        $status = $isManual
+            ? ($attendance->attendance_status ?? null)
+            : ($attendance->effective_status ?? null);
+
+        return match ($status) {
+            'present', 'late', 'overtime', 'early_departure' => 'Present',
+            'half_day' => 'halfday',
+            'absent' => 'Absent',
+            'on_leave' => 'Full Day Leave',
+            'first_half_leave' => 'First Half Leave',
+            'second_half_leave' => 'Second Half Leave',
+            default => null,
+        };
+    }
+
+    /**
      * Determine user status for a given date - WITH SHIFT-BASED LOGIC
      */
     private function determineUserStatus($attendance, $leave, $holiday, $weekoff, $date, $userId)
     {
+        // A hand-set / policy-resolved status wins over everything else.
+        if ($attendance) {
+            $persisted = $this->persistedDayStatus($attendance);
+            if ($persisted !== null) {
+                return $persisted;
+            }
+        }
+
         // HIGHEST PRIORITY: Attendance with shift-based calculation
         if ($attendance) {
             // ✅ FIX: Use worked_hours for calculation
