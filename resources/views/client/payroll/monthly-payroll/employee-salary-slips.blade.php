@@ -13,61 +13,8 @@
             padding: 0 12px;
         }
 
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.3s ease;
-            border: 1px solid #edf2f7;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
-
-        .stats-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .total-card .stats-icon-wrapper {
-            background: rgba(79, 70, 229, 0.1);
-        }
-        .total-card .stats-icon-wrapper i {
-            color: #4f46e5;
-            font-size: 24px;
-        }
-
-        .stats-content {
-            flex: 1;
-        }
-
-        .stats-amount-main {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 4px;
-        }
-
-        .stats-label {
-            font-size: 12px;
-            font-weight: 500;
-            color: #64748b;
-            margin-bottom: 6px;
-        }
+        /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
+           are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
         /* Filter Section */
         .filter-wrapper {
@@ -348,7 +295,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
         <div class="stats-grid">
             <div class="stats-card total-card">

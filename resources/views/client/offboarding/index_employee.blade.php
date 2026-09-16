@@ -78,7 +78,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
 
         @if ($hasActiveRequest)
             @php $offboarding = $activeRequest; @endphp

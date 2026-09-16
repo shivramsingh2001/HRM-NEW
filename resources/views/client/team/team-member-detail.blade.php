@@ -463,7 +463,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Profile Header -->
         <div class="profile-header">
             <div class="row align-items-center">

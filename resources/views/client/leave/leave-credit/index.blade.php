@@ -2,189 +2,16 @@
 
 @section('style')
     <style>
-        /* ==================== STATS CARDS ==================== */
+        /* ==================== STATS CARDS — same anatomy as the dashboard's
+           Total Employees KPI card ==================== */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
+            gap: 10px;
+            margin-bottom: 14px;
         }
 
-        /* Stats Card Base Styles */
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.3s ease;
-            border: 1px solid #edf2f7;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Card-specific gradient borders */
-        .total-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
-        }
-
-        .balance-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #10b981, #34d399);
-        }
-
-        .used-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-        }
-
-        .types-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
-        }
-
-        .pending-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #ef4444, #f87171);
-        }
-
-        /* Icon Wrapper */
-        .stats-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-        }
-
-        .stats-card:hover .stats-icon-wrapper {
-            transform: scale(1.05);
-        }
-
-        /* Card-specific icon backgrounds */
-        .total-card .stats-icon-wrapper {
-            background: rgba(79, 70, 229, 0.1);
-        }
-
-        .total-card .stats-icon-wrapper i {
-            color: #4f46e5;
-            font-size: 24px;
-        }
-
-        .balance-card .stats-icon-wrapper {
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .balance-card .stats-icon-wrapper i {
-            color: #10b981;
-            font-size: 24px;
-        }
-
-        .used-card .stats-icon-wrapper {
-            background: rgba(245, 158, 11, 0.1);
-        }
-
-        .used-card .stats-icon-wrapper i {
-            color: #f59e0b;
-            font-size: 24px;
-        }
-
-        .types-card .stats-icon-wrapper {
-            background: rgba(99, 102, 241, 0.1);
-        }
-
-        .types-card .stats-icon-wrapper i {
-            color: #6366f1;
-            font-size: 24px;
-        }
-
-        .pending-card .stats-icon-wrapper {
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        .pending-card .stats-icon-wrapper i {
-            color: #ef4444;
-            font-size: 24px;
-        }
-
-        /* Content Styles */
-        .stats-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .stats-amount-main {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e293b;
-            line-height: 1.3;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .stats-label {
-            font-size: 10px;
-            font-weight: 500;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-bottom: 6px;
-        }
-
-        .stats-count {
-            display: flex;
-            align-items: baseline;
-            gap: 4px;
-        }
-
-        .stats-card:hover .stats-count {
-            background: white;
-            border-color: currentColor;
-        }
-
-        .count-number {
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .count-text {
-            font-size: 11px;
-            color: #64748b;
-            font-weight: 400;
-        }
+        /* .kpi5-* is centralized in client.layout.head — no local copy. */
 
         @media (max-width: 1400px) {
             .stats-grid {
@@ -203,6 +30,8 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Table font/spacing is centralized in client.layout.head — no local copy. */
 
         /* ==================== FILTER SECTION ==================== */
         .filter-wrapper {
@@ -231,13 +60,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -258,8 +87,8 @@
         }
 
         .clear-all-link:hover {
-            background: #fee2e2;
-            color: #ef4444;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .clear-all-link i {
@@ -306,7 +135,7 @@
         .apply-btn {
             height: 36px;
             padding: 0 16px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             border-radius: 8px;
@@ -321,7 +150,7 @@
         }
 
         .apply-btn:hover {
-            background: #4338ca;
+            background: #1e3a8a;
         }
 
         .reset-btn {
@@ -381,7 +210,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 11px;
         }
 
@@ -393,13 +222,13 @@
         }
 
         .filter-tag .remove-tag:hover {
-            color: #ef4444;
+            color: #1e3a8a;
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
@@ -445,13 +274,13 @@
         }
 
         .badge.bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
+            background: #e3edfe !important;
+            color: #1d4ed8;
         }
 
         .badge.bg-danger {
-            background: #fee2e2 !important;
-            color: #991b1b;
+            background: #e3edfe !important;
+            color: #1e3a8a;
         }
 
         .badge.bg-info {
@@ -460,13 +289,13 @@
         }
 
         .badge.bg-warning {
-            background: #fef3c7 !important;
-            color: #92400e;
+            background: #e3edfe !important;
+            color: #2563eb;
         }
 
         .badge.bg-purple {
             background: #e0e7ff !important;
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .badge.bg-secondary {
@@ -488,13 +317,13 @@
         }
 
         .frequency-monthly {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1d4ed8;
         }
 
         .frequency-yearly {
             background: #e0e7ff;
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .frequency-no {
@@ -520,8 +349,8 @@
 
         .action-btn:hover {
             background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
             transform: translateY(-2px);
         }
 
@@ -530,18 +359,18 @@
         }
 
         .action-btn.delete:hover {
-            color: #ef4444;
-            border-color: #ef4444;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         .action-btn.info:hover {
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         .action-btn.initialize:hover {
-            color: #10b981;
-            border-color: #10b981;
+            color: #3b82f6;
+            border-color: #3b82f6;
         }
 
         /* ==================== PROCESS CARD ==================== */
@@ -564,7 +393,7 @@
         }
 
         .process-title i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 18px;
         }
 
@@ -625,8 +454,8 @@
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: #1e3a8a;
+            border-color: #1e3a8a;
             color: white;
         }
 
@@ -698,8 +527,8 @@
         }
 
         .bg-soft-primary {
-            background: rgba(79, 70, 229, 0.1);
-            color: #4f46e5;
+            background: rgba(30, 58, 138, 0.1);
+            color: #1e3a8a;
         }
 
         .bg-soft-success {
@@ -708,8 +537,8 @@
         }
 
         .bg-soft-warning {
-            background: rgba(245, 158, 11, 0.1);
-            color: #f59e0b;
+            background: rgba(96, 165, 250, 0.1);
+            color: #60a5fa;
         }
 
         /* ==================== RESPONSIVE ==================== */
@@ -763,6 +592,109 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ==================== COMPACT MODAL (Manual Credit) — chrome
+           (max-width/modal-content/header/body/card padding) is centralized
+           in client.layout.head; only this modal's own extras stay here. */
+        .compact-modal .modal-header .fs-18 { font-size: 13px !important; }
+        .compact-modal .form-group { margin-bottom: 10px; }
+
+        /* Base styling for the modal's form controls — these classes
+           (form-control-modern / btn-modern / employee-info / balance-preview)
+           had no definitions anywhere on this page, so the browser was
+           rendering them completely unstyled (no borders, no color, no
+           button background). Single blue theme throughout. */
+        .compact-modal label,
+        .compact-modal .form-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 3px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #475569;
+        }
+        .compact-modal .form-label i { color: #1e3a8a; font-size: 11px; }
+        .compact-modal .required-star { color: #1e3a8a; }
+        .compact-modal .info-tooltip { color: #94a3b8; font-size: 10px; }
+
+        .compact-modal .form-control,
+        .compact-modal .form-control-modern {
+            width: 100%;
+            font-size: 11.5px;
+            height: 34px;
+            padding: 6px 10px;
+            border: 1px solid #dfe5f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #1a2236;
+            transition: all .2s;
+        }
+        .compact-modal .form-control-modern:focus {
+            border-color: #1e3a8a;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, .1);
+            background: #fff;
+        }
+        .compact-modal textarea.form-control-modern { height: auto; min-height: 60px; resize: vertical; }
+
+        .compact-modal .employee-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: #f8fafc;
+            border: 1px solid #eaeef5;
+            border-radius: 8px;
+        }
+        .compact-modal .employee-avatar {
+            width: 30px; height: 30px; flex: none;
+            background: #1e3a8a; color: #fff; border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 11px;
+        }
+        .compact-modal .employee-details { flex: 1; min-width: 0; }
+        .compact-modal .employee-name { font-weight: 700; color: #1a2236; font-size: 11.5px; }
+        .compact-modal .employee-meta { font-size: 9.5px; color: #6b7385; }
+
+        .compact-modal .balance-preview {
+            padding: 10px 12px;
+            margin: 10px 0;
+            background: #f4f6fb;
+            border: 1px dashed #dfe5f0;
+            border-radius: 10px;
+        }
+        .compact-modal .balance-preview-title {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 10px; font-weight: 700; color: #475569;
+            text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px;
+        }
+        .compact-modal .balance-amount { font-size: 18px; font-weight: 800; color: #1a2236; line-height: 1.2; }
+        .compact-modal .balance-amount small { font-size: 10px; font-weight: 400; color: #6b7385; }
+
+        .compact-modal .action-buttons { display: flex; margin-top: 10px; padding-top: 10px; gap: 8px; border-top: 1px solid #eaeef5; }
+        .compact-modal .btn-modern {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .compact-modal .btn-primary-modern { background: #2563eb; color: #fff; }
+        .compact-modal .btn-primary-modern:hover:not(:disabled) { background: #1e3a8a; }
+        .compact-modal .btn-primary-modern:disabled { opacity: .6; cursor: not-allowed; }
+        .compact-modal .btn-secondary-modern {
+            background: #f4f6fb;
+            border-color: #dfe5f0;
+            color: #475569;
+        }
+        .compact-modal .btn-secondary-modern:hover {
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
+        }
     </style>
 @endsection
 @php
@@ -771,134 +703,112 @@
 @endphp
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Leave Report</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Leave Credit Management</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex d-md-none">
-                    <a href="#" class="page-header-right-close-toggle">
-                        <i class="feather-arrow-left me-2"></i>
-                        <span>Back</span>
-                    </a>
-                </div>
-                <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
-                            data-bs-auto-close="outside">
-                            <i class="feather-download"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a href="#" class="dropdown-item" onclick="exportToCSV()">
-                                <i class="bi bi-filetype-csv me-3"></i>
-                                <span>Export CSV</span>
-                            </a>
-                        </div>
-                    </div>
-                    <a href="{{ route('leave-credit.manual.create') }}" class="btn btn-sm btn-primary">
-                        <i class="feather-plus me-2"></i>
-                        <span>Manual Credit</span>
-                    </a>
-                    <a href="{{ route('leave-credit.reports') }}" class="btn btn-sm btn-info">
-                        <i class="feather-bar-chart-2 me-2"></i>
-                        <span>Reports</span>
-                    </a>
-                </div>
-            </div>
-            <div class="d-md-none d-flex align-items-center">
-                <a href="#" class="page-header-right-open-toggle">
-                    <i class="feather-align-right fs-20"></i>
+    <x-ui.page-header title="Leave Credit Management">
+        <x-slot:actions>
+            <div class="dropdown">
+                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
+                    data-bs-auto-close="outside">
+                    <i class="feather-download"></i>
                 </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="#" class="dropdown-item" onclick="exportToCSV()">
+                        <i class="bi bi-filetype-csv me-3"></i>
+                        <span>Export CSV</span>
+                    </a>
+                </div>
             </div>
-        </div>
-    </div>
+            <a href="javascript:void(0)" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                data-bs-target="#manualCreditModal">
+                <i class="feather-plus me-2"></i>
+                <span>Manual Credit</span>
+            </a>
+            <a href="{{ route('leave-credit.reports') }}" class="btn btn-sm btn-info">
+                <i class="feather-bar-chart-2 me-2"></i>
+                <span>Reports</span>
+            </a>
+        </x-slot:actions>
+    </x-ui.page-header>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 18px !important;">
         <!-- Stats Cards -->
         <div class="stats-grid">
             <!-- Total Employees Card -->
-            <div class="stats-card total-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-users"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-users"></i></span>
+                    <span class="kpi5-pill">{{ $usersWithBalance }} w/ balance</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ $totalUsers }}</div>
-                    <div class="stats-label">Total Employees</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $usersWithBalance }}</span>
-                        <span class="count-text">With Balance</span>
-                    </div>
+                <div class="kpi5-value">{{ $totalUsers }}</div>
+                <div class="kpi5-label">Total Employees</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $usersWithBalance }}</span><span class="l">Balance</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $usersWithoutBalance->count() }}</span><span class="l">Pending</span></div>
                 </div>
             </div>
 
             <!-- Total Balance Card -->
-            <div class="stats-card balance-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-coins"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-coins"></i></span>
+                    <span class="kpi5-pill">Days</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ number_format($totalBalance ?? 0, 2) }}</div>
-                    <div class="stats-label">Total Leave Balance</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $usersWithBalance }}</span>
-                        <span class="count-text">Employees</span>
-                    </div>
+                <div class="kpi5-value">{{ number_format($totalBalance ?? 0, 1) }}</div>
+                <div class="kpi5-label">Total Leave Balance</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $usersWithBalance }}</span><span class="l">Employees</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($totalUsed ?? 0, 1) }}</span><span class="l">Used</span></div>
                 </div>
             </div>
 
             <!-- Total Used Card -->
-            <div class="stats-card used-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-calendar-check"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-calendar-check"></i></span>
+                    <span class="kpi5-pill">{{ $totalTransactions ?? 0 }} txns</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ number_format($totalUsed ?? 0, 2) }}</div>
-                    <div class="stats-label">Total Used</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $totalTransactions ?? 0 }}</span>
-                        <span class="count-text">Transactions</span>
-                    </div>
+                <div class="kpi5-value">{{ number_format($totalUsed ?? 0, 1) }}</div>
+                <div class="kpi5-label">Total Used (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $totalTransactions ?? 0 }}</span><span class="l">Txns</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($totalBalance ?? 0, 1) }}</span><span class="l">Balance</span></div>
                 </div>
             </div>
 
             <!-- Leave Types Card -->
-            <div class="stats-card types-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-tags"></i>
+            @php
+                $weeklyCount = $leaveTypes->where('credit_type', 'weekly')->count();
+                $monthlyCount = $leaveTypes->where('credit_type', 'monthly')->count();
+                $yearlyCount = $leaveTypes->where('credit_type', 'yearly')->count();
+            @endphp
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-tags"></i></span>
+                    <span class="kpi5-pill">Active</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ $leaveTypes->count() }}</div>
-                    <div class="stats-label">Leave Types</div>
-                    <div class="stats-count">
-                        @php
-                            $weeklyCount = $leaveTypes->where('credit_type', 'weekly')->count();
-                            $monthlyCount = $leaveTypes->where('credit_type', 'monthly')->count();
-                            $yearlyCount = $leaveTypes->where('credit_type', 'yearly')->count();
-                        @endphp
-                        <span class="count-text">W:{{ $weeklyCount }} M:{{ $monthlyCount }} Y:{{ $yearlyCount }}</span>
-                    </div>
+                <div class="kpi5-value">{{ $leaveTypes->count() }}</div>
+                <div class="kpi5-label">Leave Types</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $monthlyCount }}</span><span class="l">Monthly</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $yearlyCount }}</span><span class="l">Yearly</span></div>
                 </div>
             </div>
 
             <!-- Pending Initialization Card -->
-            <div class="stats-card pending-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-hourglass-half"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-hourglass-half"></i></span>
+                    <span class="kpi5-pill">Pending</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ $usersWithoutBalance->count() }}</div>
-                    <div class="stats-label">Need Initialization</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $usersWithoutBalance->count() }}</span>
-                        <span class="count-text">Employees</span>
-                    </div>
+                <div class="kpi5-value">{{ $usersWithoutBalance->count() }}</div>
+                <div class="kpi5-label">Need Initialization</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $totalUsers }}</span><span class="l">Total</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $usersWithBalance }}</span><span class="l">Initialized</span></div>
                 </div>
             </div>
         </div>
@@ -982,19 +892,18 @@
                                         @endphp
                                         <tr>
                                             <td>
-                                                <div class="d-flex align-items-center">
+                                                <div class="employee-info">
                                                     <div class="avatar-md me-2">
                                                         <span
                                                             class="avatar-title {{ $hasBalance ? 'bg-soft-success' : 'bg-soft-warning' }} rounded-circle">
                                                             {{ strtoupper(substr($user->name, 0, 2)) }}
                                                         </span>
                                                     </div>
-                                                    <div>
-                                                        <strong>{{ $user->name ?? 'N/A' }}
-                                                            (<small>{{ $user->employee_id ?? 'N/A' }}</small>)</strong>
-                                                        <br>
-                                                        <small
-                                                            class="text-muted">{{ $user->email ?? '' }}</small>
+                                                    <div class="employee-details">
+                                                        <div class="employee-name">{{ $user->name ?? 'N/A' }}
+                                                            <small class="text-muted employee-email">({{ $user->employee_id ?? 'N/A' }})</small>
+                                                        </div>
+                                                        <div class="employee-email">{{ $user->email ?? '' }}</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -1317,6 +1226,111 @@
     </div>
 @endsection
 
+@section('create-modal')
+    <!-- Manual Credit Modal -->
+    <div class="modal fade-scale" id="manualCreditModal" tabindex="-1" aria-labelledby="manualCreditModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="d-flex flex-column mb-0">
+                        <span class="fs-18 fw-bold mb-1">Add Manual Credit</span>
+                    </h2>
+                    <a href="#" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
+                        <i class="feather-x text-danger"></i>
+                    </a>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="card m-0">
+                        <div class="card-body">
+                            <div id="alertContainer"></div>
+                            <form action="{{ route('leave-credit.manual.store') }}" method="POST" id="manualCreditForm">
+                                @csrf
+
+                                <div class="form-group">
+                                    <label class="form-label">Select Employee *</label>
+                                    <select name="user_id" class="form-control select2" id="employeeSelect" required>
+                                        <option value="">Search and select employee...</option>
+                                        @foreach ($users as $u)
+                                            <option value="{{ $u->id }}"
+                                                data-balance="{{ optional($u->leaveBalance)->balance ?? 0 }}"
+                                                data-joining="{{ $u->joining_date ? date('d M Y', strtotime($u->joining_date)) : 'N/A' }}"
+                                                data-email="{{ $u->email }}">
+                                                {{ $u->name }} ({{ $u->email }}) - Current:
+                                                {{ optional($u->leaveBalance)->balance ?? 0 }} days
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div id="employeePreview" style="display: none;" class="mb-2">
+                                    <div class="employee-info">
+                                        <div class="employee-avatar" id="employeeInitials">JD</div>
+                                        <div class="employee-details">
+                                            <div class="employee-name" id="employeeName"></div>
+                                            <div class="employee-meta" id="employeeMeta"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Leave Type *</label>
+                                    <select name="leave_type_id" class="form-control" id="leaveTypeSelect" required>
+                                        <option value="">Select Leave Type</option>
+                                        @foreach ($leaveTypes as $type)
+                                            <option value="{{ $type->id }}" data-credit="{{ $type->credit_value }}"
+                                                data-frequency="{{ $type->credit_type }}"
+                                                data-description="{{ $type->description }}">
+                                                {{ $type->name }} ({{ $type->credit_value }} {{ $type->credit_type }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="text-muted" id="leaveTypeDescription"></small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Credit Value (Days) *</label>
+                                    <input type="number" name="credit_value" class="form-control-modern" id="creditValue"
+                                        step="0.5" min="0.5" required placeholder="Enter credit value">
+                                </div>
+
+                                <div class="balance-preview">
+                                    <div class="balance-preview-title">Balance Preview</div>
+                                    <div class="row align-items-center">
+                                        <div class="col-6">
+                                            <div class="balance-amount" id="currentBalance">0.00</div>
+                                            <small class="text-muted">Current</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="balance-amount" id="newBalance">0.00</div>
+                                            <small class="text-muted">After Credit</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Remarks</label>
+                                    <textarea name="remarks" class="form-control-modern" id="remarks" rows="2"
+                                        placeholder="Enter reason for manual credit (optional)"></textarea>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <button type="submit" class="btn-modern btn-primary-modern" id="submitBtn">
+                                        Add Credit
+                                    </button>
+                                    <a href="javascript:void(0)" class="btn-modern btn-secondary-modern"
+                                        data-bs-dismiss="modal">
+                                        Cancel
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
 @section('script-area')
     <script>
         // Configure toastr
@@ -1417,5 +1431,125 @@
 
             toastr.success('CSV exported successfully');
         }
+
+        // ==================== Manual Credit Modal ====================
+        function getInitials(name) {
+            if (!name) return 'NA';
+            return name.split(' ').map(word => word[0]).join('').toUpperCase().substring(0, 2);
+        }
+
+        function formatNumber(num) {
+            num = parseFloat(num) || 0;
+            return num.toFixed(2);
+        }
+
+        function updateNewBalance() {
+            const currentBalance = parseFloat($('#currentBalance').text()) || 0;
+            const creditValue = parseFloat($('#creditValue').val()) || 0;
+            $('#newBalance').text(formatNumber(currentBalance + creditValue));
+        }
+
+        $('#employeeSelect').on('change', function() {
+            const selected = $(this).find('option:selected');
+            const userId = $(this).val();
+
+            if (userId) {
+                const fullText = selected.text();
+                const name = fullText.split(' (')[0];
+                const email = selected.data('email');
+                const joiningDate = selected.data('joining');
+                const currentBalance = parseFloat(selected.data('balance')) || 0;
+
+                $('#employeePreview').show();
+                $('#employeeInitials').text(getInitials(name));
+                $('#employeeName').text(name);
+                $('#employeeMeta').html(
+                    `<i class="fas fa-envelope me-1"></i> ${email} | <i class="fas fa-calendar me-1"></i> Joined: ${joiningDate}`
+                );
+                $('#currentBalance').text(formatNumber(currentBalance));
+                $('#creditValue').val('');
+                updateNewBalance();
+            } else {
+                $('#employeePreview').hide();
+                $('#currentBalance').text('0.00');
+                $('#newBalance').text('0.00');
+                $('#creditValue').val('');
+            }
+        });
+
+        $('#leaveTypeSelect').on('change', function() {
+            const selected = $(this).find('option:selected');
+            const creditValue = selected.data('credit') || 0;
+            const description = selected.data('description');
+            const frequency = selected.data('frequency');
+
+            $('#leaveTypeDescription').text(description ? `📝 ${description}` : `⏱️ Frequency: ${frequency || 'N/A'}`);
+
+            const currentCredit = $('#creditValue').val();
+            if (!currentCredit && creditValue > 0) {
+                $('#creditValue').val(creditValue);
+            }
+
+            updateNewBalance();
+        });
+
+        $('#creditValue').on('input', updateNewBalance);
+
+        $('#manualCreditForm').on('submit', function(e) {
+            e.preventDefault();
+
+            if (!$('select[name="user_id"]').val()) {
+                toastr.error('Please select an employee');
+                return false;
+            }
+
+            const creditValue = parseFloat($('#creditValue').val());
+            if (!creditValue || creditValue <= 0) {
+                toastr.error('Please enter a valid credit value');
+                return false;
+            }
+
+            var form = $(this);
+            var submitBtn = $('#submitBtn');
+            var originalText = submitBtn.html();
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: form.serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    submitBtn.prop('disabled', false).html(originalText);
+                    if (response.success) {
+                        toastr.success(response.message);
+                        $('#manualCreditModal').modal('hide');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    submitBtn.prop('disabled', false).html(originalText);
+                    if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                        $.each(xhr.responseJSON.errors, function(key, value) {
+                            toastr.error(value[0]);
+                        });
+                    } else {
+                        toastr.error(xhr.responseJSON?.message || 'An error occurred while processing');
+                    }
+                }
+            });
+
+            return false;
+        });
+
+        $('#manualCreditModal').on('hidden.bs.modal', function() {
+            $('#manualCreditForm')[0].reset();
+            $('#employeePreview').hide();
+            $('#currentBalance').text('0.00');
+            $('#newBalance').text('0.00');
+            $('#leaveTypeDescription').text('');
+        });
     </script>
 @endsection

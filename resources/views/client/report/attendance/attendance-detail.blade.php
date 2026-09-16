@@ -7,13 +7,13 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 20px;
-            margin-bottom: 30px;
+            margin-bottom: 21px;
         }
 
         .stats-card {
             background: white;
             border-radius: 16px;
-            padding: 22px 20px;
+            padding: 15px 14px;
             display: flex;
             align-items: center;
             gap: 18px;
@@ -32,7 +32,7 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
+            background: linear-gradient(90deg, #1e3a8a, #2563eb);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -48,19 +48,19 @@
         }
 
         .stats-card.total-card::before {
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
+            background: linear-gradient(90deg, #1e3a8a, #2563eb);
         }
 
         .stats-card.present-card::before {
-            background: linear-gradient(90deg, #10b981, #34d399);
+            background: linear-gradient(90deg, #1e3a8a, #2563eb);
         }
 
         .stats-card.absent-card::before {
-            background: linear-gradient(90deg, #ef4444, #f87171);
+            background: linear-gradient(90deg, #475569, #94a3b8);
         }
 
         .stats-card.leave-card::before {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            background: linear-gradient(90deg, #2563eb, #2563eb);
         }
 
         .stats-icon-wrapper {
@@ -83,8 +83,8 @@
         }
 
         .total-card .stats-icon-wrapper i {
-            color: #4f46e5;
-            font-size: 26px;
+            color: #1e3a8a;
+            font-size: 18px;
         }
 
         .present-card .stats-icon-wrapper {
@@ -92,8 +92,8 @@
         }
 
         .present-card .stats-icon-wrapper i {
-            color: #10b981;
-            font-size: 26px;
+            color: #1e3a8a;
+            font-size: 18px;
         }
 
         .absent-card .stats-icon-wrapper {
@@ -101,8 +101,8 @@
         }
 
         .absent-card .stats-icon-wrapper i {
-            color: #ef4444;
-            font-size: 26px;
+            color: #475569;
+            font-size: 18px;
         }
 
         .leave-card .stats-icon-wrapper {
@@ -110,8 +110,8 @@
         }
 
         .leave-card .stats-icon-wrapper i {
-            color: #f59e0b;
-            font-size: 26px;
+            color: #2563eb;
+            font-size: 18px;
         }
 
         .stats-content {
@@ -120,7 +120,7 @@
         }
 
         .stats-amount-main {
-            font-size: 28px;
+            font-size: 20px;
             font-weight: 700;
             color: #0f172a;
             line-height: 1.2;
@@ -129,7 +129,7 @@
         }
 
         .stats-label {
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 600;
             color: #64748b;
             text-transform: uppercase;
@@ -138,23 +138,23 @@
         }
 
         .stats-change {
-            font-size: 11px;
+            font-size: 9.5px;
             font-weight: 500;
-            margin-top: 4px;
+            margin-top: 3px;
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 2px 10px;
+            padding: 2px 7px;
             border-radius: 20px;
         }
 
         .stats-change.up {
-            color: #10b981;
+            color: #1e3a8a;
             background: rgba(16, 185, 129, 0.1);
         }
 
         .stats-change.down {
-            color: #ef4444;
+            color: #475569;
             background: rgba(239, 68, 68, 0.1);
         }
 
@@ -163,8 +163,8 @@
             background: white;
             border-radius: 16px;
             border: 1px solid #eef2f6;
-            padding: 20px 24px;
-            margin-bottom: 28px;
+            padding: 14px 17px;
+            margin-bottom: 20px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
             transition: all 0.3s ease;
         }
@@ -177,7 +177,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 16px;
+            margin-bottom: 11px;
             flex-wrap: wrap;
             gap: 10px;
         }
@@ -186,27 +186,27 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 15px;
+            font-size: 12px;
             font-weight: 600;
             color: #0f172a;
         }
 
         .filter-title i {
-            color: #4f46e5;
-            font-size: 18px;
-            background: #eef2ff;
-            padding: 6px;
+            color: #1e3a8a;
+            font-size: 14px;
+            background: #e3edfe;
+            padding: 4px;
             border-radius: 8px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
-            font-size: 11px;
+            background: #e3edfe;
+            color: #1e3a8a;
+            font-size: 9.5px;
             font-weight: 600;
-            padding: 2px 10px;
+            padding: 2px 7px;
             border-radius: 20px;
-            margin-left: 4px;
+            margin-left: 3px;
         }
 
         .clear-all-link {
@@ -214,9 +214,9 @@
             align-items: center;
             gap: 6px;
             color: #64748b;
-            font-size: 12px;
+            font-size: 10px;
             text-decoration: none;
-            padding: 6px 14px;
+            padding: 4px 10px;
             border-radius: 20px;
             transition: all 0.2s;
             background: #f8fafc;
@@ -224,13 +224,13 @@
         }
 
         .clear-all-link:hover {
-            background: #fee2e2;
-            border-color: #fecaca;
-            color: #ef4444;
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+            color: #475569;
         }
 
         .clear-all-link i {
-            font-size: 14px;
+            font-size: 11px;
         }
 
         .filter-row {
@@ -262,20 +262,20 @@
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
-            font-size: 15px;
+            font-size: 12px;
             pointer-events: none;
             transition: color 0.3s;
         }
 
         .search-wrapper:focus-within i {
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .search-wrapper .form-control {
             width: 100%;
             height: 40px;
-            padding: 8px 14px 8px 38px;
-            font-size: 13px;
+            padding: 6px 10px 6px 27px;
+            font-size: 10.5px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
             background: #f8fafc;
@@ -284,7 +284,7 @@
         }
 
         .search-wrapper .form-control:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             outline: none;
             background: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -292,15 +292,15 @@
 
         .search-wrapper .form-control::placeholder {
             color: #94a3b8;
-            font-size: 12px;
+            font-size: 10px;
         }
 
         /* Select Dropdowns */
         .filter-select {
             width: 100%;
             height: 40px;
-            padding: 8px 32px 8px 14px;
-            font-size: 13px;
+            padding: 6px 22px 6px 10px;
+            font-size: 10.5px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
             background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 12px center;
@@ -318,14 +318,14 @@
         }
 
         .filter-select:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             outline: none;
             background-color: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
         }
 
         .filter-select option {
-            padding: 8px;
+            padding: 6px;
         }
 
         /* Month Picker */
@@ -335,8 +335,8 @@
 
         .month-picker input {
             height: 40px;
-            padding: 8px 14px;
-            font-size: 13px;
+            padding: 6px 10px;
+            font-size: 10.5px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
             background: #f8fafc;
@@ -353,7 +353,7 @@
         }
 
         .month-picker input:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             outline: none;
             background: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -363,11 +363,11 @@
         .apply-btn {
             height: 40px;
             padding: 0 20px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 10.5px;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -378,7 +378,7 @@
         }
 
         .apply-btn:hover {
-            background: #4338ca;
+            background: #16295e;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
@@ -394,7 +394,7 @@
             color: #64748b;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 10.5px;
             font-weight: 500;
             display: flex;
             align-items: center;
@@ -413,7 +413,7 @@
         }
 
         .reset-btn i {
-            font-size: 14px;
+            font-size: 11px;
         }
 
         /* ==================== EMPLOYEE DROPDOWN ==================== */
@@ -423,7 +423,7 @@
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
             color: #0f172a;
-            font-size: 13px;
+            font-size: 10.5px;
             padding: 0 14px;
             width: 100%;
             transition: all 0.3s;
@@ -436,12 +436,12 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
         }
 
         .custom-employee-dropdown .btn .feather-chevron-down {
-            font-size: 14px;
+            font-size: 11px;
             color: #94a3b8;
             transition: transform 0.3s;
         }
@@ -453,14 +453,14 @@
         .employee-initials {
             width: 30px;
             height: 30px;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            background: linear-gradient(135deg, #1e3a8a, #1e3a8a);
             color: white;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 10px;
             flex-shrink: 0;
             box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
         }
@@ -468,8 +468,8 @@
         .employee-initials-sm {
             width: 26px;
             height: 26px;
-            font-size: 11px;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            font-size: 9.5px;
+            background: linear-gradient(135deg, #1e3a8a, #1e3a8a);
             color: white;
             border-radius: 50%;
             display: inline-flex;
@@ -484,17 +484,17 @@
             border: 1px solid #eef2f6;
             border-radius: 12px;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-            padding: 8px;
+            padding: 6px;
             max-height: 320px;
             overflow-y: auto;
             min-width: 260px;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .custom-employee-dropdown .dropdown-item {
-            padding: 10px 14px;
+            padding: 7px 10px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 10.5px;
             color: #1e293b;
             margin-bottom: 2px;
             transition: all 0.2s;
@@ -505,13 +505,13 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             font-weight: 500;
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #4f46e5 !important;
+            color: #1e3a8a !important;
             opacity: 0.8;
         }
 
@@ -522,8 +522,8 @@
 
         /* ==================== ACTIVE FILTER TAGS ==================== */
         .active-filters {
-            margin-top: 14px;
-            padding-top: 14px;
+            margin-top: 10px;
+            padding-top: 10px;
             border-top: 1.5px dashed #e2e8f0;
             display: flex;
             flex-wrap: wrap;
@@ -532,13 +532,13 @@
         }
 
         .active-filters-label {
-            font-size: 11px;
+            font-size: 9.5px;
             font-weight: 600;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             background: #f1f5f9;
-            padding: 3px 10px;
+            padding: 2px 7px;
             border-radius: 20px;
         }
 
@@ -546,8 +546,8 @@
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 30px;
-            padding: 4px 12px 4px 10px;
-            font-size: 12px;
+            padding: 3px 8px 3px 7px;
+            font-size: 10px;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
@@ -562,8 +562,8 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
-            font-size: 12px;
+            color: #1e3a8a;
+            font-size: 10px;
         }
 
         .filter-tag .remove-tag {
@@ -579,23 +579,23 @@
         }
 
         .filter-tag .remove-tag:hover {
-            color: #ef4444;
+            color: #475569;
             background: rgba(239, 68, 68, 0.08);
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
             font-weight: 600;
             text-decoration: none;
-            padding: 4px 14px;
+            padding: 3px 10px;
         }
 
         .filter-tag.clear-all:hover {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
         }
 
         .filter-tag.clear-all i {
@@ -612,11 +612,11 @@
         .table thead th {
             background: #f8fafc;
             font-weight: 600;
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: #475569;
-            padding: 12px 12px;
+            padding: 8px 8px;
             white-space: nowrap;
             position: sticky;
             top: 0;
@@ -627,8 +627,8 @@
 
         .table tbody td {
             vertical-align: middle;
-            font-size: 12px;
-            padding: 10px 12px;
+            font-size: 10px;
+            padding: 7px 8px;
             border-bottom: 1px solid #f1f5f9;
             color: #1e293b;
         }
@@ -657,8 +657,8 @@
             overflow: hidden;
             text-overflow: ellipsis;
             cursor: pointer;
-            font-size: 11px;
-            padding: 2px 6px;
+            font-size: 9.5px;
+            padding: 2px 4px;
             border-radius: 4px;
             transition: all 0.2s;
         }
@@ -683,13 +683,13 @@
             width: 36px;
             height: 36px;
             border-radius: 10px;
-            background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+            background: linear-gradient(135deg, #e3edfe, #e3edfe);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #4f46e5;
+            color: #1e3a8a;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 10.5px;
             text-transform: uppercase;
             flex-shrink: 0;
             box-shadow: 0 2px 6px rgba(79, 70, 229, 0.1);
@@ -709,7 +709,7 @@
         .employee-name-text {
             font-weight: 600;
             color: #0f172a;
-            font-size: 13px;
+            font-size: 10.5px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -717,11 +717,11 @@
         }
 
         .employee-info:hover .employee-name-text {
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .employee-email-text {
-            font-size: 11px;
+            font-size: 9.5px;
             color: #64748b;
             white-space: nowrap;
             overflow: hidden;
@@ -731,9 +731,9 @@
 
         /* ==================== BADGES ==================== */
         .badge {
-            padding: 4px 12px;
+            padding: 3px 8px;
             font-weight: 600;
-            font-size: 10px;
+            font-size: 9px;
             border-radius: 20px;
             display: inline-flex;
             align-items: center;
@@ -744,26 +744,26 @@
         }
 
         .badge-present {
-            background: #d1fae5 !important;
-            color: #065f46;
-            border-color: #a7f3d0;
+            background: #e3edfe !important;
+            color: #1e3a8a;
+            border-color: #93c5fd;
         }
 
         .badge-absent {
-            background: #fee2e2 !important;
-            color: #991b1b;
-            border-color: #fecaca;
+            background: #e2e8f0 !important;
+            color: #475569;
+            border-color: #cbd5e1;
         }
 
         .badge-on_leave {
-            background: #fef3c7 !important;
-            color: #92400e;
-            border-color: #fde68a;
+            background: #bfd3f7 !important;
+            color: #1e3a8a;
+            border-color: #60a5fa;
         }
          .badge-halfday {
-            background: #cffafe !important;
-            color: #0e7490;
-            border-color: #0e7490;
+            background: #e3edfe !important;
+            color: #2563eb;
+            border-color: #2563eb;
         }
 
         .badge-holiday {
@@ -773,15 +773,15 @@
         }
 
         .badge-week_off {
-            background: #ede9fe !important;
-            color: #5b21b6;
-            border-color: #ddd6fe;
+            background: #e3edfe !important;
+            color: #16295e;
+            border-color: #93c5fd;
         }
 
         .badge-checked_in_only {
-            background: #fef3c7 !important;
-            color: #92400e;
-            border-color: #fde68a;
+            background: #bfd3f7 !important;
+            color: #1e3a8a;
+            border-color: #60a5fa;
         }
 
         .badge-present small,
@@ -819,15 +819,15 @@
         }
 
         .status-dot.present {
-            background: #10b981;
+            background: #1e3a8a;
         }
 
         .status-dot.absent {
-            background: #ef4444;
+            background: #475569;
         }
 
         .status-dot.on_leave {
-            background: #f59e0b;
+            background: #2563eb;
         }
 
         .status-dot.holiday {
@@ -835,22 +835,22 @@
         }
 
         .status-dot.week_off {
-            background: #8b5cf6;
+            background: #2563eb;
         }
 
         .status-dot.checked_in_only {
-            background: #f59e0b;
+            background: #2563eb;
         }
          .status-dot.halfday {
-            background: #0e7490;
+            background: #2563eb;
         }
 
         /* ==================== SHIFT TIME BADGE ==================== */
         .shift-badge {
-            font-size: 11px;
+            font-size: 9.5px;
             background: #f1f5f9;
             color: #475569;
-            padding: 3px 10px;
+            padding: 2px 7px;
             border-radius: 12px;
             display: inline-block;
             white-space: nowrap;
@@ -870,31 +870,31 @@
 
         /* ==================== EMPTY STATE ==================== */
         .empty-state {
-            padding: 60px 24px;
+            padding: 42px 17px;
             text-align: center;
             background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
             border-radius: 16px;
-            margin: 20px;
+            margin: 14px;
         }
 
         .empty-state i {
-            font-size: 72px;
+            font-size: 48px;
             color: #d1d5db;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
             opacity: 0.5;
         }
 
         .empty-state h4 {
             color: #0f172a;
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .empty-state p {
             color: #64748b;
-            font-size: 14px;
-            margin-bottom: 24px;
+            font-size: 11px;
+            margin-bottom: 17px;
             max-width: 400px;
             margin-left: auto;
             margin-right: auto;
@@ -914,8 +914,8 @@
             border: 1px solid #e2e8f0;
             border-radius: 8px !important;
             color: #475569;
-            font-size: 13px;
-            padding: 8px 14px;
+            font-size: 10.5px;
+            padding: 6px 10px;
             transition: all 0.2s;
             background: white;
             font-weight: 500;
@@ -930,8 +930,8 @@
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: #1e3a8a;
+            border-color: #1e3a8a;
             color: white;
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
@@ -959,11 +959,11 @@
         .card-header {
             background: white;
             border-bottom: 1px solid #f1f5f9;
-            padding: 18px 24px;
+            padding: 13px 17px;
         }
 
         .card-title {
-            font-size: 16px;
+            font-size: 12px;
             font-weight: 600;
             color: #0f172a;
             margin: 0;
@@ -976,7 +976,7 @@
         .card-footer {
             background: white;
             border-top: 1px solid #f1f5f9;
-            padding: 14px 24px;
+            padding: 10px 17px;
         }
 
         /* ==================== TOOLTIP ==================== */
@@ -986,12 +986,12 @@
         }
 
         .badge-info-custom {
-            background: #eef2ff !important;
-            color: #4f46e5 !important;
+            background: #e3edfe !important;
+            color: #1e3a8a !important;
             font-weight: 600 !important;
             padding: 6px 14px !important;
             border-radius: 20px !important;
-            border: 1px solid #c7d2fe !important;
+            border: 1px solid #93c5fd !important;
         }
 
         /* ==================== RESPONSIVE ==================== */
@@ -1023,7 +1023,7 @@
             }
 
             .filter-wrapper {
-                padding: 16px;
+                padding: 11px;
             }
 
             .filter-row {
@@ -1052,8 +1052,8 @@
 
             .table th,
             .table td {
-                padding: 8px 10px;
-                font-size: 11px;
+                padding: 6px 7px;
+                font-size: 9.5px;
                 white-space: nowrap;
             }
 
@@ -1066,8 +1066,8 @@
             }
 
             .shift-badge {
-                font-size: 10px;
-                padding: 2px 6px;
+                font-size: 9px;
+                padding: 2px 4px;
             }
         }
 
@@ -1131,7 +1131,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
         {{-- <div class="stats-grid">
         <div class="stats-card total-card">
@@ -1357,9 +1357,9 @@
                 <div class="card stretch stretch-full">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
-                            <i class="feather-calendar me-2" style="color: #4f46e5;"></i>
+                            <i class="feather-calendar me-2" style="color: #1e3a8a;"></i>
                             Attendance Report -
-                            <span style="color: #4f46e5;">
+                            <span style="color: #1e3a8a;">
                                 {{ \Carbon\Carbon::createFromFormat('Y-m', request('month', now()->format('Y-m')))->format('F Y') }}
                             </span>
                         </h5>
@@ -1477,7 +1477,7 @@
                                             </td>
                                             <td>
                                                 @if ($record['total_hours'])
-                                                    <span style="font-weight: 600; color: #4f46e5;">
+                                                    <span style="font-weight: 600; color: #1e3a8a;">
                                                         {{ $record['total_hours'] }} hrs
                                                     </span>
                                                 @else
@@ -1500,7 +1500,7 @@
                                                     <span class="location-text"
                                                         title="{{ $record['clock_in_location'] }}">
                                                         <i class="feather-map-pin text-primary"
-                                                            style="font-size: 12px;"></i>
+                                                            style="font-size: 10px;"></i>
                                                         {{ Str::limit($record['clock_in_location'], 28) }}
                                                     </span>
                                                 @else
@@ -1512,7 +1512,7 @@
                                                     <span class="location-text"
                                                         title="{{ $record['clock_out_location'] }}">
                                                         <i class="feather-map-pin text-danger"
-                                                            style="font-size: 12px;"></i>
+                                                            style="font-size: 10px;"></i>
                                                         {{ Str::limit($record['clock_out_location'], 28) }}
                                                     </span>
                                                 @else

@@ -85,7 +85,7 @@
     </div>
     <!-- [ page-header ] end -->
     <!-- [ Main Content ] start -->
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row">
             <!-- [Invoices Awaiting Payment] start -->
             <div class="col-xxl-3 col-md-6">

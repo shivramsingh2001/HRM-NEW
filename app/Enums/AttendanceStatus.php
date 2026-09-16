@@ -16,6 +16,8 @@ enum AttendanceStatus: string
     case OnLeave = 'on_leave';
     case FirstHalfLeave = 'first_half_leave';
     case SecondHalfLeave = 'second_half_leave';
+    case Holiday = 'holiday';
+    case WeekOff = 'weekoff';
 
     /**
      * The statuses an admin/HR/manager may set by hand from the team screen.
@@ -29,6 +31,8 @@ enum AttendanceStatus: string
             self::OnLeave->value,
             self::FirstHalfLeave->value,
             self::SecondHalfLeave->value,
+            self::Holiday->value,
+            self::WeekOff->value,
         ];
     }
 
@@ -53,7 +57,8 @@ enum AttendanceStatus: string
         return match ($this) {
             self::Present, self::Late, self::EarlyDeparture, self::Overtime => 1.00,
             self::HalfDay, self::FirstHalfLeave, self::SecondHalfLeave => 0.50,
-            self::Absent, self::OnLeave => 0.00,
+            // Non-working days — neither present nor absent for summary math.
+            self::Absent, self::OnLeave, self::Holiday, self::WeekOff => 0.00,
         };
     }
 

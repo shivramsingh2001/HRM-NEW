@@ -16,7 +16,7 @@ class AnnoucementController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
 
             // Base query with JOIN to users table
             $query = Announcement::select(

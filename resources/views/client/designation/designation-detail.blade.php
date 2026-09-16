@@ -34,7 +34,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row">
             <div class="col-lg-12">
                 <div class="card border-top-0">
@@ -206,7 +206,7 @@
     <!-- Update Designation Modal -->
     <div class="modal fade" id="changedesignationDetails" tabindex="-1" aria-labelledby="changedesignationDetailsLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">

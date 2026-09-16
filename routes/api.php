@@ -19,8 +19,6 @@ use App\Http\Controllers\Api\Attendance\OvertimeController;
 use App\Http\Controllers\Api\Mom\MeetingController;
 use App\Http\Controllers\Api\Loan\LoanController;
 use App\Http\Controllers\Api\Offboarding\offboardingController;
-use App\Http\Controllers\Api\Fingerprint\FingerprintCallbackController;
-use App\Http\Controllers\Api\Fingerprint\FingerprintSyncController;
 
 use App\Http\Controllers\AI\AnnoucementController as AIAnnoucementController;
 use App\Http\Controllers\AI\AttendanceController as AIAttendanceController;
@@ -39,13 +37,13 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::middleware('tenant')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
     //forgot Password
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-    Route::post('/send-otp', [AuthController::class, 'otp']);
-    Route::post('/login-otp', [AuthController::class, 'login_otp']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:login');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:login');
+    Route::post('/send-otp', [AuthController::class, 'otp'])->middleware('throttle:otp-request');
+    Route::post('/login-otp', [AuthController::class, 'login_otp'])->middleware('throttle:otp-verify');
 
     Route::middleware(['auth:api', 'singleLogin'])->group(function () {
         
@@ -82,13 +80,14 @@ Route::middleware('tenant')->group(function () {
         Route::get('/view-leave', [LeaveController::class, 'view']);
         Route::post('/apply-leave', [LeaveController::class, 'store']);
 
-        Route::get('/view-team-leave', [LeaveController::class, 'view_all']);
-        Route::get('/update-team-leave-status/{id}', [LeaveController::class, 'updateLeaveStatus']);
+        Route::get('/view-team-leave', [LeaveController::class, 'view_all'])->middleware('permission:leave,view');
+        Route::get('/update-team-leave-status/{id}', [LeaveController::class, 'updateLeaveStatus'])->middleware('permission:leave,approve');
 
         //Announcement
         Route::get('/view-announcement', [AnnouncementController::class, 'view']);
         Route::post('/create-announcement', [AnnouncementController::class, 'store']);
         Route::get('/all-announcement', [AnnouncementController::class, 'index']);
+        Route::post('/acknowledge-announcement/{id}', [AnnouncementController::class, 'acknowledge']);
 
         //Expense
         Route::get('/expense-type', [ExpenseController::class, 'fetch_type']);
@@ -102,7 +101,8 @@ Route::middleware('tenant')->group(function () {
         Route::post('/user/attendance/clock-in', [AttendanceController::class, 'clockIn']);
         Route::post('/user/attendance/clock-out', [AttendanceController::class, 'clockOut']);
         Route::get('/user/attendance/history', [AttendanceController::class, 'history']);
-        Route::post('/user/attendance/track', [AttendanceController::class, 'trackLocation']);
+        Route::post('/user/attendance/track', [AttendanceController::class, 'trackLocation'])->middleware('throttle:location-ingest');
+        Route::post('/user/attendance/track-batch', [AttendanceController::class, 'trackBatch'])->middleware('throttle:location-ingest');
         Route::get('/user/attendance/today', [AttendanceController::class, 'getAttendance']);
         Route::get('/user/attendance/today-locations', [AttendanceController::class, 'todayLocations']);
         
@@ -187,14 +187,15 @@ Route::middleware('tenant')->group(function () {
         });
         
         Route::prefix('meetings')->group(function () {
-            Route::get('/', [MeetingController::class, 'index']);
-            Route::get('/detail/{id}', [MeetingController::class, 'show']);
-            Route::post('/store', [MeetingController::class, 'store']);
-            Route::post('/update/{id}', [MeetingController::class, 'update']);
-            Route::post('/cancel/{id}', [MeetingController::class, 'cancel']);
-            Route::post('/complete/{id}', [MeetingController::class, 'complete']);
-            Route::get('/mom-writer/meetings', [MeetingController::class, 'momWriterMeetings']);
-         
+            Route::get('/', [MeetingController::class, 'index'])->middleware('permission:meetings,view');
+            Route::get('/detail/{id}', [MeetingController::class, 'show'])->middleware('permission:meetings,view');
+            Route::post('/store', [MeetingController::class, 'store'])->middleware('permission:meetings,create');
+            Route::post('/update/{id}', [MeetingController::class, 'update'])->middleware('permission:meetings,edit');
+            Route::post('/cancel/{id}', [MeetingController::class, 'cancel'])->middleware('permission:meetings,edit');
+            Route::post('/complete/{id}', [MeetingController::class, 'complete'])->middleware('permission:meetings,edit');
+            Route::post('/attendance/{id}', [MeetingController::class, 'updateAttendance'])->middleware('permission:meetings,view');
+            Route::get('/mom-writer/meetings', [MeetingController::class, 'momWriterMeetings'])->middleware('permission:meetings,view');
+
         });
         
          Route::prefix('offboarding')->group(function () {
@@ -231,38 +232,5 @@ Route::middleware('tenant')->group(function () {
 
 
 
-// ============================================
-// CAMS CALLBACK ROUTE (Device → Your Server)
-// ============================================
-Route::post('/fingerprint/callback', [FingerprintCallbackController::class, 'store'])
-    ->middleware(['verify.fingerprint', 'throttle:300,1'])
-    ->name('fingerprint.callback');
-
-// ============================================
-// ADMIN ROUTES (Your Server → Device)
-// ============================================
-Route::prefix('fingerprint')->group(function () {
-    
-    // Device Management
-    Route::get('/devices', [FingerprintSyncController::class, 'listDevices']);
-    Route::post('/register-device', [FingerprintSyncController::class, 'registerDevice']);
-    Route::put('/devices/{id}', [FingerprintSyncController::class, 'updateDevice']);
-    Route::delete('/devices/{id}', [FingerprintSyncController::class, 'deleteDevice']);
-    
-    // User Mapping
-    Route::post('/map-user', [FingerprintSyncController::class, 'mapUser']);
-    Route::delete('/unmap-user', [FingerprintSyncController::class, 'unmapUser']);
-    Route::get('/device-users/{deviceId}', [FingerprintSyncController::class, 'getDeviceUsers']);
-    
-    // Sync Operations
-    Route::post('/sync-employee', [FingerprintSyncController::class, 'syncEmployee']);
-    Route::post('/sync-employees', [FingerprintSyncController::class, 'syncEmployees']);
-    Route::delete('/delete-employee', [FingerprintSyncController::class, 'deleteEmployee']);
-    
-    // Device Status
-    Route::get('/device-status/{deviceId}', [FingerprintSyncController::class, 'deviceStatus']);
-    
-    // Logs
-    Route::get('/punch-logs', [FingerprintSyncController::class, 'getPunchLogs']);
-    Route::get('/punch-logs/{id}', [FingerprintSyncController::class, 'getPunchLog']);
-});
+// Biometric-terminal integration: the SBXPC bridge posts punches to
+// POST /api/v1/biometric/punches (key-authenticated, see routes/api_v1.php).

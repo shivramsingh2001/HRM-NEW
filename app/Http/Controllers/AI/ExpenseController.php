@@ -8,6 +8,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\RbacService;
 
 class ExpenseController extends Controller
 {
@@ -15,7 +16,7 @@ class ExpenseController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
 
             // Base query
             $query = Expense::join('users', 'expenses.user_id', '=', 'users.id')
@@ -58,23 +59,23 @@ class ExpenseController extends Controller
                 ")
                 );
 
-            // Role-based filtering
-            switch ($authUser->role) {
-                case 'admin':
-                case 'hr':
-                    // Admin/HR: See all expenses (no filter)
+            // Permission-based filtering (was a fixed role switch that
+            // silently locked out any custom role holding a real
+            // expenses:view grant).
+            $expenseScope = app(RbacService::class)->scopeFor($authUser, 'expenses', 'view');
+            switch ($expenseScope) {
+                case 'company':
+                    // See all expenses (no filter)
                     break;
 
-                case 'manager':
-                    // Manager: See team members' expenses + their own expenses
+                case 'team':
                     $query->where(function ($q) use ($authUser) {
                         $q->where('user_job_details.reporting_head', $authUser->id) // Team members
                             ->orWhere('expenses.user_id', $authUser->id); // Own expenses
                     });
                     break;
 
-                case 'employee':
-                    // Employee: See only their own expenses
+                case 'own':
                     $query->where('expenses.user_id', $authUser->id);
                     break;
 
@@ -111,9 +112,9 @@ class ExpenseController extends Controller
                 ]
             ];
 
-            // Group by employee if user is admin/hr/manager
+            // Group by employee if the caller can see more than just their own
             $groupedByEmployee = null;
-            if (in_array($authUser->role, ['admin', 'hr', 'manager'])) {
+            if ($expenseScope !== 'own') {
                 $groupedByEmployee = $expenses->groupBy('user_id')->map(function ($userExpenses, $userId) {
                     $first = $userExpenses->first();
                     return [

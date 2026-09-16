@@ -9,8 +9,8 @@
             background: white;
             border-radius: 12px;
             border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
+            padding: 11px 14px;
+            margin-bottom: 17px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
@@ -18,7 +18,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             flex-wrap: wrap;
             gap: 10px;
         }
@@ -27,21 +27,21 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 600;
             color: #1e293b;
         }
 
         .filter-title i {
-            color: #4f46e5;
-            font-size: 16px;
+            color: #1e3a8a;
+            font-size: 12px;
         }
 
         .filter-title .badge-count {
-            background: #eef2ff;
-            color: #4f46e5;
-            font-size: 11px;
-            padding: 2px 10px;
+            background: #e3edfe;
+            color: #1e3a8a;
+            font-size: 9.5px;
+            padding: 2px 7px;
             border-radius: 20px;
             font-weight: 600;
         }
@@ -74,20 +74,20 @@
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
-            font-size: 15px;
+            font-size: 12px;
             pointer-events: none;
             transition: color 0.3s;
         }
 
         .search-wrapper:focus-within i {
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .search-wrapper .form-control {
             width: 100%;
             height: 40px;
-            padding: 8px 14px 8px 38px;
-            font-size: 13px;
+            padding: 6px 10px 6px 27px;
+            font-size: 10.5px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
             background: #f8fafc;
@@ -96,7 +96,7 @@
         }
 
         .search-wrapper .form-control:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             outline: none;
             background: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -104,15 +104,15 @@
 
         .search-wrapper .form-control::placeholder {
             color: #94a3b8;
-            font-size: 12px;
+            font-size: 10px;
         }
 
         /* Select Dropdowns */
         .filter-select {
             width: 100%;
             height: 40px;
-            padding: 8px 32px 8px 14px;
-            font-size: 13px;
+            padding: 6px 22px 6px 10px;
+            font-size: 10.5px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
             background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 12px center;
@@ -130,23 +130,23 @@
         }
 
         .filter-select:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             outline: none;
             background-color: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
         }
 
         .filter-select option {
-            padding: 8px;
+            padding: 6px;
         }
 
         .month-select {
             width: 200px;
             height: 40px;
-            padding: 8px 12px;
+            padding: 6px 8px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 10.5px;
             background: #f8fafc;
             cursor: pointer;
             transition: all 0.3s;
@@ -155,7 +155,7 @@
         }
 
         .month-select:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             outline: none;
             background: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -170,11 +170,11 @@
         .btn-sm-custom {
             height: 40px;
             padding: 0 20px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 10.5px;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
@@ -186,7 +186,7 @@
         }
 
         .btn-sm-custom:hover {
-            background: #4338ca;
+            background: #16295e;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
             color: white;
@@ -200,7 +200,7 @@
             color: #64748b;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 10.5px;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
@@ -220,7 +220,7 @@
         }
 
         .btn-sm-custom-outline i {
-            font-size: 14px;
+            font-size: 11px;
         }
 
         .reset-button {
@@ -230,7 +230,7 @@
             color: #64748b;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 10.5px;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
@@ -250,7 +250,7 @@
         }
 
         .reset-button i {
-            font-size: 14px;
+            font-size: 11px;
         }
 
         /* ==================== TABLE STYLES ==================== */
@@ -268,19 +268,19 @@
         .table th {
             background-color: #f8fafc;
             font-weight: 600;
-            font-size: 11px;
+            font-size: 9.5px;
             text-transform: uppercase;
             letter-spacing: 0.3px;
             color: #475569;
             border-bottom-width: 1px;
-            padding: 14px 16px;
+            padding: 10px 11px;
             white-space: nowrap;
         }
 
         .table td {
             vertical-align: middle;
-            font-size: 13px;
-            padding: 12px 16px;
+            font-size: 10.5px;
+            padding: 8px 11px;
             border-bottom: 1px solid #f1f5f9;
         }
 
@@ -294,7 +294,7 @@
         }
 
         .table tfoot td {
-            padding: 14px 16px;
+            padding: 10px 11px;
             border-top: 2px solid #e2e8f0;
         }
 
@@ -315,13 +315,13 @@
             width: 36px;
             height: 36px;
             border-radius: 10px;
-            background: #eef2ff;
+            background: #e3edfe;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #4f46e5;
+            color: #1e3a8a;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 10.5px;
             text-transform: uppercase;
             flex-shrink: 0;
             transition: all 0.3s;
@@ -339,7 +339,7 @@
         .employee-name {
             font-weight: 600;
             color: #1e293b;
-            font-size: 13px;
+            font-size: 10.5px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -348,11 +348,11 @@
         .employee-name small {
             font-weight: 400;
             color: #94a3b8;
-            font-size: 11px;
+            font-size: 9.5px;
         }
 
         .employee-email {
-            font-size: 11px;
+            font-size: 9.5px;
             color: #64748b;
             white-space: nowrap;
             overflow: hidden;
@@ -361,9 +361,9 @@
 
         /* Badges */
         .badge {
-            padding: 4px 12px;
+            padding: 3px 8px;
             border-radius: 20px;
-            font-size: 11px;
+            font-size: 9.5px;
             font-weight: 600;
             display: inline-block;
             min-width: 32px;
@@ -371,18 +371,18 @@
         }
 
         .badge-success {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
+            background: #bfd3f7;
+            color: #1e3a8a;
         }
 
         .badge-danger {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #e2e8f0;
+            color: #475569;
         }
 
         .badge-info {
@@ -391,8 +391,8 @@
         }
 
         .badge-purple {
-            background: #ede9fe;
-            color: #5b21b6;
+            background: #e3edfe;
+            color: #16295e;
         }
 
         .badge-secondary {
@@ -407,24 +407,24 @@
 
         /* Empty State */
         .empty-state {
-            padding: 60px 20px;
+            padding: 42px 14px;
             text-align: center;
         }
 
         .empty-state i {
-            font-size: 48px;
+            font-size: 32px;
             color: #cbd5e1;
         }
 
         .empty-state h4 {
             color: #0f172a;
-            font-size: 18px;
-            margin-top: 16px;
+            font-size: 14px;
+            margin-top: 11px;
         }
 
         .empty-state p {
             color: #94a3b8;
-            font-size: 14px;
+            font-size: 11px;
         }
 
         /* Responsive */
@@ -474,11 +474,11 @@
             }
 
             .employee-name {
-                font-size: 12px;
+                font-size: 10px;
             }
 
             .employee-email {
-                font-size: 10px;
+                font-size: 9px;
             }
         }
 
@@ -500,7 +500,7 @@
                 print-color-adjust: exact;
             }
             .employee-avatar {
-                background: #eef2ff !important;
+                background: #e3edfe !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -534,7 +534,7 @@
         </div> --}}
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Filter Section -->
         <div class="filter-wrapper">
             <div class="filter-header">
@@ -552,7 +552,7 @@
                     @endif
                 </div>
                 {{-- @if(request()->hasAny(['month', 'search', 'department']))
-                    <a href="{{ route('team.attendance-summary') }}" class="reset-button" style="border-color: #ef4444; color: #ef4444;">
+                    <a href="{{ route('team.attendance-summary') }}" class="reset-button" style="border-color: #475569; color: #475569;">
                         <i class="feather-x"></i>
                         Clear All
                     </a>
@@ -615,16 +615,16 @@
 
             <!-- Active Filter Tags -->
             @if(request()->hasAny(['month', 'search', 'department']))
-                <div class="active-filters" style="margin-top: 14px; padding-top: 14px; border-top: 1.5px dashed #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
-                    <span class="active-filters-label" style="font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; background: #f1f5f9; padding: 3px 10px; border-radius: 20px;">Active:</span>
+                <div class="active-filters" style="margin-top: 10px; padding-top: 10px; border-top: 1.5px dashed #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                    <span class="active-filters-label" style="font-size: 9.5px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; background: #f1f5f9; padding: 2px 7px; border-radius: 20px;">Active:</span>
 
                     @if(request('month') && request('month') != now()->format('Y-m'))
-                        <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 4px 12px 4px 10px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
-                            <i class="feather-calendar" style="color: #4f46e5; font-size: 12px;"></i>
+                        <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 3px 8px 3px 7px; font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
+                            <i class="feather-calendar" style="color: #1e3a8a; font-size: 10px;"></i>
                             {{ \Carbon\Carbon::createFromFormat('Y-m', request('month'))->format('F Y') }}
                             <a href="{{ route('team.attendance-summary', array_merge(request()->except(['month', 'page']))) }}"
                                class="remove-tag" style="color: #94a3b8; margin-left: 2px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; padding: 2px; border-radius: 50%; line-height: 1; text-decoration: none;">
-                                <i class="feather-x" style="font-size: 12px;"></i>
+                                <i class="feather-x" style="font-size: 10px;"></i>
                             </a>
                         </span>
                     @endif
@@ -634,30 +634,30 @@
                             $deptName = isset($departments) ? $departments->firstWhere('id', (int)request('department'))?->name : '';
                         @endphp
                         @if($deptName)
-                            <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 4px 12px 4px 10px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
-                                <i class="feather-grid" style="color: #4f46e5; font-size: 12px;"></i>
+                            <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 3px 8px 3px 7px; font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
+                                <i class="feather-grid" style="color: #1e3a8a; font-size: 10px;"></i>
                                 {{ $deptName }}
                                 <a href="{{ route('team.attendance-summary', array_merge(request()->except(['department', 'page']))) }}"
                                    class="remove-tag" style="color: #94a3b8; margin-left: 2px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; padding: 2px; border-radius: 50%; line-height: 1; text-decoration: none;">
-                                    <i class="feather-x" style="font-size: 12px;"></i>
+                                    <i class="feather-x" style="font-size: 10px;"></i>
                                 </a>
                             </span>
                         @endif
                     @endif
 
                     @if(request('search'))
-                        <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 4px 12px 4px 10px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
-                            <i class="feather-search" style="color: #4f46e5; font-size: 12px;"></i>
+                        <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 3px 8px 3px 7px; font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
+                            <i class="feather-search" style="color: #1e3a8a; font-size: 10px;"></i>
                             "{{ request('search') }}"
                             <a href="{{ route('team.attendance-summary', array_merge(request()->except(['search', 'page']))) }}"
                                class="remove-tag" style="color: #94a3b8; margin-left: 2px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; padding: 2px; border-radius: 50%; line-height: 1; text-decoration: none;">
-                                <i class="feather-x" style="font-size: 12px;"></i>
+                                <i class="feather-x" style="font-size: 10px;"></i>
                             </a>
                         </span>
                     @endif
 
-                    <a href="{{ route('team.attendance-summary') }}" class="filter-tag clear-all" style="background: #eef2ff; border-color: #4f46e5; color: #4f46e5; font-weight: 600; text-decoration: none; padding: 4px 14px; border-radius: 30px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
-                        <i class="feather-refresh-cw" style="color: currentColor; font-size: 12px;"></i>
+                    <a href="{{ route('team.attendance-summary') }}" class="filter-tag clear-all" style="background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; font-weight: 600; text-decoration: none; padding: 3px 10px; border-radius: 30px; font-size: 10px; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="feather-refresh-cw" style="color: currentColor; font-size: 10px;"></i>
                         Clear All
                     </a>
                 </div>

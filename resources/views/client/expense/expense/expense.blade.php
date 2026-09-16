@@ -36,206 +36,14 @@
             background: rgba(30, 41, 59, 0.1);
         }
 
-        /* ==================== STATS CARDS ==================== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        /* Add Balance Card Styles */
-        .balance-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            color: white;
-            border: none;
-        }
-
-        .balance-card .stats-amount-main {
-            color: white;
-        }
-
-        .balance-card .stats-label {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .balance-card .count-number {
-            color: white;
-        }
-
-        .balance-card .count-text {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .balance-card .stats-icon-wrapper {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .balance-card .stats-icon-wrapper i {
-            color: white;
-        }
-
-
-        @media (max-width: 1400px) {
-            .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-
-        @media (max-width: 992px) {
-            .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-
-
-
-        /* Stats Card Base Styles */
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.3s ease;
-            border: 1px solid #edf2f7;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Card-specific gradient borders */
-        .total-card::before {
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
-        }
-
-        .pending-card::before {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-        }
-
-        .approved-card::before {
-            background: linear-gradient(90deg, #10b981, #34d399);
-        }
-
-        .completed-card::before {
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
-        }
-
-        .cancelled-card::before {
-            background: linear-gradient(90deg, #ef4444, #f87171);
-        }
-
-        /* Icon Wrapper */
-        .stats-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-        }
-
-        .stats-card:hover .stats-icon-wrapper {
-            transform: scale(1.05);
-        }
-
-        /* Card-specific icon backgrounds */
-        .total-card .stats-icon-wrapper {
-            background: rgba(79, 70, 229, 0.1);
-        }
-
-        .total-card .stats-icon-wrapper i {
-            color: #4f46e5;
-            font-size: 24px;
-        }
-
-        .pending-card .stats-icon-wrapper {
-            background: rgba(245, 158, 11, 0.1);
-        }
-
-        .pending-card .stats-icon-wrapper i {
-            color: #f59e0b;
-            font-size: 24px;
-        }
-
-        .approved-card .stats-icon-wrapper {
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .approved-card .stats-icon-wrapper i {
-            color: #10b981;
-            font-size: 24px;
-        }
-
-        .completed-card .stats-icon-wrapper {
-            background: rgba(99, 102, 241, 0.1);
-        }
-
-        .completed-card .stats-icon-wrapper i {
-            color: #6366f1;
-            font-size: 24px;
-        }
-
-        .cancelled-card .stats-icon-wrapper {
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        .cancelled-card .stats-icon-wrapper i {
-            color: #ef4444;
-            font-size: 24px;
-        }
-
-        /* Content Styles */
-        .stats-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .stats-amount-main {
-            font-size: 12px;
-            font-weight: 700;
-            color: #1e293b;
-            line-height: 1.3;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .stats-label {
-            font-size: 10px;
-            font-weight: 500;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-bottom: 6px;
-        }
-
+        /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
+           are centralized in client.layout.head (single blue-only theme —
+           the balance-card's special purple gradient highlight is dropped
+           so all 4 cards share the same consistent look) — no local copy. */
         .stats-count {
             display: flex;
             align-items: baseline;
             gap: 4px;
-        }
-
-        .stats-card:hover .stats-count {
-            background: white;
-            border-color: currentColor;
         }
 
         .count-number {
@@ -247,24 +55,6 @@
             font-size: 11px;
             color: #64748b;
             font-weight: 400;
-        }
-
-        @media (max-width: 1400px) {
-            .stats-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        @media (max-width: 992px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
         }
 
         /* ==================== FILTER SECTION ==================== */
@@ -795,7 +585,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
 
         <div class="row g-3 mb-3">
             <!-- Current Balance Card -->

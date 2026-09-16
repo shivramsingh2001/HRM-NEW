@@ -54,7 +54,7 @@ class TenantMiddleware
         $identifier = $request->query('tenant')
             ?? $request->header('X-Tenant')
             ?? $request->session()->get('tenant_id')
-            ?? env('LOCAL_TENANT_ID');
+            ?? config('tenancy.local_tenant_id');
 
         $tenant = null;
 
@@ -130,23 +130,43 @@ class TenantMiddleware
         }
 
         // Unauthenticated: only the pre-auth allowlist may name its tenant.
+        // Tenant resolution is REQUIRED here, not best-effort — these routes
+        // look users up by employee_id/email/contact, none of which are
+        // guaranteed unique across tenants. Previously, a request with no
+        // (or an unresolvable) tenant identifier fell through to $next()
+        // anyway, leaving the downstream User::where(...) lookup completely
+        // unscoped by TenantTrait's global scope (which only filters when
+        // app()->bound('current_tenant') — never bound here) — i.e. able to
+        // match a same-employee_id/email/contact row in ANY tenant. Failing
+        // closed here removes that gap at its single root cause instead of
+        // relying on every controller to remember to check it individually.
         if ($this->isTenantSelectableRoute($request)) {
             $identifier = $request->header('X-Tenant')
                 ?? $request->header('X-Tenant-ID')
                 ?? $request->input('tenant_id');
 
-            if ($identifier) {
-                $tenant = Tenant::where('status', 'active')
-                    ->where(function ($q) use ($identifier) {
-                        $q->where('subdomain', $identifier)
-                          ->orWhere('id', $identifier);
-                    })
-                    ->first();
-
-                if ($tenant) {
-                    $this->setTenantContext($tenant, $request);
-                }
+            if (!$identifier) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing tenant identifier. Include an X-Tenant header with your request.',
+                ], 400);
             }
+
+            $tenant = Tenant::where('status', 'active')
+                ->where(function ($q) use ($identifier) {
+                    $q->where('subdomain', $identifier)
+                      ->orWhere('id', $identifier);
+                })
+                ->first();
+
+            if (!$tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Company not found or inactive.',
+                ], 400);
+            }
+
+            $this->setTenantContext($tenant, $request);
         }
 
         return $next($request);

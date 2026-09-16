@@ -36,6 +36,22 @@ Schedule::command('attendance:auto-clockout --hours=15')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/auto-clockout.log'));
 
+// Fire meeting reminders once a meeting enters its reminder_minutes_before
+// window. Runs every five minutes (like the missed-checkin sweep above)
+// since the window is minute-granular; reminder_sent dedupes.
+Schedule::command('meetings:send-reminders')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/meeting-reminders.log'));
+
+// Remind task assignees the day before a deadline, then daily while overdue.
+Schedule::command('tasks:deadline-reminders')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/task-deadline-reminders.log'));
+
 // Rebuild the current month's attendance summaries nightly, and on the 1st also
 // finalise the month that just ended.
 Schedule::command('attendance:update-summaries')
@@ -55,3 +71,36 @@ Schedule::call(function () {
 Schedule::command('performance:calculate')
 ->monthlyOn(1, '02:00')
 ->appendOutputTo(storage_path('logs/performance-calculation.log'));
+
+// Field GPS tracking — meter seat usage for billing, then prune old breadcrumbs.
+Schedule::command('field-tracking:meter')
+    ->dailyAt('02:30')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/field-tracking-meter.log'));
+
+Schedule::command('field-tracking:prune')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/field-tracking-prune.log'));
+
+// Biometric-terminal integration — retry stuck punches; prune settled ones.
+Schedule::command('biometric:reprocess --remap')
+    ->everyTenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/biometric-reprocess.log'));
+
+Schedule::command('biometric:prune')
+    ->dailyAt('03:45')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/biometric-prune.log'));
+
+// Reconcile terminal user lists against HRM (safety net for the User observer).
+Schedule::command('biometric:sync-roster')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/biometric-sync-roster.log'));

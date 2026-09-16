@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Request as DBRequest;
 use App\Models\RequestType;
+use App\Services\RbacService;
 
 class RequestController extends Controller
 {
@@ -16,7 +17,7 @@ class RequestController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
 
             // Base query with joins
             $query = DBRequest::query()
@@ -60,23 +61,22 @@ class RequestController extends Controller
                 // ")
                 );
 
-            // Role-based filtering
-            switch ($authUser->role) {
-                case 'admin':
-                case 'hr':
-                    // Admin/HR: See all requests (no filter)
+            // Permission-based filtering (was a fixed role switch that
+            // silently locked out any custom role holding a real
+            // requests:view grant).
+            $requestScope = app(RbacService::class)->scopeFor($authUser, 'requests', 'view');
+            switch ($requestScope) {
+                case 'company':
                     break;
 
-                case 'manager':
-                    // Manager: See team members' requests + their own requests
+                case 'team':
                     $query->where(function ($q) use ($authUser) {
                         $q->where('user_job_details.reporting_head', $authUser->id) // Team members
                             ->orWhere('requests.user_id', $authUser->id); // Own requests
                     });
                     break;
 
-                case 'employee':
-                    // Employee: See only their own requests
+                case 'own':
                     $query->where('requests.user_id', $authUser->id);
                     break;
 
@@ -96,7 +96,7 @@ class RequestController extends Controller
                 $query->where('requests.request_type_id', $request->request_type);
             }
 
-            if ($request->filled('employee_id') && in_array($authUser->role, ['admin', 'hr'])) {
+            if ($request->filled('employee_id') && $requestScope === 'company') {
                 $query->where('requests.user_id', $request->employee_id);
             }
 
@@ -189,9 +189,9 @@ class RequestController extends Controller
                 ];
             }
 
-            // Group by employee if user is admin/hr/manager
+            // Group by employee if the caller can see more than just their own
             $groupedByEmployee = null;
-            if (in_array($authUser->role, ['admin', 'hr', 'manager'])) {
+            if ($requestScope !== 'own') {
                 $groupedByEmployee = $allRequests->groupBy('user_id')->map(function ($userRequests, $userId) {
                     $first = $userRequests->first();
                     return [

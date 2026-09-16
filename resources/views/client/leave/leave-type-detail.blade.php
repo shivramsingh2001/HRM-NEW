@@ -1,23 +1,20 @@
 @extends('client.layout.master')
 
 @section('style')
+<style>
+    .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #eaeef5; }
+    .personal-info .form-control { border-color: #eaeef5; font-size: 12px; }
+    .personal-info label { font-size: 12px; }
+    .btn-warning { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .btn-warning:hover { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }
+    .badge.bg-soft-primary { background: #e3edfe; }
+</style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Leave Type Detail</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('leave-type.index') }}">Leave Types</a></li>
-                <li class="breadcrumb-item active">Details</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Leave Type Detail" :parent="['label' => 'Leave Types', 'route' => 'leave-type.index']" />
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row">
             <div class="col-lg-12">
                 <div class="card border-top-0">
@@ -40,9 +37,15 @@
                                             fields must be filled ! </span>
                                     </h5>
                                     <h5 class="fw-bold mb-0">
-                                        <a href="javascript:void(0);" class="btn btn-warning" data-bs-toggle="modal"
-                                            data-bs-target="#changeLeaveTypeDetails">Change
-                                            Leave Type Details</a>
+                                        @if ($leaveType->isSystemType())
+                                            <span class="badge bg-soft-primary text-primary" title="System-managed leave type — cannot be edited or deleted">
+                                                <i class="feather-lock me-1"></i>System type — locked
+                                            </span>
+                                        @else
+                                            <a href="javascript:void(0);" class="btn btn-warning" data-bs-toggle="modal"
+                                                data-bs-target="#changeLeaveTypeDetails">Change
+                                                Leave Type Details</a>
+                                        @endif
                                     </h5>
                                 </div>
 
@@ -113,7 +116,7 @@
     <!-- Update Leave Type Modal -->
     <div class="modal fade" id="changeLeaveTypeDetails" tabindex="-1" aria-labelledby="changeLeaveTypeDetailsLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">

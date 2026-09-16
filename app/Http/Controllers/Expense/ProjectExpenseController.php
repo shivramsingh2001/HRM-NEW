@@ -15,7 +15,7 @@ class ProjectExpenseController extends Controller
     public function index(Request $request)
     {
         $id = Auth::id();
-        $baseUrl = env('APP_URL');
+        $baseUrl = config('app.url');
         $authUser = Auth::user();
         $data['projects'] = DB::table('projects as p')
             ->select([

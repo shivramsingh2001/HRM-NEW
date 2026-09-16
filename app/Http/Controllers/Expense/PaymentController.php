@@ -17,9 +17,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Services\ExpensePaymentNotificationService;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 
 class PaymentController extends Controller
 {
+    use AuthorizesByScope;
+
     protected $notificationService;
 
     public function __construct(ExpensePaymentNotificationService $notificationService)
@@ -45,7 +49,7 @@ class PaymentController extends Controller
                     'users.email as employee_email'
                 );
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (app(RbacService::class)->scopeFor($authUser, 'expenses', 'view') !== 'company') {
                 $query->where('expenses.user_id', $authUser->id);
             }
 
@@ -77,7 +81,7 @@ class PaymentController extends Controller
             $statsQuery = ExpensePayment::query()
                 ->join('expenses', 'expense_payments.expense_id', '=', 'expenses.id');
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (app(RbacService::class)->scopeFor($authUser, 'expenses', 'view') !== 'company') {
                 $statsQuery->where('expenses.user_id', $authUser->id);
             }
             if ($request->filled('user_id')) {
@@ -142,7 +146,7 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
             }
 
@@ -196,7 +200,7 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
             }
 
@@ -494,7 +498,7 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
             }
 
@@ -612,7 +616,7 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
             }
 
@@ -664,20 +668,10 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
-            }
-
             $expense = Expense::with(['payments.payer', 'user'])->findOrFail($expenseId);
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
-                $isReportingHead = UserJobDetail::where('user_id', $expense->user_id)   // ← Bug 4 fix
-                    ->where('reporting_head', $authUser->id)
-                    ->exists();
-
-                if ($expense->user_id != $authUser->id && !$isReportingHead) {
-                    return response()->json(['success' => false, 'message' => 'You are not authorized to view these payments.'], 403);
-                }
+            if (!$this->scopeCoversOwner($authUser, 'expenses', 'view', $expense->user_id)) {
+                return response()->json(['success' => false, 'message' => 'You are not authorized to view these payments.'], 403);
             }
 
             $payments        = $expense->payments;
@@ -719,7 +713,7 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
             }
 
@@ -777,7 +771,7 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
             }
 

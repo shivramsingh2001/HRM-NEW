@@ -29,10 +29,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Carbon\CarbonPeriod;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 
 class TeamController extends Controller
 {
     use \App\Http\Controllers\Concerns\SanitizesCsv;
+    use AuthorizesByScope;
 
     /**
      * Display team members based on user role
@@ -159,14 +162,13 @@ class TeamController extends Controller
             ->where('status', 1)
             ->where('role', "!=", "admin");
 
-        // Role-based filtering
-        if ($authUser->role == 'manager') {
+        // Permission-based filtering
+        $teamScope = app(RbacService::class)->scopeFor($authUser, 'team', 'view');
+        if ($teamScope === 'team') {
             $query->whereHas('jobDetails', function ($q) use ($authUser) {
                 $q->where('reporting_head', $authUser->id);
             });
-        } elseif (in_array($authUser->role, ['admin', 'hr'])) {
-            // Admin and HR see all users
-        } else {
+        } elseif ($teamScope !== 'company') {
             return collect([]);
         }
 
@@ -177,9 +179,12 @@ class TeamController extends Controller
             ->get()
             ->keyBy('user_id');
 
+        // COALESCE(end_date, start_date) so legacy one-row-per-day records
+        // (created before leave requests were collapsed to a single row and
+        // never had end_date set) still match on their single day.
         $leaveRecords = Leave::where('status', 'approved')
             ->whereDate('start_date', '<=', $currentDate)
-            ->whereDate('start_date', '>=', $currentDate)
+            ->whereRaw('COALESCE(end_date, start_date) >= ?', [$currentDate])
             ->whereIn('user_id', $users->pluck('id'))
             ->get()
             ->keyBy('user_id');
@@ -317,6 +322,12 @@ class TeamController extends Controller
         $isManual = (($attendance->attendance_type ?? null) === 'manual')
             || !empty($attendance->marked_by ?? null);
 
+        // An auto row that has only been clocked into (no clock-out) must still
+        // read as "Checked In Only", not the 'present' the policy writes for it.
+        if (!$isManual && !empty($attendance->clock_in ?? null) && empty($attendance->clock_out ?? null)) {
+            return null;
+        }
+
         $status = $isManual
             ? ($attendance->attendance_status ?? null)
             : ($attendance->effective_status ?? null);
@@ -328,6 +339,8 @@ class TeamController extends Controller
             'on_leave' => 'Full Day Leave',
             'first_half_leave' => 'First Half Leave',
             'second_half_leave' => 'Second Half Leave',
+            'holiday' => 'Holiday',
+            'weekoff' => 'Week Off',
             default => null,
         };
     }
@@ -560,20 +573,7 @@ class TeamController extends Controller
      */
     private function canViewUserProfile($authUser, $targetUser)
     {
-        if ($authUser->id == $targetUser->id) {
-            return true;
-        }
-
-        if (in_array($authUser->role, ['admin', 'hr'])) {
-            return true;
-        }
-
-        if ($authUser->role == 'manager') {
-            return $targetUser->jobDetails &&
-                $targetUser->jobDetails->reporting_head == $authUser->id;
-        }
-
-        return false;
+        return $this->scopeCoversOwner($authUser, 'team', 'view', $targetUser->id);
     }
 
     /**
@@ -703,10 +703,13 @@ class TeamController extends Controller
             ->get()
             ->keyBy('date');
 
+        // Overlap check (with COALESCE fallback for legacy one-row-per-day
+        // records that never had end_date set) instead of matching start_date
+        // alone, so every day of a multi-day leave is picked up below.
         $leaves = Leave::where('user_id', $userId)
             ->where('status', 'approved')
             ->where('start_date', '<=', $endDate)
-            ->where('start_date', '>=', $startDate)
+            ->whereRaw('COALESCE(end_date, start_date) >= ?', [$startDate])
             ->get();
 
         $holidays = Holiday::where('start_date', '<=', $endDate)
@@ -751,7 +754,7 @@ class TeamController extends Controller
             $leave = null;
             foreach ($leaves as $l) {
                 $leaveStart = Carbon::parse($l->start_date)->startOfDay();
-                $leaveEnd = Carbon::parse($l->start_date)->endOfDay();
+                $leaveEnd = Carbon::parse($l->end_date ?? $l->start_date)->endOfDay();
                 if ($currentDate->between($leaveStart, $leaveEnd)) {
                     $leave = $l;
                     break;
@@ -1285,7 +1288,7 @@ class TeamController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
+            if (!app(RbacService::class)->can($authUser, 'team', 'view', 'team')) {
                 return redirect()->back()->with('error', 'Unauthorized access.');
             }
 
@@ -1359,7 +1362,7 @@ class TeamController extends Controller
             ->where('status', 1)
             ->where('role', "!=", 'admin');
 
-        if ($authUser->role == 'manager') {
+        if (app(RbacService::class)->scopeFor($authUser, 'team', 'view') === 'team') {
             $query->whereHas('jobDetails', function ($q) use ($authUser) {
                 $q->where('reporting_head', $authUser->id);
             });
@@ -1393,6 +1396,16 @@ class TeamController extends Controller
             $dataEndDate = Carbon::parse($dataEnd);
 
             $totalDaysInMonth = $start->copy()->daysInMonth;
+
+            // Tier 1 / W3 — read the persisted rollup instead of recomputing from
+            // raw rows. Same output keys; gated until `attendance:summary-diff`
+            // confirms parity for the tenant.
+            if (config('attendance.summary_readthrough')) {
+                $adapted = $this->monthlySummaryFromRollup($user, $start, $totalDaysInMonth);
+                if ($adapted !== null) {
+                    return $adapted;
+                }
+            }
 
             $attendances = Attendance::where('user_id', $userId)
                 ->whereBetween('date', [$monthStart, $dataEnd])
@@ -1574,12 +1587,59 @@ class TeamController extends Controller
         }
     }
 
+    /**
+     * Tier 1 / W3 — build the getUserMonthlySummary() payload from the persisted
+     * attendance_summaries row. Returns null (caller falls back to the live
+     * recompute) if no rollup exists yet.
+     *
+     * Key mapping (must stay identical to the inline path's return array):
+     *   present  = present_days + 0.5 * half_days   (a worked half day is 0.5 present)
+     *   halfday  = half_days
+     *   leaves   = total_leaves
+     */
+    private function monthlySummaryFromRollup($user, Carbon $start, int $totalDaysInMonth): ?array
+    {
+        $m = app(\App\Services\AttendanceSummaryService::class)
+            ->getMonthly((int) $user->id, $start->format('Y-m'), (int) $user->tenant_id);
+
+        if (($m['source'] ?? null) === 'unavailable') {
+            return null;
+        }
+
+        $halfDays = (float) $m['half_days'];
+        $present = (float) $m['present_days'] + 0.5 * $halfDays;
+        $absent = (float) $m['absent_days'];
+        $leaveCount = (float) $m['total_leaves'];
+        $holidayCount = (int) $m['holidays'];
+        $weekoffCount = (int) $m['week_offs'];
+        $workingDays = $totalDaysInMonth - $holidayCount - $weekoffCount;
+
+        return [
+            'user_id' => $user->id,
+            'employee_id' => $user->employee_id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'department' => $user->jobDetails->Department->name ?? 'N/A',
+            'designation' => $user->jobDetails->Designation->name ?? 'N/A',
+            'joining_date' => $user->jobDetails->joining_date ?? 'N/A',
+            'present' => (float) $present,
+            'absent' => (float) $absent,
+            'leaves' => (float) $leaveCount,
+            'holidays' => $holidayCount,
+            'weekoffs' => $weekoffCount,
+            'halfday' => (int) $halfDays,
+            'working_days' => $workingDays,
+            'total_month_days' => $totalDaysInMonth,
+            'attendance_percentage' => $workingDays > 0 ? round(($present / $workingDays) * 100, 2) : 0,
+        ];
+    }
+
     public function exportAttendanceSummary(Request $request)
     {
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
+            if (!app(RbacService::class)->can($authUser, 'team', 'view', 'team')) {
                 return redirect()->back()->with('error', 'Unauthorized access.');
             }
 
@@ -1681,7 +1741,7 @@ class TeamController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
+            if (!app(RbacService::class)->can($authUser, 'team', 'view', 'team')) {
                 return response()->json(['error' => 'Unauthorized'], 403);
             }
 
@@ -3063,15 +3123,16 @@ class TeamController extends Controller
      * reportees). Supports present / absent / half day / on leave /
      * first- or second-half leave. Delegates to ManualAttendanceService.
      */
-    public function markAttendance(\App\Http\Requests\MarkAttendanceRequest $request, \App\Services\Attendance\ManualAttendanceService $service)
+    public function markAttendance(\App\Http\Requests\MarkAttendanceRequest $request, \App\Services\Attendance\AttendanceEntryService $service)
     {
         try {
             $actor = Auth::user();
 
-            $result = $service->mark([
+            $result = $service->markStatus([
                 'user_id' => (int) $request->input('user_id'),
                 'tenant_id' => (int) $actor->tenant_id,
                 'date' => $request->input('date'),
+                'end_date' => $request->input('end_date'),
                 'status' => $request->attendanceStatus(),
                 'clock_in' => $request->input('clock_in'),
                 'clock_out' => $request->input('clock_out'),
@@ -3082,11 +3143,12 @@ class TeamController extends Controller
             $attendance = $result['attendance'];
             $shift = $result['shift'];
             $dateLabel = \Carbon\Carbon::parse($request->input('date'))->format('d M Y');
+            $rangeLabel = ($result['marked'] ?? 1) > 1 ? (' (' . $result['marked'] . ' days)') : '';
 
             return response()->json([
                 'success' => true,
                 'message' => ($result['is_update'] ? 'Attendance updated' : 'Attendance marked')
-                    . ' successfully for ' . $dateLabel,
+                    . ' successfully for ' . $dateLabel . $rangeLabel,
                 'data' => $attendance,
                 'is_update' => $result['is_update'],
                 'leave_created' => $result['leave'] ? $result['leave']->leave_id : null,
@@ -3111,61 +3173,79 @@ class TeamController extends Controller
         }
     }
 
+    /**
+     * Recent attendance change-log entries for an employee (audit trail).
+     * GET /team/attendance-log?user_id=&from=&to=
+     */
+    public function attendanceLog(Request $request)
+    {
+        $actor = Auth::user();
+        $userId = (int) $request->input('user_id');
+        $from = $request->filled('from') ? Carbon::parse($request->input('from'))->startOfDay() : Carbon::now()->subDays(30)->startOfDay();
+        $to = $request->filled('to') ? Carbon::parse($request->input('to'))->endOfDay() : Carbon::now()->endOfDay();
+
+        if (!$userId) {
+            return response()->json(['success' => false, 'message' => 'user_id is required'], 422);
+        }
+        if (!$this->scopeCoversOwner($actor, 'team', 'view', $userId)) {
+            return response()->json(['success' => false, 'message' => 'Not your reportee.'], 403);
+        }
+
+        $rows = \App\Models\AttendanceLog::withoutGlobalScopes()
+            ->with('actor:id,name,role')
+            ->where('tenant_id', $actor->tenant_id)
+            ->where('user_id', $userId)
+            ->whereBetween('event_time', [$from, $to])
+            ->orderByDesc('event_time')
+            ->limit(200)
+            ->get()
+            ->map(function ($l) {
+                $changes = [];
+                foreach ((array) ($l->after ?? []) as $col => $newVal) {
+                    $oldVal = ($l->before[$col] ?? null);
+                    $changes[] = ['field' => $col, 'from' => $oldVal, 'to' => $newVal];
+                }
+                return [
+                    'id' => $l->id,
+                    'event_time' => $l->event_time ? (string) $l->event_time : null,
+                    'source' => $l->source ?: $l->event_type,
+                    'event_type' => $l->event_type,
+                    'actor' => $l->actor?->name ?? ($l->actor_role ?: 'System'),
+                    'actor_role' => $l->actor_role ?: ($l->actor?->role),
+                    'reason' => $l->reason,
+                    'changes' => $changes,
+                ];
+            });
+
+        return response()->json(['success' => true, 'data' => $rows]);
+    }
+
     private function getUserShiftForDate($userId, $date, $tenantId)
     {
         try {
-            // First check user_shifts table
-            $userShift = DB::table('user_shifts')
+            // Honours the tenant's custom-shifts toggle (fixed company shift when
+            // off, the per-date assignment chain when on).
+            $shift = app(\App\Services\Attendance\TenantShiftResolver::class)
+                ->forUserDate((int) $userId, (int) $tenantId, $date);
+
+            if (!$shift) {
+                return null;
+            }
+
+            $userShiftId = DB::table('user_shifts')
                 ->where('user_id', $userId)
                 ->where('tenant_id', $tenantId)
                 ->where('date', $date)
-                ->first();
+                ->value('id');
 
-            if ($userShift) {
-                $shift = DB::table('shifts')
-                    ->where('id', $userShift->shift_id)
-                    ->where('tenant_id', $tenantId)
-                    ->where('status', 1)
-                    ->first();
-
-                if ($shift) {
-                    return [
-                        'shift_id' => $shift->id,
-                        'name' => $shift->name,
-                        'start_time' => $shift->start_time,
-                        'end_time' => $shift->end_time,
-                        'grace_minutes' => $shift->grace_minutes ?? 0,
-                        'user_shift_id' => $userShift->id
-                    ];
-                }
-            }
-
-            // If no shift in user_shifts, check user_job_details
-            $userJobDetail = DB::table('user_job_details')
-                ->where('user_id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->first();
-
-            if ($userJobDetail && $userJobDetail->shift_id) {
-                $shift = DB::table('shifts')
-                    ->where('id', $userJobDetail->shift_id)
-                    ->where('tenant_id', $tenantId)
-                    ->where('status', 1)
-                    ->first();
-
-                if ($shift) {
-                    return [
-                        'shift_id' => $shift->id,
-                        'name' => $shift->name,
-                        'start_time' => $shift->start_time,
-                        'end_time' => $shift->end_time,
-                        'grace_minutes' => $shift->grace_minutes ?? 0,
-                        'user_shift_id' => null
-                    ];
-                }
-            }
-
-            return null;
+            return [
+                'shift_id' => $shift->id,
+                'name' => $shift->name,
+                'start_time' => $shift->start_time,
+                'end_time' => $shift->end_time,
+                'grace_minutes' => $shift->grace_minutes ?? 0,
+                'user_shift_id' => $userShiftId,
+            ];
         } catch (Exception $e) {
             Log::error('Error getting user shift: ' . $e->getMessage());
             return null;

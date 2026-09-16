@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Mom;
 
 use App\Http\Controllers\Controller;
 use App\Models\Meeting;
-use App\Models\MeetingMinute;
 use App\Models\MeetingParticipant;
 use App\Models\Project;
 use App\Models\User;
@@ -14,11 +13,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Services\MeetingNotificationService;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 use Exception;
 use Carbon\Carbon;
 
 class MeetingController extends Controller
 {
+    use AuthorizesByScope;
+
     protected $meetingNotificationService;
 
     public function __construct(MeetingNotificationService $meetingNotificationService)
@@ -39,6 +42,27 @@ class MeetingController extends Controller
                 'participants.user:id,name,employee_id,email',
                 'momWriters'
             ]);
+
+            // Permission-based visibility: company scope sees every tenant
+            // meeting; anything narrower is restricted to meetings the user
+            // participates in (or created) — same rule the web index()
+            // already enforces, ported here so mobile/API can't see more
+            // than the web UI would for the same user.
+            $meetingScope = app(RbacService::class)->scopeFor($authUser, 'meetings', 'view');
+            if ($meetingScope === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to view meetings.'
+                ], 403);
+            }
+            if ($meetingScope !== 'company') {
+                $query->where(function ($q) use ($authUser) {
+                    $q->where('created_by', $authUser->id)
+                        ->orWhereHas('participants', function ($subQ) use ($authUser) {
+                            $subQ->where('user_id', $authUser->id);
+                        });
+                });
+            }
 
             // Filter by status
             if ($request->filled('status') && $request->status != 'all') {
@@ -345,7 +369,7 @@ class MeetingController extends Controller
             // Check if user has access to this meeting
             $hasAccess = ($meeting->created_by == $authUser->id) ||
                 $meeting->participants->contains('user_id', $authUser->id) ||
-                in_array($authUser->role, ['admin', 'hr']);
+                app(RbacService::class)->scopeFor($authUser, 'meetings', 'view') === 'company';
 
             if (!$hasAccess) {
                 return response()->json([
@@ -460,7 +484,7 @@ class MeetingController extends Controller
             }
 
             // Check authorization
-            if ($meeting->created_by != $authUser->id && !in_array($authUser->role, ['admin'])) {
+            if (!$this->scopeCoversOwner($authUser, 'meetings', 'edit', (int) $meeting->created_by)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You are not authorized to edit this meeting.'
@@ -618,7 +642,7 @@ class MeetingController extends Controller
             }
 
             // Check authorization
-            if ($meeting->created_by != $authUser->id && !in_array($authUser->role, ['admin'])) {
+            if (!$this->scopeCoversOwner($authUser, 'meetings', 'edit', (int) $meeting->created_by)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You are not authorized to cancel this meeting.'
@@ -680,7 +704,7 @@ class MeetingController extends Controller
             }
 
             // Check authorization (only creator or admin can mark as completed)
-            if ($meeting->created_by != $authUser->id && !in_array($authUser->role, ['admin'])) {
+            if (!$this->scopeCoversOwner($authUser, 'meetings', 'edit', (int) $meeting->created_by)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You are not authorized to complete this meeting.'
@@ -724,7 +748,7 @@ class MeetingController extends Controller
             $authUser = Auth::user();
 
             $validator = Validator::make($request->all(), [
-                'attendance' => 'required|in:pending,accepted,declined',
+                'attendance' => 'required|in:confirmed,declined,tentative',
                 'meeting_id' => 'required|exists:meetings,id'
             ]);
 
@@ -743,7 +767,8 @@ class MeetingController extends Controller
                 ], 200);
             }
 
-            // Find participant record
+            // Find participant record — implicitly self-scoped: a user can
+            // only ever update their own RSVP row, never anyone else's.
             $participant = MeetingParticipant::where('meeting_id', $request->meeting_id)
                 ->where('user_id', $authUser->id)
                 ->first();
@@ -756,17 +781,10 @@ class MeetingController extends Controller
             }
 
             $participant->update([
-                'attendance' => $request->attendance,
-                'joined_at' => $request->attendance == 'accepted' ? now() : null
+                'attendance_status' => $request->attendance,
+                'response_comments' => $request->comments ?? null,
+                'responded_at' => now(),
             ]);
-
-            // Send notification to meeting creator
-            try {
-
-                // $this->meetingNotificationService->notifyAttendanceUpdated($meeting, $authUser, $request->attendance);
-            } catch (Exception $e) {
-                Log::error('Failed to send attendance notification: ' . $e->getMessage());
-            }
 
             return response()->json([
                 'success' => true,

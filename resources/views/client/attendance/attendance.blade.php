@@ -522,58 +522,9 @@
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Attendance</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Attendance</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="hstack gap-2">
-                <!-- Summary Stats -->
-                {{-- <div class="d-flex gap-3">
-                    <div class="text-center">
-                        <div class="badge bg-success rounded-pill p-2">
-                            <i class="feather-check-circle me-1"></i>
-                            Present: {{ $summary['present'] ?? 0 }}
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <div class="badge bg-danger rounded-pill p-2">
-                            <i class="feather-x-circle me-1"></i>
-                            Absent: {{ $summary['absent'] ?? 0 }}
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <div class="badge bg-warning rounded-pill p-2">
-                            <i class="feather-calendar me-1"></i>
-                            Leave: {{ $summary['leave'] ?? 0 }}
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <div class="badge bg-primary rounded-pill p-2">
-                            <i class="feather-home me-1"></i>
-                            Holiday: {{ $summary['holiday'] ?? 0 }}
-                        </div>
-                    </div>
-                </div> --}}
+    <x-ui.page-header title="Attendance" />
 
-                <!-- Date Range Info -->
-                <!--<div class="dropdown d-none d-sm-flex">-->
-                <!--    <span class="btn btn-light btn-sm rounded-pill">-->
-                <!--        <i class="feather-calendar me-1"></i>-->
-                <!--        {{ date('M d, Y', strtotime($startDate)) }} - {{ date('M d, Y', strtotime($endDate)) }}-->
-                <!--    </span>-->
-                <!--</div>-->
-            </div>
-        </div>
-    </div>
-
-    <div class="main-content d-flex" style="padding: 30px !important;">
+    <div class="main-content d-flex" style="padding: 20px !important;">
 
         <!-- Calendar Card -->
         <div class="card border-0 shadow-lg" style="border-radius: 10px;">

@@ -18,9 +18,13 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use App\Services\ExpenseNotificationService;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 
 class ExpenseController extends Controller
 {
+    use AuthorizesByScope;
+
     protected $notificationService;
 
     public function __construct(ExpenseNotificationService $notificationService)
@@ -35,7 +39,7 @@ class ExpenseController extends Controller
     {
         try {
             $userId = Auth::id();
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
             $authUser = Auth::user();
 
             $userBalance = UserExpenseBalance::where('user_id', $userId)->first();
@@ -448,6 +452,17 @@ class ExpenseController extends Controller
             $authUser = Auth::user();
             $userId = $authUser->id;
 
+            // Unlike some modules' "view all" screens, this one was never
+            // role-gated at all — even a plain employee could reach it and
+            // simply saw a narrower (own+team) result set. Preserve that:
+            // only a genuine "no permission at all" blocks access; 'own'
+            // scope still gets in, just filtered narrowly below.
+            $scope = app(RbacService::class)->scopeFor($authUser, 'expenses', 'view');
+            if ($scope === null) {
+                abort(403, 'You do not have permission to view expenses.');
+            }
+            $needsOwnerFilter = $scope !== 'company';
+
             // Get expense types
             $expenseTypes = ExpenseType::where('status', 1)
                 ->orderBy('name')
@@ -471,8 +486,8 @@ class ExpenseController extends Controller
                     'user_job_details.reporting_head'
                 );
 
-            // Role-based access
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            // Permission-driven scope (was: hardcoded !in_array(role, [admin,hr]))
+            if ($needsOwnerFilter) {
                 $expenseQuery->where(function ($q) use ($authUser, $userId) {
                     $q->where('expenses.user_id', $userId)
                         ->orWhere('user_job_details.reporting_head', $authUser->id);
@@ -504,7 +519,7 @@ class ExpenseController extends Controller
                 $expenseQuery->where('expenses.requirement_type', $request->requirement_type);
             }
 
-            if ($request->filled('user_id') && in_array($authUser->role, ['admin', 'hr'])) {
+            if ($request->filled('user_id') && $scope === 'company') {
                 $expenseQuery->where('expenses.user_id', $request->user_id);
             }
 
@@ -614,7 +629,7 @@ class ExpenseController extends Controller
             $employeesQuery = User::where('status', 1)
                 ->with(['jobDetails']);
 
-            if (!in_array($authUser->role, ['admin', 'hr'])) {
+            if ($needsOwnerFilter) {
                 $employeesQuery->where(function ($q) use ($authUser, $userId) {
                     $q->whereHas('jobDetails', function ($query) use ($authUser) {
                         $query->where('reporting_head', $authUser->id);
@@ -728,15 +743,19 @@ class ExpenseController extends Controller
         try {
             $authUser = Auth::user();
 
-            // Check permission
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized access.'
-                ], 403);
-            }
-
-            // Get expense with authorization check
+            // Coarse "can this role approve expenses at all" is enforced at
+            // the route level (permission:expenses,approve). Get the
+            // expense, then check whether its owner falls within the
+            // caller's granted scope.
+            //
+            // Note: the previous version of this check had a real bug —
+            // it repeated the exact same `!in_array(role, [admin,hr,manager])`
+            // test that had already caused an early return just above when
+            // true, so by the time execution reached the second check it
+            // could never be true again, meaning the manager/reporting_head
+            // ownership check below it was dead code. In practice this
+            // meant any manager could approve ANY expense, not just their
+            // own team's. scopeCoversOwner() replaces both checks correctly.
             $expense = Expense::where('expenses.id', $id)
                 ->leftJoin('user_job_details', 'expenses.user_id', '=', 'user_job_details.user_id')
                 ->select('expenses.*', 'user_job_details.reporting_head')
@@ -749,14 +768,11 @@ class ExpenseController extends Controller
                 ], 404);
             }
 
-            // Check authorization for non-admin/hr
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
-                if ($expense->reporting_head != $authUser->id) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You are not authorized to update this expense.'
-                    ], 403);
-                }
+            if (!$this->scopeCoversOwner($authUser, 'expenses', 'approve', $expense->user_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to update this expense.'
+                ], 403);
             }
 
             if ($expense->status !== 'pending') {

@@ -9,6 +9,7 @@ use App\Models\LeaveTransaction;
 use App\Models\Holiday;
 use App\Models\UserWeekoffs;
 use App\Services\Attendance\AttendanceCalculator;
+use App\Services\Attendance\AttendanceDayResolver;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +21,13 @@ class AttendanceSummaryService
 
     /** ['Y-m-d' => true] week-off dates for the user/month being processed. */
     private array $weekoffDays = [];
+
+    private ?AttendanceDayResolver $resolver = null;
+
+    private function resolver(): AttendanceDayResolver
+    {
+        return $this->resolver ??= app(AttendanceDayResolver::class);
+    }
 
     /**
      * Update or create attendance summary for a user for a specific month.
@@ -45,6 +53,11 @@ class AttendanceSummaryService
             }
             $tenantId = $tenantId ?: $user->tenant_id;
 
+            // Rules in force on the 1st of this month (Tier 1 / W1). Anchored to
+            // the month start so a later policy change can't re-grade it.
+            $policy = app(\App\Services\Attendance\PolicyResolver::class)
+                ->forTenantMonth((int) $tenantId, $yearMonth);
+
             $startStr = $startDate->format('Y-m-d');
             $endStr = $endDate->format('Y-m-d');
 
@@ -69,7 +82,8 @@ class AttendanceSummaryService
             $leaveDetail = LeaveTransaction::withoutGlobalScopes()
                 ->whereIn('leave_id', $leaves->pluck('id'))
                 ->where('transaction_type', 'sub')
-                ->pluck('leave_detail', 'leave_id');
+                ->pluck('leave_detail', 'leave_id')
+                ->all();
 
             // Holidays overlapping the month, expanded to every covered date.
             $holidays = [];
@@ -132,7 +146,7 @@ class AttendanceSummaryService
                     break;
                 }
                 $dateString = $date->format('Y-m-d');
-                $dayData = $this->getDayStatusWithHours($userId, $dateString, $attendances, $leaves, $holidays, $leaveDetail, $tenantId);
+                $dayData = $this->getDayStatusWithHours($userId, $dateString, $attendances, $leaves, $holidays, $leaveDetail, $tenantId, $policy);
 
                 $dayStatus = $dayData['status'];
                 $workedHours = $dayData['worked_hours'] ?? 0;
@@ -166,9 +180,9 @@ class AttendanceSummaryService
                             $summary['early_departure_days']++;
                         }
 
-                        // Check for overtime (more than 9 hours)
-                        if ($workedHours > self::OVERTIME_THRESHOLD) {
-                            $summary['total_overtime_hours'] += ($workedHours - self::OVERTIME_THRESHOLD);
+                        // Overtime beyond the tenant's configured threshold.
+                        if ($workedHours > $policy->overtimeAfterHours) {
+                            $summary['total_overtime_hours'] += ($workedHours - $policy->overtimeAfterHours);
                         }
                         break;
 
@@ -206,11 +220,23 @@ class AttendanceSummaryService
                         $currentContinuousPresent = 0;
                         break;
 
+                    case 'first_half_leave':
+                    case 'second_half_leave':
+                        // The worked half is a half-day; the other half is a leave day.
+                        $summary['half_days']++;
+                        $summary['paid_leaves']++;
+                        $summary['total_leaves']++;
+                        $currentContinuousPresent++;
+                        $currentContinuousAbsent = 0;
+                        $lastAttendanceDate = $dateString;
+                        $summary['total_worked_hours'] += $workedHours;
+                        break;
+
                     case 'holiday':
                         $summary['holidays']++;
                         if ($workedHours > 0) {
                             $summary['holiday_work_days']++;
-                            $worked = $this->classifyByHours($workedHours, $dayData['expected_seconds'] ?? 0);
+                            $worked = $this->classifyByHours($workedHours, $dayData['expected_seconds'] ?? 0, $policy);
                             if ($worked === 'present') {
                                 $summary['present_days']++;
                             } elseif ($worked === 'half_day') {
@@ -224,7 +250,7 @@ class AttendanceSummaryService
                         $summary['week_offs']++;
                         if ($workedHours > 0) {
                             $summary['weekoff_work_days']++;
-                            $worked = $this->classifyByHours($workedHours, $dayData['expected_seconds'] ?? 0);
+                            $worked = $this->classifyByHours($workedHours, $dayData['expected_seconds'] ?? 0, $policy);
                             if ($worked === 'present') {
                                 $summary['present_days']++;
                             } elseif ($worked === 'half_day') {
@@ -250,6 +276,9 @@ class AttendanceSummaryService
                 $summary['avg_working_hours'] = round($summary['total_worked_hours'] / $workingDaysCount, 2);
             }
 
+            // Freshness marker (the column, not just the JSON blob).
+            $summary['calculated_at'] = Carbon::now();
+
             // Add metadata
             $summary['metadata'] = json_encode([
                 'calculated_at' => Carbon::now()->toDateTimeString(),
@@ -259,11 +288,11 @@ class AttendanceSummaryService
                 ],
                 'daily_breakdown' => $dailyDetails,
                 'thresholds' => [
-                    'present_ratio' => config('attendance.ratio.present'),
-                    'half_ratio' => config('attendance.ratio.half'),
-                    'fallback_present_hours' => config('attendance.fallback_hours.present'),
-                    'fallback_half_hours' => config('attendance.fallback_hours.half'),
-                    'overtime' => self::OVERTIME_THRESHOLD,
+                    'present_ratio' => $policy->presentRatio,
+                    'half_ratio' => $policy->halfDayRatio,
+                    'fallback_present_hours' => $policy->fallbackPresentHours,
+                    'fallback_half_hours' => $policy->fallbackHalfHours,
+                    'overtime' => $policy->overtimeAfterHours,
                 ]
             ]);
 
@@ -287,62 +316,128 @@ class AttendanceSummaryService
     }
 
     /**
-     * Status for a single day, with worked hours.
+     * Tier 1 / W3 — the single read API for a user's monthly attendance rollup.
      *
-     * Precedence: holiday -> week off -> completed attendance -> approved leave
-     * -> (incomplete/empty attendance or nothing) absent.
+     * Returns the persisted attendance_summaries row as a stable array, first
+     * recomputing it when the row is missing or stale (a write stamps stale_at;
+     * the current month is also treated stale once a day). Pass $allowStale to
+     * skip the recompute on a screen that prefers speed over freshness.
+     *
+     * @return array<string,mixed>
      */
-    private function getDayStatusWithHours($userId, $date, $attendances, $leaves, $holidays, $leaveDetail, $tenantId)
+    public function getMonthly(int $userId, string $yearMonth, ?int $tenantId = null, bool $allowStale = false): array
     {
-        $hoursData = isset($attendances[$date])
-            ? $this->calculateDailyHours($attendances[$date])
-            : null;
-
-        $worked = $hoursData['total_hours'] ?? 0;
-        $lateMin = $hoursData['late_minutes'] ?? 0;
-        $earlyMin = $hoursData['early_departure_minutes'] ?? 0;
-        $expectedSeconds = $hoursData['expected_seconds'] ?? 0;
-        $effectiveStatus = $hoursData['effective_status'] ?? null;
-        $hasCompletedWork = ($hoursData['completed'] ?? false) && $worked > 0;
-
-        if (isset($holidays[$date])) {
-            return $this->result('holiday', $worked, $lateMin, $earlyMin, $expectedSeconds);
+        if (! $tenantId) {
+            $tenantId = (int) (\App\Models\User::withoutGlobalScopes()->whereKey($userId)->value('tenant_id'));
         }
 
-        if (isset($this->weekoffDays[$date])) {
-            return $this->result('week_off', $worked, $lateMin, $earlyMin, $expectedSeconds);
+        $load = fn () => AttendanceSummary::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->where('year_month', $yearMonth)
+            ->first();
+
+        $row = $load();
+        $source = 'summary';
+
+        if (! $allowStale && $this->summaryIsStale($row, $yearMonth)) {
+            $this->updateMonthlySummary($userId, $yearMonth, $tenantId);
+            $row = $load();
+            $source = $row ? 'recomputed' : 'unavailable';
+        } elseif (! $row) {
+            $source = 'unavailable';
+        } elseif ($this->summaryIsStale($row, $yearMonth)) {
+            $source = 'stale';
         }
 
-        if ($hasCompletedWork) {
-            // LatePolicyService's resolved status wins over the raw hours ladder
-            // for the present / half_day / late distinction (Feature B).
-            $status = match ($effectiveStatus) {
-                'half_day' => 'half_day',
-                'present', 'late', 'overtime', 'early_departure' => 'present',
-                'absent' => 'absent',
-                default => $this->classifyByHours($worked, $expectedSeconds),
-            };
+        return $this->summaryToArray($row, $userId, $yearMonth, $tenantId, $source);
+    }
 
-            return $this->result($status, $worked, $lateMin, $earlyMin, $expectedSeconds);
+    /**
+     * Fresh when the row exists, was calculated at or after any stale marker,
+     * and — for the current month, which drifts daily — was calculated today.
+     */
+    private function summaryIsStale(?AttendanceSummary $row, string $yearMonth): bool
+    {
+        if (! $row || ! $row->calculated_at) {
+            return true;
         }
 
-        // Approved leave covering this date (checked BEFORE treating an empty
-        // attendance row as absent).
-        $current = Carbon::parse($date);
-        foreach ($leaves as $leave) {
-            if ($current->betweenIncluded(Carbon::parse($leave->start_date), Carbon::parse($leave->end_date))) {
-                $detail = $leaveDetail[$leave->id] ?? 'paid';
-                return $this->result(
-                    $detail === 'unpaid' ? 'unpaid_leave' : 'paid_leave',
-                    0,
-                    0,
-                    0,
-                    0
-                );
-            }
+        $calculatedAt = Carbon::parse($row->calculated_at);
+
+        if ($row->stale_at && $calculatedAt->lt(Carbon::parse($row->stale_at))) {
+            return true;
         }
 
-        return $this->result('absent', 0, 0, 0, 0);
+        if ($yearMonth === Carbon::now()->format('Y-m') && $calculatedAt->lt(Carbon::today())) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function summaryToArray(?AttendanceSummary $row, int $userId, string $yearMonth, int $tenantId, string $source): array
+    {
+        $cols = [
+            'total_days', 'present_days', 'absent_days', 'half_days', 'late_days',
+            'early_departure_days', 'paid_leaves', 'unpaid_leaves', 'total_leaves',
+            'holidays', 'week_offs', 'holiday_work_days', 'weekoff_work_days',
+            'work_from_home_days', 'on_duty_days', 'total_worked_hours',
+            'total_overtime_hours', 'total_late_minutes', 'avg_working_hours',
+            'continuous_present_days', 'continuous_absent_days',
+        ];
+
+        $out = [
+            'user_id' => $userId,
+            'tenant_id' => $tenantId,
+            'year_month' => $yearMonth,
+            'source' => $source,
+            'calculated_at' => $row?->calculated_at,
+            'last_attendance_date' => $row?->last_attendance_date,
+        ];
+
+        foreach ($cols as $c) {
+            $out[$c] = $row ? (is_numeric($row->{$c}) ? $row->{$c} + 0 : ($row->{$c} ?? 0)) : 0;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Status for a single day, with worked hours. Delegates the precedence to the
+     * shared AttendanceDayResolver and maps its token to this service's vocab.
+     */
+    private function getDayStatusWithHours($userId, $date, $attendances, $leaves, $holidays, $leaveDetail, $tenantId, ?\App\Services\Attendance\AttendancePolicySnapshot $policy = null)
+    {
+        $rows = $attendances[$date] ?? [];
+
+        $r = $this->resolver()->resolve(
+            $rows,
+            $leaves,
+            $leaveDetail,
+            isset($holidays[$date]),
+            isset($this->weekoffDays[$date]),
+            $date,
+            $policy
+        );
+
+        // Resolver token -> summary status vocab.
+        $status = match ($r['token']) {
+            'late', 'overtime', 'early_departure', 'checked_in_only' => 'present',
+            default => $r['token'], // present, half_day, absent, paid_leave, unpaid_leave,
+                                    // first_half_leave, second_half_leave, holiday, week_off, upcoming
+        };
+
+        return $this->result(
+            $status,
+            $r['worked_hours'],
+            $r['late_minutes'],
+            $r['early_departure_minutes'],
+            $r['expected_seconds']
+        );
     }
 
     private function result(string $status, $worked, $late, $early, $expectedSeconds): array
@@ -356,34 +451,17 @@ class AttendanceSummaryService
         ];
     }
 
-    /**
-     * Classify a worked-hours value against the day's scheduled expectation.
-     * Falls back to an absolute-hours ladder when no shift expectation is known.
-     */
-    private function classifyByHours(float $workedHours, int $expectedSeconds): string
+    /** @deprecated use AttendanceDayResolver::classifyWorked() */
+    private function classifyByHours(float $workedHours, int $expectedSeconds, ?\App\Services\Attendance\AttendancePolicySnapshot $policy = null): string
     {
-        if ($expectedSeconds > 0) {
-            $ratio = ($workedHours * 3600) / $expectedSeconds;
-            if ($ratio >= (float) config('attendance.ratio.present')) {
-                return 'present';
-            }
-            if ($ratio >= (float) config('attendance.ratio.half')) {
-                return 'half_day';
-            }
-            return 'absent';
-        }
-
-        if ($workedHours >= (float) config('attendance.fallback_hours.present')) {
-            return 'present';
-        }
-        if ($workedHours >= (float) config('attendance.fallback_hours.half')) {
-            return 'half_day';
-        }
-        return 'absent';
+        return $this->resolver()->classifyWorked($workedHours, (int) $expectedSeconds, $policy);
     }
 
     /**
      * Aggregate worked hours + stored metrics for a day's attendance row(s).
+     *
+     * @deprecated superseded by AttendanceDayResolver; kept only in case an
+     * external caller still references it.
      */
     private function calculateDailyHours($attendanceEntries)
     {
@@ -396,6 +474,7 @@ class AttendanceSummaryService
         $expectedSeconds = 0;
         $completed = false;
         $effectiveStatus = null;
+        $persistedStatus = null;
 
         // A single session cannot sanely exceed 24h — clamp obvious bad data
         // (missed clock-out closed days later) so one row can't wreck the month.
@@ -435,6 +514,17 @@ class AttendanceSummaryService
             if (!empty($entry->effective_status)) {
                 $effectiveStatus = $entry->effective_status;
             }
+
+            // The status a human hand-set wins over the policy-resolved one, the
+            // same rule the team/report screens use.
+            $isManual = (($entry->attendance_type ?? null) === 'manual')
+                || !empty($entry->marked_by ?? null);
+            $rowStatus = $isManual
+                ? ($entry->attendance_status ?? null)
+                : ($entry->effective_status ?? null);
+            if (!empty($rowStatus)) {
+                $persistedStatus = $rowStatus;
+            }
         }
 
         return [
@@ -446,6 +536,7 @@ class AttendanceSummaryService
             'expected_seconds' => $expectedSeconds,
             'completed' => $completed,
             'effective_status' => $effectiveStatus,
+            'persisted_status' => $persistedStatus,
         ];
     }
 

@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // Shared secret the Super Admin Panel sends on /internal/superadmin/* calls,
+    // and its base URL for the impersonation "End session" redirect.
+    'superadmin' => [
+        'internal_token' => env('SUPERADMIN_INTERNAL_TOKEN', ''),
+        'panel_url' => env('SUPERADMIN_PANEL_URL', 'http://127.0.0.1:8001'),
+    ],
+
 ];

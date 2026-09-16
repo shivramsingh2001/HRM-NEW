@@ -15,10 +15,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Services\ExpenseNotificationService;
+use App\Traits\AuthorizesByScope;
 use Illuminate\Support\Facades\Log;
 
 class ExpenseController extends Controller
 {
+        use AuthorizesByScope;
+
         /**
      * @var ExpenseNotificationService
      */    protected $notificationService;  // Add this property
@@ -52,7 +55,7 @@ class ExpenseController extends Controller
     {
         try {
             $userId = Auth::id();
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
             
             // Get all expenses for the user
             $expenses = Expense::where('expenses.user_id', $userId)
@@ -310,7 +313,7 @@ class ExpenseController extends Controller
     {
     try {
         $authUser = Auth::user();
-        $baseUrl = env('APP_URL');
+        $baseUrl = config('app.url');
 
         // Check if user is manager
         if ($authUser->role !== 'manager') {
@@ -538,14 +541,6 @@ class ExpenseController extends Controller
              $id = $request->id;
             $authUser = Auth::user();
 
-            // Check permission
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized access.'
-                ], 200);
-            }
-
             // Get expense with authorization check
             $expense = Expense::where('expenses.id', $id)
                 ->leftJoin('user_job_details', 'expenses.user_id', '=', 'user_job_details.user_id')
@@ -559,14 +554,15 @@ class ExpenseController extends Controller
                 ], 200);
             }
 
-            // Check authorization for non-admin/hr
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
-                if ($expense->reporting_head != $authUser->id) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You are not authorized to update this expense.'
-                    ], 200);
-                }
+            // Was two identical admin/hr/manager gates in a row — the second
+            // was dead code (the first already guaranteed its negation was
+            // false), so a manager could approve ANY tenant's expense, not
+            // just their team's. scopeCoversOwner() closes that gap.
+            if (!$this->scopeCoversOwner($authUser, 'expenses', 'approve', (int) $expense->user_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to update this expense.'
+                ], 200);
             }
 
             if ($expense->status !== 'pending') {

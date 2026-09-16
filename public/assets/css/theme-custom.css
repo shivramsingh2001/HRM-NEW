@@ -1,0 +1,1152 @@
+/* ============================================================
+   THEME CUSTOM — single shared stylesheet for the whole app.
+   Extracted from the inline <style> block that used to live in
+   resources/views/client/layout/head.blade.php (UI/UX Design
+   Consistency plan, Phase 1). Loaded once, after theme.min.css,
+   so it can cleanly override the vendor template.
+
+   Fixes applied here vs. the old inline version:
+   - :root --primary was #2563eb while .btn-primary hardcoded the
+     OLD indigo #4f46e5 — two different "primary" colors active
+     in the same file. --primary is now #1e3a8a (the color the
+     rest of the app already uses ~575 times), --primary-mid is
+     the #2563eb accent/button shade, --primary-light is #e3edfe.
+     Every rule below references the variables, never a literal
+     hex, so this can't drift out of sync again.
+   - Removed a second, fully dead (HTML-commented-out) copy of
+     this block that carried a THIRD, unused primary color.
+   - Added a small type scale (--fs-*) and 4px spacing scale
+     (--sp-*) for later phases to consume instead of inventing
+     ad hoc font-size/padding values per page.
+   ============================================================ */
+
+:root {
+    --primary: #1e3a8a;
+    --primary-mid: #2563eb;
+    --primary-light: #e3edfe;
+    --primary-dark: #1d4ed8;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --purple-mid: #ddd6fe;
+    --success: #059669;
+    --success-light: #ecfdf5;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --border: #e5e7eb;
+    --border-focus: #93c5fd;
+    --surface: #ffffff;
+    --surface-2: #f9fafb;
+    --surface-3: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, .08);
+    --shadow-focus: 0 0 0 3px rgba(37, 99, 235, .18);
+    --font: 'DM Sans', system-ui, sans-serif;
+    --transition: .15s ease;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+
+    /* Type scale — replaces the 20+ ad hoc font-size values found
+       scattered across page-local <style> blocks. Not yet applied
+       everywhere; later phases migrate pages onto these. */
+    --fs-xs: 10px;
+    --fs-sm: 11.5px;
+    --fs-base: 12.5px;
+    --fs-md: 14px;
+    --fs-lg: 16px;
+
+    /* 4px spacing scale — same purpose, for padding/margin. */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+}
+
+.card-footer .remove-internal-para p {
+    display: none;
+}
+
+.btn-icon {
+    padding: 5px 5px !important;
+}
+
+.btn-primary {
+    background: var(--primary-mid);
+    color: #fff;
+    border: none;
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+.btn-primary:hover {
+    background: var(--primary);
+}
+
+.table-responsive {
+    overflow-x: auto !important;
+    touch-action: pan-x pan-y !important;
+    cursor: grab;
+}
+
+.table-responsive.grabbing {
+    cursor: grabbing;
+    user-select: none;
+}
+
+/* ==================== EMPLOYEE INFO ==================== */
+.employee-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.employee-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.employee-details {
+    line-height: 1.3;
+}
+
+.employee-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 13px;
+}
+
+.employee-id {
+    font-size: 10px;
+    color: #64748b;
+}
+
+/* Simple consistent styling */
+.custom-employee-dropdown .btn {
+    height: 36px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #1e293b;
+    font-size: 13px;
+    padding: 0 12px;
+}
+
+.custom-employee-dropdown .btn:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+}
+
+.custom-employee-dropdown .btn:focus {
+    border-color: var(--primary-mid);
+    box-shadow: var(--shadow-focus);
+}
+
+/* Consistent initials style - same color for all */
+.employee-initials,
+.employee-initials-sm {
+    width: 28px;
+    height: 28px;
+    background: var(--primary-mid);
+    /* Single consistent color */
+    color: white;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.employee-initials-sm {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+}
+
+/* Dropdown menu styling */
+.custom-employee-dropdown .dropdown-menu {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+
+    min-width: 250px;
+}
+
+.custom-employee-dropdown .dropdown-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #1e293b;
+    margin-bottom: 2px;
+}
+
+.custom-employee-dropdown .dropdown-item:hover {
+    background: #f1f5f9;
+}
+
+.custom-employee-dropdown .dropdown-item.active {
+    background: var(--primary-light);
+    color: var(--primary-mid);
+}
+
+.custom-employee-dropdown .dropdown-item.active .text-muted {
+    color: var(--primary-mid) !important;
+    opacity: 0.8;
+}
+
+/* Employee name styling — same class name, same size/weight,
+   applied site-wide (any page with its own more specific/!important
+   rule, like the dashboard, keeps winning the cascade as before). */
+.employee-name,
+.employee-name-text {
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.employee-email,
+.employee-email-text {
+    font-size: 8px;
+}
+
+/* Global form-control padding — applies site-wide */
+.form-control {
+    padding: 7px 15px !important;
+}
+
+/* Global table font/spacing — same as the Team Leave page — applies
+   site-wide except where a page already sets its own font-size on
+   td/th (e.g. the admin dashboard uses !important there, which still
+   wins the cascade regardless of this rule). */
+.table { font-size: 11.5px; }
+.table-responsive .table tr td {
+    padding: 3px 15px;
+}
+
+/* Employee avatar+name+email cell (Team Leave's pattern) — centralized
+   so every page that builds this cell shares one definition instead of
+   each page re-declaring its own copy. */
+.employee-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.employee-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+.employee-avatar:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.employee-details { line-height: 1.4; }
+
+/* ============================================
+   KPI5 CARD — compact stat-card anatomy (icon+pill header, bold
+   value+label, dashed divider, 2 footer stats), first established on
+   the admin dashboard. Centralized here so it's declared once instead
+   of being copy-pasted per page (that drift previously caused the
+   kpi5-divider margin to disagree between pages).
+   ============================================ */
+.kpi5-card {
+    background: #fff;
+    border: 1px solid #eaeef5;
+    border-radius: 10px;
+    padding: 8px 10px;
+    height: 100%;
+    box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+}
+.kpi5-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: .35rem; }
+.kpi5-icon {
+    width: 26px; height: 26px; border-radius: 7px; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 12px; flex: none;
+    background: var(--primary-light); color: var(--primary);
+}
+.kpi5-pill {
+    font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+    background: rgba(59, 130, 246, .14); color: #1d4ed8; padding: 2px 6px;
+    border-radius: 999px; white-space: nowrap;
+}
+.kpi5-value { font-size: 16px; font-weight: 800; color: #1a2236; line-height: 1.1; }
+.kpi5-label {
+    font-size: 9.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .03em; color: #6b7385; margin-top: 2px;
+}
+.kpi5-divider { border-top: 1px dashed #eaeef5; margin: 0; }
+.kpi5-foot { display: flex; }
+.kpi5-stat { flex: 1; min-width: 0; }
+.kpi5-stat + .kpi5-stat { border-left: 1px solid #eaeef5; padding-left: .45rem; margin-left: .45rem; }
+.kpi5-stat .n { font-size: 10.5px; font-weight: 700; color: #1a2236; }
+.kpi5-stat .l { font-size: 9.5px; color: #9aa1b1; text-transform: uppercase; letter-spacing: .02em; margin-left: .2rem; }
+
+/* ============================================
+   STATS CARD — second shared stat-card family (report/attendance,
+   task, loan, request, expense, overtime, recruitment, payroll,
+   offboarding, user, performance, ...). Centralized so every page
+   using these class names gets one small, blue-only look instead
+   of its own colorful/oversized copy. Markup and JS (data-status,
+   click-to-filter, .active state) are untouched — only visual
+   values changed here.
+   Two markup variants share the same .stats-card/.stats-grid
+   wrapper: (A) .stats-icon-wrapper + .stats-content > .stats-amount-main/.stats-label,
+   (B) .stats-info > h3/p + .stats-icon.
+   ============================================ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.stats-card {
+    background: #fff;
+    border: 1px solid #eaeef5;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+    transition: all .2s;
+    position: relative;
+    overflow: visible;
+}
+.stats-card::before { display: none; }
+.stats-card:hover {
+    box-shadow: 0 4px 8px rgba(20, 30, 60, .08);
+    transform: translateY(-2px);
+}
+.stats-card.active {
+    border: 1.5px solid var(--primary);
+    background: #eef2ff;
+}
+
+/* Variant A */
+.stats-icon-wrapper {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-light) !important;
+    flex: none;
+}
+.stats-icon-wrapper i {
+    font-size: 15px !important;
+    color: var(--primary) !important;
+}
+.stats-content { flex: 1; min-width: 0; }
+.stats-amount-main {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1a2236;
+    line-height: 1.15;
+    margin-bottom: 0;
+}
+.stats-label {
+    font-size: 9.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #6b7385;
+    margin-top: 1px;
+    margin-bottom: 0;
+}
+
+/* Variant B (offboarding / task / recruitment click-to-filter cards) */
+.stats-info { flex: 1; min-width: 0; }
+.stats-info h3 {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1a2236;
+    margin: 0 0 1px 0;
+}
+.stats-info p {
+    font-size: 9.5px;
+    font-weight: 600;
+    color: #6b7385;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.stats-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--primary-light);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+.stats-icon i {
+    font-size: 15px;
+    color: var(--primary);
+}
+
+/* Variant C (recruitment applications — centered, no icon) */
+.stats-number {
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+/* ============================================
+   COMPACT MODAL — core chrome shared by every "Add/Edit X" modal
+   that opts in via the compact-modal class (announcement, leave
+   type, manual credit, ...). Page-specific extras (e.g. the Manual
+   Credit modal's form-control-modern/balance-preview components)
+   stay declared locally in their own page.
+   ============================================ */
+.compact-modal { max-width: 380px !important; }
+.compact-modal .modal-content { border-radius: 10px; }
+.compact-modal .modal-header { padding: 10px 14px; }
+.compact-modal .modal-header h2 { margin: 0; }
+.compact-modal .modal-body { padding: 0; }
+.compact-modal .card { border: none; }
+.compact-modal .card-body { padding: 12px 14px; }
+.compact-modal .row > [class*="col-"] { margin-bottom: 8px; }
+.compact-modal label { margin-bottom: 3px; font-size: 11.5px; }
+.compact-modal .btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+}
+.compact-modal .btn-modal-cancel {
+    background: #f4f6fb;
+    border-color: #dfe5f0;
+    color: #475569;
+}
+.compact-modal .btn-modal-cancel:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+/* bodyOnly variant (<x-ui.modal bodyOnly>) — a modal-body that isn't
+   wrapped in its own .card, plus a separate footer. Formalizes the ad hoc
+   "#approvalModal .modal-body { padding: 1.5rem !important }" fix made
+   earlier for the Process Regularization Request modal. Scoped to its own
+   marker class so it doesn't collide with the default (card-wrapped,
+   padding:0) .compact-modal .modal-body rule above. */
+.compact-modal.compact-modal-plain .modal-body { padding: 1.5rem; }
+.compact-modal.compact-modal-plain .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #edf2f7; }
+
+/* ============================================
+   UI DRAWER — generalized version of the Add-Task offcanvas
+   pattern (previously duplicated byte-for-byte across
+   view-assigned-by-task.blade.php / view-assigned-to-task.blade.php).
+   Any page using an offcanvas with class="ui-drawer" gets this
+   chrome for free instead of re-declaring it.
+   ============================================ */
+.ui-drawer { width: 640px; max-width: 94vw; }
+.ui-drawer .offcanvas-header {
+    padding: 8px 14px;
+    border-bottom: 1px solid #eaeef5;
+}
+.ui-drawer .offcanvas-header h5,
+.ui-drawer .offcanvas-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a2236;
+    margin: 0;
+}
+.ui-drawer .offcanvas-body { padding: 10px 14px; }
+.ui-drawer .btn-modal-cancel {
+    background: #eef3fd;
+    border: 1px solid #bfd3f7;
+    color: var(--primary);
+}
+.ui-drawer .btn-modal-cancel:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+}
+
+/* ============================================
+   STATUS BADGE — one status→color mapping for the whole app.
+   data-status accepts the union of every module's status
+   vocabulary (leave/attendance/expense/overtime/loan/...).
+   Use: <span class="status-badge" data-status="approved">Approved</span>
+   ============================================ */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: capitalize;
+    line-height: 1.4;
+}
+.status-badge[data-status="pending"],
+.status-badge[data-status="draft"],
+.status-badge[data-status="late"],
+.status-badge[data-status="tentative"],
+.status-badge[data-status="postponed"],
+.status-badge[data-status="not_started"] {
+    background: #fef3c7;
+    color: #92400e;
+}
+.status-badge[data-status="approved"],
+.status-badge[data-status="active"],
+.status-badge[data-status="paid"],
+.status-badge[data-status="completed"],
+.status-badge[data-status="present"],
+.status-badge[data-status="confirmed"],
+.status-badge[data-status="finalized"],
+.status-badge[data-status="success"] {
+    background: #d1fae5;
+    color: #065f46;
+}
+.status-badge[data-status="rejected"],
+.status-badge[data-status="cancelled"],
+.status-badge[data-status="failed"],
+.status-badge[data-status="absent"],
+.status-badge[data-status="declined"],
+.status-badge[data-status="inactive"] {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.status-badge[data-status="processing"],
+.status-badge[data-status="in_progress"],
+.status-badge[data-status="ongoing"] {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+/* ============================================
+   PAGE HEADER — fixed/sticky + compact spacing on
+   every page. Applies to both header conventions used
+   across the app: the older .page-header and the newer
+   .content-area-header (sticky-top). .content-area is the
+   scrolling pane (fixed height, PerfectScrollbar-managed),
+   so `position: sticky; top: 0` pins the header to the top
+   of that pane as its content scrolls underneath, exactly
+   like .content-area-header.sticky-top already does.
+   ============================================ */
+.page-header,
+.content-area-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1020 !important;
+    background: #fff !important;
+    padding: 16px 20px !important;
+    min-height: auto !important;
+    height: auto !important;
+}
+html.app-skin-dark .page-header,
+html.app-skin-dark .content-area-header {
+    background: #121a2d !important;
+}
+
+/* ============================================
+   STICKY FOOTER — the footer is rendered right after each
+   page's own content inside .content-area (a fixed-height,
+   internally-scrolling pane). On short pages that left the
+   footer sitting right under the content instead of pinned
+   to the bottom of the pane. .content-area-inner (wrapping
+   @yield('content-area') in master.blade.php) grows to fill
+   the pane via flex, pushing .footer down with margin-top:
+   auto — the standard sticky-footer pattern — while staying
+   correct (footer right after content, whole pane scrolls)
+   when a page's content is taller than the pane.
+   ============================================ */
+.content-area {
+    display: flex !important;
+    flex-direction: column !important;
+}
+.content-area-inner {
+    flex: 1 0 auto;
+    min-height: 0;
+}
+.footer {
+    margin-top: auto;
+    flex-shrink: 0;
+    padding: 10px 20px !important;
+}
+
+/* ============================================
+   SIDEBAR — modern/compact restyle, single blue color
+   family (matching the rest of the app), layered on top of
+   the existing .nxl-* theme classes/JS (never renamed —
+   the theme's own toggle/active-state JS targets them).
+   ============================================ */
+.nxl-navigation .navbar-content .nxl-caption {
+    padding: 14px 18px 6px !important;
+    font-size: 9.5px !important;
+    letter-spacing: .08em !important;
+}
+.nxl-navigation .navbar-content .nxl-link {
+    padding: 8px 14px !important;
+    font-size: 12.5px !important;
+    border-radius: 8px;
+    margin: 1px 8px;
+    width: calc(100% - 16px);
+}
+.nxl-navigation .navbar-content .nxl-micon {
+    margin-right: 10px !important;
+}
+.nxl-navigation .navbar-content .nxl-micon i {
+    font-size: 15px !important;
+}
+.nxl-navigation .navbar-content .nxl-submenu .nxl-link {
+    padding: 6px 14px !important;
+    font-size: 11.5px !important;
+    margin-left: 30px !important;
+    margin-right: 4px !important;
+    width: calc(100% - 34px);
+}
+.nxl-item.active > .nxl-link,
+.nxl-navigation .navbar-content .nxl-item:hover > .nxl-link {
+    background-color: var(--primary-light) !important;
+    color: var(--primary) !important;
+}
+.nxl-navigation .navbar-content .nxl-item.active > .nxl-link .nxl-micon i,
+.nxl-navigation .navbar-content .nxl-item:hover > .nxl-link .nxl-micon i,
+.nxl-navigation .navbar-content .nxl-link.active .nxl-micon i,
+.nxl-navigation .navbar-content .nxl-link:hover .nxl-micon i {
+    color: var(--primary) !important;
+}
+.nxl-navigation .navbar-content .nxl-link.active,
+.nxl-navigation .navbar-content .nxl-link:hover {
+    color: var(--primary) !important;
+}
+.nxl-navigation .navbar-content .nxl-hasmenu.nxl-trigger > .nxl-link {
+    background-color: #eef3fd !important;
+    color: var(--primary) !important;
+}
+.nxl-navigation .navbar-content .nxl-hasmenu.nxl-trigger > .nxl-link .nxl-micon i {
+    color: var(--primary) !important;
+}
+
+/* ============================================
+   MEETING MANAGEMENT — shared across the meeting
+   list/detail/schedule-drawer views (Meeting Management
+   improvement plan, Phase 3). Reuses the tokens above
+   instead of the page-local :root overrides those views
+   used to each declare independently.
+   ============================================ */
+.meeting-type-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.meeting-type-card {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+}
+.meeting-type-card:hover {
+    border-color: var(--primary-mid);
+    background: var(--primary-light);
+}
+.meeting-type-card.active {
+    border-color: var(--primary-mid);
+    background: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+.meeting-type-card input {
+    display: none;
+}
+.meeting-type-card .type-icon {
+    font-size: 16px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+}
+.meeting-type-card.active .type-icon {
+    color: var(--primary-mid);
+}
+.meeting-type-card .type-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.meeting-participants-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.meeting-participants-box .mp-head {
+    padding: 8px 10px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.meeting-participants-box .mp-search {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+}
+.meeting-participants-box .mp-search input {
+    width: 100%;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11.5px;
+    outline: none;
+}
+.meeting-participants-box .mp-search input:focus {
+    border-color: var(--primary-mid);
+}
+.meeting-participants-box .mp-list {
+    max-height: 170px;
+    overflow-y: auto;
+    padding: 6px;
+}
+.mp-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11.5px;
+    margin-bottom: 2px;
+}
+.mp-item:hover {
+    background: var(--surface-3);
+}
+.mp-item.selected {
+    background: var(--primary-light);
+}
+.mp-avatar {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    color: var(--text-secondary);
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+}
+.mp-item.selected .mp-avatar {
+    background: var(--primary-mid);
+    color: #fff;
+}
+.mp-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mp-name small {
+    display: block;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mp-check {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    border-radius: 3px;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: transparent;
+}
+.mp-item.selected .mp-check {
+    background: var(--primary-mid);
+    border-color: var(--primary-mid);
+    color: #fff;
+}
+.mp-selected-list {
+    padding: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.mp-selected-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    border-radius: 6px;
+    font-size: 11.5px;
+}
+.mp-selected-row:hover {
+    background: var(--surface-2);
+}
+.mp-mom-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface-3);
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.mp-mom-toggle input {
+    display: none;
+}
+.mp-mom-toggle.active {
+    background: var(--purple-light);
+    border-color: var(--purple-mid);
+    color: var(--purple);
+}
+.mp-remove {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    border: none;
+    background: transparent;
+    color: var(--gray-300);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: pointer;
+}
+.mp-remove:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+.meeting-empty-hint {
+    padding: 16px 10px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.meeting-reminder-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.meeting-reminder-pill input {
+    display: none;
+}
+.meeting-reminder-pill label {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.meeting-reminder-pill input:checked + label {
+    background: var(--primary-mid);
+    border-color: var(--primary-mid);
+    color: #fff;
+}
+
+.mom-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--purple-light);
+    color: var(--purple);
+    border: 1px solid var(--purple-mid);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.meeting-avatar-stack {
+    display: flex;
+    align-items: center;
+}
+.meeting-avatar-stack .m-av {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    border: 2px solid var(--surface);
+    color: var(--text-secondary);
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: -7px;
+    text-transform: uppercase;
+}
+.meeting-avatar-stack .m-av:first-child {
+    margin-left: 0;
+}
+.meeting-avatar-stack .m-av.overflow {
+    background: var(--surface-3);
+    color: var(--text-muted);
+    font-size: 8.5px;
+}
+
+/* MEETING DETAIL — shared by the full-page fallback (meeting/show.blade.php)
+   and the AJAX-loaded "Meeting Details" drawer on meeting/index.blade.php.
+   Moved here (rather than a page-local <style>) because the drawer
+   fragment doesn't extend the master layout, so a page-local @section
+   ('style') block would never reach it — this way both contexts share one
+   definition. */
+.meeting-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+.meeting-info-item { display: flex; align-items: flex-start; gap: 10px; }
+.meeting-info-icon {
+    width: 30px; height: 30px; border-radius: var(--radius-md);
+    background: var(--primary-light); color: var(--primary-mid);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+}
+.meeting-info-label { font-size: 10.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.meeting-info-value { font-size: 12.5px; font-weight: 500; color: var(--text-primary); word-break: break-word; }
+.meeting-description-box { background: var(--surface-2); padding: 10px 12px; border-radius: var(--radius-md); font-size: 12px; line-height: 1.6; color: var(--text-secondary); margin-top: 8px; }
+.participant-badge, .writer-badge {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--surface-2);
+    border-radius: 20px; font-size: 11.5px; font-weight: 500; color: var(--text-secondary); margin: 0 6px 6px 0;
+}
+.writer-badge { background: var(--purple-light); color: var(--purple); }
+.mom-content-box { background: var(--surface-2); padding: 14px; border-radius: var(--radius-md); font-size: 12.5px; line-height: 1.7; }
+.task-item-card { border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 10px; overflow: hidden; }
+.task-item-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface-2); }
+.task-item-body { padding: 12px 14px; }
+.task-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; font-size: 11.5px; }
+.task-meta-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+.priority-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+.priority-critical { background: var(--danger-light); color: var(--danger); }
+.priority-high { background: #fed7aa; color: #9a3412; }
+.priority-medium { background: var(--warning-light); color: #92400e; }
+.priority-low { background: var(--success-light); color: var(--success); }
+.attendance-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--gray-100); font-size: 12px; }
+.attendance-row:last-child { border-bottom: none; }
+.history-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gray-100); font-size: 11.5px; }
+.history-item:last-child { border-bottom: none; }
+.history-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary-mid); margin-top: 4px; flex-shrink: 0; }
+
+/* MOM AUTHORING — shared by the full-page fallback (mom/create.blade.php)
+   and the AJAX-loaded "Minutes of Meeting" drawer on meeting/index.blade.php
+   (same reasoning as the MEETING DETAIL block above: the drawer fragment
+   doesn't extend the master layout, so this can't live in a page-local
+   @section('style')). */
+.card-modern {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+.card-header-modern {
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 22px;
+}
+.card-header-modern h5 {
+    color: var(--text-primary);
+    margin: 0;
+    font-weight: 600;
+    font-size: 15px;
+}
+.card-header-modern p {
+    color: var(--text-muted);
+    margin: 4px 0 0 0;
+    font-size: 12px;
+}
+.task-card {
+    background: #fff;
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    transition: box-shadow .15s ease;
+    animation: momSlideIn .3s ease;
+}
+.task-card:hover { box-shadow: var(--shadow-md); }
+.task-header {
+    background: var(--surface-2);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.task-number {
+    background: var(--primary-mid);
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+}
+.task-body { padding: 16px; }
+.form-label-modern {
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    display: block;
+}
+.form-label-modern i { margin-right: 6px; color: var(--primary-mid); }
+.required-star { color: var(--danger); margin-left: 4px; }
+.form-control-modern,
+.form-select-modern {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 7px 12px;
+    font-size: 12.5px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    width: 100%;
+}
+.form-control-modern:focus,
+.form-select-modern:focus {
+    border-color: var(--primary-mid);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+    outline: none;
+}
+.row-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 20px; }
+.row-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 20px; }
+.full-width { grid-column: span 4; }
+.btn-add-task {
+    background: var(--primary-mid);
+    border: none;
+    padding: 8px 18px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 12.5px;
+    color: white;
+    transition: background .15s ease;
+    margin-bottom: 20px;
+}
+.btn-add-task:hover { background: var(--primary-dark); color: white; }
+.btn-remove-task {
+    background: #fff;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    padding: 5px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 11.5px;
+    font-weight: 600;
+    transition: all .15s ease;
+}
+.btn-remove-task:hover { background: var(--danger-light); }
+.btn-record-modern {
+    background: var(--primary-mid);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 11.5px;
+    margin-right: 6px;
+}
+.btn-stop-modern {
+    background: var(--text-secondary);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 11.5px;
+}
+.audio-preview-modern { margin-top: 10px; background: var(--surface-2); border-radius: var(--radius-sm); }
+.mom-authoring-container audio { width: 100%; border-radius: var(--radius-sm); height: 36px !important; }
+.file-preview-modern {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: var(--surface-3);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    display: inline-block;
+}
+.submit-section { background: var(--surface-2); padding: 16px; border-radius: var(--radius-md); text-align: start; }
+.btn-submit {
+    background: var(--primary-mid);
+    border: none;
+    padding: 9px 28px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    color: white;
+    font-size: 13px;
+    transition: background .15s ease;
+}
+.btn-submit:hover { background: var(--primary-dark); color: white; }
+.btn-cancel {
+    background: #fff;
+    border: 1px solid var(--border);
+    padding: 9px 28px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+}
+.btn-cancel:hover { background: var(--surface-2); border-color: var(--gray-300); }
+@keyframes momSlideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 1200px) {
+    .row-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .full-width { grid-column: span 2; }
+}
+@media (max-width: 768px) {
+    .row-grid-4 { grid-template-columns: 1fr; }
+    .row-grid-2 { grid-template-columns: 1fr; }
+    .full-width { grid-column: span 1; }
+}

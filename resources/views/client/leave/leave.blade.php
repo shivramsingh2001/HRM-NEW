@@ -1,6 +1,39 @@
 @extends('client.layout.master')
 
 @section('style')
+<style>
+    :root {
+        /* --lv-primary/-2/-soft used to redeclare the exact same blue as the
+           shared theme tokens (theme-custom.css) under a page-local name —
+           now aliased to those instead of duplicating the values. The other
+           three genuinely differ from their shared-token counterparts
+           (border/text colors), so they stay page-local as-is. */
+        --lv-primary: var(--primary);
+        --lv-primary-2: var(--primary-mid);
+        --lv-soft: var(--primary-light);
+        --lv-border: #eaeef5;
+        --lv-text: #1a2236;
+        --lv-text-soft: #6b7385;
+    }
+
+    .avatar-text.avatar-xl { background: var(--lv-soft) !important; color: var(--lv-primary) !important; }
+    .fs-24 { font-size: 17px !important; }
+    .card { border-color: var(--lv-border); }
+    .card-title { font-size: 13px; }
+
+    #customerList1 { font-size: 11.5px; }
+    #customerList1 th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: var(--lv-text-soft); padding: 8px 10px; }
+    #customerList1 td { padding: 8px 10px; vertical-align: middle; }
+    #customerList1 .badge { font-size: 10px; padding: 3px 9px; font-weight: 700; }
+    #customerList1 .bg-warning { background-color: #60a5fa !important; }
+    #customerList1 .bg-success { background-color: #3b82f6 !important; }
+    #customerList1 .bg-danger { background-color: var(--lv-primary) !important; }
+    #customerList1 .bg-secondary { background-color: #93c5fd !important; color: var(--lv-primary) !important; }
+
+    .btn-primary { background: var(--lv-primary-2); border-color: var(--lv-primary-2); }
+    .btn-primary:hover { background: var(--lv-primary); border-color: var(--lv-primary); }
+    .form-label { font-size: 11.5px; font-weight: 600; color: var(--lv-text-soft); }
+</style>
 @endsection
 
 @section('content-area')
@@ -143,7 +176,7 @@
     </div>
     <!-- [ page-header ] end -->
     <!-- [ Main Content ] start -->
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Filter Form -->
         <div class="card stretch stretch-full mb-4">
             <div class="card-body">
@@ -199,7 +232,8 @@
                                     <tr class="text-center">
                                         <th>S. No.</th>
                                         <th>Leave Type</th>
-                                        <th>Date</th>
+                                        <th>Date Range</th>
+                                        <th>Days</th>
                                         <th>Session</th>
                                         <th style="width:100px !important;">Reason</th>
                                         <th>File</th>
@@ -212,7 +246,13 @@
                                         <tr class="text-center">
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $leave->leaveType->name ?? '' }}</td>
-                                            <td>{{ date('d-m-Y', strtotime($leave->start_date)) ?? '' }}</td>
+                                            <td>
+                                                {{ date('d M Y', strtotime($leave->start_date)) }}
+                                                @if ($leave->end_date && $leave->end_date != $leave->start_date)
+                                                    &rarr; {{ date('d M Y', strtotime($leave->end_date)) }}
+                                                @endif
+                                            </td>
+                                            <td>{{ $leave->total_days ?? $leave->leave_count }}</td>
                                             <td>{{ ucfirst($leave->start_session) ?? '' }}</td>
                                             <td style="width:100px !important;">{{ ucfirst($leave->reason) ?? '' }}</td>
                                             <td>
@@ -293,7 +333,7 @@
                                     @endforeach
                                     @if ($leaves->isEmpty())
                                         <tr>
-                                            <td colspan="6" class="text-center">No leave applications found.</td>
+                                            <td colspan="9" class="text-center">No leave applications found.</td>
                                         </tr>
                                     @endif
                                 </tbody>

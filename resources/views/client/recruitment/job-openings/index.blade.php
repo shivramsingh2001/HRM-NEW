@@ -3,67 +3,10 @@
 
 @section('style')
     <style>
-        /* ==================== STATS CARDS ==================== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stats-card {
-            background: white;
-            border: 1px solid #edf2f7;
-            border-radius: 12px;
-            padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        .stats-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transform: translateY(-2px);
-            border-color: #cbd5e1;
-        }
-
-        .stats-card.active {
-            border: 2px solid #4f46e5;
-            background: #eef2ff;
-        }
-
-        .stats-info h3 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 4px 0;
-            color: #1e293b;
-        }
-
-        .stats-info p {
-            font-size: 12px;
-            color: #64748b;
-            margin: 0;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        .stats-icon {
-            width: 48px;
-            height: 48px;
-            background: #eef2ff;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .stats-icon i {
-            font-size: 24px;
-            color: #4f46e5;
-        }
+        /* .stats-grid/.stats-card/.stats-card.active/.stats-info/.stats-icon
+           are centralized in client.layout.head (single blue-only theme,
+           click-to-filter JS below still targets .stats-card/data-status
+           unchanged) — no local copy. */
 
         /* ==================== MODERN FILTER SECTION ==================== */
         .filter-wrapper {
@@ -523,7 +466,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
 
         <!-- Statistics Cards -->
         <div class="stats-grid">

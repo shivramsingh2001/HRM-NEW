@@ -893,6 +893,7 @@ class LoanController extends Controller
         LoanRepayment::create([
             'tenant_id' => $loan->tenant_id,
             'loan_id' => $loan->id,
+            'repayment_number' => $loan->loan_number . '-L1',
             'installment_number' => 1,
             'month' => date('Y-m', strtotime($dueDate)),
             'due_date' => $dueDate,
@@ -923,6 +924,7 @@ class LoanController extends Controller
             LoanRepayment::create([
                 'tenant_id'            => $loan->tenant_id,
                 'loan_id'              => $loan->id,
+                'repayment_number'     => $loan->loan_number . '-E' . str_pad((string) $i, 3, '0', STR_PAD_LEFT),
                 'installment_number'   => $i,
                 'month'                => $dueDate->format('Y-m'),
                 'due_date'             => $dueDate->format('Y-m-d'),
@@ -980,5 +982,119 @@ class LoanController extends Controller
 
         $defaults = (clone $query)->where('status', Loan::STATUS_DEFAULT)->count();
         return round(($defaults / $total) * 100, 2);
+    }
+
+    /**
+     * GET /loan/reports/summary -- tenant-wide loan summary for admin/hr/manager.
+     * Routed but previously had no matching method (BadMethodCallException).
+     */
+    public function getStats(Request $request)
+    {
+        try {
+            $statistics = $this->getLoanStatistics(true);
+
+            return response()->json([
+                'success' => true,
+                'data' => $statistics,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while generating the summary.',
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /loan/reports/employee/{userId} -- one employee's loan history.
+     * Routed but previously had no matching method (BadMethodCallException).
+     */
+    public function getEmployeeSummary(Request $request, $userId)
+    {
+        try {
+            $query = Loan::with(['loanCategory', 'repayments'])
+                ->where('user_id', $userId);
+
+            if (auth()->user() && auth()->user()->tenant_id) {
+                $query->where('tenant_id', auth()->user()->tenant_id);
+            }
+
+            $loans = $query->orderBy('created_at', 'desc')->get();
+
+            $summary = [
+                'total_loans' => $loans->count(),
+                'active_loans' => $loans->where('status', Loan::STATUS_ACTIVE)->count(),
+                'closed_loans' => $loans->where('status', Loan::STATUS_CLOSED)->count(),
+                'total_disbursed' => $loans->whereIn('status', [Loan::STATUS_ACTIVE, Loan::STATUS_CLOSED])->sum('amount'),
+                'total_outstanding' => $loans->where('status', Loan::STATUS_ACTIVE)->sum('remaining_amount'),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'summary' => $summary,
+                    'loans' => $loans,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while generating the employee summary.',
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /loan/reports/export -- CSV export of loans (optionally filtered
+     * by status/category via query params, same filters as view_all()).
+     * Routed but previously had no matching method (BadMethodCallException).
+     */
+    public function exportReport(Request $request)
+    {
+        $query = Loan::with(['user', 'loanCategory']);
+
+        if (auth()->user() && auth()->user()->tenant_id) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('category')) {
+            $query->where('loan_type_id', $request->category);
+        }
+
+        $loans = $query->orderBy('created_at', 'desc')->get();
+
+        $handle = fopen('php://temp', 'w+');
+        fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+        fputcsv($handle, [
+            'Loan Number', 'Employee', 'Category', 'Type', 'Amount',
+            'Remaining Amount', 'Status', 'Applied Date',
+        ]);
+
+        foreach ($loans as $loan) {
+            fputcsv($handle, [
+                $loan->loan_number,
+                optional($loan->user)->name,
+                optional($loan->loanCategory)->name,
+                strtoupper($loan->repayment_type),
+                $loan->amount,
+                $loan->remaining_amount,
+                $loan->status,
+                optional($loan->loan_date)->format('Y-m-d') ?? $loan->loan_date,
+            ]);
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="loan_report_' . date('Y-m-d_His') . '.csv"',
+        ]);
     }
 }

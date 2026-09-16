@@ -7,9 +7,11 @@ use App\Models\Language;
 use App\Models\LeaveBalance;
 use App\Models\User;
 use App\Models\UserPayroll;
+use App\Services\Payroll\PayrollStructureAssignmentService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
@@ -17,7 +19,7 @@ class ProfileController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
             $currentYear = date('Y');
 
             // Get only the authenticated user
@@ -56,40 +58,78 @@ class ProfileController extends Controller
                 }
             }
 
-            // Get current payroll information
-            $currentPayroll = UserPayroll::where('user_id', $member->id)
-                ->where('is_current', 1)
-                ->where('status', 1)
-                ->first();
+            // Payroll rebuild — Phase 9: once a tenant is on the dynamic
+            // engine, read payroll from PayrollEmployeeStructure instead of
+            // the legacy UserPayroll table, which stops receiving new
+            // writes for that tenant.
+            $dynamicEnabled = app()->bound('current_tenant')
+                && (bool) DB::table('tenants')->where('id', app('current_tenant')->id)->value('payroll_dynamic_ui_enabled');
 
-            // Get payroll history
-            $payrollHistory = UserPayroll::where('user_id', $member->id)
-                ->where('status', 1)
-                ->orderBy('effective_from', 'desc')
-                ->get()
-                ->map(function ($payroll) {
-                    return [
-                        'id' => $payroll->id,
-                        'payroll_code' => $payroll->payroll_code,
-                        'effective_from' => $payroll->effective_from,
-                        'effective_to' => $payroll->effective_to,
-                        'is_current' => $payroll->is_current,
-                        'basic_salary' => (float) $payroll->basic_salary,
-                        'hra' => (float) $payroll->hra,
-                        'conveyence' => (float) $payroll->conveyence,
-                        'medical_allowance' => (float) $payroll->medical_allowance,
-                        'special_allowance' => (float) $payroll->special_allowance,
-                        'monthly_incentive' => (float) $payroll->monthly_incentive,
-                        'provident_fund' => (float) $payroll->provident_fund,
-                        'esi' => (float) $payroll->esi,
-                        'professional_tax' => (float) $payroll->professional_tax,
-                        'tds' => (float) $payroll->tds,
-                        'gross_salary' => (float) $payroll->gross_salary,
-                        'total_deductions' => (float) $payroll->total_deductions,
-                        'net_salary' => (float) $payroll->net_salary,
-                        'ctc' => (float) $payroll->ctc
-                    ];
-                });
+            if ($dynamicEnabled) {
+                $assignmentService = app(PayrollStructureAssignmentService::class);
+
+                $currentStructure = $member->currentDynamicPayrollStructure;
+                $currentPayrollData = $currentStructure ? $assignmentService->toLegacyShapedArray($currentStructure) : null;
+
+                $payrollHistory = $member->dynamicPayrollStructures()
+                    ->orderByDesc('effective_from')
+                    ->get()
+                    ->map(fn ($s) => array_merge(['id' => $s->id], $assignmentService->toLegacyShapedArray($s)));
+            } else {
+                // Get current payroll information
+                $currentPayroll = UserPayroll::where('user_id', $member->id)
+                    ->where('is_current', 1)
+                    ->where('status', 1)
+                    ->first();
+
+                $currentPayrollData = $currentPayroll ? [
+                    'payroll_code' => $currentPayroll->payroll_code,
+                    'effective_from' => $currentPayroll->effective_from,
+                    'basic_salary' => (float) $currentPayroll->basic_salary,
+                    'hra' => (float) $currentPayroll->hra,
+                    'conveyence' => (float) $currentPayroll->conveyence,
+                    'medical_allowance' => (float) $currentPayroll->medical_allowance,
+                    'special_allowance' => (float) $currentPayroll->special_allowance,
+                    'monthly_incentive' => (float) $currentPayroll->monthly_incentive,
+                    'provident_fund' => (float) $currentPayroll->provident_fund,
+                    'esi' => (float) $currentPayroll->esi,
+                    'professional_tax' => (float) $currentPayroll->professional_tax,
+                    'tds' => (float) $currentPayroll->tds,
+                    'gross_salary' => (float) $currentPayroll->gross_salary,
+                    'total_deductions' => (float) $currentPayroll->total_deductions,
+                    'net_salary' => (float) $currentPayroll->net_salary,
+                    'ctc' => (float) $currentPayroll->ctc,
+                ] : null;
+
+                // Get payroll history
+                $payrollHistory = UserPayroll::where('user_id', $member->id)
+                    ->where('status', 1)
+                    ->orderBy('effective_from', 'desc')
+                    ->get()
+                    ->map(function ($payroll) {
+                        return [
+                            'id' => $payroll->id,
+                            'payroll_code' => $payroll->payroll_code,
+                            'effective_from' => $payroll->effective_from,
+                            'effective_to' => $payroll->effective_to,
+                            'is_current' => $payroll->is_current,
+                            'basic_salary' => (float) $payroll->basic_salary,
+                            'hra' => (float) $payroll->hra,
+                            'conveyence' => (float) $payroll->conveyence,
+                            'medical_allowance' => (float) $payroll->medical_allowance,
+                            'special_allowance' => (float) $payroll->special_allowance,
+                            'monthly_incentive' => (float) $payroll->monthly_incentive,
+                            'provident_fund' => (float) $payroll->provident_fund,
+                            'esi' => (float) $payroll->esi,
+                            'professional_tax' => (float) $payroll->professional_tax,
+                            'tds' => (float) $payroll->tds,
+                            'gross_salary' => (float) $payroll->gross_salary,
+                            'total_deductions' => (float) $payroll->total_deductions,
+                            'net_salary' => (float) $payroll->net_salary,
+                            'ctc' => (float) $payroll->ctc
+                        ];
+                    });
+            }
 
             $teamData = [
                 // Basic Information
@@ -161,24 +201,7 @@ class ProfileController extends Controller
                 ],
 
                 // Current Payroll
-                'current_payroll' => $currentPayroll ? [
-                    'payroll_code' => $currentPayroll->payroll_code,
-                    'effective_from' => $currentPayroll->effective_from,
-                    'basic_salary' => (float) $currentPayroll->basic_salary,
-                    'hra' => (float) $currentPayroll->hra,
-                    'conveyence' => (float) $currentPayroll->conveyence,
-                    'medical_allowance' => (float) $currentPayroll->medical_allowance,
-                    'special_allowance' => (float) $currentPayroll->special_allowance,
-                    'monthly_incentive' => (float) $currentPayroll->monthly_incentive,
-                    'provident_fund' => (float) $currentPayroll->provident_fund,
-                    'esi' => (float) $currentPayroll->esi,
-                    'professional_tax' => (float) $currentPayroll->professional_tax,
-                    'tds' => (float) $currentPayroll->tds,
-                    'gross_salary' => (float) $currentPayroll->gross_salary,
-                    'total_deductions' => (float) $currentPayroll->total_deductions,
-                    'net_salary' => (float) $currentPayroll->net_salary,
-                    'ctc' => (float) $currentPayroll->ctc,
-                ] : null,
+                'current_payroll' => $currentPayrollData,
 
                 // Payroll History
                 'payroll_history' => $payrollHistory,

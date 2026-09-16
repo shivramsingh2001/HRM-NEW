@@ -18,18 +18,10 @@
 @endsection
 
 @section('content-area')
+    <x-ui.page-header title="Attendance Policy" />
+
     <div class="page-content">
         <div class="container-fluid">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <h4 class="mb-0">Attendance Policy</h4>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">Attendance Policy</li>
-                    </ol>
-                </nav>
-            </div>
-
             @if (session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
@@ -44,21 +36,109 @@
             @endif
 
             <div class="policy-container">
-                <div class="policy-card">
-                    <div class="policy-header">
-                        <h5>Monthly Late Allowance</h5>
-                        <p>Automatically record a day as <strong>half day</strong> once an employee's late
-                           arrivals in a calendar month go over the allowance.</p>
-                    </div>
-                    <div class="policy-body">
-                        <form action="{{ route('attendance-policy.update') }}" method="POST">
-                            @csrf
-                            @method('PUT')
+                <form action="{{ route('attendance-policy.update') }}" method="POST">
+                    @csrf
+                    @method('PUT')
 
+                    <div class="policy-card">
+                        <div class="policy-header">
+                            <h5>Effective date</h5>
+                            <p>Saving creates a new policy version. It applies to every day on or
+                               after this date; closed months keep the version they were graded under.</p>
+                        </div>
+                        <div class="policy-body">
+                            <input type="date" class="form-control" name="effective_from" style="max-width: 220px"
+                                   value="{{ old('effective_from', now()->format('Y-m-d')) }}">
+                        </div>
+                    </div>
+
+                    <div class="policy-card">
+                        <div class="policy-header">
+                            <h5>Day classification</h5>
+                            <p>A day is scored by comparing hours worked against the hours the
+                               employee was scheduled to work.</p>
+                        </div>
+                        <div class="policy-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Present ratio</label>
+                                    <input type="number" step="0.01" min="0.1" max="1" class="form-control"
+                                           name="present_ratio"
+                                           value="{{ old('present_ratio', $policy->presentRatio) }}">
+                                    <div class="form-text">worked / scheduled &ge; this &rarr; <strong>present</strong> (e.g. 0.90)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Half-day ratio</label>
+                                    <input type="number" step="0.01" min="0" max="1" class="form-control"
+                                           name="half_day_ratio"
+                                           value="{{ old('half_day_ratio', $policy->halfDayRatio) }}">
+                                    <div class="form-text">&ge; this &rarr; <strong>half day</strong>, else <strong>absent</strong></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Fallback present hours</label>
+                                    <input type="number" step="0.25" min="1" max="24" class="form-control"
+                                           name="fallback_present_hours"
+                                           value="{{ old('fallback_present_hours', $policy->fallbackPresentHours) }}">
+                                    <div class="form-text">used when the day has no scheduled shift</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Fallback half-day hours</label>
+                                    <input type="number" step="0.25" min="0" max="24" class="form-control"
+                                           name="fallback_half_hours"
+                                           value="{{ old('fallback_half_hours', $policy->fallbackHalfHours) }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="policy-card">
+                        <div class="policy-header">
+                            <h5>Overtime &amp; late arrival</h5>
+                        </div>
+                        <div class="policy-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Overtime after (hours)</label>
+                                    <input type="number" step="0.25" min="1" max="24" class="form-control"
+                                           name="overtime_after_hours"
+                                           value="{{ old('overtime_after_hours', $policy->overtimeAfterHours) }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Overtime multiplier</label>
+                                    <input type="number" step="0.05" min="0" max="5" class="form-control"
+                                           name="overtime_multiplier"
+                                           value="{{ old('overtime_multiplier', $policy->overtimeMultiplier) }}">
+                                    <div class="form-text">payroll rate factor (1.00 = same as normal)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Grace period (minutes)</label>
+                                    <input type="number" min="0" max="240" class="form-control"
+                                           name="grace_minutes"
+                                           value="{{ old('grace_minutes', $policy->graceMinutes) }}">
+                                    <div class="form-text">arrivals within this window are not "late"</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Round punches to (minutes)</label>
+                                    <input type="number" min="0" max="60" class="form-control"
+                                           name="rounding_minutes"
+                                           value="{{ old('rounding_minutes', $policy->roundingMinutes) }}">
+                                    <div class="form-text">0 = keep exact times</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="policy-card">
+                        <div class="policy-header">
+                            <h5>Monthly late allowance</h5>
+                            <p>Record a day as <strong>half day</strong> once an employee's late arrivals
+                               in a calendar month go over the allowance.</p>
+                        </div>
+                        <div class="policy-body">
                             <div class="form-check form-switch mb-4">
                                 <input class="form-check-input" type="checkbox" role="switch"
                                        id="late_halfday_enabled" name="late_halfday_enabled" value="1"
-                                       {{ old('late_halfday_enabled', $tenant->late_halfday_enabled) ? 'checked' : '' }}>
+                                       {{ old('late_halfday_enabled', $policy->lateHalfdayEnabled) ? 'checked' : '' }}>
                                 <label class="form-check-label" for="late_halfday_enabled">
                                     Enable automatic late &rarr; half-day conversion
                                 </label>
@@ -71,23 +151,80 @@
                                 <input type="number" min="0" max="31" class="form-control"
                                        id="monthly_late_allowance" name="monthly_late_allowance"
                                        style="max-width: 160px"
-                                       value="{{ old('monthly_late_allowance', $tenant->monthly_late_allowance) }}"
-                                       placeholder="Unlimited">
-                                <div class="form-text">
-                                    Leave blank for <strong>unlimited</strong> (never auto-convert).
-                                </div>
+                                       value="{{ old('monthly_late_allowance', $policy->monthlyLateAllowance) }}"
+                                       placeholder="30">
                                 <ul class="rule-list">
-                                    <li><strong>Blank</strong> &mdash; late days are always kept as "late".</li>
+                                    <li><strong>Blank</strong> &mdash; falls back to the default of 30.</li>
                                     <li><strong>0</strong> &mdash; every late day becomes a half day.</li>
                                     <li><strong>N</strong> &mdash; the first N late days in a month are fine;
                                         the (N+1)th and every later late day become a half day.</li>
                                 </ul>
                             </div>
-
-                            <button type="submit" class="btn btn-primary">Save Policy</button>
-                        </form>
+                        </div>
                     </div>
-                </div>
+
+                    <div class="policy-card">
+                        <div class="policy-header">
+                            <h5>Working-time thresholds <span class="text-muted" style="font-size:12px">(advisory)</span></h5>
+                            <p>Not enforced yet &mdash; reserved for compliance alerts.</p>
+                        </div>
+                        <div class="policy-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Min rest hours</label>
+                                    <input type="number" step="0.5" min="0" max="24" class="form-control"
+                                           name="min_rest_hours"
+                                           value="{{ old('min_rest_hours', $policy->minRestHours) }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Max daily hours</label>
+                                    <input type="number" step="0.5" min="0" max="24" class="form-control"
+                                           name="max_daily_hours"
+                                           value="{{ old('max_daily_hours', $policy->maxDailyHours) }}">
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="sandwich_leave" name="sandwich_leave" value="1"
+                                               {{ old('sandwich_leave', $policy->sandwichLeave) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="sandwich_leave">Sandwich-leave rule</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Policy Version</button>
+                </form>
+
+                @if (($history ?? collect())->isNotEmpty())
+                    <div class="policy-card mt-4">
+                        <div class="policy-header"><h5>Previous versions</h5></div>
+                        <div class="policy-body">
+                            <table class="table table-sm mb-0" style="font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Effective from</th><th>Present</th><th>Half</th>
+                                        <th>OT after</th><th>Grace</th><th>Late allow.</th><th>Saved</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($history as $h)
+                                        <tr>
+                                            <td>{{ \Carbon\Carbon::parse($h->effective_from)->format('d M Y') }}</td>
+                                            <td>{{ $h->present_ratio }}</td>
+                                            <td>{{ $h->half_day_ratio }}</td>
+                                            <td>{{ $h->overtime_after_hours }}h</td>
+                                            <td>{{ $h->grace_minutes }}m</td>
+                                            <td>{{ $h->late_halfday_enabled ? $h->monthly_late_allowance : '—' }}</td>
+                                            <td>{{ $h->created_at?->format('d M Y') }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
 
                 <p class="text-muted" style="font-size: 12px">
                     Changes take effect the next time attendance summaries are recalculated

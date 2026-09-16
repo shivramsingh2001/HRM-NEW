@@ -12,7 +12,7 @@
         .report-card {
             background: white;
             border-radius: 12px;
-            padding: 16px 18px;
+            padding: 11px 13px;
             border: 1px solid #eef2f6;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: default;
@@ -30,7 +30,7 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
+            background: linear-gradient(90deg, #1e3a8a, #2563eb);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -52,8 +52,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
-            margin-bottom: 12px;
+            font-size: 14px;
+            margin-bottom: 8px;
             transition: all 0.3s ease;
             flex-shrink: 0;
         }
@@ -64,12 +64,12 @@
 
         .card-icon.primary {
             background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(79, 70, 229, 0.05));
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .card-icon.success {
             background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.05));
-            color: #10b981;
+            color: #1e3a8a;
         }
 
         .card-icon.info {
@@ -79,47 +79,47 @@
 
         .card-icon.warning {
             background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.05));
-            color: #f59e0b;
+            color: #2563eb;
         }
 
         .card-icon.danger {
             background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.05));
-            color: #ef4444;
+            color: #475569;
         }
 
         .card-icon.purple {
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0.05));
-            color: #8b5cf6;
+            color: #2563eb;
         }
 
         .report-card .card-title {
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 600;
             color: #0f172a;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             line-height: 1.3;
         }
 
         .report-card .card-description {
-            font-size: 12px;
+            font-size: 10px;
             color: #64748b;
             line-height: 1.4;
             flex-grow: 1;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         .report-card .card-footer {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-top: 12px;
+            padding-top: 8px;
             border-top: 1px solid #f1f5f9;
             margin-top: auto;
         }
 
         .report-card .badge {
-            font-size: 9px;
-            padding: 3px 10px;
+            font-size: 8.5px;
+            padding: 2px 7px;
             border-radius: 16px;
             font-weight: 600;
             text-transform: uppercase;
@@ -127,13 +127,13 @@
         }
 
         .badge-primary {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .badge-success {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .badge-info {
@@ -142,26 +142,26 @@
         }
 
         .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
+            background: #bfd3f7;
+            color: #1e3a8a;
         }
 
         .badge-danger {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #e2e8f0;
+            color: #475569;
         }
 
         .badge-purple {
-            background: #ede9fe;
-            color: #5b21b6;
+            background: #e3edfe;
+            color: #16295e;
         }
 
         .report-card .btn-generate {
-            padding: 4px 14px;
+            padding: 3px 10px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 9.5px;
             font-weight: 600;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             transition: all 0.3s;
@@ -173,13 +173,13 @@
         }
 
         .report-card .btn-generate:hover {
-            background: #4338ca;
+            background: #16295e;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
         }
 
         .report-card .btn-generate i {
-            font-size: 12px;
+            font-size: 10px;
         }
 
         .report-card .btn-generate.coming-soon {
@@ -194,13 +194,13 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
 
         .quick-stat-card {
             background: white;
             border-radius: 10px;
-            padding: 12px 16px;
+            padding: 8px 11px;
             border: 1px solid #eef2f6;
             display: flex;
             align-items: center;
@@ -221,13 +221,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 12px;
             flex-shrink: 0;
         }
 
         .quick-stat-icon.purple {
-            background: #ede9fe;
-            color: #8b5cf6;
+            background: #e3edfe;
+            color: #2563eb;
         }
 
         .quick-stat-icon.blue {
@@ -236,13 +236,13 @@
         }
 
         .quick-stat-icon.green {
-            background: #d1fae5;
-            color: #10b981;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .quick-stat-icon.orange {
-            background: #fef3c7;
-            color: #f59e0b;
+            background: #bfd3f7;
+            color: #2563eb;
         }
 
         .quick-stat-content {
@@ -250,14 +250,14 @@
         }
 
         .quick-stat-number {
-            font-size: 17px;
+            font-size: 13px;
             font-weight: 700;
             color: #0f172a;
             line-height: 1.2;
         }
 
         .quick-stat-label {
-            font-size: 11px;
+            font-size: 9.5px;
             color: #64748b;
             font-weight: 500;
         }
@@ -271,16 +271,16 @@
         }
 
         .alert h6 {
-            font-size: 13px !important;
+            font-size: 10.5px !important;
             margin-bottom: 2px !important;
         }
 
         .alert p {
-            font-size: 12px !important;
+            font-size: 10px !important;
         }
 
         .alert i {
-            font-size: 20px !important;
+            font-size: 16px !important;
         }
 
         /* Coming Soon Overlay */
@@ -296,7 +296,7 @@
             background: #f1f5f9;
             color: #94a3b8;
             font-size: 8px;
-            padding: 2px 10px;
+            padding: 2px 7px;
             border-radius: 12px;
             font-weight: 600;
             text-transform: uppercase;
@@ -316,7 +316,7 @@
 
             .report-card {
                 min-height: 130px;
-                padding: 14px 16px;
+                padding: 10px 11px;
             }
 
           
@@ -328,15 +328,15 @@
             }
 
             .quick-stat-card {
-                padding: 10px 12px;
+                padding: 7px 8px;
             }
 
             .quick-stat-number {
-                font-size: 15px;
+                font-size: 12px;
             }
 
             .report-card .card-title {
-                font-size: 13px;
+                font-size: 10.5px;
             }
         }
     </style>
@@ -362,7 +362,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Report Cards Grid -->
         <div class="report-cards-grid">
             <!-- Overall Attendance Report -->
@@ -440,21 +440,34 @@
                 </div>
             </div>
 
-            <!-- Coming Soon: Overtime Hours Report -->
-            <!--<div class="report-card coming-soon-card">-->
-            <!--    <div class="coming-soon-overlay">Coming Soon</div>-->
-            <!--    <div class="card-icon danger">-->
-            <!--        <i class="feather-clock"></i>-->
-            <!--    </div>-->
-            <!--    <h6 class="card-title">Overtime Hours</h6>-->
-            <!--    <p class="card-description">Track extra hours put in by employees beyond their regular working hours.</p>-->
-            <!--    <div class="card-footer">-->
-            <!--        <span class="badge badge-danger">Overtime</span>-->
-            <!--        <a href="{{route('report.attendance.branch-wise')}}" class="btn-generate" >-->
-            <!--            <i class="feather-clock"></i> Soon-->
-            <!--        </a>-->
-            <!--    </div>-->
-            <!--</div>-->
+            <!-- Overtime Report (Monthly) -->
+            <div class="report-card">
+                <div class="card-icon primary">
+                    <i class="feather-clock"></i>
+                </div>
+                <h6 class="card-title">Overtime Hours</h6>
+                <p class="card-description">Per-employee requested, approved & rejected overtime hours with an estimated payout cost for the month.</p>
+                <div class="card-footer">
+                    <span class="badge badge-primary">Overtime</span>
+                    <a href="{{ route('report.overtime.monthly.index') }}" class="btn-generate">
+                        <i class="feather-arrow-right"></i> Generate
+                    </a>
+                </div>
+            </div>
+            <!-- Task & Project Report -->
+            <div class="report-card">
+                <div class="card-icon primary">
+                    <i class="feather-check-square"></i>
+                </div>
+                <h6 class="card-title">Task & Project</h6>
+                <p class="card-description">Completion rate, overdue count, per-employee workload, and active project progress for the month.</p>
+                <div class="card-footer">
+                    <span class="badge badge-primary">Tasks</span>
+                    <a href="{{ route('report.task-project.index') }}" class="btn-generate">
+                        <i class="feather-arrow-right"></i> Generate
+                    </a>
+                </div>
+            </div>
               <div class="report-card coming-soon-card">
                 <!--<div class="coming-soon-overlay">Coming Soon</div>-->
                 <div class="card-icon primary">
@@ -476,10 +489,10 @@
             <div class="col-12">
                 <div class="alert alert-info" style="border-radius: 10px; border: 1px solid #dbeafe; background: #eff6ff;">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="feather-info" style="font-size: 18px; color: #3b82f6;"></i>
+                        <i class="feather-info" style="font-size: 14px; color: #3b82f6;"></i>
                         <div>
-                            <h6 class="mb-0" style="font-weight: 600; color: #1e40af; font-size: 13px;">All Reports Available</h6>
-                            <p class="mb-0" style="color: #3b82f6; font-size: 12px;">
+                            <h6 class="mb-0" style="font-weight: 600; color: #1e40af; font-size: 10.5px;">All Reports Available</h6>
+                            <p class="mb-0" style="color: #3b82f6; font-size: 10px;">
                                 Generate attendance reports with real-time data. All reports can be exported as CSV for further analysis.
                             </p>
                         </div>

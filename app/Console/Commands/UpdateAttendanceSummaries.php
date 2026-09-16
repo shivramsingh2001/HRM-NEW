@@ -52,16 +52,22 @@ class UpdateAttendanceSummaries extends Command
         $this->info('Attendance summary recalculation — months: ' . implode(', ', $months)
             . ($dryRun ? '  [DRY RUN]' : ''));
 
+        // Finalised (fully past) months are recomputed for EVERY user, including
+        // those deactivated mid-month, so a leaver still gets a closed summary.
+        // The current / future month only covers active users.
+        $currentMonth = Carbon::now()->format('Y-m');
+        $finalisingOnly = count($months) === 1 && $months[0] < $currentMonth;
+
         // TenantTrait's global scope is a no-op in the CLI, so this spans every
         // tenant by design; the summary service re-scopes per user internally.
         $users = User::withoutGlobalScopes()
-            ->where('status', 1)
+            ->when(!$finalisingOnly, fn ($q) => $q->where('status', 1))
             ->when($userId, fn ($q) => $q->where('id', $userId))
             ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
             ->get(['id', 'tenant_id', 'name']);
 
         if ($users->isEmpty()) {
-            $this->error('No matching active users.');
+            $this->error('No matching users.');
             return self::FAILURE;
         }
 

@@ -11,6 +11,7 @@ use App\Models\UserJobDetail;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\TaskNotificationService;
+use App\Services\TaskPermissionService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +32,7 @@ class TaskController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
 
             $query = User::where('status', 1)
                 ->with([
@@ -846,7 +847,7 @@ class TaskController extends Controller
                 })
                 ->exists();
 
-            if (!$hasAccess && !in_array($authUser->role, ['admin', 'hr'])) {
+            if (!$hasAccess && !app(TaskPermissionService::class)->isElevated($authUser)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have access to this task.'

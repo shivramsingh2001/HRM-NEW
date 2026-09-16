@@ -15,90 +15,74 @@
         color: #64748b;
         margin-top: 5px;
     }
-     /* ==================== STATS CARDS ==================== */
+     /* ==================== ALL-BLUE THEME, COMPACT SPACING ==================== */
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: .75rem;
+        margin-bottom: 1rem;
     }
 
     .stats-card {
         background: white;
-        border: 1px solid #edf2f7;
-        border-radius: 12px;
-        padding: 20px;
+        border: 1px solid #eaeef5;
+        border-radius: 10px;
+        padding: 12px 14px;
         display: flex;
         align-items: center;
         transition: all 0.2s;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
 
     .stats-card:hover {
-        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
-        border-color: #cbd5e1;
-        transform: translateY(-2px);
+        box-shadow: 0 4px 12px -4px rgba(30, 50, 110, .12);
+        border-color: #dfe5f0;
+        transform: translateY(-1px);
     }
 
     .stats-icon {
-        width: 48px;
-        height: 48px;
-        background: #eef2ff;
-        border-radius: 12px;
+        width: 34px;
+        height: 34px;
+        background: #e3edfe;
+        border-radius: 9px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-right: 16px;
+        margin-right: 10px;
+        flex: none;
     }
 
     .stats-icon i {
-        font-size: 24px;
-        color: #4f46e5;
+        font-size: 15px;
+        color: #1e3a8a;
     }
 
     .stats-info h3 {
-        font-size: 24px;
+        font-size: 17px;
         font-weight: 700;
-        margin: 0 0 4px 0;
-        color: #1e293b;
+        margin: 0 0 2px 0;
+        color: #1a2236;
         line-height: 1.2;
     }
 
     .stats-info p {
-        font-size: 13px;
-        color: #64748b;
+        font-size: 11px;
+        color: #6b7385;
         margin: 0;
     }
 
-    /* Icon colors for different cards */
-    .stats-card.total .stats-icon {
-        background: #eef2ff;
-    }
-    .stats-card.total .stats-icon i {
-        color: #4f46e5;
-    }
-    
-    .stats-card.active .stats-icon {
-        background: #d1fae5;
-    }
-    .stats-card.active .stats-icon i {
-        color: #10b981;
-    }
-    
-    .stats-card.inactive .stats-icon {
-        background: #fee2e2;
-    }
-    .stats-card.inactive .stats-icon i {
-        color: #ef4444;
-    }
-    
+    /* every stat tile shares the same soft-blue icon chip — single-color theme */
+    .stats-card.total .stats-icon,
+    .stats-card.active .stats-icon,
+    .stats-card.inactive .stats-icon,
     .stats-card.pending .stats-icon {
-        background: #fff3e0;
+        background: #e3edfe;
     }
-    .stats-card.pending .stats-icon i {
-        color: #f59e0b;
-    }
-    
+    .stats-card.total .stats-icon i { color: #1e3a8a; }
+    .stats-card.active .stats-icon i { color: #2563eb; }
+    .stats-card.inactive .stats-icon i { color: #1d4ed8; }
+    .stats-card.pending .stats-icon i { color: #0ea5e9; }
+
     /* ==================== PAGINATION ==================== */
     .pagination {
         margin: 0;
@@ -108,8 +92,8 @@
     .page-link {
         border: 1px solid #e2e8f0;
         color: #475569;
-        font-size: 12px;
-        padding: 6px 12px;
+        font-size: 11px;
+        padding: 4px 10px;
         border-radius: 6px !important;
         transition: all 0.2s;
     }
@@ -121,37 +105,58 @@
     }
 
     .page-item.active .page-link {
-        background: #4f46e5;
-        border-color: #4f46e5;
+        background: #1e3a8a;
+        border-color: #1e3a8a;
     }
-    
+
     /* ==================== EMPTY STATE ==================== */
     .empty-state {
-        padding: 48px 24px;
+        padding: 32px 20px;
         text-align: center;
-        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-        border-radius: 16px;
-        margin: 24px;
+        background: linear-gradient(145deg, #ffffff 0%, #f4f6fb 100%);
+        border-radius: 14px;
+        margin: 16px;
     }
 
     .empty-state i {
-        font-size: 64px;
-        color: #cbd5e1;
-        margin-bottom: 16px;
+        font-size: 44px;
+        color: #93c5fd;
+        margin-bottom: 10px;
     }
 
     .empty-state h4 {
-        color: #334155;
-        font-size: 18px;
+        color: #1a2236;
+        font-size: 14px;
         font-weight: 600;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
 
     .empty-state p {
-        color: #64748b;
-        font-size: 14px;
-        margin-bottom: 20px;
+        color: #6b7385;
+        font-size: 11.5px;
+        margin-bottom: 14px;
     }
+
+    /* ==================== TABLE / BADGES — small font, tight spacing, blue-only ==================== */
+    #announcementList { font-size: 11.5px; }
+    #announcementList th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: #6b7385; padding: 6px 10px; }
+    #announcementList td { padding: 6px 10px; vertical-align: middle; }
+    #announcementList .badge { font-size: 10px; padding: 2px 8px; font-weight: 700; }
+    #announcementList .badge.bg-success { background-color: #3b82f6 !important; }
+    #announcementList .badge.bg-danger { background-color: #1e3a8a !important; }
+    #announcementList .badge.bg-secondary { background-color: #93c5fd !important; color: #1e3a8a !important; }
+    #announcementList .badge.bg-warning { background-color: #60a5fa !important; color: #fff !important; }
+    .card-header .badge.bg-info { background-color: #0ea5e9 !important; }
+    .card-header .badge.bg-success { background-color: #3b82f6 !important; }
+    .card-title { font-size: 13px; }
+
+    /* ==================== COMPACT MODAL (Add / Edit) — core chrome
+       (max-width/header/body/card/row/label/btn) is centralized in
+       client.layout.head; only this page's own extras stay here. ==================== */
+    .compact-modal .modal-header .fs-18 { font-size: 13px !important; }
+    .compact-modal .form-group { margin-bottom: 0; }
+    .compact-modal .form-control,
+    .compact-modal .form-check-label { font-size: 11.5px; }
 </style>
 @endsection
 
@@ -244,6 +249,7 @@ $role = $user->role;
                                         <th>Description</th>
                                         <th>Acknowledge</th>
                                         <th>Status</th>
+                                        <th>Expires</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -316,6 +322,16 @@ $role = $user->role;
                                                 @endif
                                             </td>
                                             <td>
+                                                @if ($announcement->expire_date)
+                                                    @php $isExpired = \Carbon\Carbon::parse($announcement->expire_date)->lt(now()->startOfDay()); @endphp
+                                                    <span class="badge {{ $isExpired ? 'bg-danger' : 'bg-warning' }}">
+                                                        {{ $isExpired ? 'Expired ' : '' }}{{ \Carbon\Carbon::parse($announcement->expire_date)->format('d M Y') }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
+                                            </td>
+                                            <td>
                                                 <div class="dropdown">
                                                     <a href="#" class="avatar-text avatar-md"
                                                         data-bs-toggle="dropdown" data-bs-offset="0,21">
@@ -323,14 +339,15 @@ $role = $user->role;
                                                     </a>
                                                     <ul class="dropdown-menu">
                                                         <li>
-                                                            <a class="dropdown-item edit-announcement" href="#" 
+                                                            <a class="dropdown-item edit-announcement" href="#"
                                                                data-id="{{ $announcement->id }}"
                                                                data-title="{{ $announcement->title }}"
                                                                data-description="{{ $announcement->description }}"
                                                                data-image="{{ $announcement->image }}"
                                                                data-file="{{ $announcement->file }}"
                                                                data-acknowledge="{{ $announcement->acknowledge }}"
-                                                               data-status="{{ $announcement->status }}">
+                                                               data-status="{{ $announcement->status }}"
+                                                               data-expire-date="{{ $announcement->expire_date ? \Carbon\Carbon::parse($announcement->expire_date)->format('Y-m-d') : '' }}">
                                                                 <i class="feather feather-edit-3 me-3"></i>
                                                                 <span>Edit</span>
                                                             </a>
@@ -341,7 +358,7 @@ $role = $user->role;
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="text-center">
+                                            <td colspan="9" class="text-center">
                                                 <div class="empty-state">
                                                     <i class="feather-megaphone"></i>
                                                     <h4>No Announcements Found</h4>
@@ -378,7 +395,7 @@ $role = $user->role;
 @section('create-modal')
     <!-- Add Announcement Modal -->
     <div class="modal fade-scale" id="addAnnouncementModal" tabindex="-1" aria-labelledby="addAnnouncementModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -430,20 +447,28 @@ $role = $user->role;
                                     <div class="col-12 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="description">Description</label>
-                                            <textarea class="form-control" name="description" id="description" rows="4"
+                                            <textarea class="form-control" name="description" id="description" rows="2"
                                                 placeholder="Enter announcement description..."></textarea>
                                             <small class="text-danger error-text description_error"></small>
                                         </div>
                                     </div>
 
-                                    <div class="col-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="acknowledge" 
+                                            <input class="form-check-input" type="checkbox" name="acknowledge"
                                                 id="acknowledge" value="1">
                                             <label class="form-check-label" for="acknowledge">
                                                 Require acknowledgment from employees
                                             </label>
                                             <small class="text-danger error-text acknowledge_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="expire_date">Expires On (optional)</label>
+                                            <input type="date" class="form-control" name="expire_date" id="expire_date">
+                                            <small class="text-danger error-text expire_date_error"></small>
                                         </div>
                                     </div>
 
@@ -453,7 +478,7 @@ $role = $user->role;
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-danger text-warning float-end"
+                                        <a href="#" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             <i class="feather-x me-2"></i>Cancel
                                         </a>
@@ -469,7 +494,7 @@ $role = $user->role;
 
     <!-- Edit Announcement Modal -->
     <div class="modal fade-scale" id="editAnnouncementModal" tabindex="-1" aria-labelledby="editAnnouncementModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -525,20 +550,28 @@ $role = $user->role;
                                     <div class="col-12 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_description">Description</label>
-                                            <textarea class="form-control" name="description" id="edit_description" rows="4"
+                                            <textarea class="form-control" name="description" id="edit_description" rows="2"
                                                 placeholder="Enter announcement description..."></textarea>
                                             <small class="text-danger error-text edit_description_error"></small>
                                         </div>
                                     </div>
 
-                                    <div class="col-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="acknowledge" 
+                                            <input class="form-check-input" type="checkbox" name="acknowledge"
                                                 id="edit_acknowledge" value="1">
                                             <label class="form-check-label" for="edit_acknowledge">
                                                 Require acknowledgment from employees
                                             </label>
                                             <small class="text-danger error-text edit_acknowledge_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_expire_date">Expires On (optional)</label>
+                                            <input type="date" class="form-control" name="expire_date" id="edit_expire_date">
+                                            <small class="text-danger error-text edit_expire_date_error"></small>
                                         </div>
                                     </div>
 
@@ -559,7 +592,7 @@ $role = $user->role;
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-danger text-warning float-end"
+                                        <a href="#" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             <i class="feather-x me-2"></i>Cancel
                                         </a>
@@ -654,12 +687,14 @@ $role = $user->role;
                 const file = $(this).data('file');
                 const acknowledge = $(this).data('acknowledge');
                 const status = $(this).data('status');
+                const expireDate = $(this).data('expire-date');
 
                 // Populate the edit form
                 $('#edit_id').val(id);
                 $('#edit_title').val(title);
                 $('#edit_description').val(description);
                 $('#edit_status').val(status);
+                $('#edit_expire_date').val(expireDate || '');
                 
                 // Set acknowledge checkbox
                 if (acknowledge == 1) {

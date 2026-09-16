@@ -2,121 +2,8 @@
 
 @section('style')
 <style>
-    /* ==================== STATS CARDS ==================== */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    /* Stats Card Base Styles */
-    .stats-card {
-        background: white;
-        border-radius: 16px;
-        padding: 20px 16px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        transition: all 0.3s ease;
-        border: 1px solid #edf2f7;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        position: relative;
-        overflow: hidden;
-    }
-
-    /* Card-specific gradient borders */
-    .total-card::before {
-        background: linear-gradient(90deg, #4f46e5, #818cf8);
-    }
-
-    .pending-card::before {
-        background: linear-gradient(90deg, #f59e0b, #fbbf24);
-    }
-
-    .approved-card::before {
-        background: linear-gradient(90deg, #10b981, #34d399);
-    }
-
-    .rejected-card::before {
-        background: linear-gradient(90deg, #ef4444, #f87171);
-    }
-
-    /* Icon Wrapper */
-    .stats-icon-wrapper {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        transition: all 0.3s ease;
-    }
-
-    .stats-card:hover .stats-icon-wrapper {
-        transform: scale(1.05);
-    }
-
-    /* Card-specific icon backgrounds */
-    .total-card .stats-icon-wrapper {
-        background: rgba(79, 70, 229, 0.1);
-    }
-
-    .total-card .stats-icon-wrapper i {
-        color: #4f46e5;
-        font-size: 24px;
-    }
-
-    .pending-card .stats-icon-wrapper {
-        background: rgba(245, 158, 11, 0.1);
-    }
-
-    .pending-card .stats-icon-wrapper i {
-        color: #f59e0b;
-        font-size: 24px;
-    }
-
-    .approved-card .stats-icon-wrapper {
-        background: rgba(16, 185, 129, 0.1);
-    }
-
-    .approved-card .stats-icon-wrapper i {
-        color: #10b981;
-        font-size: 24px;
-    }
-
-    .rejected-card .stats-icon-wrapper {
-        background: rgba(239, 68, 68, 0.1);
-    }
-
-    .rejected-card .stats-icon-wrapper i {
-        color: #ef4444;
-        font-size: 24px;
-    }
-
-    /* Content Styles */
-    .stats-content {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .stats-amount-main {
-        font-size: 24px;
-        font-weight: 700;
-        color: #1e293b;
-        line-height: 1.3;
-        margin-bottom: 4px;
-    }
-
-    .stats-label {
-        font-size: 11px;
-        font-weight: 600;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        margin-bottom: 6px;
-    }
+    /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
+       are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
     .stats-count {
         display: flex;
@@ -175,13 +62,13 @@
     }
 
     .filter-title i {
-        color: #4f46e5;
+        color: #1e3a8a;
         font-size: 16px;
     }
 
     .filter-title span {
-        background: #eef2ff;
-        color: #4f46e5;
+        background: #e3edfe;
+        color: #1e3a8a;
         font-size: 11px;
         font-weight: 600;
         padding: 2px 8px;
@@ -263,7 +150,7 @@
     }
 
     .filter-select:focus {
-        border-color: #4f46e5;
+        border-color: #1e3a8a;
         outline: none;
         background-color: white;
     }
@@ -271,7 +158,7 @@
     .apply-btn {
         height: 36px;
         padding: 0 16px;
-        background: #4f46e5;
+        background: #1e3a8a;
         color: white;
         border: none;
         border-radius: 8px;
@@ -286,7 +173,7 @@
     }
 
     .apply-btn:hover {
-        background: #4338ca;
+        background: #16295e;
     }
 
     .reset-btn {
@@ -346,7 +233,7 @@
     }
 
     .filter-tag i {
-        color: #4f46e5;
+        color: #1e3a8a;
         font-size: 11px;
     }
 
@@ -362,9 +249,9 @@
     }
 
     .filter-tag.clear-all {
-        background: #eef2ff;
-        border-color: #4f46e5;
-        color: #4f46e5;
+        background: #e3edfe;
+        border-color: #1e3a8a;
+        color: #1e3a8a;
         font-weight: 600;
         text-decoration: none;
         padding: 3px 10px;
@@ -430,24 +317,40 @@
     }
 
     .badge.bg-purple {
-        background: #ede9fe !important;
-        color: #5b21b6;
+        background: #e3edfe !important;
+        color: #1e3a8a;
     }
 
-    /* Request Type Badges */
+    /* Request Type Badges - single blue theme */
     .badge-type-in {
-        background: #dbeafe !important;
-        color: #1e40af;
+        background: #e3edfe !important;
+        color: #1e3a8a;
     }
 
     .badge-type-out {
-        background: #fef3c7 !important;
-        color: #92400e;
+        background: #dbeafe !important;
+        color: #2563eb;
     }
 
     .badge-type-both {
-        background: #e0e7ff !important;
-        color: #4f46e5;
+        background: #bfd3f7 !important;
+        color: #1e3a8a;
+    }
+
+    .badge-type-fullday {
+        background: #93c5fd !important;
+        color: #1e3a8a;
+    }
+
+    .badge-type-wfh {
+        background: #eef3fd !important;
+        color: #2563eb;
+        border: 1px solid #bfd3f7;
+    }
+
+    .badge-type-tech {
+        background: #e2e8f0 !important;
+        color: #475569;
     }
 
     /* ==================== ACTION BUTTONS ==================== */
@@ -468,8 +371,8 @@
 
     .action-btn:hover {
         background: white;
-        color: #4f46e5;
-        border-color: #4f46e5;
+        color: #1e3a8a;
+        border-color: #1e3a8a;
         transform: translateY(-2px);
     }
 
@@ -483,8 +386,8 @@
     }
 
     .action-btn.info:hover {
-        color: #4f46e5;
-        border-color: #4f46e5;
+        color: #1e3a8a;
+        border-color: #1e3a8a;
     }
 
     .action-btn.approve {
@@ -513,7 +416,7 @@
     }
 
     .file-preview a {
-        color: #4f46e5;
+        color: #1e3a8a;
         text-decoration: none;
         font-size: 11px;
         display: flex;
@@ -559,7 +462,7 @@
         border-radius: 8px;
         padding: 8px 12px;
         margin-top: 8px;
-        border-left: 2px solid #4f46e5;
+        border-left: 2px solid #1e3a8a;
         font-size: 12px;
     }
 
@@ -612,57 +515,98 @@
             justify-content: center;
         }
     }
+
+    /* ==================== MODAL HEADER / BUTTONS - small font, blue theme ==================== */
+    #addRegularizationModal .modal-header,
+    #editRegularizationModal .modal-header,
+    #viewRegularizationModal .modal-header {
+        background: #fff !important;
+        border-bottom: 1px solid #edf2f7 !important;
+        padding: 10px 16px !important;
+    }
+
+    #addRegularizationModal .modal-header .fs-18,
+    #editRegularizationModal .modal-header .fs-18,
+    #viewRegularizationModal .modal-header .fs-18 {
+        font-size: 13px !important;
+        color: #1e293b !important;
+    }
+
+    #addRegularizationModal .modal-header .close-icon,
+    #editRegularizationModal .modal-header .close-icon,
+    #viewRegularizationModal .modal-header .close-icon {
+        width: 26px;
+        height: 26px;
+    }
+
+    #addRegularizationModal .form-group label,
+    #editRegularizationModal .form-group label {
+        font-size: 11px !important;
+    }
+
+    #addRegularizationModal .form-control,
+    #editRegularizationModal .form-control {
+        font-size: 11.5px !important;
+        padding: 6px 10px !important;
+    }
+
+    #addRegularizationModal .btn,
+    #editRegularizationModal .btn {
+        font-size: 11.5px !important;
+        padding: 6px 14px !important;
+    }
+
+    #addRegularizationModal .btn-primary,
+    #editRegularizationModal .btn-primary {
+        background: #1e3a8a !important;
+        border-color: #1e3a8a !important;
+    }
+
+    #addRegularizationModal .btn-primary:hover,
+    #editRegularizationModal .btn-primary:hover {
+        background: #16295e !important;
+        border-color: #16295e !important;
+    }
+
+    #addRegularizationModal .btn-modal-cancel,
+    #editRegularizationModal .btn-modal-cancel {
+        background: #eef3fd !important;
+        border-color: #bfd3f7 !important;
+        color: #1e3a8a !important;
+    }
+
+    #addRegularizationModal .btn-modal-cancel:hover,
+    #editRegularizationModal .btn-modal-cancel:hover {
+        background: #dbeafe !important;
+        color: #1e3a8a !important;
+    }
 </style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Attendance Regularizations</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Attendance Regularizations</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex d-md-none">
-                    <a href="#" class="page-header-right-close-toggle">
-                        <i class="feather-arrow-left me-2"></i>
-                        <span>Back</span>
-                    </a>
-                </div>
-                <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
-                            data-bs-auto-close="outside">
-                            <i class="feather-download"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a href="#" class="dropdown-item" onclick="exportToCSV()">
-                                <i class="bi bi-filetype-csv me-3"></i>
-                                <span>Export CSV</span>
-                            </a>
-                        </div>
-                    </div>
-                    <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#addRegularizationModal">
-                        <i class="feather-plus me-2"></i>
-                        <span>Add Regularization</span>
-                    </a>
-                </div>
-            </div>
-            <div class="d-md-none d-flex align-items-center">
-                <a href="#" class="page-header-right-open-toggle">
-                    <i class="feather-align-right fs-20"></i>
+    <x-ui.page-header title="Attendance Regularizations">
+        <x-slot:actions>
+            <div class="dropdown">
+                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
+                    data-bs-auto-close="outside">
+                    <i class="feather-download"></i>
                 </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="#" class="dropdown-item" onclick="exportToCSV()">
+                        <i class="bi bi-filetype-csv me-3"></i>
+                        <span>Export CSV</span>
+                    </a>
+                </div>
             </div>
-        </div>
-    </div>
+            <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                data-bs-target="#addRegularizationModal">
+                <i class="feather-plus me-2"></i>
+                <span>Add Regularization</span>
+            </a>
+        </x-slot:actions>
+    </x-ui.page-header>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
         <div class="stats-grid">
             <!-- Total Regularizations Card -->
@@ -764,9 +708,12 @@
                     <div class="filter-item">
                         <select class="filter-select" name="request_type">
                             <option value="">All Types</option>
-                            <option value="in_time" {{ request('request_type') == 'in_time' ? 'selected' : '' }}>In Time</option>
-                            <option value="out_time" {{ request('request_type') == 'out_time' ? 'selected' : '' }}>Out Time</option>
-                            <option value="both" {{ request('request_type') == 'both' ? 'selected' : '' }}>Both</option>
+                            <option value="in_time" {{ request('request_type') == 'in_time' ? 'selected' : '' }}>In Time Only</option>
+                            <option value="out_time" {{ request('request_type') == 'out_time' ? 'selected' : '' }}>Out Time Only</option>
+                            <option value="both" {{ request('request_type') == 'both' ? 'selected' : '' }}>Both In & Out</option>
+                            <option value="full_day" {{ request('request_type') == 'full_day' ? 'selected' : '' }}>Full Day Missed Punch</option>
+                            <option value="wfh_not_marked" {{ request('request_type') == 'wfh_not_marked' ? 'selected' : '' }}>WFH Not Marked</option>
+                            <option value="technical_issue" {{ request('request_type') == 'technical_issue' ? 'selected' : '' }}>System/Technical Issue</option>
                         </select>
                     </div>
 
@@ -896,13 +843,19 @@
                                                         'in_time' => 'badge-type-in',
                                                         'out_time' => 'badge-type-out',
                                                         'both' => 'badge-type-both',
-                                                        default => 'bg-secondary'
+                                                        'full_day' => 'badge-type-fullday',
+                                                        'wfh_not_marked' => 'badge-type-wfh',
+                                                        'technical_issue' => 'badge-type-tech',
+                                                        default => 'badge-type-in'
                                                     };
                                                     $typeText = match($regularization->request_type) {
                                                         'in_time' => 'In Time Only',
                                                         'out_time' => 'Out Time Only',
                                                         'both' => 'Both In & Out',
-                                                        default => ucfirst($regularization->request_type)
+                                                        'full_day' => 'Full Day Missed Punch',
+                                                        'wfh_not_marked' => 'WFH Not Marked',
+                                                        'technical_issue' => 'System/Technical Issue',
+                                                        default => ucfirst(str_replace('_', ' ', $regularization->request_type))
                                                     };
                                                 @endphp
                                                 <span class="badge {{ $typeClass }}">
@@ -951,16 +904,7 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @php
-                                                    $statusClass = [
-                                                        'approved' => 'bg-success',
-                                                        'rejected' => 'bg-danger',
-                                                        'pending' => 'bg-warning',
-                                                    ][$regularization->status] ?? 'bg-secondary';
-                                                @endphp
-                                                <span class="badge {{ $statusClass }}">
-                                                    {{ ucfirst($regularization->status) }}
-                                                </span>
+                                                <x-ui.status-badge :status="$regularization->status" />
                                             </td>
                                             <td>
                                                 @if($regularization->status == 'approved' && $regularization->approved_by)
@@ -1039,7 +983,7 @@
 @section('create-modal')
     <!-- Add Regularization Modal -->
     <div class="modal fade-scale" id="addRegularizationModal" tabindex="-1" aria-labelledby="addRegularizationModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -1065,6 +1009,9 @@
                                                 <option value="in_time">In Time Only</option>
                                                 <option value="out_time">Out Time Only</option>
                                                 <option value="both">Both In & Out Time</option>
+                                                <option value="full_day">Full Day Missed Punch</option>
+                                                <option value="wfh_not_marked">WFH Not Marked</option>
+                                                <option value="technical_issue">System/Technical Issue</option>
                                             </select>
                                             <small class="text-danger error-text request_type_error"></small>
                                         </div>
@@ -1077,14 +1024,14 @@
                                             <small class="text-danger error-text date_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-md-6 mb-3" id="in_time_container">
+                                    <div class="col-12 mb-3" id="in_time_container">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="in_time">In Time</label>
                                             <input type="time" class="form-control" name="in_time" id="in_time">
                                             <small class="text-danger error-text in_time_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-md-6 mb-3" id="out_time_container">
+                                    <div class="col-12 mb-3" id="out_time_container">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="out_time">Out Time</label>
                                             <input type="time" class="form-control" name="out_time" id="out_time">
@@ -1111,7 +1058,7 @@
                                         <button class="btn btn-primary" type="submit">Submit Request</button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-danger text-warning float-end"
+                                        <a href="#" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             Cancel
                                         </a>
@@ -1128,7 +1075,7 @@
     <!-- Edit Regularization Modal -->
     <div class="modal fade-scale" id="editRegularizationModal" tabindex="-1" aria-labelledby="editRegularizationModal"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -1155,6 +1102,9 @@
                                                 <option value="in_time">In Time Only</option>
                                                 <option value="out_time">Out Time Only</option>
                                                 <option value="both">Both In & Out Time</option>
+                                                <option value="full_day">Full Day Missed Punch</option>
+                                                <option value="wfh_not_marked">WFH Not Marked</option>
+                                                <option value="technical_issue">System/Technical Issue</option>
                                             </select>
                                             <small class="text-danger error-text edit_request_type_error"></small>
                                         </div>
@@ -1167,14 +1117,14 @@
                                             <small class="text-danger error-text edit_date_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-md-6 mb-3" id="edit_in_time_container">
+                                    <div class="col-12 mb-3" id="edit_in_time_container">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_in_time">In Time</label>
                                             <input type="time" class="form-control" name="in_time" id="edit_in_time">
                                             <small class="text-danger error-text edit_in_time_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-md-6 mb-3" id="edit_out_time_container">
+                                    <div class="col-12 mb-3" id="edit_out_time_container">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_out_time">Out Time</label>
                                             <input type="time" class="form-control" name="out_time" id="edit_out_time">
@@ -1202,7 +1152,7 @@
                                         <button class="btn btn-primary" type="submit">Update Request</button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-danger text-warning float-end"
+                                        <a href="#" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             Cancel
                                         </a>

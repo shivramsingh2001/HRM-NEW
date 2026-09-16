@@ -12,14 +12,29 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 
 class ManagerPerformanceReviewController extends Controller
 {
+    use AuthorizesByScope;
+
+
     /**
      * Display list of employees with review modal
      */ public function index(Request $request)
     {
         $user = Auth::user();
+
+        // This is the manager/admin/hr review-management list — an employee
+        // (whose performance_reviews grant is scope=own) shouldn't reach it
+        // at all. Previously unenforced: any authenticated user hitting this
+        // route with no manager/admin/hr role fell through both branches
+        // below and saw every employee/manager in the company unfiltered.
+        if (!app(RbacService::class)->can($user, 'performance_reviews', 'view', 'team')) {
+            abort(403, 'You are not authorized to view this page.');
+        }
+
         $month = $request->get('month', now()->subMonth()->format('Y-m'));
         $reportingMonth = $month . '-01';
         $departmentId = $request->get('department_id');
@@ -378,12 +393,17 @@ class ManagerPerformanceReviewController extends Controller
      */
     public function export(Request $request)
     {
+        $user = Auth::user();
         $month = $request->get('month', now()->subMonth()->format('Y-m'));
         $reportingMonth = $month . '-01';
         $departmentId = $request->get('department_id');
 
         $query = ManagerPerformanceReview::with(['user', 'user.jobDetails.department', 'reviewer'])
             ->where('review_month', $reportingMonth);
+
+        // Previously unfiltered by scope entirely — any authenticated user
+        // hitting this route got every tenant's review data in the CSV.
+        $query = $this->applyScope($query, 'user_id', $user, 'performance_reviews', 'view');
 
         if ($departmentId) {
             $query->whereHas('user.jobDetails', function ($q) use ($departmentId) {
@@ -444,18 +464,10 @@ class ManagerPerformanceReviewController extends Controller
     private function authorizeReview($employee)
     {
         $user = Auth::user();
+        $action = request()->routeIs('*.destroy') ? 'delete' : (request()->routeIs('*.update') ? 'edit' : 'create');
 
-        // Admin and HR can review anyone
-        if (in_array($user->role, ['admin', 'hr'])) {
+        if ($this->scopeCoversOwner($user, 'performance_reviews', $action, $employee->id)) {
             return true;
-        }
-
-        // Manager can review their team members
-        if ($user->role == 'manager') {
-            $reportingHead = $employee->jobDetails?->reporting_head;
-            if ($reportingHead == $user->id) {
-                return true;
-            }
         }
 
         abort(403, 'You are not authorized to review this employee.');
@@ -465,22 +477,8 @@ class ManagerPerformanceReviewController extends Controller
     {
         $user = Auth::user();
 
-        // Employee can view their own review
-        if ($user->id == $review->user_id) {
+        if ($this->scopeCoversOwner($user, 'performance_reviews', 'view', $review->user_id)) {
             return true;
-        }
-
-        // Admin, HR, and manager can view
-        if (in_array($user->role, ['admin', 'hr'])) {
-            return true;
-        }
-
-        // Manager can view their team's reviews
-        if ($user->role == 'manager') {
-            $reportingHead = $review->user->jobDetails?->reporting_head;
-            if ($reportingHead == $user->id) {
-                return true;
-            }
         }
 
         abort(403, 'You are not authorized to view this review.');

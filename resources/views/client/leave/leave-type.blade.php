@@ -1,6 +1,64 @@
 @extends('client.layout.master')
 
 @section('style')
+<style>
+    :root {
+        --lt-primary: #1e3a8a;
+        --lt-primary-2: #2563eb;
+        --lt-soft: #e3edfe;
+        --lt-border: #eaeef5;
+        --lt-text: #1a2236;
+        --lt-text-soft: #6b7385;
+    }
+
+    /* Bootstrap's row/col gutters are margin-based (--bs-gutter-y), not CSS
+       grid gap, so the vertical gap between rows is trimmed here directly. */
+    .note-has-grid { --bs-gutter-y: 0.35rem; }
+
+    .single-note-item .card {
+        border: 1px solid var(--lt-border) !important;
+        border-radius: 10px;
+        margin-bottom: 0 !important;
+    }
+
+    .single-note-item .card-body {
+        padding: 10px 12px !important;
+    }
+
+    .single-note-item .note-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--lt-text);
+        margin-bottom: 2px !important;
+    }
+
+    .single-note-item .badge {
+        font-size: 9px;
+        padding: 2px 7px;
+    }
+    .single-note-item .badge.bg-success { background-color: var(--lt-primary-2) !important; }
+    .single-note-item .badge.bg-danger { background-color: var(--lt-primary) !important; }
+    .single-note-item .badge.bg-system {
+        background-color: var(--lt-soft);
+        color: var(--lt-primary);
+        font-weight: 700;
+    }
+    .single-note-item .badge.bg-primary,
+    .single-note-item .badge.bg-info { background-color: var(--lt-primary-2) !important; }
+    .single-note-item .badge.bg-secondary { background-color: #93c5fd !important; color: var(--lt-primary) !important; }
+
+    .single-note-item .bg-light { background-color: #f4f6fb !important; padding: 6px 10px !important; }
+    .single-note-item .fs-11, .single-note-item .fs-12, .single-note-item .fs-10 { color: var(--lt-text-soft); font-size: 9.5px !important; }
+    .single-note-item .fs-6 { font-size: 12px !important; }
+    .single-note-item .note-content p { font-size: 10.5px !important; margin-bottom: 0; }
+
+    /* ==================== COMPACT MODAL (Add Leave Type) — core chrome
+       (max-width/header/body/card/row/label/btn) is centralized in
+       client.layout.head; only this page's own extras stay here. ==================== */
+    .compact-modal .modal-header .fs-18 { font-size: 13px !important; }
+    .compact-modal .form-group { margin-bottom: 0; }
+    .compact-modal .form-control { font-size: 11.5px; }
+</style>
 @endsection
 
 @section('content-area')
@@ -27,14 +85,21 @@
         </div>
     </div>
     <div class="content-area-body pb-0 h-100">
-        <div class="row note-has-grid" id="note-full-container">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-2 note-has-grid" id="note-full-container">
             <!--! BEGIN: [Single Note Item] !-->
             @foreach ($leaveTypes as $leaveType)
-                <div class="col-xxl-4 col-xl-6 col-lg-4 col-sm-6 single-note-item">
-                    <div class="card card-body mb-4 stretch stretch-full position-relative shadow-sm border-0">
+                <div class="col single-note-item">
+                    <div class="card card-body stretch stretch-full position-relative shadow-sm border-0">
 
                         <!-- Top Right: Status + View -->
                         <div class="position-absolute top-0 end-0 d-flex align-items-center gap-2 m-3">
+
+                            <!-- System Badge -->
+                            @if ($leaveType->isSystemType())
+                                <span class="badge bg-system" title="System-managed — cannot be edited or deleted">
+                                    <i class="feather-lock fs-10"></i> System
+                                </span>
+                            @endif
 
                             <!-- Status Badge -->
                             <span class="badge {{ $leaveType->status ? 'bg-success' : 'bg-danger' }}">
@@ -107,25 +172,7 @@
     </div>
 @endsection
 @section('create-modal')
-    <div class="modal fade-scale" id="addDepartments" tabindex="-1" aria-labelledby="addDepartments" aria-hidden="true"
-        data-bs-dismiss="ou">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
-            <div class="modal-content">
-
-                <div class="modal-header">
-                    <h2 class="d-flex flex-column mb-0">
-                        <span class="fs-18 fw-bold mb-1">Add Leave Type</span>
-                        {{-- <small class="d-block fs-11 fw-normal text-muted">Leave Type must have a head!</small> --}}
-                    </h2>
-                    <a href="javascript:void(0)" class="avatar-text avatar-md bg-soft-danger close-icon"
-                        data-bs-dismiss="modal">
-                        <i class="feather-x text-danger"></i>
-                    </a>
-                </div>
-
-                <div class="modal-body p-0">
-                    <div class="card m-0">
-                        <div class="card-body">
+    <x-ui.modal id="addDepartments" title="Add Leave Type">
                             <form action="#" id="addDepartmentForm">
                                 <div id="formError" class="alert alert-danger d-none"></div>
                                 <div class="row">
@@ -178,7 +225,7 @@
                                     </div>
 
                                     <div class="col-6">
-                                        <a href="javascript:void(0)" class="btn btn-danger text-warning float-end"
+                                        <a href="javascript:void(0)" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             Cancel
                                         </a>
@@ -186,12 +233,7 @@
 
                                 </div>
                             </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    </x-ui.modal>
 @endsection
 
 

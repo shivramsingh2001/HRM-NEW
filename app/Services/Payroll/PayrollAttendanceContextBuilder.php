@@ -1,0 +1,136 @@
+<?php
+
+namespace App\Services\Payroll;
+
+use App\Services\Attendance\PayrollDaysService;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Payroll rebuild — Phase 2.
+ *
+ * Builds the attendance/overtime/loan context a payslip calculation needs,
+ * for one employee for one month. Deliberately does NOT re-derive day
+ * classification (present/absent/leave/holiday/weekoff, the sandwich rule)
+ * itself — it delegates entirely to PayrollDaysService, the codebase's
+ * existing tenant-configurable "Tier 2" attendance source (which already
+ * reads attendance_policies per tenant instead of the legacy payroll
+ * controller's hardcoded 20%/60%/2h/6h thresholds). This is the "extract,
+ * don't duplicate" half of the Phase 2 plan for the attendance side; only
+ * the overtime-approval and loan-deduction lookups are ported here since
+ * they're short, self-contained, and outside PayrollDaysService's scope.
+ */
+class PayrollAttendanceContextBuilder
+{
+    public function __construct(
+        private PayrollDaysService $payrollDays,
+        private LoanDeductionService $loanDeductionService
+    ) {
+    }
+
+    public function build(int $userId, int $tenantId, string $yearMonth): array
+    {
+        $start = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
+        $end = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth();
+
+        $days = $this->payrollDays->forMonth($userId, $yearMonth, $tenantId);
+
+        $overtime = $this->approvedOvertimeHours($userId, $tenantId, $start->toDateString(), $end->toDateString());
+        $overtimeRateMultiplier = $this->overtimeRateMultiplier($tenantId);
+        $loanDeduction = $this->loanDeduction($userId, $tenantId, $yearMonth);
+
+        // start/end are always the first/last day of the same calendar
+        // month (startOfMonth()/endOfMonth()), so this is just the month's
+        // day count — computing it via diffInDays() on Carbon instances
+        // with sub-second precision from startOfMonth/endOfMonth produced
+        // floating-point artifacts (e.g. 30.999999999988) that then
+        // silently corrupted every proration factor downstream.
+        $calendarDays = $start->daysInMonth;
+
+        return [
+            'year_month' => $yearMonth,
+            'start_date' => $start->toDateString(),
+            'end_date' => $end->toDateString(),
+            'calendar_days' => $calendarDays,
+
+            'payable_days' => $days['payable_days'],
+            'present_days' => $days['present_days'],
+            'half_days' => $days['half_days'],
+            'absent_days' => $days['absent_days'],
+            'paid_leave_days' => $days['paid_leave_days'],
+            'unpaid_leave_days' => $days['unpaid_leave_days'],
+            'holidays' => $days['holidays'],
+            'week_offs' => $days['week_offs'],
+
+            'actual_worked_hours' => $days['actual_worked_hours'],
+            'attendance_overtime_hours' => $days['overtime_hours'],
+
+            'approved_overtime_hours' => $overtime['total_hours'],
+            'overtime_rate_multiplier' => $overtimeRateMultiplier,
+
+            'loan_deduction_amount' => $loanDeduction,
+
+            // Ready-made proration factors, clamped to [0, 1]. Individual
+            // components still choose which one applies via their own
+            // proration_rule — this context just precomputes the inputs.
+            'proration_by_payable_days' => $calendarDays > 0
+                ? max(0.0, min(1.0, $days['payable_days'] / $calendarDays))
+                : 0.0,
+            'proration_by_lop_days' => $calendarDays > 0
+                ? max(0.0, min(1.0, ($calendarDays - $days['unpaid_leave_days']) / $calendarDays))
+                : 0.0,
+        ];
+    }
+
+    /**
+     * Ported directly from MonthlyPayrollController::getApprovedOvertimeHours
+     * — short and self-contained enough that delegating would mean reaching
+     * into a private method on an unrelated controller. Always uses
+     * app('current_tenant') semantics via the passed-in $tenantId (the
+     * caller is responsible for resolving it correctly), never session().
+     */
+    private function approvedOvertimeHours(int $userId, int $tenantId, string $startDate, string $endDate): array
+    {
+        $rows = DB::select("
+            SELECT COALESCE(approved_hours, overtime_hours) AS hours
+            FROM overtime_requests
+            WHERE user_id = ? AND tenant_id = ? AND status = 'approved'
+              AND date BETWEEN ? AND ?
+        ", [$userId, $tenantId, $startDate, $endDate]);
+
+        $total = 0.0;
+        foreach ($rows as $row) {
+            $total += (float) $row->hours;
+        }
+
+        return ['total_hours' => round($total, 2), 'request_count' => count($rows)];
+    }
+
+    /**
+     * Tenant-specific overtime_settings row takes priority over the global
+     * (tenant_id IS NULL) fallback row — same precedence as the legacy
+     * controller. Defaults to 1.5x only if no settings row exists at all.
+     */
+    private function overtimeRateMultiplier(int $tenantId): float
+    {
+        $row = DB::selectOne("
+            SELECT rate_multiplier FROM overtime_settings
+            WHERE tenant_id = ? OR tenant_id IS NULL
+            ORDER BY (tenant_id IS NULL) ASC
+            LIMIT 1
+        ", [$tenantId]);
+
+        return $row ? (float) $row->rate_multiplier : 1.5;
+    }
+
+    /**
+     * Delegates to LoanDeductionService::totalDue() -- read-only lookup, no
+     * ledger mutation (that stays LoanDeductionService::applyDeduction()'s
+     * responsibility, called from the payroll controller once a payslip is
+     * actually persisted). Considers EMI and lumpsum loans both.
+     */
+    private function loanDeduction(int $userId, int $tenantId, string $yearMonth): float
+    {
+        return $this->loanDeductionService->totalDue($userId, $tenantId, $yearMonth);
+    }
+}

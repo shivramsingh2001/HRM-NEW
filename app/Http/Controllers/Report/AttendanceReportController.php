@@ -113,6 +113,11 @@ class AttendanceReportController extends Controller
         $isManual = (($attendance->attendance_type ?? null) === 'manual')
             || !empty($attendance->marked_by ?? null);
 
+        // An auto row clocked into but not out of stays "checked in only".
+        if (!$isManual && !empty($attendance->clock_in ?? null) && empty($attendance->clock_out ?? null)) {
+            return null;
+        }
+
         $status = $isManual
             ? ($attendance->attendance_status ?? null)
             : ($attendance->effective_status ?? null);
@@ -124,6 +129,29 @@ class AttendanceReportController extends Controller
             'on_leave' => 'Full Day Leave',
             'first_half_leave' => 'First Half Leave',
             'second_half_leave' => 'Second Half Leave',
+            'holiday' => 'Holiday',
+            'weekoff' => 'Week Off',
+            default => null,
+        };
+    }
+
+    /**
+     * The hand-set / policy-resolved status as one of the report's own status
+     * tokens (present, halfday, absent, full_day_leave, first_half_leave,
+     * second_half_leave, holiday, week_off). Null => fall through to the
+     * clock/holiday/leave/weekoff logic.
+     */
+    private function persistedReportToken($attendance): ?string
+    {
+        return match ($this->persistedDayStatus($attendance)) {
+            'Present' => 'present',
+            'Halfday' => 'halfday',
+            'Absent' => 'absent',
+            'Full Day Leave' => 'full_day_leave',
+            'First Half Leave' => 'first_half_leave',
+            'Second Half Leave' => 'second_half_leave',
+            'Holiday' => 'holiday',
+            'Week Off' => 'week_off',
             default => null,
         };
     }
@@ -134,61 +162,29 @@ class AttendanceReportController extends Controller
     private function getUserShiftForDate($userId, $date, $tenantId)
     {
         try {
-            // First check user_shifts table for specific date with tenant_id
-            $userShift = DB::table('user_shifts')
+            // Honours the tenant's custom-shifts toggle (fixed company shift when
+            // off, the per-date assignment chain when on).
+            $shift = app(\App\Services\Attendance\TenantShiftResolver::class)
+                ->forUserDate((int) $userId, (int) $tenantId, $date);
+
+            if (!$shift) {
+                return null;
+            }
+
+            $userShiftId = DB::table('user_shifts')
                 ->where('user_id', $userId)
                 ->where('tenant_id', $tenantId)
                 ->where('date', $date)
-                ->first();
-    
-            if ($userShift) {
-                // Check if shift exists in shifts table with tenant_id
-                $shift = DB::table('shifts')
-                    ->where('id', $userShift->shift_id)
-                    ->where('tenant_id', $tenantId)
-                    ->where('status', 1)
-                    ->first();
-    
-                if ($shift) {
-                    return [
-                        'shift_id' => $shift->id,
-                        'name' => $shift->name,
-                        'start_time' => $shift->start_time,
-                        'end_time' => $shift->end_time,
-                        'grace_minutes' => $shift->grace_minutes ?? 0,
-                        'user_shift_id' => $userShift->id
-                    ];
-                }
-            }
-    
-            // If no shift in user_shifts, check user_job_details for default shift with tenant_id
-            $userJobDetail = DB::table('user_job_details')
-                ->where('user_id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->first();
-    
-            if ($userJobDetail && $userJobDetail->shift_id) {
-                // Check if shift exists in shifts table with tenant_id
-                $shift = DB::table('shifts')
-                    ->where('id', $userJobDetail->shift_id)
-                    ->where('tenant_id', $tenantId)
-                    ->where('status', 1)
-                    ->first();
-    
-                if ($shift) {
-                    return [
-                        'shift_id' => $shift->id,
-                        'name' => $shift->name,
-                        'start_time' => $shift->start_time,
-                        'end_time' => $shift->end_time,
-                        'grace_minutes' => $shift->grace_minutes ?? 0,
-                        'user_shift_id' => null
-                    ];
-                }
-            }
-    
-            // If no shift found, return null
-            return null;
+                ->value('id');
+
+            return [
+                'shift_id' => $shift->id,
+                'name' => $shift->name,
+                'start_time' => $shift->start_time,
+                'end_time' => $shift->end_time,
+                'grace_minutes' => $shift->grace_minutes ?? 0,
+                'user_shift_id' => $userShiftId,
+            ];
         } catch (Exception $e) {
             Log::error('Error getting user shift: ' . $e->getMessage());
             return null;
@@ -314,6 +310,10 @@ class AttendanceReportController extends Controller
                     'a.clock_out_long',
                     'a.scheduled_shift_start as shiftstarttime',
                     'a.scheduled_shift_end as shiftendtime',
+                    'a.attendance_status',
+                    'a.effective_status',
+                    'a.attendance_type',
+                    'a.marked_by',
                     'a.late_minutes',
                     'a.early_departure_minutes as earlyexitminutes',
                     'a.overtime_minutes',
@@ -440,7 +440,10 @@ class AttendanceReportController extends Controller
     
                     // Determine status using shift-based logic
                     $status = 'absent';
-                    if ($attendance && $attendance->clock_in && $attendance->clock_out) {
+                    $persistedToken = $attendance ? $this->persistedReportToken($attendance) : null;
+                    if ($persistedToken !== null) {
+                        $status = $persistedToken;
+                    } elseif ($attendance && $attendance->clock_in && $attendance->clock_out) {
                         $status = $this->getAttendanceStatusByShift($totalHours, $user->id, $dateStr, $attendance);
                         $status = strtolower($status);
                     } elseif ($attendance && $attendance->clock_in && !$attendance->clock_out) {
@@ -733,7 +736,10 @@ class AttendanceReportController extends Controller
     
                     // Determine status using shift-based logic
                     $status = 'absent';
-                    if ($attendance && $attendance->clock_in && $attendance->clock_out) {
+                    $persistedToken = $attendance ? $this->persistedReportToken($attendance) : null;
+                    if ($persistedToken !== null) {
+                        $status = $persistedToken;
+                    } elseif ($attendance && $attendance->clock_in && $attendance->clock_out) {
                         $status = $this->getAttendanceStatusByShift($totalHours, $user->id, $dateStr, $attendance);
                         $status = strtolower($status);
                     } elseif ($attendance && $attendance->clock_in && !$attendance->clock_out) {
@@ -1034,6 +1040,10 @@ class AttendanceReportController extends Controller
                     'a.clock_out_long',
                     'a.scheduled_shift_start as shiftstarttime',
                     'a.scheduled_shift_end as shiftendtime',
+                    'a.attendance_status',
+                    'a.effective_status',
+                    'a.attendance_type',
+                    'a.marked_by',
                     'a.late_minutes',
                     'a.early_departure_minutes as earlyexitminutes',
                     'a.overtime_minutes',
@@ -1055,7 +1065,7 @@ class AttendanceReportController extends Controller
                 ->where('status', 'approved')
                 ->where(function ($q) use ($dayStart) {
                     $q->where('start_date', '<=', $dayStart)
-                        ->where('start_date', '>=', $dayStart);
+                        ->where('end_date', '>=', $dayStart);
                 })
                 ->get()
                 ->keyBy('user_id');
@@ -1063,10 +1073,8 @@ class AttendanceReportController extends Controller
             // Fetch holidays for this day
             $holidayRows = DB::table('holidays')
                 ->where('tenant_id', $tenantId)
-                ->where(function ($q) use ($dayStart) {
-                    $q->where('start_date', '<=', $dayStart)
-                        ->where('start_date', '>=', $dayStart);
-                })
+                ->where('start_date', '<=', $dayStart)
+                ->where('end_date', '>=', $dayStart)
                 ->get();
 
             // Fetch user weekoffs with tenant filter
@@ -1127,7 +1135,10 @@ class AttendanceReportController extends Controller
 
                 // Determine status using shift-based logic
                 $status = 'absent';
-                if ($attendance && $attendance->clock_in && $attendance->clock_out) {
+                $persistedToken = $attendance ? $this->persistedReportToken($attendance) : null;
+                if ($persistedToken !== null) {
+                    $status = $persistedToken;
+                } elseif ($attendance && $attendance->clock_in && $attendance->clock_out) {
                     $status = $this->getAttendanceStatusByShift($totalHours, $user->id, $dayStart, $attendance);
                     $status = strtolower($status);
                 } elseif ($attendance && $attendance->clock_in && !$attendance->clock_out) {
@@ -1318,7 +1329,7 @@ class AttendanceReportController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->where('status', 'approved')
                 ->where('start_date', '<=', $dayStart)
-                ->where('start_date', '>=', $dayStart)
+                ->where('end_date', '>=', $dayStart)
                 ->get()
                 ->keyBy('user_id');
 
@@ -1326,7 +1337,7 @@ class AttendanceReportController extends Controller
             $holidayRows = DB::table('holidays')
                 ->where('tenant_id', $tenantId)
                 ->where('start_date', '<=', $dayStart)
-                ->where('start_date', '>=', $dayStart)
+                ->where('end_date', '>=', $dayStart)
                 ->get();
 
             // Fetch user weekoffs with tenant filter
@@ -1380,7 +1391,10 @@ class AttendanceReportController extends Controller
 
                 // Determine status using shift-based logic
                 $status = 'absent';
-                if ($attendance && $attendance->clock_in && $attendance->clock_out) {
+                $persistedToken = $attendance ? $this->persistedReportToken($attendance) : null;
+                if ($persistedToken !== null) {
+                    $status = $persistedToken;
+                } elseif ($attendance && $attendance->clock_in && $attendance->clock_out) {
                     $status = $this->getAttendanceStatusByShift($totalHours, $user->id, $dayStart, $attendance);
                     $status = strtolower($status);
                 } elseif ($attendance && $attendance->clock_in && !$attendance->clock_out) {
@@ -1638,10 +1652,10 @@ class AttendanceReportController extends Controller
                 ->where('status', 'approved')
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                         ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                             $q2->where('start_date', '<=', $monthStart)
-                                ->where('start_date', '>=', $monthEnd);
+                                ->where('end_date', '>=', $monthEnd);
                         });
                 })
                 ->get()
@@ -1652,10 +1666,10 @@ class AttendanceReportController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                         ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                             $q2->where('start_date', '<=', $monthStart)
-                                ->where('start_date', '>=', $monthEnd);
+                                ->where('end_date', '>=', $monthEnd);
                         });
                 })
                 ->get();
@@ -1712,12 +1726,12 @@ class AttendanceReportController extends Controller
 
                     // Check for leave
                     $leave = $employeeLeaves->first(function ($lv) use ($dateStr) {
-                        return $dateStr >= $lv->start_date && $dateStr <= $lv->start_date;
+                        return $dateStr >= $lv->start_date && $dateStr <= $lv->end_date;
                     });
 
                     // Check for holiday
                     $holiday = $holidays->first(function ($hl) use ($dateStr) {
-                        return $dateStr >= $hl->start_date && $dateStr <= $hl->start_date;
+                        return $dateStr >= $hl->start_date && $dateStr <= $hl->end_date;
                     });
 
                     // Check for weekoff
@@ -1905,10 +1919,10 @@ class AttendanceReportController extends Controller
                 ->where('status', 'approved')
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                         ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                             $q2->where('start_date', '<=', $monthStart)
-                                ->where('start_date', '>=', $monthEnd);
+                                ->where('end_date', '>=', $monthEnd);
                         });
                 })
                 ->get()
@@ -1918,10 +1932,10 @@ class AttendanceReportController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                         ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                             $q2->where('start_date', '<=', $monthStart)
-                                ->where('start_date', '>=', $monthEnd);
+                                ->where('end_date', '>=', $monthEnd);
                         });
                 })
                 ->get();
@@ -1978,11 +1992,11 @@ class AttendanceReportController extends Controller
                     });
 
                     $leave = $employeeLeaves->first(function ($lv) use ($dateStr) {
-                        return $dateStr >= $lv->start_date && $dateStr <= $lv->start_date;
+                        return $dateStr >= $lv->start_date && $dateStr <= $lv->end_date;
                     });
 
                     $holiday = $holidays->first(function ($hl) use ($dateStr) {
-                        return $dateStr >= $hl->start_date && $dateStr <= $hl->start_date;
+                        return $dateStr >= $hl->start_date && $dateStr <= $hl->end_date;
                     });
 
                     $weekoff = $employeeWeekoffs->first(function ($wo) use ($date) {
@@ -2127,10 +2141,10 @@ class AttendanceReportController extends Controller
                 ->where('status', 'approved')
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                         ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                             $q2->where('start_date', '<=', $monthStart)
-                                ->where('start_date', '>=', $monthEnd);
+                                ->where('end_date', '>=', $monthEnd);
                         });
                 })
                 ->get()
@@ -2141,10 +2155,10 @@ class AttendanceReportController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                         ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                             $q2->where('start_date', '<=', $monthStart)
-                                ->where('start_date', '>=', $monthEnd);
+                                ->where('end_date', '>=', $monthEnd);
                         });
                 })
                 ->get();
@@ -2196,12 +2210,12 @@ class AttendanceReportController extends Controller
     
                     // Check for leave
                     $leave = $employeeLeaves->first(function ($lv) use ($dateStr) {
-                        return $dateStr >= $lv->start_date && $dateStr <= $lv->start_date;
+                        return $dateStr >= $lv->start_date && $dateStr <= $lv->end_date;
                     });
     
                     // Check for holiday
                     $holiday = $holidays->first(function ($hl) use ($dateStr) {
-                        return $dateStr >= $hl->start_date && $dateStr <= $hl->start_date;
+                        return $dateStr >= $hl->start_date && $dateStr <= $hl->end_date;
                     });
     
                     // Check for weekoff
@@ -2382,10 +2396,10 @@ class AttendanceReportController extends Controller
                 ->where('status', 'approved')
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                         ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                             $q2->where('start_date', '<=', $monthStart)
-                                ->where('start_date', '>=', $monthEnd);
+                                ->where('end_date', '>=', $monthEnd);
                         });
                 })
                 ->get()
@@ -2395,10 +2409,10 @@ class AttendanceReportController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                         ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                             $q2->where('start_date', '<=', $monthStart)
-                                ->where('start_date', '>=', $monthEnd);
+                                ->where('end_date', '>=', $monthEnd);
                         });
                 })
                 ->get();
@@ -2460,11 +2474,11 @@ class AttendanceReportController extends Controller
                     });
 
                     $leave = $employeeLeaves->first(function ($lv) use ($dateStr) {
-                        return $dateStr >= $lv->start_date && $dateStr <= $lv->start_date;
+                        return $dateStr >= $lv->start_date && $dateStr <= $lv->end_date;
                     });
 
                     $holiday = $holidays->first(function ($hl) use ($dateStr) {
-                        return $dateStr >= $hl->start_date && $dateStr <= $hl->start_date;
+                        return $dateStr >= $hl->start_date && $dateStr <= $hl->end_date;
                     });
 
                     $weekoff = $employeeWeekoffs->first(function ($wo) use ($date) {
@@ -2666,10 +2680,10 @@ class AttendanceReportController extends Controller
                     ->where('status', 'approved')
                     ->where(function ($q) use ($monthStart, $monthEnd) {
                         $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                            ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                            ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                             ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                                 $q2->where('start_date', '<=', $monthStart)
-                                    ->where('start_date', '>=', $monthEnd);
+                                    ->where('end_date', '>=', $monthEnd);
                             });
                     })
                     ->get();
@@ -2679,10 +2693,10 @@ class AttendanceReportController extends Controller
                     ->where('tenant_id', $tenantId)
                     ->where(function ($q) use ($monthStart, $monthEnd) {
                         $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                            ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                            ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                             ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                                 $q2->where('start_date', '<=', $monthStart)
-                                    ->where('start_date', '>=', $monthEnd);
+                                    ->where('end_date', '>=', $monthEnd);
                             });
                     })
                     ->get();
@@ -2714,10 +2728,10 @@ class AttendanceReportController extends Controller
 
                     $attendance = $attendances->get($dateStr);
                     $leave = $leaves->first(function ($lv) use ($dateStr) {
-                        return $dateStr >= $lv->start_date && $dateStr <= $lv->start_date;
+                        return $dateStr >= $lv->start_date && $dateStr <= $lv->end_date;
                     });
                     $holiday = $holidays->first(function ($hl) use ($dateStr) {
-                        return $dateStr >= $hl->start_date && $dateStr <= $hl->start_date;
+                        return $dateStr >= $hl->start_date && $dateStr <= $hl->end_date;
                     });
                     $weekoff = $weekoffs->first(function ($wo) use ($date) {
                         if ($wo->off_type == 'day_based') {
@@ -2850,10 +2864,10 @@ class AttendanceReportController extends Controller
                     ->where('status', 'approved')
                     ->where(function ($q) use ($monthStart, $monthEnd) {
                         $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                            ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                            ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                             ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                                 $q2->where('start_date', '<=', $monthStart)
-                                    ->where('start_date', '>=', $monthEnd);
+                                    ->where('end_date', '>=', $monthEnd);
                             });
                     })
                     ->get();
@@ -2863,10 +2877,10 @@ class AttendanceReportController extends Controller
                     ->where('tenant_id', $tenantId)
                     ->where(function ($q) use ($monthStart, $monthEnd) {
                         $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                            ->orWhereBetween('start_date', [$monthStart, $monthEnd])
+                            ->orWhereBetween('end_date', [$monthStart, $monthEnd])
                             ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
                                 $q2->where('start_date', '<=', $monthStart)
-                                    ->where('start_date', '>=', $monthEnd);
+                                    ->where('end_date', '>=', $monthEnd);
                             });
                     })
                     ->get();
@@ -2897,10 +2911,10 @@ class AttendanceReportController extends Controller
 
                     $attendance = $attendances->get($dateStr);
                     $leave = $leaves->first(function ($lv) use ($dateStr) {
-                        return $dateStr >= $lv->start_date && $dateStr <= $lv->start_date;
+                        return $dateStr >= $lv->start_date && $dateStr <= $lv->end_date;
                     });
                     $holiday = $holidays->first(function ($hl) use ($dateStr) {
-                        return $dateStr >= $hl->start_date && $dateStr <= $hl->start_date;
+                        return $dateStr >= $hl->start_date && $dateStr <= $hl->end_date;
                     });
                     $weekoff = $weekoffs->first(function ($wo) use ($date) {
                         if ($wo->off_type == 'day_based') {
@@ -3844,5 +3858,164 @@ class AttendanceReportController extends Controller
         // FINALLY: Absent
         return 'absent';
     }
-    
+
+    /**
+     * Overtime Report (Monthly) — per-employee requested/approved/rejected
+     * overtime hours for a month, with an estimated payout cost. Reuses the
+     * same dynamic-vs-legacy hourly-rate resolution AttendanceAnalyticsService
+     * uses for its overtime-cost widget, but per employee instead of a
+     * tenant-wide average.
+     */
+    public function overtimeMonthlyReport(Request $request)
+    {
+        try {
+            $tenantId = session('tenant_id');
+
+            if (!$tenantId) {
+                return back()->with('error', 'Tenant not found. Please login again.');
+            }
+
+            $selectedMonth = $request->get('month', now()->format('Y-m'));
+            $monthStart = Carbon::parse($selectedMonth . '-01')->startOfMonth()->format('Y-m-d');
+            $monthEnd = Carbon::parse($selectedMonth . '-01')->endOfMonth()->format('Y-m-d');
+
+            $search = $request->get('search');
+            $departmentFilter = $request->get('department');
+            $statusFilter = $request->get('status');
+
+            $dynamicEnabled = (bool) DB::table('tenants')->where('id', $tenantId)->value('payroll_dynamic_ui_enabled');
+            $multiplier = app(\App\Services\Attendance\PolicyResolver::class)
+                ->forTenantMonth($tenantId, $selectedMonth)
+                ->overtimeMultiplier;
+
+            $usersQuery = DB::table('users as u')
+                ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
+                ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
+                ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->select('u.id', 'u.name', 'u.employee_id', 'd.name as department_name', 'ds.name as designation_name')
+                ->where('u.tenant_id', $tenantId)
+                ->where('u.status', 1)
+                ->where('u.role', '!=', 'admin');
+
+            if ($search) {
+                $usersQuery->where(function ($q) use ($search) {
+                    $q->where('u.name', 'like', "%{$search}%")
+                        ->orWhere('u.employee_id', 'like', "%{$search}%");
+                });
+            }
+            if ($departmentFilter) {
+                $usersQuery->where('uj.department', $departmentFilter);
+            }
+
+            $users = $usersQuery->orderBy('u.name')->get();
+
+            // Every approved/pending/rejected OT request this tenant has for the month.
+            $requests = DB::table('overtime_requests')
+                ->where('tenant_id', $tenantId)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->get()
+                ->groupBy('user_id');
+
+            // Per-employee hourly rate, dynamic-or-legacy — same resolution
+            // AttendanceAnalyticsService::overtimeCost() uses tenant-wide,
+            // done per user here for an accurate per-row estimated cost.
+            $dynamicRates = [];
+            $legacyRates = [];
+
+            if ($dynamicEnabled) {
+                $dynamicRates = DB::table('payroll_employee_structures')
+                    ->where('tenant_id', $tenantId)
+                    ->where('is_current', 1)
+                    ->pluck('ctc', 'user_id');
+            } else {
+                $legacyRates = DB::table('user_payrolls')
+                    ->join('payroll_masters', 'user_payrolls.payroll_master_id', '=', 'payroll_masters.id')
+                    ->where('user_payrolls.tenant_id', $tenantId)
+                    ->where('user_payrolls.is_current', 1)
+                    ->pluck('payroll_masters.hourly_rate_applied', 'user_payrolls.user_id');
+            }
+
+            $reportData = collect();
+            $totalApprovedHours = 0;
+            $totalPendingHours = 0;
+            $totalRejectedHours = 0;
+            $totalEstimatedCost = 0;
+            $totalRequests = 0;
+
+            foreach ($users as $user) {
+                $userRequests = $requests->get($user->id, collect());
+
+                if ($userRequests->isEmpty()) {
+                    continue;
+                }
+
+                $approved = $userRequests->where('status', 'approved');
+                $pending = $userRequests->where('status', 'pending');
+                $rejected = $userRequests->where('status', 'rejected');
+
+                $approvedHours = (float) $approved->sum(fn ($r) => $r->approved_hours ?? $r->overtime_hours);
+                $pendingHours = (float) $pending->sum('overtime_hours');
+                $rejectedHours = (float) $rejected->sum('overtime_hours');
+
+                $rate = $dynamicEnabled
+                    ? (isset($dynamicRates[$user->id]) ? round(((float) $dynamicRates[$user->id] / 12) / (26 * 8), 2) : 0)
+                    : (float) ($legacyRates[$user->id] ?? 0);
+
+                $estimatedCost = round($approvedHours * $rate * $multiplier, 2);
+
+                if ($statusFilter) {
+                    $countForStatus = $userRequests->where('status', $statusFilter)->count();
+                    if ($countForStatus === 0) {
+                        continue;
+                    }
+                }
+
+                $reportData->push([
+                    'user_id' => $user->id,
+                    'name' => $user->name,
+                    'employee_id' => $user->employee_id,
+                    'department' => $user->department_name,
+                    'designation' => $user->designation_name,
+                    'request_count' => $userRequests->count(),
+                    'approved_count' => $approved->count(),
+                    'pending_count' => $pending->count(),
+                    'rejected_count' => $rejected->count(),
+                    'approved_hours' => $approvedHours,
+                    'pending_hours' => $pendingHours,
+                    'rejected_hours' => $rejectedHours,
+                    'hourly_rate' => $rate,
+                    'estimated_cost' => $estimatedCost,
+                ]);
+
+                $totalApprovedHours += $approvedHours;
+                $totalPendingHours += $pendingHours;
+                $totalRejectedHours += $rejectedHours;
+                $totalEstimatedCost += $estimatedCost;
+                $totalRequests += $userRequests->count();
+            }
+
+            $reportData = $reportData->sortByDesc('approved_hours')->values();
+
+            $departments = DB::table('departments')->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
+
+            $stats = [
+                'total_employees' => $reportData->count(),
+                'total_requests' => $totalRequests,
+                'total_approved_hours' => round($totalApprovedHours, 2),
+                'total_pending_hours' => round($totalPendingHours, 2),
+                'total_rejected_hours' => round($totalRejectedHours, 2),
+                'total_estimated_cost' => round($totalEstimatedCost, 2),
+                'multiplier' => $multiplier,
+            ];
+
+            return view('client.report.attendance.overtime-monthly', compact(
+                'reportData', 'stats', 'departments', 'selectedMonth', 'search', 'departmentFilter', 'statusFilter'
+            ));
+        } catch (Exception $e) {
+            Log::error('Overtime Monthly Report Error: ' . $e->getMessage());
+
+            return back()->with('error', 'Failed to load overtime report: ' . $e->getMessage());
+        }
+    }
+
 }

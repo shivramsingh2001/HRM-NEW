@@ -17,6 +17,7 @@ use App\Models\Country;
 use App\Models\Language;
 use App\Models\EmployementType;
 use App\Models\LeaveType;
+use App\Services\Payroll\PayrollStructureAssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -88,6 +89,7 @@ class UserController extends Controller
                     'user_job_details.type',
                     'user_job_details.office_branch',
                     'user_job_details.face_register',
+                    'user_job_details.location_tracking_enabled',
                     'user_bank_details.bank_name',
                     'user_bank_details.account_number',
                     'user_bank_details.ifsc',
@@ -175,7 +177,16 @@ class UserController extends Controller
                     ->select('id', 'name', 'email', 'employee_id', 'status')
                     ->first();
             }
-            return view('client.user.view-user', compact('designations', 'users', 'totalEmployees', 'activeEmployees', 'inactiveEmployees', 'departments', 'allEmployees', 'selectedEmployeeData'));
+
+            // Field GPS tracking add-on (only shown when the tenant has it).
+            $ftTenant = app()->bound('current_tenant') ? app('current_tenant') : null;
+            $fieldTrackingEnabled = (bool) optional($ftTenant)->field_tracking_enabled;
+            $fieldTrackingSeats = (int) optional($ftTenant)->field_tracking_seats;
+            $fieldTrackingSeatsUsed = $fieldTrackingEnabled
+                ? app(\App\Services\FieldTracking\FieldTrackingService::class)->seatsUsed((int) auth()->user()->tenant_id)
+                : 0;
+
+            return view('client.user.view-user', compact('designations', 'users', 'totalEmployees', 'activeEmployees', 'inactiveEmployees', 'departments', 'allEmployees', 'selectedEmployeeData', 'fieldTrackingEnabled', 'fieldTrackingSeats', 'fieldTrackingSeatsUsed'));
         } catch (\Exception $e) {
             Log::error('Error fetching employees: ' . $e->getMessage());
 
@@ -783,6 +794,15 @@ class UserController extends Controller
         ]);
 
         $user = User::where('employee_id', $employeeId)->firstOrFail();
+
+        $tenantId = app('current_tenant')->id;
+        $dynamicEnabled = (bool) DB::table('tenants')->where('id', $tenantId)->value('payroll_dynamic_ui_enabled');
+
+        if ($dynamicEnabled) {
+            $this->assignDynamicStructureFromWizardValues($tenantId, $user, $validated, 'initial', 'Created during employee registration');
+
+            return;
+        }
 
         DB::beginTransaction();
 
@@ -1592,6 +1612,15 @@ class UserController extends Controller
             'gross_salary' => 'required|numeric|min:0',
         ]);
 
+        $tenantId = app('current_tenant')->id;
+        $dynamicEnabled = (bool) DB::table('tenants')->where('id', $tenantId)->value('payroll_dynamic_ui_enabled');
+
+        if ($dynamicEnabled) {
+            $this->assignDynamicStructureFromWizardValues($tenantId, $user, $validated, 'increment', 'Updated during employee edit');
+
+            return;
+        }
+
         DB::beginTransaction();
 
         try {
@@ -1724,6 +1753,55 @@ class UserController extends Controller
     }
 
     /**
+     * Payroll rebuild — Phase 9. Once a tenant is on the dynamic engine, the
+     * wizard/profile payroll step must stop writing into the legacy
+     * user_payrolls table — that write was the one remaining bypass of the
+     * per-tenant cutover flag, since it happened outside
+     * UserPayrollController entirely. Creates/revises a real
+     * PayrollEmployeeStructure instead, using the same flat wizard fields
+     * mapped onto the tenant's own component catalog.
+     *
+     * @param string $defaultRevisionType used only when the employee doesn't
+     *   already have a current dynamic structure at a different date than
+     *   the one submitted here — otherwise 'initial' (no prior structure) or
+     *   an in-place update (identical effective date resubmitted) takes over.
+     */
+    private function assignDynamicStructureFromWizardValues(int $tenantId, User $user, array $validated, string $defaultRevisionType, string $reason): void
+    {
+        $service = app(PayrollStructureAssignmentService::class);
+        $components = $service->componentsFromFlatValues($tenantId, $validated);
+        $effectiveFrom = $validated['salary_effective_date'] ?? now()->toDateString();
+        $ctc = (float) $validated['annual_ctc'];
+
+        $existingForDate = $service->findForExactDate($tenantId, $user->id, $effectiveFrom);
+
+        if ($existingForDate) {
+            // Same date resubmitted — update the snapshot in place rather
+            // than colliding with the (tenant_id, user_id, effective_from)
+            // unique constraint or creating a duplicate revision.
+            $service->updateComponentsInPlace($existingForDate, $components, $ctc);
+
+            Log::info('Dynamic payroll structure updated in place for employee: ' . $user->employee_id);
+
+            return;
+        }
+
+        $hasCurrentStructure = \App\Models\PayrollEmployeeStructure::forUser($user->id)->current()->exists();
+
+        $structure = $service->assign($tenantId, $components, [
+            'user_id' => $user->id,
+            'ctc' => $ctc,
+            'effective_from' => $effectiveFrom,
+            'revision_type' => $hasCurrentStructure ? $defaultRevisionType : 'initial',
+            'revision_reason' => $reason,
+            'created_by' => auth()->id(),
+            'source' => 'manual',
+        ]);
+
+        Log::info('Dynamic payroll structure ' . $structure->status . ' for employee: ' . $user->employee_id);
+    }
+
+    /**
      * Update step 7 (Documents)
      */
     private function updateStep7($request, $user, $filePaths)
@@ -1843,6 +1921,123 @@ class UserController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update attendance type: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Turn continuous GPS tracking on/off for one employee. Hard-capped at the
+     * tenant's purchased field-tracking seats. Mirrors toggleFaceRegister().
+     */
+    public function toggleLocationTracking(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:users,id',
+        ]);
+
+        try {
+            $user = User::findOrFail($request->id);
+            $svc = app(\App\Services\FieldTracking\FieldTrackingService::class);
+            $jd = UserJobDetail::where('user_id', $user->id)->first();
+            $turnOn = ! ($jd && $jd->location_tracking_enabled);
+
+            if ($turnOn) {
+                $gate = $svc->canEnable((int) $user->tenant_id);
+                if (! $gate['ok']) {
+                    return response()->json(['success' => false, 'message' => $gate['reason']], 200);
+                }
+                $res = $svc->assign($user);
+            } else {
+                $res = $svc->remove($user);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $turnOn ? 'Field tracking enabled' : 'Field tracking disabled',
+                'new_status' => $turnOn ? 1 : 0,
+                'seats_used' => $res['seats_used'],
+                'seats_purchased' => $res['seats_purchased'],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('toggleLocationTracking failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating field tracking. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Enable/disable field tracking for many employees. When enabling under a
+     * hard seat cap, fills the remaining seats and reports the rest as skipped.
+     */
+    public function bulkLocationTracking(Request $request)
+    {
+        $data = $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'integer|exists:users,id',
+            'enabled' => 'required|boolean',
+        ]);
+
+        try {
+            $tenantId = (int) auth()->user()->tenant_id;
+            $svc = app(\App\Services\FieldTracking\FieldTrackingService::class);
+
+            $users = User::where('tenant_id', $tenantId)
+                ->whereIn('id', $data['user_ids'])
+                ->orderBy('id')
+                ->get();
+
+            $enabling = (bool) $data['enabled'];
+            $updated = 0;
+            $skipped = 0;
+
+            DB::transaction(function () use ($users, $enabling, $svc, $tenantId, &$updated, &$skipped) {
+                $tenant = \App\Models\Tenant::find($tenantId);
+                $remaining = $enabling
+                    ? max(0, $svc->seatsPurchased($tenant) - $svc->seatsUsed($tenantId))
+                    : PHP_INT_MAX;
+
+                foreach ($users as $user) {
+                    $jd = UserJobDetail::where('user_id', $user->id)->first();
+                    $isOn = (bool) ($jd && $jd->location_tracking_enabled);
+
+                    if ($enabling) {
+                        if ($isOn) {
+                            continue;
+                        }
+                        if ($remaining <= 0) {
+                            $skipped++;
+                            continue;
+                        }
+                        $svc->assign($user);
+                        $remaining--;
+                        $updated++;
+                    } else {
+                        if (! $isOn) {
+                            continue;
+                        }
+                        $svc->remove($user);
+                        $updated++;
+                    }
+                }
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => "{$updated} employee(s) updated" . ($skipped ? ", {$skipped} skipped (no seats)" : ''),
+                'data' => [
+                    'updated' => $updated,
+                    'skipped_no_seats' => $skipped,
+                    'seats_used' => $svc->seatsUsed($tenantId),
+                    'seats_purchased' => $svc->seatsPurchased(\App\Models\Tenant::find($tenantId)),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('bulkLocationTracking failed: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Error updating field tracking. Please try again.',
             ], 500);
         }
     }

@@ -6,9 +6,46 @@ use App\Http\Controllers\Controller;
 use App\Models\PayrollMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use App\Traits\BlocksLegacyPayrollWrites;
 
 class PayrollMasterController extends Controller
 {
+    use BlocksLegacyPayrollWrites;
+
+    /**
+     * Server-side mirror of create-payroll-master.blade.php's restrictPercentInput() cap --
+     * previously only enforced in the browser, so a direct POST (curl/disabled JS) could save
+     * a payroll master whose earnings or deductions percentages exceed 100%.
+     */
+    private function applyPercentCapValidation(\Illuminate\Contracts\Validation\Validator $validator, Request $request): void
+    {
+        $validator->after(function ($v) use ($request) {
+            $earningsTotal = (float) ($request->hra ?? 0)
+                + (float) ($request->conveyence ?? 0)
+                + (float) ($request->medical_allowance ?? 0)
+                + (float) ($request->children_allowance ?? 0)
+                + (float) ($request->post_allowance ?? 0)
+                + (float) ($request->leave_travel_allowance ?? 0)
+                + (float) ($request->monthly_incentive ?? 0);
+
+            if ($earningsTotal > 100) {
+                $v->errors()->add('hra', 'Total earnings percentage cannot exceed 100% (currently ' . round($earningsTotal, 2) . '%).');
+            }
+
+            $deductionsTotal = (float) ($request->provident_fund ?? 0)
+                + (float) ($request->employer_provident_fund ?? 0)
+                + (float) ($request->esi ?? 0)
+                + (float) ($request->employer_esi ?? 0)
+                + (float) ($request->pt ?? 0);
+
+            if ($deductionsTotal > 100) {
+                $v->errors()->add('provident_fund', 'Total deductions percentage cannot exceed 100% (currently ' . round($deductionsTotal, 2) . '%).');
+            }
+        });
+    }
+
     private function generatePayrollCode()
     {
         // Get the latest payroll master record
@@ -64,8 +101,14 @@ class PayrollMasterController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:payroll_masters,name',
+        if ($blocked = $this->blockedByDynamicCutover()) {
+            return $blocked;
+        }
+
+        $tenantId = app('current_tenant')->id;
+
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255', Rule::unique('payroll_masters', 'name')->where('tenant_id', $tenantId)],
             'hra' => 'nullable|numeric|min:0',
             'conveyence' => 'nullable|numeric|min:0',
             'medical_allowance' => 'nullable|numeric|min:0',
@@ -82,7 +125,11 @@ class PayrollMasterController extends Controller
             'payroll_calculation_type' => 'required|in:day_based,hour_based',
             'working_hours_per_day' => 'required_if:payroll_calculation_type,hour_based|nullable|numeric|min:0|max:24',
             'hourly_rate_applied' => 'nullable|numeric|min:0',
+            'ot_rate_divisor_mode' => 'nullable|in:calendar_days,fixed_working_days',
+            'ot_fixed_working_days' => 'nullable|integer|min:1|max:31',
         ]);
+        $this->applyPercentCapValidation($validator, $request);
+        $validator->validate();
 
         try {
             DB::beginTransaction();
@@ -107,6 +154,8 @@ class PayrollMasterController extends Controller
                 'payroll_calculation_type' => $request->payroll_calculation_type,
                 'working_hours_per_day' => $request->payroll_calculation_type == 'hour_based' ? ($request->working_hours_per_day ?? 8.00) : null,
                 'hourly_rate_applied' => $request->hourly_rate_applied ?? null,
+                'ot_rate_divisor_mode' => $request->ot_rate_divisor_mode ?? 'calendar_days',
+                'ot_fixed_working_days' => $request->ot_fixed_working_days ?? 26,
             ]);
 
             DB::commit();
@@ -136,10 +185,16 @@ class PayrollMasterController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if ($blocked = $this->blockedByDynamicCutover()) {
+            return $blocked;
+        }
+
         $payrollMaster = PayrollMaster::findOrFail($id);
 
-        $request->validate([
-            'name' => 'required|string|max:255|unique:payroll_masters,name,' . $id,
+        $tenantId = app('current_tenant')->id;
+
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255', Rule::unique('payroll_masters', 'name')->where('tenant_id', $tenantId)->ignore($id)],
             'hra' => 'nullable|numeric|min:0',
             'conveyence' => 'nullable|numeric|min:0',
             'medical_allowance' => 'nullable|numeric|min:0',
@@ -156,7 +211,11 @@ class PayrollMasterController extends Controller
             'payroll_calculation_type' => 'required|in:day_based,hour_based',
             'working_hours_per_day' => 'required_if:payroll_calculation_type,hour_based|nullable|numeric|min:0|max:24',
             'hourly_rate_applied' => 'nullable|numeric|min:0',
+            'ot_rate_divisor_mode' => 'nullable|in:calendar_days,fixed_working_days',
+            'ot_fixed_working_days' => 'nullable|integer|min:1|max:31',
         ]);
+        $this->applyPercentCapValidation($validator, $request);
+        $validator->validate();
 
         try {
             DB::beginTransaction();
@@ -179,6 +238,8 @@ class PayrollMasterController extends Controller
                   'payroll_calculation_type' => $request->payroll_calculation_type,
                 'working_hours_per_day' => $request->payroll_calculation_type == 'hour_based' ? ($request->working_hours_per_day ?? 8.00) : null,
                 'hourly_rate_applied' => $request->hourly_rate_applied ?? null,
+                'ot_rate_divisor_mode' => $request->ot_rate_divisor_mode ?? 'calendar_days',
+                'ot_fixed_working_days' => $request->ot_fixed_working_days ?? 26,
             ]);
 
             DB::commit();

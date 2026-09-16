@@ -6,9 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\TenantTrait;
+use App\Traits\LogsPayrollActivity;
 class UserPayroll extends Model
 {
-    use TenantTrait , HasFactory, SoftDeletes;
+    use TenantTrait, HasFactory, SoftDeletes, LogsPayrollActivity;
 
     protected $fillable = [
         'tenant_id',

@@ -2,112 +2,11 @@
 
 @section('style')
     <style>
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            border: 1px solid #edf2f7;
-            transition: all 0.3s;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stats-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-        }
-
-        .stats-card.total-card::before {
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
-        }
-
-        .stats-card.pending-card::before {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-        }
-
-        .stats-card.approved-card::before {
-            background: linear-gradient(90deg, #10b981, #34d399);
-        }
-
-        .stats-card.rejected-card::before {
-            background: linear-gradient(90deg, #ef4444, #f87171);
-        }
-
-        .stats-card.month-card::before {
-            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
-        }
-
-        .stats-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .stats-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .total-icon {
-            background: rgba(79, 70, 229, 0.1);
-            color: #4f46e5;
-        }
-
-        .pending-icon {
-            background: rgba(245, 158, 11, 0.1);
-            color: #f59e0b;
-        }
-
-        .approved-icon {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-        }
-
-        .rejected-icon {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-        }
-
-        .month-icon {
-            background: rgba(139, 92, 246, 0.1);
-            color: #8b5cf6;
-        }
-
-        .stats-icon i {
-            font-size: 24px;
-        }
-
-        .stats-info h3 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 4px;
-            color: #1e293b;
-        }
-
-        .stats-info p {
-            font-size: 12px;
-            color: #64748b;
-            margin: 0;
-        }
+        /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
+           in client.layout.head (single blue-only theme — the per-type
+           gradient borders and total/pending/approved/rejected/month-icon
+           colors are dropped so every icon shares the same blue) — no
+           local copy. */
 
         .stats-sub {
             font-size: 11px;
@@ -587,7 +486,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Statistics Cards -->
         <div class="stats-grid">
             <div class="stats-card total-card" onclick="filterByStatus('')">

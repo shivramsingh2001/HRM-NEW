@@ -98,6 +98,13 @@ class AutoClockOutCommand extends Command
                 }
 
                 DB::transaction(function () use ($attendance, $clockOut, $totalHours, $workedHours, $status, $maxHours, $now, $clockIn, $workedSeconds) {
+                    $before = [
+                        'clock_out' => $attendance->clock_out,
+                        'total_hours' => $attendance->total_hours,
+                        'worked_hours' => $attendance->worked_hours,
+                        'attendance_status' => $attendance->attendance_status,
+                    ];
+
                     $attendance->clock_out = $clockOut->format('Y-m-d H:i:s');
                     $attendance->total_hours = $totalHours;
                     $attendance->worked_hours = $workedHours;
@@ -111,6 +118,9 @@ class AutoClockOutCommand extends Command
                     AttendanceLog::create([
                         'tenant_id' => $attendance->tenant_id,
                         'user_id' => $attendance->user_id,
+                        'actor_id' => null,
+                        'actor_role' => null,
+                        'source' => 'auto_clockout',
                         'attendance_id' => $attendance->id,
                         'event_type' => 'manual_adjustment',
                         'event_time' => $clockOut->format('Y-m-d H:i:s'),
@@ -119,6 +129,14 @@ class AutoClockOutCommand extends Command
                         'address' => 'Auto clock-out',
                         'verification_method' => 'system',
                         'user_agent' => 'AutoClockOutCommand',
+                        'reason' => "Exceeded {$maxHours}h without clock-out",
+                        'before' => $before,
+                        'after' => [
+                            'clock_out' => $attendance->clock_out,
+                            'total_hours' => $attendance->total_hours,
+                            'worked_hours' => $attendance->worked_hours,
+                            'attendance_status' => $attendance->attendance_status,
+                        ],
                         'raw_data' => json_encode([
                             'reason' => "exceeded {$maxHours}h without clock-out",
                             'clock_in' => $clockIn->format('Y-m-d H:i:s'),
@@ -218,20 +236,16 @@ class AutoClockOutCommand extends Command
             ]);
         }
 
+        $policy = app(\App\Services\Attendance\PolicyResolver::class)
+            ->forTenantDate((int) $attendance->tenant_id, (string) $attendance->date);
+
         if ($expected > 0) {
             $ratio = ($workedHours * 3600) / $expected;
             if ($ratio >= 1.0) {
                 return 'overtime';
             }
-            if ($ratio >= (float) config('attendance.ratio.present', 0.9)) {
-                return 'present';
-            }
-            return $ratio >= (float) config('attendance.ratio.half', 0.5) ? 'half_day' : 'absent';
         }
 
-        if ($workedHours >= (float) config('attendance.fallback_hours.present', 8)) {
-            return 'present';
-        }
-        return $workedHours >= (float) config('attendance.fallback_hours.half', 4) ? 'half_day' : 'absent';
+        return $policy->classify($workedHours, (int) $expected);
     }
 }

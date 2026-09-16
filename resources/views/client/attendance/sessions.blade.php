@@ -176,28 +176,6 @@
             color: white;
         }
 
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .status-present {
-            background: #10b981;
-            color: white;
-        }
-
-        .status-absent {
-            background: #ef4444;
-            color: white;
-        }
-
-        .status-late {
-            background: #f59e0b;
-            color: white;
-        }
-
         .btn-view-map {
             margin-top: 15px;
             padding: 8px 16px;
@@ -232,25 +210,15 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Attendance Sessions</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('team.index') }}">Team</a></li>
-                <li class="breadcrumb-item active">Attendance Sessions</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Attendance Sessions" :parent="['label' => 'Team', 'route' => 'team.index']">
+        <x-slot:actions>
             <a href="{{ url()->previous() }}" class="btn btn-light btn-sm">
                 <i class="feather-arrow-left me-1"></i>Back
             </a>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="sessions-container">
             <!-- Header -->
             <div class="sessions-header">
@@ -288,9 +256,9 @@
                                 <div class="text-muted mb-1">Attendance Status</div>
                                 <h5 class="mb-0">
                                     @if ($attendance && $attendance->clock_in)
-                                        <span class="status-badge status-present">Present</span>
+                                        <x-ui.status-badge status="present" label="Present" />
                                     @else
-                                        <span class="status-badge status-absent">Absent</span>
+                                        <x-ui.status-badge status="absent" label="Absent" />
                                     @endif
                                 </h5>
                             </div>
@@ -394,9 +362,7 @@
                                         <span class="priority-badge priority-{{ $task->priority }}">
                                             {{ strtoupper($task->priority) }}
                                         </span>
-                                        <span class="status-badge status-{{ $task->status }}">
-                                            {{ strtoupper(str_replace('_', ' ', $task->status)) }}
-                                        </span>
+                                        <x-ui.status-badge :status="$task->status" :label="strtoupper(str_replace('_', ' ', $task->status))" />
                                         {{-- @if ($task->deadline_status == 'Due Today')
                                             <span class="badge bg-danger">Due Today</span>
                                         @elseif($task->deadline_status == 'Overdue')

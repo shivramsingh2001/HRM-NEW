@@ -9,7 +9,7 @@
                 border: 1px solid #e2e8f0;
                 border-radius: 8px;
                 color: #1e293b;
-                font-size: 13px;
+                font-size: 11.5px;
                 padding: 0 12px;
             }
 
@@ -19,8 +19,8 @@
             }
 
             .custom-employee-dropdown .btn:focus {
-                border-color: #4f46e5;
-                box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                border-color: #1e3a8a;
+                box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
             }
 
             /* Consistent initials style - same color for all */
@@ -28,7 +28,7 @@
             .employee-initials-sm {
                 width: 28px;
                 height: 28px;
-                background: #4f46e5;
+                background: #1e3a8a;
                 /* Single consistent color */
                 color: white;
                 border-radius: 50%;
@@ -61,7 +61,7 @@
             .custom-employee-dropdown .dropdown-item {
                 padding: 8px 12px;
                 border-radius: 6px;
-                font-size: 13px;
+                font-size: 11.5px;
                 color: #1e293b;
                 margin-bottom: 2px;
             }
@@ -71,20 +71,17 @@
             }
 
             .custom-employee-dropdown .dropdown-item.active {
-                background: #eef2ff;
-                color: #4f46e5;
+                background: #e3edfe;
+                color: #1e3a8a;
             }
 
             .custom-employee-dropdown .dropdown-item.active .text-muted {
-                color: #4f46e5 !important;
+                color: #1e3a8a !important;
                 opacity: 0.8;
             }
 
-            /* Employee name styling */
-            .employee-name {
-                color: #1e293b;
-                font-weight: 500;
-            }
+            /* .employee-name/.employee-email are centralized in client.layout.head
+               (12px/600-weight name, 8px email) — no local override here. */
 
             .text-muted {
                 color: #64748b !important;
@@ -108,7 +105,7 @@
             }
 
             .toggle-switch.active {
-                background: #10b981;
+                background: #3b82f6;
             }
 
             .toggle-switch .toggle-circle {
@@ -128,16 +125,16 @@
             }
 
             .status-label {
-                font-size: 13px;
+                font-size: 11.5px;
                 font-weight: 500;
             }
 
             .status-label.active {
-                color: #10b981;
+                color: #3b82f6;
             }
 
             .status-label.inactive {
-                color: #ef4444;
+                color: #1e3a8a;
             }
 
             /* ==================== MODERN FILTER SECTION ==================== */
@@ -161,19 +158,19 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                font-size: 14px;
+                font-size: 12px;
                 font-weight: 600;
                 color: #1e293b;
             }
 
             .filter-title i {
-                color: #4f46e5;
-                font-size: 16px;
+                color: #1e3a8a;
+                font-size: 13px;
             }
 
             .filter-title span {
-                background: #eef2ff;
-                color: #4f46e5;
+                background: #e3edfe;
+                color: #1e3a8a;
                 font-size: 11px;
                 font-weight: 600;
                 padding: 2px 8px;
@@ -194,12 +191,12 @@
             }
 
             .clear-all-link:hover {
-                background: #fee2e2;
-                color: #ef4444;
+                background: #e3edfe;
+                color: #1e3a8a;
             }
 
             .clear-all-link i {
-                font-size: 14px;
+                font-size: 12px;
             }
 
             /* ==================== COMPACT FILTER ROW ==================== */
@@ -232,7 +229,7 @@
                 top: 50%;
                 transform: translateY(-50%);
                 color: #94a3b8;
-                font-size: 14px;
+                font-size: 12px;
                 pointer-events: none;
             }
 
@@ -240,7 +237,7 @@
                 width: 100%;
                 height: 36px;
                 padding: 6px 12px 6px 32px;
-                font-size: 13px;
+                font-size: 11.5px;
                 border: 1px solid #e2e8f0;
                 border-radius: 8px;
                 background: #f8fafc;
@@ -249,8 +246,8 @@
 
             .search-wrapper .form-control:focus {
                 background: white;
-                border-color: #4f46e5;
-                box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                border-color: #1e3a8a;
+                box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
                 outline: none;
             }
 
@@ -276,8 +273,8 @@
 
             .filter-select:focus {
                 background-color: white;
-                border-color: #4f46e5;
-                box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                border-color: #1e3a8a;
+                box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
                 outline: none;
             }
 
@@ -290,7 +287,7 @@
             .apply-btn {
                 height: 36px;
                 padding: 0 16px;
-                background: #4f46e5;
+                background: #1e3a8a;
                 color: white;
                 border: none;
                 border-radius: 8px;
@@ -305,12 +302,12 @@
             }
 
             .apply-btn:hover {
-                background: #4338ca;
+                background: #1e3a8a;
                 transform: translateY(-1px);
             }
 
             .apply-btn i {
-                font-size: 14px;
+                font-size: 12px;
             }
 
             /* Reset Button */
@@ -373,7 +370,7 @@
             }
 
             .filter-tag i {
-                color: #4f46e5;
+                color: #1e3a8a;
                 font-size: 11px;
             }
 
@@ -387,20 +384,20 @@
             }
 
             .filter-tag .remove-tag:hover {
-                color: #ef4444;
+                color: #1e3a8a;
             }
 
             .filter-tag.clear-all {
-                background: #eef2ff;
-                border-color: #4f46e5;
-                color: #4f46e5;
+                background: #e3edfe;
+                border-color: #1e3a8a;
+                color: #1e3a8a;
                 font-weight: 600;
                 text-decoration: none;
                 padding: 3px 10px;
             }
 
             .filter-tag.clear-all:hover {
-                background: #4f46e5;
+                background: #1e3a8a;
                 color: white;
             }
 
@@ -408,99 +405,71 @@
                 color: currentColor;
             }
 
-            /* ==================== STATS CARDS ==================== */
+            /* ==================== STATS CARDS (compact, like the dashboard's
+               Expense Overview tiles) ==================== */
             .stats-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                gap: 1.5rem;
-                margin-bottom: 2rem;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: .75rem;
+                margin-bottom: 1rem;
             }
 
             .stats-card {
                 background: white;
-                border: 1px solid #edf2f7;
-                border-radius: 12px;
-                padding: 20px;
+                border: 1px solid #eaeef5;
+                border-radius: 10px;
+                padding: 12px;
                 display: flex;
                 align-items: center;
+                gap: 12px;
                 transition: all 0.2s;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+                box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
             }
 
             .stats-card:hover {
-                box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
-                border-color: #cbd5e1;
-                transform: translateY(-2px);
+                box-shadow: 0 4px 12px -4px rgba(30, 50, 110, .12);
+                border-color: #dfe5f0;
+                transform: translateY(-1px);
             }
 
             .stats-icon {
-                width: 48px;
-                height: 48px;
-                background: #eef2ff;
-                border-radius: 12px;
+                width: 32px;
+                height: 32px;
+                background: #e3edfe;
+                border-radius: 9px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-right: 16px;
+                flex: none;
             }
 
             .stats-icon i {
-                font-size: 24px;
-                color: #4f46e5;
+                font-size: 12px;
+                color: #1e3a8a;
             }
 
             .stats-info h3 {
-                font-size: 24px;
-                font-weight: 700;
-                margin: 0 0 4px 0;
-                color: #1e293b;
+                font-size: 15px;
+                font-weight: 800;
+                margin: 0 0 1px 0;
+                color: #1a2236;
                 line-height: 1.2;
             }
 
             .stats-info p {
-                font-size: 13px;
-                color: #64748b;
+                font-size: 9.5px;
+                font-weight: 600;
+                color: #6b7385;
                 margin: 0;
             }
 
-            /* ==================== EMPLOYEE AVATAR ==================== */
-            .employee-avatar {
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                object-fit: cover;
-                border: 2px solid #fff;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                transition: all 0.2s;
-            }
+            /* .employee-avatar/.employee-info/.employee-details/.employee-name/
+               .employee-email are centralized in client.layout.head — no local copy. */
 
-            .employee-avatar:hover {
-                transform: scale(1.1);
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-            }
-
-            .employee-info {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-
-            .employee-details {
-                line-height: 1.4;
-            }
-
-            .employee-name {
-                font-weight: 600;
-                color: #1e293b;
-                font-size: 14px;
-            }
-
-            .employee-email {
-                font-size: 11px;
-                color: #64748b;
-            }
-
-            /* ==================== TABLE STYLES ==================== */
+            /* ==================== TABLE STYLES ====================
+               font-size and td padding are centralized in client.layout.head
+               (11.5px / 3px 15px) — no local copy, only this page's own
+               margin-bottom addition stays. */
             .table {
                 margin-bottom: 0;
             }
@@ -519,7 +488,7 @@
 
             .table td {
                 vertical-align: middle;
-                font-size: 13px;
+                font-size: 11.5px;
                 padding: 12px 16px;
                 border-bottom: 1px solid #f1f5f9;
             }
@@ -548,13 +517,13 @@
             }
 
             .badge.bg-success {
-                background: #d1fae5 !important;
-                color: #065f46;
+                background: #e3edfe !important;
+                color: #1d4ed8;
             }
 
             .badge.bg-danger {
-                background: #fee2e2 !important;
-                color: #991b1b;
+                background: #e3edfe !important;
+                color: #1e3a8a;
             }
 
             .badge.bg-primary {
@@ -563,8 +532,8 @@
             }
 
             .badge.bg-warning {
-                background: #fef3c7 !important;
-                color: #92400e;
+                background: #e3edfe !important;
+                color: #2563eb;
             }
 
             .badge.bg-info {
@@ -585,7 +554,7 @@
             }
 
             .role-tag.admin {
-                background: #818cf8;
+                background: #93c5fd;
                 color: white;
             }
 
@@ -610,14 +579,14 @@
 
             .action-btn:hover {
                 background: white;
-                color: #4f46e5;
-                border-color: #4f46e5;
+                color: #1e3a8a;
+                border-color: #1e3a8a;
                 transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(79, 70, 229, 0.1);
+                box-shadow: 0 4px 8px rgba(30, 58, 138, 0.1);
             }
 
             .action-btn i {
-                font-size: 14px;
+                font-size: 12px;
             }
 
             .dropdown-item {
@@ -629,12 +598,12 @@
             }
 
             .dropdown-item i {
-                font-size: 14px;
+                font-size: 12px;
                 color: #64748b;
             }
 
             .dropdown-item:hover i {
-                color: #4f46e5;
+                color: #1e3a8a;
             }
 
             /* ==================== REASON TEXT (NO SCROLLBAR) ==================== */
@@ -643,7 +612,7 @@
                 white-space: normal;
                 word-wrap: break-word;
                 line-height: 1.4;
-                font-size: 13px;
+                font-size: 11.5px;
             }
 
             /* ==================== MODAL STYLES ==================== */
@@ -664,13 +633,13 @@
                 width: 140px;
                 font-weight: 600;
                 color: #475569;
-                font-size: 13px;
+                font-size: 11.5px;
             }
 
             .detail-value {
                 flex: 1;
                 color: #1e293b;
-                font-size: 13px;
+                font-size: 11.5px;
             }
 
             .file-preview {
@@ -687,21 +656,21 @@
             }
 
             .file-preview:hover {
-                background: #eef2ff;
-                border-color: #4f46e5;
-                color: #4f46e5;
+                background: #e3edfe;
+                border-color: #1e3a8a;
+                color: #1e3a8a;
             }
 
             .file-preview i {
-                font-size: 18px;
+                font-size: 14px;
             }
 
             .reason-box {
                 background: #f8fafc;
                 padding: 12px 16px;
                 border-radius: 8px;
-                border-left: 3px solid #4f46e5;
-                font-size: 13px;
+                border-left: 3px solid #1e3a8a;
+                font-size: 11.5px;
                 line-height: 1.6;
                 color: #334155;
             }
@@ -723,14 +692,14 @@
 
             .empty-state h4 {
                 color: #334155;
-                font-size: 18px;
+                font-size: 14px;
                 font-weight: 600;
                 margin-bottom: 8px;
             }
 
             .empty-state p {
                 color: #64748b;
-                font-size: 14px;
+                font-size: 12px;
                 margin-bottom: 20px;
             }
 
@@ -756,8 +725,8 @@
             }
 
             .page-item.active .page-link {
-                background: #4f46e5;
-                border-color: #4f46e5;
+                background: #1e3a8a;
+                border-color: #1e3a8a;
             }
 
             /* ==================== RESPONSIVE ==================== */
@@ -831,59 +800,11 @@
 
     @section('content-area')
         <!-- [ page-header ] start -->
-        <div class="page-header">
-            <div class="page-header-left d-flex align-items-center">
-                <div class="page-header-title">
-                    <h5 class="m-b-10">Team Leaves Management</h5>
-                </div>
-                <ul class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('leave.view-all') }}">Leave</a></li>
-                    <li class="breadcrumb-item active">Team Leave Applications</li>
-                </ul>
-            </div>
-            <!--<div class="page-header-right ms-auto">-->
-            <!--    <div class="page-header-right-items">-->
-            <!--        <div class="d-flex d-md-none">-->
-            <!--            <a href="#" class="page-header-right-close-toggle">-->
-            <!--                <i class="feather-arrow-left me-2"></i>-->
-            <!--                <span>Back</span>-->
-            <!--            </a>-->
-            <!--        </div>-->
-            <!--        <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">-->
-            <!--            <div class="dropdown">-->
-            <!--                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"-->
-            <!--                    data-bs-auto-close="outside">-->
-            <!--                    <i class="feather-download"></i>-->
-            <!--                </a>-->
-            <!--                <div class="dropdown-menu dropdown-menu-end">-->
-            <!--                    <a href="#" class="dropdown-item" onclick="exportToCSV()">-->
-            <!--                        <i class="bi bi-filetype-csv me-3"></i>-->
-            <!--                        <span>Export CSV</span>-->
-            <!--                    </a>-->
-            <!--                </div>-->
-            <!--            </div>-->
-            <!--            @if (in_array(Auth::user()->role, ['manager', 'hr']))
-    -->
-            <!--                <a href="{{ route('leave.apply') }}" class="btn btn-sm btn-primary">-->
-            <!--                    <i class="feather-plus me-2"></i>-->
-            <!--                    <span>Apply Leave</span>-->
-            <!--                </a>-->
-            <!--
-    @endif-->
-            <!--        </div>-->
-            <!--    </div>-->
-            <!--    <div class="d-md-none d-flex align-items-center">-->
-            <!--        <a href="#" class="page-header-right-open-toggle">-->
-            <!--            <i class="feather-align-right fs-20"></i>-->
-            <!--        </a>-->
-            <!--    </div>-->
-            <!--</div>-->
-        </div>
+        <x-ui.page-header title="Team Leave Applications" :parent="['label' => 'Leave', 'route' => 'leave.view-all']" />
         <!-- [ page-header ] end -->
 
         <!-- [ Main Content ] start -->
-        <div class="main-content" style="padding: 30px !important;">
+        <div class="main-content" style="padding: 18px !important;">
             <!-- Stats Cards -->
             <div class="stats-grid">
                 <div class="stats-card">
@@ -896,8 +817,8 @@
                     </div>
                 </div>
                 <div class="stats-card">
-                    <div class="stats-icon" style="background: rgba(245, 158, 11, 0.1);">
-                        <i class="feather-clock" style="color: #f59e0b;"></i>
+                    <div class="stats-icon" style="background: rgba(96, 165, 250, 0.1);">
+                        <i class="feather-clock" style="color: #60a5fa;"></i>
                     </div>
                     <div class="stats-info">
                         <h3>{{ $pendingLeaves ?? 0 }}</h3>
@@ -905,8 +826,8 @@
                     </div>
                 </div>
                 <div class="stats-card">
-                    <div class="stats-icon" style="background: rgba(16, 185, 129, 0.1);">
-                        <i class="feather-check-circle" style="color: #10b981;"></i>
+                    <div class="stats-icon" style="background: rgba(59, 130, 246, 0.1);">
+                        <i class="feather-check-circle" style="color: #3b82f6;"></i>
                     </div>
                     <div class="stats-info">
                         <h3>{{ $approvedLeaves ?? 0 }}</h3>
@@ -914,8 +835,8 @@
                     </div>
                 </div>
                 <div class="stats-card">
-                    <div class="stats-icon" style="background: rgba(239, 68, 68, 0.1);">
-                        <i class="feather-x-circle" style="color: #ef4444;"></i>
+                    <div class="stats-icon" style="background: rgba(30, 58, 138, 0.1);">
+                        <i class="feather-x-circle" style="color: #1e3a8a;"></i>
                     </div>
                     <div class="stats-info">
                         <h3>{{ $cancelledLeaves ?? 0 }}</h3>
@@ -1126,7 +1047,7 @@
                                                 <td>
                                                     <div class="employee-info">
                                                         <div class="employee-avatar"
-                                                            style="background: #4f46e5; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600;">
+                                                            style="background: #1e3a8a; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600;">
                                                             {{ strtoupper(substr($leave->user_name ?? 'U', 0, 2)) }}
                                                         </div>
                                                         <div class="employee-details">
@@ -1145,10 +1066,17 @@
                                                 </td>
                                                 <td>
                                                     <div>
-                                                        <strong>{{ date('d M Y', strtotime($leave->start_date)) }}</strong>
+                                                        <strong>
+                                                            {{ date('d M Y', strtotime($leave->start_date)) }}
+                                                            @if ($leave->end_date && $leave->end_date != $leave->start_date)
+                                                                &rarr; {{ date('d M Y', strtotime($leave->end_date)) }}
+                                                            @endif
+                                                        </strong>
                                                         <br>
-                                                        <small class="text-muted">Session:
-                                                            {{ ucfirst($leave->start_session) }}</small>
+                                                        <small class="text-muted">
+                                                            Session: {{ ucfirst($leave->start_session) }}
+                                                            &middot; {{ $leave->total_days ?? $leave->leave_count }} day(s)
+                                                        </small>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -1186,17 +1114,7 @@
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    @php
-                                                        $statusClasses = [
-                                                            'pending' => 'bg-warning',
-                                                            'approved' => 'bg-success',
-                                                            'cancelled' => 'bg-danger',
-                                                        ];
-                                                    @endphp
-                                                    <span
-                                                        class="badge {{ $statusClasses[$leave->status] ?? 'bg-secondary' }}">
-                                                        {{ ucfirst($leave->status) }}
-                                                    </span>
+                                                    <x-ui.status-badge :status="$leave->status" />
                                                 </td>
                                                 <td class="text-center">
                                                     <div class="dropdown">
@@ -1227,13 +1145,8 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="8" class="text-center py-5">
-                                                    <div class="empty-state">
-                                                        <i class="feather-calendar"></i>
-                                                        <h4>No Leave Applications Found</h4>
-                                                        <p class="text-muted">There are no leave applications to display
-                                                        </p>
-                                                    </div>
+                                                <td colspan="8">
+                                                    <x-ui.empty-state icon="calendar" title="No Leave Applications Found" subtitle="There are no leave applications to display" />
                                                 </td>
                                             </tr>
                                         @endforelse

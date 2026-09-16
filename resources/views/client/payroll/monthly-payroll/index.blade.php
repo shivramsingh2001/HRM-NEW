@@ -20,8 +20,8 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
         }
 
         /* Consistent initials style - same color for all */
@@ -29,7 +29,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border-radius: 50%;
             display: inline-flex;
@@ -70,12 +70,12 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #4f46e5 !important;
+            color: #1e3a8a !important;
             opacity: 0.8;
         }
 
@@ -115,13 +115,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -142,8 +142,8 @@
         }
 
         .clear-all-link:hover {
-            background: #fee2e2;
-            color: #ef4444;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .clear-all-link i {
@@ -185,8 +185,8 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
             outline: none;
         }
 
@@ -199,7 +199,7 @@
         .apply-btn {
             height: 36px;
             padding: 0 16px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             border-radius: 8px;
@@ -214,7 +214,7 @@
         }
 
         .apply-btn:hover {
-            background: #4338ca;
+            background: #16295e;
             transform: translateY(-1px);
         }
 
@@ -282,7 +282,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 11px;
         }
 
@@ -296,20 +296,20 @@
         }
 
         .filter-tag .remove-tag:hover {
-            color: #ef4444;
+            color: #1e3a8a;
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
         .filter-tag.clear-all:hover {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
         }
 
@@ -317,60 +317,8 @@
             color: currentColor;
         }
 
-        /* ==================== SUMMARY CARDS ==================== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stats-card {
-            background: white;
-            border: 1px solid #edf2f7;
-            border-radius: 12px;
-            padding: 16px;
-            display: flex;
-            align-items: center;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
-
-        .stats-card:hover {
-            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
-            border-color: #cbd5e1;
-            transform: translateY(-2px);
-        }
-
-        .stats-icon {
-            width: 48px;
-            height: 48px;
-            background: #eef2ff;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 16px;
-        }
-
-        .stats-icon i {
-            font-size: 24px;
-            color: #4f46e5;
-        }
-
-        .stats-info h3 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 4px 0;
-            color: #1e293b;
-            line-height: 1.2;
-        }
-
-        .stats-info p {
-            font-size: 13px;
-            color: #64748b;
-            margin: 0;
-        }
+        /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
+           in client.layout.head (single blue-only theme) — no local copy. */
 
         /* ==================== STATUS BADGES ==================== */
         .status-badge {
@@ -390,27 +338,27 @@
         }
 
         .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fde68a;
+            background: #e3edfe;
+            color: #1e3a8a;
+            border: 1px solid #93c5fd;
         }
 
         .status-processed {
-            background: #dbeafe;
-            color: #1e40af;
-            border: 1px solid #bfdbfe;
+            background: #bfd3f7;
+            color: #1e3a8a;
+            border: 1px solid #60a5fa;
         }
 
         .status-paid {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
+            background: #1e3a8a;
+            color: #ffffff;
+            border: 1px solid #1e3a8a;
         }
 
         .status-cancelled {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
+            background: #e2e8f0;
+            color: #475569;
+            border: 1px solid #cbd5e1;
         }
 
         /* ==================== TABLE STYLES ==================== */
@@ -458,7 +406,7 @@
         .employee-avatar {
             width: 36px;
             height: 36px;
-            background: linear-gradient(135deg, #4f46e5, #818cf8);
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -512,7 +460,7 @@
 
         .amount-negative {
             font-weight: 600;
-            color: #991b1b;
+            color: #1e3a8a;
             font-size: 12px;
         }
 
@@ -543,9 +491,9 @@
         }
 
         .btn-action:hover {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             transform: translateY(-2px);
         }
 
@@ -566,8 +514,8 @@
         }
 
         .selected-count {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             padding: 4px 10px;
             border-radius: 30px;
             font-size: 11px;
@@ -582,7 +530,7 @@
         }
 
         .bulk-actions-btn {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             padding: 6px 14px;
@@ -629,7 +577,7 @@
         }
 
         .bulk-actions-menu a i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 13px;
         }
 
@@ -651,13 +599,13 @@
 
         .page-link:hover {
             background: #f8fafc;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         /* ==================== MODAL STYLES ==================== */
@@ -685,7 +633,7 @@
         }
 
         .modal-header h5 i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 16px;
         }
 
@@ -801,20 +749,12 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
         @php
+            // $totalNet / $paidAmount are passed in from the controller, aggregated against the
+            // full filtered set -- NOT derived from $monthlyPayrolls (only the current page of 15).
             $totalEmployees = $monthlyPayrolls->total();
-            $totalGross = $monthlyPayrolls->sum('gross_earnings');
-            $totalDeductions = $monthlyPayrolls->sum('total_deductions');
-            $totalNet = $monthlyPayrolls->sum('net_payable');
-
-            $pendingCount = $monthlyPayrolls->where('payment_status', 'pending')->count();
-            $processedCount = $monthlyPayrolls->where('payment_status', 'processed')->count();
-            $paidCount = $monthlyPayrolls->where('payment_status', 'paid')->count();
-            $paidAmount = $monthlyPayrolls->where('payment_status', 'paid')->sum('net_payable');
-            $totalPresentDays = $monthlyPayrolls->sum('present_days');
-            $totalOvertime = $monthlyPayrolls->sum('overtime_amount');
             $paymentProgress = $totalNet > 0 ? round(($paidAmount / $totalNet) * 100, 1) : 0;
         @endphp
 
@@ -838,8 +778,8 @@
                 </div>
             </div>
             <div class="stats-card">
-                <div class="stats-icon" style="background: rgba(16, 185, 129, 0.1);">
-                    <i class="feather-credit-card" style="color: #10b981;"></i>
+                <div class="stats-icon">
+                    <i class="feather-credit-card"></i>
                 </div>
                 <div class="stats-info">
                     <h3>₹{{ number_format($paidAmount / 100000, 1) }}L</h3>
@@ -847,8 +787,8 @@
                 </div>
             </div>
             <div class="stats-card">
-                <div class="stats-icon" style="background: rgba(245, 158, 11, 0.1);">
-                    <i class="feather-bar-chart-2" style="color: #f59e0b;"></i>
+                <div class="stats-icon">
+                    <i class="feather-bar-chart-2"></i>
                 </div>
                 <div class="stats-info">
                     <h3>{{ $paymentProgress }}%</h3>

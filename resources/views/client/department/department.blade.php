@@ -115,7 +115,7 @@
 @section('create-modal')
     <div class="modal fade-scale" id="addDepartments" tabindex="-1" aria-labelledby="addDepartments" aria-hidden="true"
         data-bs-dismiss="ou">
-        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
 
                 <div class="modal-header">

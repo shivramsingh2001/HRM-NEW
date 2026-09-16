@@ -17,6 +17,8 @@ class Meeting extends Model
         'title',
         'description',
         'agenda',
+        'agenda_items',
+        'decisions',
         'meeting_type',
         'meeting_mode',
         'virtual_meeting_link',
@@ -27,6 +29,8 @@ class Meeting extends Model
         'created_by',
         'status',
         'cancellation_reason',
+        'mom_content',
+        'mom_status',
         'reminder_minutes_before',
         'reminder_sent',
         'parent_meeting_id',
@@ -39,7 +43,9 @@ class Meeting extends Model
         // 'start_time' => 'datetime:H:i',
         // 'end_time' => 'datetime:H:i',
         'reminder_sent' => 'boolean',
-        'recurrence_rule' => 'array'
+        'recurrence_rule' => 'array',
+        'agenda_items' => 'array',
+        'decisions' => 'array',
     ];
 
     // Relationships
@@ -67,24 +73,14 @@ class Meeting extends Model
         return $this->hasMany(Task::class,'meeting_id');
     }
 
-    public function agendas()
-    {
-        return $this->hasMany(MeetingAgenda::class);
-    }
-
-    public function minutes()
-    {
-        return $this->hasMany(MeetingMinute::class);
-    }
-
-    public function actionItems()
-    {
-        return $this->hasMany(MeetingActionItem::class);
-    }
+    // "Action items" from a meeting are plain Task rows (tasks.meeting_id) —
+    // see tasks() above. There is deliberately no separate action-items
+    // table; agenda/decisions live as JSON columns on this model instead of
+    // their own tables (see the meeting-management improvement plan).
 
     public function histories()
     {
-        return $this->hasMany(MeetingHistory::class);
+        return $this->hasMany(MeetingHistory::class)->orderByDesc('created_at');
     }
 
     // Mom Writers Relationship - FIXED
@@ -151,17 +147,113 @@ class Meeting extends Model
 
         $this->save();
 
-        // Log history
-        MeetingHistory::create([
-            'meeting_id' => $this->id,
-            'action_by' => auth()->id(),
-            'action_type' => 'status_changed',
-            'old_values' => json_encode(['status' => $oldStatus]),
-            'new_values' => json_encode(['status' => $status]),
-            'description' => "Meeting status changed from {$oldStatus} to {$status}"
-        ]);
+        MeetingHistory::record(
+            $this,
+            'status_changed',
+            "Meeting status changed from {$oldStatus} to {$status}",
+            ['status' => $oldStatus],
+            ['status' => $status]
+        );
 
         return $this;
+    }
+
+    /**
+     * Whether $user can edit/reschedule/cancel/delete this meeting, per the
+     * `meetings` RBAC grants in config/rbac.php: company scope (admin/hr)
+     * can edit any meeting; own scope (manager/employee) only their own
+     * (creator), matching the config's documented "meeting edit => own:
+     * any meeting creator could already update/cancel their own meeting."
+     */
+    public function isEditableBy($user): bool
+    {
+        $scope = app(\App\Services\RbacService::class)->scopeFor($user, 'meetings', 'edit');
+
+        if ($scope === null) {
+            return false;
+        }
+        if ($scope === 'company') {
+            return true;
+        }
+
+        // own / team both collapse to "creator only" here — there's no
+        // single reporting-line owner for a many-to-many meeting.
+        return (int) $this->created_by === (int) $user->id;
+    }
+
+    /**
+     * MOM authoring is a special case of edit: anyone who can edit the
+     * meeting can author its minutes, PLUS a participant explicitly
+     * designated as MOM writer (is_mom_writer) even if they didn't create
+     * it — the flag already exists in the data model but nothing enforced
+     * it before.
+     */
+    public function isMomAuthorableBy($user): bool
+    {
+        if ($this->isEditableBy($user)) {
+            return true;
+        }
+
+        return $this->participants()
+            ->where('user_id', $user->id)
+            ->where('is_mom_writer', true)
+            ->exists();
+    }
+
+    /**
+     * Whether $user can view this meeting: company scope (admin/hr) sees
+     * everything; own scope (manager/employee) is participant-based per
+     * config/rbac.php's comment ("meetings => own (participant-only)").
+     */
+    public function isViewableBy($user): bool
+    {
+        $scope = app(\App\Services\RbacService::class)->scopeFor($user, 'meetings', 'view');
+
+        if ($scope === null) {
+            return false;
+        }
+        if ($scope === 'company') {
+            return true;
+        }
+
+        if ((int) $this->created_by === (int) $user->id) {
+            return true;
+        }
+
+        return $this->participants()->where('user_id', $user->id)->exists();
+    }
+
+    /**
+     * The field-value shape the Edit drawer's JS (openEditMeetingDrawer in
+     * meeting/index.blade.php) expects on a data-meeting attribute, so it
+     * can repopulate the shared edit drawer without an extra AJAX round
+     * trip. Shared by index() (one per row) and show() (the fragment's own
+     * Edit button) so this shape is defined in exactly one place.
+     */
+    public function toEditPayload(): array
+    {
+        $this->loadMissing('participants.user');
+
+        return [
+            'title' => $this->title,
+            'description' => $this->description,
+            'meeting_type' => $this->meeting_type,
+            'location' => $this->location,
+            'virtual_meeting_link' => $this->virtual_meeting_link,
+            'meeting_date' => \Carbon\Carbon::parse($this->meeting_date)->format('Y-m-d'),
+            'start_time' => \Carbon\Carbon::parse($this->start_time)->format('H:i'),
+            'end_time' => \Carbon\Carbon::parse($this->end_time)->format('H:i'),
+            'reminder_minutes' => $this->reminder_minutes_before,
+            'agenda_items' => $this->agenda_items ?? [],
+            'participants' => $this->participants->map(fn($p) => [
+                'id' => $p->user_id,
+                'name' => $p->user->name ?? ('#' . $p->user_id),
+                'email' => $p->user->email ?? '',
+            ])->values(),
+            'mom_writer_id' => $this->participants->firstWhere('is_mom_writer', true)?->user_id,
+            'form_action' => route('meetings.update', $this->id),
+            'editable' => $this->status === 'scheduled',
+        ];
     }
 
     public function getParticipantCounts()

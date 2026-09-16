@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Mom;
 
 use App\Http\Controllers\Controller;
 use App\Models\Meeting;
+use App\Models\MeetingHistory;
 use App\Models\MeetingParticipant;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\Task;
 use App\Models\TaskAssign;
+use App\Services\MeetingNotificationService;
 use App\Services\TaskNotificationService;
 use Exception;
 use Illuminate\Http\Request;
@@ -20,26 +22,37 @@ use Illuminate\Support\Facades\Validator;
 class MeetingMinuteController extends Controller
 {
     protected $notificationService;
+    protected $meetingNotificationService;
 
-    public function __construct(TaskNotificationService $notificationService)
+    public function __construct(TaskNotificationService $notificationService, MeetingNotificationService $meetingNotificationService)
     {
         $this->notificationService = $notificationService;
+        $this->meetingNotificationService = $meetingNotificationService;
     }
 
     public function create(Request $request, $id)
     {
+        $meeting = Meeting::with(['participants.user'])->findOrFail($id);
+
+        if (!$meeting->isMomAuthorableBy(Auth::user())) {
+            abort(403, 'You are not authorized to author minutes for this meeting.');
+        }
+
         $allUsers = User::where('status', '1')->get();
         $projects = Project::whereIn('status', ['ongoing', 'pending'])->get();
 
-        $existingTasks = collect();
-        $meeting = Meeting::with(['participants.user'])->find($id);
+        // Get existing tasks for this meeting from the tasks table
+        $existingTasks = Task::with(['project', 'assignments.assignedTo'])
+            ->where('meeting_id', $meeting->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        if ($meeting) {
-            // Get existing tasks for this meeting from the tasks table
-            $existingTasks = Task::with(['project', 'assignments.assignedTo'])
-                ->where('meeting_id', $meeting->id)
-                ->orderBy('created_at', 'desc')
-                ->get();
+        // The list/detail pages fetch this same form into a drawer via AJAX
+        // instead of navigating — same data/authorization, only the
+        // response wrapper differs (no master-layout chrome for the
+        // fragment; the caller's own drawer already provides that).
+        if ($request->ajax()) {
+            return view('client.mom.mom._mom_form_content', compact('allUsers', 'projects', 'meeting', 'existingTasks'));
         }
 
         return view('client.mom.mom.create', compact('allUsers', 'projects', 'meeting', 'existingTasks'));
@@ -60,6 +73,12 @@ class MeetingMinuteController extends Controller
             'meeting_date' => 'nullable|date',
             'attendees' => 'nullable|array',
             'attendees.*' => 'exists:users,id',
+            // 'draft' saves mom_content without completing the meeting or
+            // locking it; 'finalize' (default, matches the form's current
+            // one-shot save behavior) completes the meeting and locks the
+            // minutes. Not sent by the current UI yet — defaults preserve
+            // today's behavior until a real draft/finalize UI ships.
+            'action' => 'nullable|in:draft,finalize',
             'tasks' => 'nullable|array',
             'tasks.*.title' => 'required_with:tasks|string|max:255',
             'tasks.*.assigned_to' => 'required_with:tasks|exists:users,id',
@@ -77,15 +96,35 @@ class MeetingMinuteController extends Controller
                 ->withInput();
         }
 
+        $meeting = Meeting::find($request->meeting_id);
+        if ($meeting && !$meeting->isMomAuthorableBy($authUser)) {
+            abort(403, 'You are not authorized to author minutes for this meeting.');
+        }
+
+        // Finalized minutes are locked — only someone who can edit the
+        // meeting itself (creator/admin/hr) may touch them again, and
+        // doing so must go through reopen() first, not a plain re-save.
+        if ($meeting && $meeting->mom_status === 'finalized') {
+            abort(403, 'These minutes are finalized. Ask the organizer to reopen them before making changes.');
+        }
+
+        $action = $request->input('action', 'finalize');
+
         DB::beginTransaction();
 
         try {
-            $meeting = Meeting::find($request->meeting_id);
             if ($meeting) {
                 $meeting->update([
                     'mom_content' => $request->mom_content,
-                    'status' => 'completed'
+                    'mom_status' => $action === 'draft' ? 'draft' : 'finalized',
+                    'status' => $action === 'draft' ? $meeting->status : 'completed',
                 ]);
+
+                MeetingHistory::record(
+                    $meeting,
+                    $action === 'draft' ? 'mom_drafted' : 'mom_finalized',
+                    $action === 'draft' ? 'Minutes of meeting saved as draft' : 'Minutes of meeting saved and finalized'
+                );
             }
             // Process tasks if any
             if ($request->has('tasks') && is_array($request->tasks)) {
@@ -170,8 +209,19 @@ class MeetingMinuteController extends Controller
 
             DB::commit();
 
-            return redirect()->route('meetings.show', $meeting->id)
-                ->with('success', 'Meeting minutes and ' . ($request->has('tasks') ? count($request->tasks) : 0) . ' task(s) created successfully!');
+            if ($meeting && $action !== 'draft') {
+                try {
+                    $this->meetingNotificationService->notifyMinutesAdded($meeting, $request->has('tasks') ? count($request->tasks) : 0);
+                } catch (Exception $e) {
+                    Log::error('Failed to send minutes-added notification: ' . $e->getMessage());
+                }
+            }
+
+            $message = $action === 'draft'
+                ? 'Meeting minutes saved as draft.'
+                : 'Meeting minutes and ' . ($request->has('tasks') ? count($request->tasks) : 0) . ' task(s) created successfully!';
+
+            return redirect()->route('meetings.show', $meeting->id)->with('success', $message);
         } catch (Exception $e) {
             DB::rollBack();
             return redirect()->back()
@@ -179,6 +229,32 @@ class MeetingMinuteController extends Controller
                 ->withInput();
         }
     }
+    /**
+     * Re-open finalized minutes for editing. Only someone who can edit the
+     * meeting itself (creator/admin/hr) — a MOM writer alone cannot reopen,
+     * only author while open — since unlocking finalized minutes is a
+     * bigger decision than just writing them.
+     */
+    public function reopen(Request $request, $id)
+    {
+        $meeting = Meeting::findOrFail($id);
+
+        if (!$meeting->isEditableBy(Auth::user())) {
+            abort(403, 'You are not authorized to reopen this meeting\'s minutes.');
+        }
+
+        if ($meeting->mom_status !== 'finalized') {
+            return back()->with('warning', 'These minutes are not finalized, so there is nothing to reopen.');
+        }
+
+        $meeting->update(['mom_status' => 'draft']);
+
+        MeetingHistory::record($meeting, 'mom_reopened', 'Minutes reopened for editing by ' . (Auth::user()->name ?? 'user'));
+
+        return redirect()->route('meetings.mom.create', $meeting->id)
+            ->with('success', 'Minutes reopened for editing.');
+    }
+
     private function generateUniqueTaskCode()
     {
         return DB::transaction(function () {

@@ -237,7 +237,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="settings-container">
             <form id="settingsForm" action="{{ route('overtime.settings.update') }}" method="POST">
                 @csrf

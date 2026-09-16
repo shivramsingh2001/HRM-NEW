@@ -2,19 +2,292 @@
 
 namespace App\Services;
 
+use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\LeaveBalance;
 use App\Models\LeaveTransaction;
+use App\Models\LeaveType;
+use Illuminate\Support\Carbon;
 
 /**
  * Shared leave-creation logic. Extracted from LeaveController::approveLeave so
  * that other flows (e.g. marking a day as leave from the attendance screen —
  * Feature A) apply the same balance + leave_transactions side effects.
+ *
+ * Also the single source of truth for "is this leave type LWP" and for
+ * approving/cancelling an existing pending Leave — both the web and mobile
+ * controllers call these instead of keeping their own copies (three
+ * independent, drifting hardcoded-id implementations previously existed).
  */
 class LeaveService
 {
-    /** Loss-of-pay leave type id (matches the check in LeaveController). */
-    private const LWP_LEAVE_TYPE_ID = 3;
+    public function __construct(private AuditLogger $audit)
+    {
+    }
+
+    /**
+     * A leave type is unpaid when its tenant-scoped row has is_unpaid=true —
+     * the single authoritative paid/unpaid signal (also read by
+     * MonthlyPayrollController and PerformanceCalculationService). Replaces
+     * the old code==='lwp' check: is_unpaid lets a tenant flag ANY leave
+     * type as unpaid, not just the one system LWP row, and LeaveTypeController
+     * keeps code='lwp' => is_unpaid=true in sync on write.
+     */
+    public function isLwp(LeaveType $type): bool
+    {
+        return (bool) $type->is_unpaid;
+    }
+
+    public function isLwpId(?int $leaveTypeId): bool
+    {
+        if (!$leaveTypeId) {
+            return false;
+        }
+
+        $type = LeaveType::find($leaveTypeId);
+
+        return $type ? $this->isLwp($type) : false;
+    }
+
+    /**
+     * Approve an existing pending Leave: deducts balance (unless LWP) and
+     * writes the LeaveTransaction ledger row. Caller is expected to run this
+     * inside its own DB transaction and rollback when success=false.
+     *
+     * @return array{success:bool, message:string}
+     */
+    public function approvePendingLeave(Leave $leave, $approver, ?string $remarks): array
+    {
+        $leaveDays = (float) $leave->leave_count;
+        $tenantId = $leave->tenant_id;
+        $leaveTypeId = (int) $leave->leave_type;
+        $userId = $leave->user_id;
+        $isLwp = $this->isLwpId($leaveTypeId);
+
+        $balanceRecord = null;
+        $currentBalance = 0.0;
+
+        if (!$isLwp) {
+            $balanceRecord = LeaveBalance::where('user_id', $userId)
+                ->where('leave_type_id', $leaveTypeId)
+                ->first();
+            $currentBalance = $balanceRecord ? (float) $balanceRecord->balance : 0.0;
+
+            if ($currentBalance < $leaveDays) {
+                return [
+                    'success' => false,
+                    'message' => "Insufficient leave balance. You have {$currentBalance} days available but requested {$leaveDays} days.",
+                ];
+            }
+        }
+
+        Leave::where('id', $leave->id)->update([
+            'status' => 'approved',
+            'status_update_by' => $approver->id,
+            'status_update_remarks' => $remarks,
+        ]);
+
+        if ($isLwp) {
+            LeaveTransaction::create([
+                'tenant_id' => $tenantId,
+                'leave_id' => $leave->id,
+                'user_id' => $userId,
+                'leave_type' => $leaveTypeId,
+                'transaction_type' => 'sub',
+                'total_leaves' => $leaveDays,
+                'leaves_count' => 0,
+                'leave_detail' => 'unpaid',
+                'before_leaves' => 0,
+                'after_leaves' => 0,
+                'transaction_date' => now(),
+                'status' => 1,
+                'remarks' => "LWP Leave approved: {$remarks}",
+            ]);
+
+            $this->audit->record('tenant_user', $approver->id, (int) $tenantId, 'leave.approved', 'Leave', $leave->id, [], ['status' => 'approved', 'leave_detail' => 'unpaid', 'remarks' => $remarks]);
+
+            return ['success' => true, 'message' => 'Leave approved successfully'];
+        }
+
+        $paidDays = min($currentBalance, $leaveDays);
+        $newBalance = $currentBalance - $paidDays;
+        $leaveDetail = $paidDays >= $leaveDays ? 'paid' : ($paidDays <= 0 ? 'unpaid' : 'mixed');
+
+        if ($paidDays > 0 && $balanceRecord) {
+            $balanceRecord->update(['balance' => $newBalance]);
+        }
+
+        LeaveTransaction::create([
+            'tenant_id' => $tenantId,
+            'leave_id' => $leave->id,
+            'user_id' => $userId,
+            'leave_type' => $leaveTypeId,
+            'transaction_type' => 'sub',
+            'total_leaves' => $leaveDays,
+            'leaves_count' => $paidDays,
+            'leave_detail' => $leaveDetail,
+            'before_leaves' => $currentBalance,
+            'after_leaves' => $newBalance,
+            'transaction_date' => now(),
+            'status' => 1,
+            'remarks' => "Leave approved: {$remarks}",
+        ]);
+
+        $this->audit->record('tenant_user', $approver->id, (int) $tenantId, 'leave.approved', 'Leave', $leave->id, [], ['status' => 'approved', 'leave_detail' => $leaveDetail, 'paid_days' => $paidDays, 'remarks' => $remarks]);
+
+        return ['success' => true, 'message' => 'Leave approved successfully'];
+    }
+
+    /**
+     * @return array{success:bool, message:string}
+     */
+    public function cancelPendingLeave(Leave $leave, $approver, ?string $remarks): array
+    {
+        Leave::where('id', $leave->id)->update([
+            'status' => 'cancelled',
+            'status_update_by' => $approver->id,
+            'status_update_remarks' => $remarks,
+        ]);
+
+        $this->audit->record('tenant_user', $approver->id, (int) $leave->tenant_id, 'leave.rejected', 'Leave', $leave->id, [], ['status' => 'cancelled', 'remarks' => $remarks]);
+
+        return ['success' => true, 'message' => 'Leave rejected successfully'];
+    }
+
+    /**
+     * Revoke an already-*approved* leave (employee returns early, HR needs to
+     * correct a mistake, etc.) and restore whatever balance was deducted at
+     * approval time. Distinct from cancelPendingLeave(), which flips a still
+     * -pending leave with no balance to restore. Restores exactly the
+     * `leaves_count` recorded on the original approval's ledger row(s) — not
+     * `leave_count` — so a leave that was only partially covered by balance
+     * at approval (a 'mixed' ledger entry) is reversed by the same partial
+     * amount, never over-crediting.
+     *
+     * @return array{success:bool, message:string}
+     */
+    public function cancelApprovedLeave(Leave $leave, $approver, ?string $remarks): array
+    {
+        if ($leave->status !== 'approved') {
+            return ['success' => false, 'message' => 'Only an approved leave can be revoked this way.'];
+        }
+
+        $tenantId = $leave->tenant_id;
+        $leaveTypeId = (int) $leave->leave_type;
+        $userId = $leave->user_id;
+
+        $paidDaysToRestore = (float) LeaveTransaction::where('leave_id', $leave->id)
+            ->where('transaction_type', 'sub')
+            ->sum('leaves_count');
+
+        Leave::where('id', $leave->id)->update([
+            'status' => 'cancelled',
+            'status_update_by' => $approver->id,
+            'status_update_remarks' => $remarks,
+        ]);
+
+        if ($paidDaysToRestore > 0) {
+            $balanceRecord = LeaveBalance::where('user_id', $userId)
+                ->where('leave_type_id', $leaveTypeId)
+                ->first();
+            $currentBalance = $balanceRecord ? (float) $balanceRecord->balance : 0.0;
+            $newBalance = $currentBalance + $paidDaysToRestore;
+
+            if ($balanceRecord) {
+                $balanceRecord->update(['balance' => $newBalance]);
+            } else {
+                LeaveBalance::create([
+                    'tenant_id' => $tenantId,
+                    'user_id' => $userId,
+                    'leave_type_id' => $leaveTypeId,
+                    'balance' => $newBalance,
+                ]);
+            }
+
+            LeaveTransaction::create([
+                'tenant_id' => $tenantId,
+                'leave_id' => $leave->id,
+                'user_id' => $userId,
+                'leave_type' => $leaveTypeId,
+                'transaction_type' => 'add',
+                'total_leaves' => $paidDaysToRestore,
+                'leaves_count' => $paidDaysToRestore,
+                'leave_detail' => 'paid',
+                'before_leaves' => $currentBalance,
+                'after_leaves' => $newBalance,
+                'transaction_date' => now(),
+                'status' => 1,
+                'remarks' => "Approved leave revoked, balance restored: {$remarks}",
+            ]);
+        }
+
+        $this->audit->record(
+            'tenant_user', $approver->id, (int) $tenantId, 'leave.cancelled_after_approval',
+            'Leave', $leave->id, ['status' => 'approved'], ['status' => 'cancelled', 'balance_restored' => $paidDaysToRestore, 'remarks' => $remarks]
+        );
+
+        return ['success' => true, 'message' => 'Approved leave revoked and balance restored successfully'];
+    }
+
+    /**
+     * Total deductible days for a leave application: walks every calendar
+     * day from $start to $end inclusive, skipping weekends and any tenant
+     * holiday, and applying half-day session counting on the first/last day.
+     * The Leave row itself still stores the full requested start/end date —
+     * only the deducted/reported day count excludes non-working days.
+     */
+    public function computeLeaveDays(
+        Carbon $start,
+        Carbon $end,
+        string $startSession,
+        string $endSession,
+        ?int $tenantId = null
+    ): float {
+        $holidays = $tenantId
+            ? Holiday::where('tenant_id', $tenantId)->where('status', 1)->get(['start_date', 'end_date'])
+            : collect();
+
+        $isNonWorkingDay = function (Carbon $date) use ($holidays) {
+            if ($date->isSaturday() || $date->isSunday()) {
+                return true;
+            }
+
+            foreach ($holidays as $holiday) {
+                $holidayStart = Carbon::parse($holiday->start_date)->startOfDay();
+                $holidayEnd = Carbon::parse($holiday->end_date ?? $holiday->start_date)->endOfDay();
+
+                if ($date->between($holidayStart, $holidayEnd)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        $isSingleDay = $start->isSameDay($end);
+        $total = 0.0;
+        $current = $start->copy();
+
+        while ($current->lte($end)) {
+            if (!$isNonWorkingDay($current)) {
+                if ($isSingleDay) {
+                    $session = $startSession;
+                } elseif ($current->isSameDay($start)) {
+                    $session = $startSession;
+                } elseif ($current->isSameDay($end)) {
+                    $session = $endSession;
+                } else {
+                    $session = 'fullday';
+                }
+
+                $total += $session === 'fullday' ? 1 : 0.5;
+            }
+
+            $current->addDay();
+        }
+
+        return $total;
+    }
 
     /**
      * Create a pre-approved leave and apply the balance / ledger side effects,
@@ -62,7 +335,7 @@ class LeaveService
         $userId = $leave->user_id;
 
         // LWP type, or the caller opted out of a balance deduction.
-        if ($leaveTypeId === self::LWP_LEAVE_TYPE_ID || !$deduct) {
+        if ($this->isLwpId($leaveTypeId) || !$deduct) {
             LeaveTransaction::create([
                 'tenant_id' => $tenantId,
                 'leave_id' => $leave->id,

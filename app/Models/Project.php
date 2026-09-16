@@ -68,12 +68,13 @@ class Project extends Model
     }
 
     /**
-     * Get overdue tasks
+     * Get overdue tasks — calendar-date comparison (a task due "today"
+     * shouldn't flip to overdue the instant any time passes past midnight).
      */
     public function overdueTasks()
     {
         return $this->hasMany(Task::class, 'project_id')
-                    ->where('deadline_date', '<', now())
+                    ->where('deadline_date', '<', \Carbon\Carbon::today())
                     ->whereNotIn('status', ['completed', 'cancelled', 'approved']);
     }
 
@@ -270,20 +271,22 @@ class Project extends Model
     }
 
     /**
-     * Scope for projects with deadline approaching (next 7 days)
+     * Scope for projects with deadline approaching (next 7 days) —
+     * calendar-date comparison; using now() here would exclude a project
+     * due "today" the moment any time passed after midnight.
      */
     public function scopeDeadlineApproaching($query)
     {
-        return $query->whereBetween('deadline_date', [now(), now()->addDays(7)])
+        return $query->whereBetween('deadline_date', [\Carbon\Carbon::today(), \Carbon\Carbon::today()->addDays(7)])
                     ->whereIn('status', ['ongoing', 'pending']);
     }
 
     /**
-     * Scope for overdue projects
+     * Scope for overdue projects — calendar-date comparison.
      */
     public function scopeOverdue($query)
     {
-        return $query->where('deadline_date', '<', now())
+        return $query->where('deadline_date', '<', \Carbon\Carbon::today())
                     ->whereIn('status', ['ongoing', 'pending']);
     }
 

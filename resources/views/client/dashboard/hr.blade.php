@@ -56,7 +56,7 @@
 </div>
 
 <!-- [ Main Content ] start -->
-<div class="main-content" style="padding: 30px !important;">
+<div class="main-content" style="padding: 20px !important;">
     <div class="row">
         <!-- Statistics Cards -->
         <div class="col-xxl-3 col-md-6">

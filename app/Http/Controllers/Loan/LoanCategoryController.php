@@ -20,7 +20,7 @@ class LoanCategoryController extends Controller
                 $query->where('status', $request->status);
             }
 
-            $data['categories'] = $query->orderBy('created_at', 'asc')->get();
+            $data['categories'] = $query->orderBy('sort_order', 'asc')->orderBy('created_at', 'asc')->get();
             return view('client.loan.category.index', $data);
         } catch (Exception $e) {
             return back()->withErrors('An error occurred. Please try again later.');
@@ -34,11 +34,13 @@ class LoanCategoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100',
+            'code' => 'nullable|string|max:20|unique:loan_categories,code',
             'max_amount' => 'nullable|numeric|min:0',
             'default_interest_rate' => 'nullable|numeric|min:0|max:100',
             'max_tenure_months' => 'nullable|integer|min:1|max:60',
             'requires_approval' => 'boolean',
             'status' => 'boolean',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -49,7 +51,10 @@ class LoanCategoryController extends Controller
         }
 
         try {
-            $category = LoanCategory::create($request->all());
+            // validated(), not all() — LoanCategory uses $guarded = [], so
+            // the raw request let any extra client-supplied field through
+            // untouched (e.g. tenant_id, id), bypassing tenant auto-stamping.
+            $category = LoanCategory::create($validator->validated());
 
             return response()->json([
                 'success' => true,
@@ -104,6 +109,7 @@ class LoanCategoryController extends Controller
             'max_tenure_months' => 'nullable|integer|min:1|max:60',
             'requires_approval' => 'boolean',
             'status' => 'boolean',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -114,7 +120,7 @@ class LoanCategoryController extends Controller
         }
 
         try {
-            $category->update($request->all());
+            $category->update($validator->validated());
 
             return response()->json([
                 'success' => true,

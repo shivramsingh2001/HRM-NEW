@@ -91,7 +91,7 @@
 
         .total-card .stats-icon-wrapper i {
             color: #4f46e5;
-            font-size: 22px;
+            font-size: 17px;
         }
 
         .present-card .stats-icon-wrapper {
@@ -100,7 +100,7 @@
 
         .present-card .stats-icon-wrapper i {
             color: #10b981;
-            font-size: 22px;
+            font-size: 17px;
         }
 
         .absent-card .stats-icon-wrapper {
@@ -109,7 +109,7 @@
 
         .absent-card .stats-icon-wrapper i {
             color: #ef4444;
-            font-size: 22px;
+            font-size: 17px;
         }
 
         .leave-card .stats-icon-wrapper {
@@ -118,7 +118,7 @@
 
         .leave-card .stats-icon-wrapper i {
             color: #f59e0b;
-            font-size: 22px;
+            font-size: 17px;
         }
 
         .holiday-card .stats-icon-wrapper {
@@ -127,7 +127,7 @@
 
         .holiday-card .stats-icon-wrapper i {
             color: #8b5cf6;
-            font-size: 22px;
+            font-size: 17px;
         }
 
         .weekoff-card .stats-icon-wrapper {
@@ -136,7 +136,7 @@
 
         .weekoff-card .stats-icon-wrapper i {
             color: #f59e0b;
-            font-size: 22px;
+            font-size: 17px;
         }
 
         .stats-content {
@@ -145,7 +145,7 @@
         }
 
         .stats-amount-main {
-            font-size: 24px;
+            font-size: 17px;
             font-weight: 700;
             color: #0f172a;
             line-height: 1.2;
@@ -185,14 +185,14 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             color: #0f172a;
         }
 
         .filter-title i {
             color: #4f46e5;
-            font-size: 16px;
+            font-size: 12px;
             background: #eef2ff;
             padding: 5px;
             border-radius: 8px;
@@ -216,7 +216,7 @@
         .filter-item.date-picker input {
             height: 38px;
             padding: 6px 12px;
-            font-size: 13px;
+            font-size: 11.5px;
             border: 1.5px solid #e2e8f0;
             border-radius: 8px;
             background: #f8fafc;
@@ -247,7 +247,7 @@
             width: 100%;
             height: 38px;
             padding: 6px 32px 6px 12px;
-            font-size: 13px;
+            font-size: 11.5px;
             border: 1.5px solid #e2e8f0;
             border-radius: 8px;
             background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 10px center;
@@ -278,7 +278,7 @@
             color: #64748b;
             border: 1.5px solid #e2e8f0;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 11.5px;
             font-weight: 500;
             display: flex;
             align-items: center;
@@ -296,7 +296,7 @@
         }
 
         .reset-btn i {
-            font-size: 14px;
+            font-size: 12px;
         }
 
         /* ==================== TABLE STYLES ==================== */
@@ -317,7 +317,7 @@
         }
 
         .card-title {
-            font-size: 15px;
+            font-size: 12px;
             font-weight: 600;
             color: #0f172a;
             margin: 0;
@@ -349,10 +349,11 @@
             border-bottom: 2px solid #e2e8f0;
         }
 
+        /* font-size and cell padding are centralized in client.layout.head
+           (11.5px / 3px 15px) — no local override, so this table matches
+           the project-wide compact table style. */
         .table tbody td {
             vertical-align: middle;
-            font-size: 12px;
-            padding: 10px 12px;
             border-bottom: 1px solid #f1f5f9;
             color: #1e293b;
         }
@@ -404,14 +405,14 @@
         .employee-name-text {
             font-weight: 600;
             color: #0f172a;
-            font-size: 13px;
+            font-size: 12px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .employee-email-text {
-            font-size: 11px;
+            font-size: 8px;
             color: #64748b;
             white-space: nowrap;
             overflow: hidden;
@@ -540,7 +541,7 @@
             justify-content: center;
             transition: all 0.2s;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             text-decoration: none;
         }
 
@@ -592,7 +593,7 @@
 
         .modal-header .modal-title {
             font-weight: 600;
-            font-size: 18px;
+            font-size: 11.5px;
             color: #0f172a;
         }
 
@@ -609,7 +610,7 @@
 
         .form-label {
             font-weight: 600;
-            font-size: 13px;
+            font-size: 11.5px;
             color: #334155;
             margin-bottom: 6px;
         }
@@ -623,7 +624,7 @@
             border-radius: 10px;
             border: 1.5px solid #e2e8f0;
             padding: 10px 14px;
-            font-size: 13px;
+            font-size: 11.5px;
             transition: all 0.3s;
         }
 
@@ -667,7 +668,7 @@
             justify-content: center;
             color: #4f46e5;
             font-weight: 700;
-            font-size: 18px;
+            font-size: 11.5px;
             text-transform: uppercase;
             flex-shrink: 0;
         }
@@ -676,12 +677,12 @@
             margin-bottom: 2px;
             font-weight: 600;
             color: #0f172a;
-            font-size: 15px;
+            font-size: 12px;
         }
 
         .employee-info-card .info p {
             margin-bottom: 0;
-            font-size: 13px;
+            font-size: 11.5px;
             color: #64748b;
         }
 
@@ -702,7 +703,7 @@
         .shift-info-card .shift-value {
             font-weight: 600;
             color: #0f172a;
-            font-size: 13px;
+            font-size: 11.5px;
         }
 
         .shift-badge {
@@ -734,7 +735,7 @@
             padding: 10px 24px;
             border-radius: 10px;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 12px;
             transition: all 0.3s;
         }
 
@@ -758,7 +759,7 @@
             padding: 10px 24px;
             border-radius: 10px;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 12px;
             transition: all 0.3s;
         }
 
@@ -802,14 +803,14 @@
 
         .empty-state h4 {
             color: #0f172a;
-            font-size: 18px;
+            font-size: 11.5px;
             font-weight: 600;
             margin-bottom: 6px;
         }
 
         .empty-state p {
             color: #64748b;
-            font-size: 13px;
+            font-size: 11.5px;
             margin-bottom: 0;
         }
 
@@ -852,7 +853,7 @@
             padding: 10px 14px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 11.5px;
             background: white;
             transition: all 0.3s ease;
             appearance: none;
@@ -879,7 +880,7 @@
         }
 
         .pagination-info {
-            font-size: 13px;
+            font-size: 11.5px;
             color: #64748b;
         }
 
@@ -910,7 +911,7 @@
             border: 1px solid #e2e8f0;
             background: white;
             color: #475569;
-            font-size: 13px;
+            font-size: 11.5px;
             font-weight: 500;
             transition: all 0.2s;
             text-decoration: none;
@@ -1027,7 +1028,7 @@
             }
 
             .employee-email-text {
-                font-size: 10px;
+                font-size: 8px;
             }
 
             .action-btn {
@@ -1067,7 +1068,7 @@
             }
 
             .stats-amount-main {
-                font-size: 18px;
+                font-size: 11.5px;
             }
 
             .stats-label {
@@ -1087,7 +1088,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Statistics Cards -->
         <div class="stats-grid">
             <div class="stats-card total-card">
@@ -1281,7 +1282,10 @@
                                                 default => 'absent',
                                             };
                                             $isAbsent = $status == 'absent';
-                                            $isAdmin = auth()->user()->role == 'admin' || auth()->user()->role == 'hr';
+                                            $isAdmin = app(\App\Services\RbacService::class)->scopeFor(auth()->user(), 'attendance', 'edit') === 'company';
+                                            // Managers may mark their own reportees; the roster is already
+                                            // filtered to reporting_head, and MarkAttendanceRequest re-checks.
+                                            $canMarkAttendance = app(\App\Services\RbacService::class)->can(auth()->user(), 'attendance', 'edit');
                                             
                                             // Calculate serial number with pagination
                                             $serialNumber = ($teamData->currentPage() - 1) * $teamData->perPage() + $loop->index + 1;
@@ -1349,8 +1353,8 @@
                                                         <i class="feather-eye"></i>
                                                     </a>
 
-                                                    <!-- Mark Attendance Button - Only for Admin/HR -->
-                                                    @if ($isAdmin)
+                                                    <!-- Mark Attendance Button - Admin / HR / Manager (own reportees) -->
+                                                    @if ($canMarkAttendance)
                                                         <button type="button" class="action-btn mark-btn"
                                                             onclick="openMarkAttendanceModal({{ $member->id }}, '{{ $member->name }}', '{{ $member->employee_id }}', '{{ $member->designation ?? 'N/A' }}')"
                                                             title="Mark Attendance">
@@ -1468,7 +1472,24 @@
                                 <option value="second_half_leave">🌇 Second Half Leave (Afternoon)</option>
                                 <option value="on_leave">📅 On Leave (Full Day)</option>
                                 <option value="absent">❌ Absent</option>
+                                <option value="holiday">🎉 Holiday</option>
+                                <option value="weekoff">🛌 Week Off</option>
                             </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <!-- Optional date range: apply the same status from `date` through `end_date` -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="feather-calendar me-1" style="color: #4f46e5;"></i>
+                                Apply through <span class="text-muted" style="font-size: 11px;">(optional — leave blank for a single day)</span>
+                            </label>
+                            <input type="date" class="form-control" name="end_date" id="attendanceEndDate"
+                                value="{{ request('date', date('Y-m-d')) }}" max="{{ date('Y-m-d') }}">
+                            <small class="text-muted" style="font-size: 11px; display: block; margin-top: 4px;">
+                                <i class="feather-info me-1"></i>
+                                When set to a later date, the selected status is applied to every day in the range.
+                            </small>
                             <div class="invalid-feedback"></div>
                         </div>
 
@@ -1528,6 +1549,20 @@
                             </div>
                         </div>
                     </form>
+
+                    <!-- Recent changes (audit trail) -->
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-link p-0" style="font-size: 12px; text-decoration: none;"
+                            onclick="toggleAttendanceLog()">
+                            <i class="feather-clock me-1" id="attendanceLogToggleIcon"></i>
+                            <span id="attendanceLogToggleText">Show recent changes</span>
+                        </button>
+                        <div id="attendanceLogPanel" style="display: none; margin-top: 8px;">
+                            <div id="attendanceLogBody" style="max-height: 220px; overflow-y: auto; font-size: 12px;">
+                                <div class="text-muted">Loading…</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">
@@ -1679,9 +1714,99 @@
             document.getElementById('attendanceRemarks').value =
                 `Admin (${adminName}) marked attendance for ${dateFormatted}`;
 
+            // Reset the optional range end to the selected day, and constrain its min.
+            const rangeEnd = document.getElementById('attendanceEndDate');
+            if (rangeEnd) {
+                rangeEnd.value = date;
+                rangeEnd.min = date;
+            }
+
+            // Reset the recent-changes panel (lazy-loaded on toggle).
+            const logPanel = document.getElementById('attendanceLogPanel');
+            if (logPanel) {
+                logPanel.style.display = 'none';
+                logPanel.dataset.loadedFor = '';
+                document.getElementById('attendanceLogToggleText').textContent = 'Show recent changes';
+            }
+
             // Show modal
             var modal = new bootstrap.Modal(document.getElementById('markAttendanceModal'));
             modal.show();
+        }
+
+        /**
+         * Toggle + lazy-load the read-only attendance change log for the employee.
+         */
+        function toggleAttendanceLog() {
+            const panel = document.getElementById('attendanceLogPanel');
+            const label = document.getElementById('attendanceLogToggleText');
+            if (!panel) return;
+
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                label.textContent = 'Hide recent changes';
+                const userId = document.getElementById('markUserId').value;
+                if (panel.dataset.loadedFor !== String(userId)) {
+                    loadAttendanceLog(userId);
+                }
+            } else {
+                panel.style.display = 'none';
+                label.textContent = 'Show recent changes';
+            }
+        }
+
+        function loadAttendanceLog(userId) {
+            const body = document.getElementById('attendanceLogBody');
+            const panel = document.getElementById('attendanceLogPanel');
+            if (!userId) {
+                body.innerHTML = '<div class="text-muted">No employee selected.</div>';
+                return;
+            }
+            body.innerHTML = '<div class="text-muted">Loading…</div>';
+
+            const url = '{{ route('team.attendance-log') }}?user_id=' + encodeURIComponent(userId);
+            fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success || !Array.isArray(data.data) || data.data.length === 0) {
+                        body.innerHTML = '<div class="text-muted">No recorded changes in the last 30 days.</div>';
+                        return;
+                    }
+                    panel.dataset.loadedFor = String(userId);
+                    body.innerHTML = data.data.map(row => {
+                        const changes = (row.changes || [])
+                            .map(c => {
+                                const from = (c.from === null || c.from === '' || typeof c.from === 'undefined') ? '—' : c.from;
+                                const to = (c.to === null || c.to === '' || typeof c.to === 'undefined') ? '—' : c.to;
+                                return '<div style="padding-left:10px;"><code>' + escapeLogHtml(c.field) + '</code>: ' +
+                                    escapeLogHtml(String(from)) + ' &rarr; ' + escapeLogHtml(String(to)) + '</div>';
+                            })
+                            .join('');
+                        return '<div style="border-bottom:1px solid #eee; padding:6px 0;">' +
+                            '<div><strong>' + escapeLogHtml(row.source || row.event_type || 'change') + '</strong>' +
+                            '<span class="text-muted"> · ' + escapeLogHtml(row.event_time || '') + '</span></div>' +
+                            '<div class="text-muted">by ' + escapeLogHtml(row.actor || 'System') +
+                            (row.actor_role ? ' (' + escapeLogHtml(row.actor_role) + ')' : '') + '</div>' +
+                            (row.reason ? '<div class="text-muted">' + escapeLogHtml(row.reason) + '</div>' : '') +
+                            changes +
+                            '</div>';
+                    }).join('');
+                })
+                .catch(() => {
+                    body.innerHTML = '<div class="text-danger">Failed to load change history.</div>';
+                });
+        }
+
+        function escapeLogHtml(s) {
+            return String(s).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
         }
 
         /**
@@ -1809,7 +1934,9 @@
                             'first_half_leave': 'First Half Leave',
                             'second_half_leave': 'Second Half Leave',
                             'on_leave': 'On Leave',
-                            'absent': 'Absent'
+                            'absent': 'Absent',
+                            'holiday': 'Holiday',
+                            'weekoff': 'Week Off'
                         };
                         const statusLabel = statusLabels[attendanceStatus] || attendanceStatus;
                         message += ' | Status: ' + statusLabel;

@@ -2,58 +2,10 @@
 
 @section('style')
     <style>
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            border: 1px solid #edf2f7;
-            transition: all 0.3s;
-        }
-
-        .stats-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .stats-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .total-icon { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
-        .pending-icon { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-        .approved-icon { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-        .rejected-icon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-        .stats-icon i { font-size: 24px; }
-
-        .stats-info h3 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 4px;
-            color: #1e293b;
-        }
-
-        .stats-info p {
-            font-size: 12px;
-            color: #64748b;
-            margin: 0;
-        }
+        /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
+           in client.layout.head (single blue-only theme — the per-type
+           total-icon/pending-icon/approved-icon/rejected-icon colors are
+           dropped so every icon shares the same blue) — no local copy. */
 
         .stats-sub {
             font-size: 11px;
@@ -239,7 +191,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Section -->
         <div class="stats-grid">
             <div class="stats-card">

@@ -457,7 +457,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row g-4">
             <!-- Left Column - Profile Card -->
             <div class="col-xxl-4 col-xl-6">

@@ -37,7 +37,7 @@
     </div>
 
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row">
             <div class="col-lg-12">
                 <div class="card border-top-0">
@@ -221,7 +221,7 @@
     <!-- MODAL - Move inside content-area section -->
     <div class="modal fade" id="changeDepartmentDetails" tabindex="-1" aria-labelledby="changeDepartmentDetails"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">

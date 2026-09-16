@@ -89,129 +89,8 @@
         .text-muted {
             color: #64748b !important;
         }
-    /* ==================== STATS CARDS ==================== */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    .stats-card {
-        background: white;
-        border-radius: 16px;
-        padding: 20px 16px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        transition: all 0.3s ease;
-        border: 1px solid #edf2f7;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .total-card::before {
-        background: linear-gradient(90deg, #4f46e5, #818cf8);
-    }
-
-    .pending-card::before {
-        background: linear-gradient(90deg, #f59e0b, #fbbf24);
-    }
-
-    .approved-card::before {
-        background: linear-gradient(90deg, #10b981, #34d399);
-    }
-
-    .rejected-card::before {
-        background: linear-gradient(90deg, #ef4444, #f87171);
-    }
-
-    .cancelled-card::before {
-        background: linear-gradient(90deg, #6b7280, #9ca3af);
-    }
-
-    .stats-icon-wrapper {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        transition: all 0.3s ease;
-    }
-
-    .stats-card:hover .stats-icon-wrapper {
-        transform: scale(1.05);
-    }
-
-    .total-card .stats-icon-wrapper {
-        background: rgba(79, 70, 229, 0.1);
-    }
-
-    .total-card .stats-icon-wrapper i {
-        color: #4f46e5;
-        font-size: 24px;
-    }
-
-    .pending-card .stats-icon-wrapper {
-        background: rgba(245, 158, 11, 0.1);
-    }
-
-    .pending-card .stats-icon-wrapper i {
-        color: #f59e0b;
-        font-size: 24px;
-    }
-
-    .approved-card .stats-icon-wrapper {
-        background: rgba(16, 185, 129, 0.1);
-    }
-
-    .approved-card .stats-icon-wrapper i {
-        color: #10b981;
-        font-size: 24px;
-    }
-
-    .rejected-card .stats-icon-wrapper {
-        background: rgba(239, 68, 68, 0.1);
-    }
-
-    .rejected-card .stats-icon-wrapper i {
-        color: #ef4444;
-        font-size: 24px;
-    }
-
-    .cancelled-card .stats-icon-wrapper {
-        background: rgba(107, 114, 128, 0.1);
-    }
-
-    .cancelled-card .stats-icon-wrapper i {
-        color: #6b7280;
-        font-size: 24px;
-    }
-
-    .stats-content {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .stats-amount-main {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1e293b;
-        line-height: 1.3;
-        margin-bottom: 4px;
-    }
-
-    .stats-label {
-        font-size: 10px;
-        font-weight: 500;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        margin-bottom: 6px;
-    }
+    /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
+       are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
     .stats-count {
         display: flex;
@@ -751,7 +630,7 @@
     </div>
 </div>
 
-<div class="main-content" style="padding: 30px !important;">
+<div class="main-content" style="padding: 20px !important;">
     <!-- Stats Cards -->
     <div class="stats-grid">
         <div class="stats-card total-card">
@@ -872,8 +751,8 @@
                     </select>
                 </div>
 
-                @if(auth()->user()->role == 'admin' || auth()->user()->role == 'hr')
-                
+                @permission('requests', 'manage')
+
                 <div class="filter-item" style="min-width: 220px;">
 
                         <div class="custom-employee-dropdown">
@@ -919,10 +798,10 @@
                             </ul>
                         </div>
                     </div>
-                @endif
+                @endpermission
 
                 <div class="filter-item">
-                    <input type="date" class="filter-input" name="from_date" 
+                    <input type="date" class="filter-input" name="from_date"
                            value="{{ request('from_date') }}" placeholder="From Date">
                 </div>
 

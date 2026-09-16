@@ -66,11 +66,17 @@ class Task extends Model
     }
 
     /**
-     * Check if task is overdue
+     * Check if task is overdue. Compares calendar dates, not timestamps — a
+     * task due "today" stays not-overdue for the whole day; it only becomes
+     * overdue once today's date is past the deadline date. (Using now()
+     * against a date-only value compares against midnight of that day, so
+     * any task due today would show overdue the moment any time passed.)
      */
     public function getIsOverdueAttribute()
     {
-        return now()->gt($this->deadline_date) && !in_array($this->status, ['completed', 'cancelled', 'approved']);
+        return $this->deadline_date
+            && \Carbon\Carbon::today()->gt(\Carbon\Carbon::parse($this->deadline_date)->startOfDay())
+            && !in_array($this->status, ['completed', 'cancelled', 'approved']);
     }
 
     /**
@@ -126,15 +132,26 @@ class Task extends Model
     }
 
     /**
-     * Scope for overdue tasks
+     * Scope for overdue tasks — calendar-date comparison (see
+     * getIsOverdueAttribute for why this can't just use now()).
      */
     public function scopeOverdue($query)
     {
-        return $query->where('deadline_date', '<', now())
+        return $query->where('deadline_date', '<', \Carbon\Carbon::today())
             ->whereNotIn('status', ['completed', 'cancelled', 'approved']);
     }
     public function approvals()
     {
         return $this->hasMany(TaskApproval::class, 'task_id')->orderBy('created_at', 'desc');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(TaskComment::class)->orderBy('created_at', 'desc');
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(TaskAttachment::class)->orderBy('created_at', 'desc');
     }
 }

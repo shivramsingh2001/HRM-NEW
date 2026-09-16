@@ -19,23 +19,25 @@
             font-size: 0.875em;
             color: #dc3545;
         }
+
+        /* ==================== BLUE THEME, COMPACT SPACING ==================== */
+        .personal-info .row.mb-4 { margin-bottom: 14px !important; }
+        .personal-info label { font-size: 12px; }
+        .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #eaeef5; }
+        .personal-info .form-control { font-size: 12px; border-color: #eaeef5; }
+        .personal-info .fs-12 { font-size: 11px !important; }
+        .card-body.personal-info { padding: 16px 18px; }
+        /* Status now rendered via the ui.status-badge Blade component
+           (shared status-color mapping) and .btn-primary matches the
+           shared theme default exactly — the old per-page overrides for
+           both are no longer needed. */
+        .btn.btn-lg { padding: 8px 20px; font-size: 13px; }
     </style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Update Leave</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('leave.view') }}">Leave</a></li>
-                <li class="breadcrumb-item active">Update Leave</li>
-            </ul>
-        </div>
-    </div>
-    <div class="main-content" style="padding: 30px !important;">
+    <x-ui.page-header title="Update Leave" :parent="['label' => 'Leave', 'route' => 'leave.view']" />
+    <div class="main-content" style="padding: 18px !important;">
         <div class="row">
             <div class="col-lg-12">
                 <div class="card border-top-0">
@@ -168,6 +170,57 @@
                                         </div>
                                     </div>
 
+                                    <!-- End Date -->
+                                    <div class="row mb-4 align-items-center">
+                                        <div class="col-lg-4">
+                                            <label for="end_date" class="fw-semibold">End Date *: </label>
+                                        </div>
+                                        <div class="col-lg-8">
+                                            <div class="input-group">
+                                                <div class="input-group-text">
+                                                    <i class="fa-regular fa-calendar-xmark"></i>
+                                                </div>
+                                                <input type="date" name="end_date" id="end_date"
+                                                    class="form-control @error('end_date') is-invalid @enderror"
+                                                    value="{{ old('end_date', $leave->end_date) }}"
+                                                    placeholder="Enter End Date" required
+                                                    {{ $leave->status != 'pending' ? 'disabled' : '' }}>
+                                            </div>
+                                            @error('end_date')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+
+                                    <!-- End Session -->
+                                    <div class="row mb-4 align-items-center">
+                                        <div class="col-lg-4">
+                                            <label for="end_session" class="fw-semibold">End Session *: </label>
+                                        </div>
+                                        <div class="col-lg-8">
+                                            <div class="input-group">
+                                                <div class="input-group-text"><i class="feather-clock"></i></div>
+                                                <select class="form-control @error('end_session') is-invalid @enderror"
+                                                    name="end_session" id="end_session" required
+                                                    {{ $leave->status != 'pending' ? 'disabled' : '' }}>
+                                                    <option value="" disabled>-- Select Session --</option>
+                                                    <option value="session1"
+                                                        {{ old('end_session', $leave->end_session) == 'session1' ? 'selected' : '' }}>
+                                                        Session 1</option>
+                                                    <option value="session2"
+                                                        {{ old('end_session', $leave->end_session) == 'session2' ? 'selected' : '' }}>
+                                                        Session 2</option>
+                                                    <option value="fullday"
+                                                        {{ old('end_session', $leave->end_session) == 'fullday' ? 'selected' : '' }}>
+                                                        Full Day</option>
+                                                </select>
+                                            </div>
+                                            @error('end_session')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+
                                     <!-- Reason -->
                                     <div class="row mb-4 align-items-center">
                                         <div class="col-lg-4">
@@ -245,17 +298,7 @@
                                             <label class="fw-semibold">Current Status: </label>
                                         </div>
                                         <div class="col-lg-8">
-                                            @php
-                                                $statusClasses = [
-                                                    'pending' => 'warning',
-                                                    'approved' => 'success',
-                                                    'cancelled' => 'danger',
-                                                ];
-                                                $statusColor = $statusClasses[$leave->status] ?? 'secondary';
-                                            @endphp
-                                            <span class="badge bg-{{ $statusColor }}">
-                                                {{ ucfirst($leave->status) }}
-                                            </span>
+                                            <x-ui.status-badge :status="$leave->status" />
                                         </div>
                                     </div>
                                 </div>
@@ -307,6 +350,10 @@
             // Set min date to today
             const today = new Date().toISOString().split('T')[0];
             $('#start_date').attr('min', today);
+            $('#end_date').attr('min', $('#start_date').val() || today);
+            $('#start_date').on('change', function() {
+                $('#end_date').attr('min', $(this).val());
+            });
 
             // Disable form if leave is not pending
             @if ($leave->status != 'pending')

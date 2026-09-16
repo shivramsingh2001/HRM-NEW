@@ -9,6 +9,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\RbacService;
 
 class   AttendanceLocationController extends Controller
 {
@@ -25,8 +26,11 @@ class   AttendanceLocationController extends Controller
                 ], 400);
             }
 
-            // Check role access
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager', 'employee'])) {
+            // Permission-based access (was a fixed role allowlist that
+            // silently locked out any custom role holding a real
+            // attendance:view grant).
+            $locationScope = app(RbacService::class)->scopeFor($authUser, 'attendance', 'view');
+            if ($locationScope === null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access'
@@ -46,8 +50,8 @@ class   AttendanceLocationController extends Controller
                 $date = date('Y-m-d');
             }
 
-            // Build the query for users based on role
-            $usersQuery = $this->getAuthorizedUsersQuery($authUser, $tenantId, $userId, $departmentId);
+            // Build the query for users based on scope
+            $usersQuery = $this->getAuthorizedUsersQuery($authUser, $tenantId, $userId, $departmentId, $locationScope);
 
             // Get users
             $users = $usersQuery->get();
@@ -86,7 +90,7 @@ class   AttendanceLocationController extends Controller
     /**
      * Get authorized users query based on role
      */
-    private function getAuthorizedUsersQuery($authUser, $tenantId, $specificUserId = null, $departmentId = null)
+    private function getAuthorizedUsersQuery($authUser, $tenantId, $specificUserId = null, $departmentId = null, string $scope = 'own')
     {
         $query = DB::table('users as u')
             ->leftJoin('user_job_details as jd', function ($join) use ($tenantId) {
@@ -105,10 +109,10 @@ class   AttendanceLocationController extends Controller
                 'ds.name as designation'
             );
 
-        // Role-based filtering
-        if ($authUser->role === 'employee') {
+        // Scope-based filtering
+        if ($scope === 'own') {
             $query->where('u.id', $authUser->id);
-        } elseif ($authUser->role === 'manager') {
+        } elseif ($scope === 'team') {
             $query->where(function ($q) use ($authUser) {
                 $q->where('jd.reporting_head', $authUser->id)
                     ->orWhere('u.id', $authUser->id);

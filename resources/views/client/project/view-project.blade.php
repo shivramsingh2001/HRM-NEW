@@ -3,14 +3,63 @@
 @section('style')
 <style>
     .project-head-badge {
-        background-color: #0d6efd;
+        background-color: #1e3a8a;
         color: white;
         font-size: 0.7rem;
         padding: 2px 6px;
         border-radius: 3px;
         margin-left: 5px;
     }
-    
+
+    /* ==================== PROJECT MODALS - small font, blue theme ==================== */
+    #addProjectModal .modal-header,
+    #editProjectModal .modal-header {
+        background: #fff !important;
+        border-bottom: 1px solid #edf2f7 !important;
+        padding: 10px 16px !important;
+    }
+    #addProjectModal .modal-header .fs-18,
+    #editProjectModal .modal-header h5 {
+        font-size: 13px !important;
+        color: #1e293b !important;
+        font-weight: 700;
+    }
+    #addProjectModal .form-group label,
+    #editProjectModal .form-group label {
+        font-size: 11px !important;
+    }
+    #addProjectModal .form-control,
+    #editProjectModal .form-control {
+        font-size: 11.5px !important;
+        padding: 6px 10px !important;
+    }
+    #addProjectModal .btn,
+    #editProjectModal .btn {
+        font-size: 11.5px !important;
+        padding: 6px 14px !important;
+    }
+    #addProjectModal .btn-primary,
+    #editProjectModal .btn-primary {
+        background: #1e3a8a !important;
+        border-color: #1e3a8a !important;
+    }
+    #addProjectModal .btn-primary:hover,
+    #editProjectModal .btn-primary:hover {
+        background: #16295e !important;
+        border-color: #16295e !important;
+    }
+    #addProjectModal .btn-modal-cancel,
+    #editProjectModal .btn-modal-cancel {
+        background: #eef3fd !important;
+        border: 1px solid #bfd3f7 !important;
+        color: #1e3a8a !important;
+    }
+    #addProjectModal .btn-modal-cancel:hover,
+    #editProjectModal .btn-modal-cancel:hover {
+        background: #dbeafe !important;
+        color: #1e3a8a !important;
+    }
+
     /* Toast Container Styles */
     #toast-container {
         z-index: 1090;
@@ -286,7 +335,7 @@
 
                                     <div class="col-12">
                                         <div class="d-flex justify-content-end gap-2">
-                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                                            <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">
                                                 Cancel
                                             </button>
                                             <button class="btn btn-primary" type="submit">

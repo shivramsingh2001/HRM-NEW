@@ -2,6 +2,21 @@
 
 @section('style')
     <style>
+        /* ==================== ADD TASK DRAWER ==================== */
+        /* Chrome (width, header, body padding, buttons) now comes from the
+           shared .ui-drawer class (theme-custom.css) via the ui.drawer
+           Blade component — only this form's own field styling stays
+           page-local. */
+        .ui-drawer .form-group { margin-bottom: 10px; }
+        .ui-drawer label { font-size: 11px; font-weight: 600; color: #1a2236; margin-bottom: 3px; display: block; }
+        .ui-drawer .form-control, .ui-drawer select.form-control {
+            font-size: 11.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid #dfe5f0;
+        }
+        .ui-drawer .form-control:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30,58,138,.12); }
+        .ui-drawer .form-hint { font-size: 10px; color: #6b7385; margin-top: 3px; display: block; }
+        .ui-drawer .error-text { font-size: 10px; color: #dc3545; display: block; margin-top: 2px; }
+        .ui-drawer #recordButton { font-size: 11px; padding: 5px 12px; }
+
         /* ==================== EMPLOYEE AVATAR ==================== */
         .employee-avatar {
             width: 36px;
@@ -64,8 +79,8 @@
         }
 
         .priority-critical {
-            background-color: #f3e8ff;
-            color: #5b21b6;
+            background-color: #e3edfe;
+            color: #1e3a8a;
         }
 
         .task-status {
@@ -83,7 +98,7 @@
 
         .status-in_progress {
             background-color: #dbeafe;
-            color: #1e40af;
+            color: #1e3a8a;
         }
 
         .status-hold {
@@ -112,66 +127,10 @@
         }
 
         /* ==================== STATS CARDS ==================== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stats-card {
-            background: white;
-            border: 1px solid #edf2f7;
-            border-radius: 12px;
-            padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        .stats-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transform: translateY(-2px);
-            border-color: #cbd5e1;
-        }
-
-        .stats-card.active {
-            border: 2px solid #4f46e5;
-            background: #eef2ff;
-        }
-
-        .stats-info h3 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 4px 0;
-            color: #1e293b;
-        }
-
-        .stats-info p {
-            font-size: 12px;
-            color: #64748b;
-            margin: 0;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        .stats-icon {
-            width: 48px;
-            height: 48px;
-            background: #eef2ff;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .stats-icon i {
-            font-size: 24px;
-            color: #4f46e5;
-        }
+        /* .stats-grid/.stats-card/.stats-card.active/.stats-info/.stats-icon
+           are centralized in client.layout.head (single blue-only theme,
+           click-to-filter JS below still targets .stats-card/data-status
+           unchanged) — no local copy. */
 
         /* ==================== MODERN FILTER SECTION ==================== */
         .filter-wrapper {
@@ -200,13 +159,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -279,7 +238,7 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
             outline: none;
         }
@@ -304,7 +263,7 @@
 
         .filter-date:focus {
             background-color: white;
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
             outline: none;
         }
@@ -369,7 +328,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 11px;
         }
 
@@ -388,16 +347,16 @@
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
         .filter-tag.clear-all:hover {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
         }
 
@@ -458,8 +417,8 @@
 
         .action-btn:hover {
             background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         .dropdown-item {
@@ -494,8 +453,8 @@
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         /* Empty State */
@@ -579,6 +538,10 @@
         </div>
         <div class="page-header-right ms-auto">
             <div class="page-header-right-items">
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#addTaskDrawer">
+                    <i class="feather-plus me-1"></i>
+                    <span>New Task</span>
+                </button>
                 <div class="d-flex d-md-none">
                     <a href="#" class="page-header-right-close-toggle">
                         <i class="feather-arrow-left me-2"></i>
@@ -590,7 +553,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
 
         <!-- Task Statistics Cards -->
         <div class="stats-grid">
@@ -931,7 +894,7 @@
                                             <td class="text-start">
                                                 <div class="employee-info">
                                                     <div class="employee-avatar"
-                                                        style="background: #4f46e5; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600;">
+                                                        style="background: #1e3a8a; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600;">
                                                         {{ strtoupper(substr($task['assigned_by_name'] ?? 'U', 0, 2)) }}
                                                     </div>
                                                     <div class="employee-details">
@@ -1067,6 +1030,156 @@
 @endsection
 
 @section('create-modal')
+    <!-- Add Task Drawer -->
+    <x-ui.drawer id="addTaskDrawer" title="Create Task">
+            <form id="addTaskForm" enctype="multipart/form-data">
+                @csrf
+                <div id="addTaskError" class="alert alert-danger d-none"></div>
+
+                <div class="form-group">
+                    <label for="self_assigned">Assignment Type *</label>
+                    <select class="form-control" name="self_assigned" id="self_assigned" required>
+                        <option value="" disabled selected>Select Assignment Type</option>
+                        @if (!in_array($authUser->role, ['admin']))
+                            <option value="1">Self Assigned (Task for myself)</option>
+                        @endif
+                        @if (!in_array($authUser->role, ['employee']))
+                            <option value="0">Assign to Someone Else</option>
+                            <option value="2">Assign to Group (Multiple Members)</option>
+                        @endif
+                    </select>
+                    <small class="form-hint">Self-assigned tasks go to your reporting head for approval.</small>
+                    <small class="error-text self_assigned_error"></small>
+                </div>
+
+                <div class="form-group" id="assignedToWrapper" style="display:none;">
+                    <label for="assigned_to">Assigned To *</label>
+                    <select class="form-control" name="assigned_to" id="assigned_to">
+                        <option value="" disabled selected>Select User</option>
+                        @foreach ($users as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                        @endforeach
+                    </select>
+                    <small class="error-text assigned_to_error"></small>
+                </div>
+
+                <div class="form-group" id="groupMembersWrapper" style="display:none;">
+                    <label>Group Members * <small class="text-muted">(pick at least 2)</small></label>
+                    <select name="group_members[]" id="group_members" class="form-control" multiple size="5">
+                        @foreach ($users as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->employee_id ?? '' }})</option>
+                        @endforeach
+                    </select>
+                    <small class="error-text group_members_error"></small>
+                </div>
+
+                <div class="form-group" id="groupRuleWrapper" style="display:none;">
+                    <label for="group_completion_rule">Completion Rule *</label>
+                    <select name="group_completion_rule" id="group_completion_rule" class="form-control">
+                        <option value="" disabled selected>How is this task considered complete?</option>
+                        <option value="all_must_complete">All members must complete</option>
+                        <option value="any_one">Any one member's completion is enough</option>
+                        <option value="percentage">Percentage threshold</option>
+                        <option value="lead_decides">Group lead decides</option>
+                    </select>
+                    <small class="error-text group_completion_rule_error"></small>
+                </div>
+
+                <div class="form-group" id="thresholdWrapper" style="display:none;">
+                    <label for="completion_threshold">Threshold % *</label>
+                    <input type="number" name="completion_threshold" id="completion_threshold" class="form-control" min="1" max="100" value="75">
+                    <small class="error-text completion_threshold_error"></small>
+                </div>
+
+                <div class="form-group" id="groupLeadWrapper" style="display:none;">
+                    <label for="group_lead_id">Group Lead (optional)</label>
+                    <select name="group_lead_id" id="group_lead_id" class="form-control">
+                        <option value="">No lead</option>
+                        @foreach ($users as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="add_project_id">Project</label>
+                            <select class="form-control" name="project_id" id="add_project_id">
+                                <option value="">No project</option>
+                                @foreach ($projects as $project)
+                                    <option value="{{ $project->id }}">{{ $project->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="add_priority">Priority *</label>
+                            <select class="form-control" name="priority" id="add_priority" required>
+                                <option value="" disabled selected>Select Priority</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                            <small class="error-text priority_error"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="add_title">Task Title *</label>
+                    <input type="text" class="form-control" id="add_title" name="title" placeholder="Task Title" required>
+                    <small class="error-text title_error"></small>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="add_task_date">Task Date *</label>
+                            <input type="date" class="form-control" id="add_task_date" name="task_date" max="{{ date('Y-m-d') }}" required>
+                            <small class="error-text task_date_error"></small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="add_deadline_date">Task Deadline *</label>
+                            <input type="date" class="form-control" id="add_deadline_date" name="deadline_date" min="{{ date('Y-m-d') }}" required>
+                            <small class="error-text deadline_date_error"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="add_description">Task Description *</label>
+                    <textarea class="form-control" id="add_description" name="description" rows="4" placeholder="Task Description" required></textarea>
+                    <small class="error-text description_error"></small>
+                </div>
+
+                <div class="form-group">
+                    <label for="add_file">Attachment</label>
+                    <input type="file" class="form-control" id="add_file" name="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx">
+                    <small class="error-text file_error"></small>
+                </div>
+
+                <div class="form-group">
+                    <label for="add_voice_file">Voice Note</label>
+                    <div>
+                        <button class="btn btn-light-brand mb-2" type="button" id="recordButton">🎤 Start Recording</button>
+                        <input type="file" class="form-control" id="add_voice_file" name="voice_file" accept=".mp3,.wav,.m4a,.webm" style="display:none;">
+                        <audio id="audioPlayer" controls style="display:none; width:100%;"></audio>
+                    </div>
+                    <small class="error-text voice_file_error"></small>
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-primary" type="submit" id="addTaskSubmitBtn">Create Task</button>
+                    <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="offcanvas">Cancel</button>
+                </div>
+            </form>
+    </x-ui.drawer>
+
     <!-- Status Update Modal -->
     <div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModalLabel"
         aria-hidden="true">
@@ -1137,6 +1250,143 @@
 
 @section('script-area')
     <script>
+        // ==================== ADD TASK DRAWER ====================
+        function toggleAssignedFields() {
+            const value = $('#self_assigned').val();
+
+            $('#assignedToWrapper, #groupMembersWrapper, #groupRuleWrapper, #thresholdWrapper, #groupLeadWrapper').hide();
+            $('#assigned_to').prop('required', false);
+            $('#group_members').prop('required', false);
+            $('#group_completion_rule').prop('required', false);
+
+            if (value === '0') {
+                $('#assignedToWrapper').show();
+                $('#assigned_to').prop('required', true);
+            }
+
+            if (value === '2') {
+                $('#groupMembersWrapper, #groupRuleWrapper, #groupLeadWrapper').show();
+                $('#group_members').prop('required', true);
+                $('#group_completion_rule').prop('required', true);
+                if ($('#group_completion_rule').val() === 'percentage') {
+                    $('#thresholdWrapper').show();
+                }
+            }
+        }
+
+        $('#self_assigned').on('change', toggleAssignedFields);
+        $('#group_completion_rule').on('change', function() {
+            $('#thresholdWrapper').toggle($(this).val() === 'percentage');
+        });
+
+        $('#addTaskDrawer').on('show.bs.offcanvas', function() {
+            $('#addTaskForm')[0].reset();
+            $('#addTaskForm .error-text').text('');
+            $('#addTaskError').addClass('d-none').text('');
+            $('#assignedToWrapper, #groupMembersWrapper, #groupRuleWrapper, #thresholdWrapper, #groupLeadWrapper').hide();
+            $('#audioPlayer').hide();
+        });
+
+        $('#add_task_date').on('change', function() {
+            const v = $(this).val();
+            if (v) {
+                $('#add_deadline_date').attr('min', v);
+                if ($('#add_deadline_date').val() && $('#add_deadline_date').val() < v) {
+                    $('#add_deadline_date').val(v);
+                }
+            }
+        });
+
+        (function() {
+            let mediaRecorder, audioChunks = [], isRecording = false;
+            const recordBtn = document.getElementById('recordButton');
+            const audioPlayer = document.getElementById('audioPlayer');
+            const voiceFileInput = document.getElementById('add_voice_file');
+            if (!recordBtn) return;
+
+            recordBtn.onclick = async () => {
+                if (!isRecording) {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        mediaRecorder = new MediaRecorder(stream);
+                        audioChunks = [];
+                        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                        mediaRecorder.onstop = () => {
+                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                            const audioFile = new File([audioBlob], 'voice_recording_' + Date.now() + '.webm', { type: 'audio/webm' });
+                            const dataTransfer = new DataTransfer();
+                            dataTransfer.items.add(audioFile);
+                            voiceFileInput.files = dataTransfer.files;
+                            audioPlayer.src = URL.createObjectURL(audioBlob);
+                            audioPlayer.style.display = 'block';
+                            recordBtn.textContent = '🎤 Start Recording';
+                            recordBtn.classList.remove('btn-danger');
+                            recordBtn.classList.add('btn-light-brand');
+                            isRecording = false;
+                        };
+                        mediaRecorder.start();
+                        recordBtn.textContent = '⏹ Stop Recording';
+                        recordBtn.classList.remove('btn-light-brand');
+                        recordBtn.classList.add('btn-danger');
+                        isRecording = true;
+                    } catch (error) {
+                        toastr.error('Error accessing microphone: ' + error.message);
+                    }
+                } else if (mediaRecorder) {
+                    mediaRecorder.stop();
+                }
+            };
+        })();
+
+        $('#addTaskForm').on('submit', function(e) {
+            e.preventDefault();
+
+            const selfAssigned = $('#self_assigned').val();
+            if (selfAssigned === '2') {
+                const selected = $('#group_members').val() || [];
+                if (selected.length < 2) {
+                    $('.group_members_error').text('Pick at least 2 group members.');
+                    return;
+                }
+            }
+
+            const submitBtn = $('#addTaskSubmitBtn');
+            const originalText = submitBtn.html();
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Creating...');
+            $('#addTaskForm .error-text').text('');
+            $('#addTaskError').addClass('d-none').text('');
+
+            const formData = new FormData(this);
+
+            $.ajax({
+                url: '{{ route('task.store') }}',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    submitBtn.prop('disabled', false).html(originalText);
+                    if (response.success) {
+                        toastr.success(response.message || 'Task created successfully!');
+                        bootstrap.Offcanvas.getInstance(document.getElementById('addTaskDrawer'))?.hide();
+                        setTimeout(() => window.location.reload(), 600);
+                    } else {
+                        toastr.error(response.message || 'Failed to create task');
+                    }
+                },
+                error: function(xhr) {
+                    submitBtn.prop('disabled', false).html(originalText);
+                    if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                        const errors = xhr.responseJSON.errors;
+                        Object.keys(errors).forEach(function(field) {
+                            $('.' + field + '_error').text(Array.isArray(errors[field]) ? errors[field][0] : errors[field]);
+                        });
+                    }
+                    toastr.error(xhr.responseJSON?.message || 'Error creating task');
+                }
+            });
+        });
+
         $(document).ready(function() {
             // Auto-submit on filter change
             $('.filter-select, .filter-date').on('change', function() {

@@ -116,7 +116,7 @@ class ProjectController extends Controller
         try {
             $authUser = Auth::user();
 
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
             $projects = DB::table('projects as p')
                 ->where('p.id', $id)
                 ->select([

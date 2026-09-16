@@ -207,7 +207,7 @@
 
 
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row mb-2">
             <div class="col-md-3">
                 <div class="card border-0 shadow-sm">

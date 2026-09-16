@@ -13,6 +13,11 @@ use App\Models\LeaveType;
 use App\Models\PayrollComponent;
 use App\Models\Loan;
 use App\Models\LoanRepayment;
+use App\Services\Payroll\LoanDeductionService;
+use App\Services\Attendance\OvertimeApprovalService;
+use App\Services\RbacService;
+use App\Models\OvertimeRequest;
+use App\Models\PayrollAuditLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,9 +25,27 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Traits\AuthorizesByScope;
+use App\Traits\ResolvesCurrentTenant;
 
 class MonthlyPayrollController extends Controller
 {
+    use AuthorizesByScope, ResolvesCurrentTenant;
+
+    private LoanDeductionService $loanDeductionService;
+    private OvertimeApprovalService $overtimeApprovalService;
+    private RbacService $rbacService;
+
+    public function __construct(
+        LoanDeductionService $loanDeductionService,
+        OvertimeApprovalService $overtimeApprovalService,
+        RbacService $rbacService
+    ) {
+        $this->loanDeductionService = $loanDeductionService;
+        $this->overtimeApprovalService = $overtimeApprovalService;
+        $this->rbacService = $rbacService;
+    }
+
     // =========================================================================
     // ATTENDANCE HOUR RULES - SHIFT BASED
     //   >= 60% of shift -> full present day (counts as 1.0)
@@ -34,47 +57,44 @@ class MonthlyPayrollController extends Controller
     private const HALF_DAY_MIN_HOURS = 2;
 
     /**
-     * Calculate attendance status based on shift timings
-     * Priority 1: scheduled_shift_start/end from attendance record
-     * Priority 2: hours-based fallback (2hrs=Absent, 2-6hrs=Half Day, 6hrs+=Present)
+     * Calculate attendance status based on shift timings.
+     *
+     * Delegates to the same App\Services\Attendance\PolicyResolver /
+     * AttendancePolicySnapshot::classify() the Attendance module itself
+     * uses, instead of the hardcoded 60%/20%/2h/6h thresholds this method
+     * used to carry — those diverged from the tenant's real, configurable
+     * attendance_policies row, so the same day could be classified
+     * differently by Payroll and by Attendance. $tenantId/$date are used
+     * only to resolve which policy is in force; when either is missing
+     * (defensive — both call sites always have them) this falls back to
+     * AttendancePolicySnapshot::default(), the same values this method's
+     * old hardcoded fallback ladder approximated.
      */
-    private function getAttendanceStatusByShift($totalHours, $attendance = null)
+    private function getAttendanceStatusByShift($totalHours, $attendance = null, ?int $tenantId = null, ?string $date = null)
     {
-        // PRIORITY 1: Use scheduled shift times from attendance record
-        if ($attendance && isset($attendance->scheduled_shift_start) && $attendance->scheduled_shift_start && 
+        $policy = ($tenantId && $date)
+            ? app(\App\Services\Attendance\PolicyResolver::class)->forTenantDate($tenantId, $date)
+            : \App\Services\Attendance\AttendancePolicySnapshot::default();
+
+        $expectedSeconds = 0;
+        if ($attendance && isset($attendance->scheduled_shift_start) && $attendance->scheduled_shift_start &&
             isset($attendance->scheduled_shift_end) && $attendance->scheduled_shift_end) {
             $shiftStart = Carbon::parse($attendance->scheduled_shift_start);
             $shiftEnd = Carbon::parse($attendance->scheduled_shift_end);
-            
+
             // Handle overnight shifts (e.g., 22:00 to 06:00)
             if ($shiftEnd->lessThan($shiftStart)) {
                 $shiftEnd->addDay();
             }
-            
-            $expectedHours = $shiftStart->diffInHours($shiftEnd);
-            
-            if ($expectedHours > 0 && $totalHours !== null) {
-                $percentage = ($totalHours / $expectedHours) * 100;
-                
-                // < 20% = Absent, 20-60% = Half Day, >= 60% = Present
-                if ($percentage < 20) {
-                    return 'Absent';
-                } elseif ($percentage < 60) {
-                    return 'Half Day';
-                } else {
-                    return 'Present';
-                }
-            }
+
+            $expectedSeconds = $shiftStart->diffInSeconds($shiftEnd);
         }
-        
-        // PRIORITY 2: Hours-based fallback
-        if ($totalHours === null || $totalHours < 2) {
-            return 'Absent';
-        } elseif ($totalHours < 6) {
-            return 'Half Day';
-        } else {
-            return 'Present';
-        }
+
+        return match ($policy->classify((float) ($totalHours ?? 0), $expectedSeconds)) {
+            'present' => 'Present',
+            'half_day' => 'Half Day',
+            default => 'Absent',
+        };
     }
 
     /**
@@ -97,6 +117,14 @@ class MonthlyPayrollController extends Controller
                 $query->where('user_id', $request->user_id);
             }
 
+            // Aggregate against the full filtered set BEFORE pagination --
+            // summing the paginated Collection itself (the previous
+            // behavior) only reflects whichever 15 rows are on the current
+            // page, silently understating "Total Payroll"/"Paid Amount" for
+            // any filter matching more than one page.
+            $totalNet = (float) (clone $query)->sum('net_payable');
+            $paidAmount = (float) (clone $query)->where('payment_status', 'paid')->sum('net_payable');
+
             $monthlyPayrolls = $query->orderBy('payroll_month', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->paginate(15);
@@ -111,7 +139,7 @@ class MonthlyPayrollController extends Controller
                 ->orderBy('payroll_month', 'desc')
                 ->pluck('payroll_month');
 
-            return view('client.payroll.monthly-payroll.index', compact('monthlyPayrolls', 'users', 'months'));
+            return view('client.payroll.monthly-payroll.index', compact('monthlyPayrolls', 'users', 'months', 'totalNet', 'paidAmount'));
         } catch (\Exception $e) {
             Log::error('Monthly payroll index error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Error loading payroll data: ' . $e->getMessage());
@@ -170,12 +198,36 @@ class MonthlyPayrollController extends Controller
             $startDate = $date->copy()->startOfMonth()->format('Y-m-d');
             $endDate   = $date->copy()->endOfMonth()->format('Y-m-d');
 
-            $employeeQuery = User::where('status', 1)
-                ->whereHas('userPayrolls', fn($q) => $q->where('is_current', true))
-                ->with([
-                    'userPayrolls'              => fn($q) => $q->where('is_current', true)->latest(),
-                    'userPayrolls.payrollMaster',
-                ]);
+            // Payroll rebuild — Phase 8 cutover: a tenant flagged onto the
+            // dynamic engine is switched over completely for new runs (no
+            // hybrid per-employee mix), so eligibility comes from having a
+            // dynamic structure instead of a legacy UserPayroll assignment.
+            // Existing legacy data/screens are never touched either way.
+            $tenantId = $this->currentTenantId();
+
+            if ($tenantId && app(\App\Services\Attendance\PeriodLockService::class)->isLocked($tenantId, $request->payroll_month)) {
+                DB::rollBack();
+
+                return redirect()->back()
+                    ->with('error', $request->payroll_month . ' is locked. Reopen the period before processing payroll for it.')
+                    ->withInput();
+            }
+
+            $dynamicEngineEnabled = $tenantId
+                ? (bool) DB::table('tenants')->where('id', $tenantId)->value('payroll_dynamic_ui_enabled')
+                : false;
+
+            if ($dynamicEngineEnabled) {
+                $employeeQuery = User::where('status', 1)
+                    ->whereHas('currentDynamicPayrollStructure');
+            } else {
+                $employeeQuery = User::where('status', 1)
+                    ->whereHas('userPayrolls', fn($q) => $q->where('is_current', true))
+                    ->with([
+                        'userPayrolls'              => fn($q) => $q->where('is_current', true)->latest(),
+                        'userPayrolls.payrollMaster',
+                    ]);
+            }
 
             if ($request->employee_selection === 'selected') {
                 $employeeQuery->whereIn('id', $request->selected_employees);
@@ -219,23 +271,68 @@ class MonthlyPayrollController extends Controller
 
             if ($request->has('force_reprocess') && count($existingEmployees) > 0) {
                 $existingIds = collect($existingEmployees)->pluck('id')->toArray();
-                MonthlyPayroll::whereIn('user_id', $existingIds)
+                $toReplace = MonthlyPayroll::whereIn('user_id', $existingIds)
                     ->where('payroll_month', $request->payroll_month)
-                    ->delete();
+                    ->get();
+
+                // Never silently replace a payroll that's already been
+                // processed/paid -- same policy destroy() already enforces,
+                // applied here too so force_reprocess can't be used as a
+                // back door around it. Block the whole batch with an
+                // itemized list rather than partially reprocessing.
+                $blocked = $toReplace->reject(fn (MonthlyPayroll $mp) => auth()->user()->can('delete', $mp));
+                if ($blocked->isNotEmpty()) {
+                    DB::rollBack();
+                    $names = $blocked->map(fn (MonthlyPayroll $mp) => optional($mp->user)->name . ' (' . $mp->payment_status . ')')->implode(', ');
+
+                    return redirect()->back()
+                        ->with('error', 'Cannot force-reprocess -- already processed/paid: ' . e($names) . '. Deselect them or reopen those payslips first.')
+                        ->withInput();
+                }
+
+                foreach ($toReplace as $mp) {
+                    $this->loanDeductionService->revokeForPayroll($mp->id, $mp->tenant_id);
+                    PayrollComponent::where('monthly_payroll_id', $mp->id)->delete();
+                    $mp->delete();
+                }
             }
 
             $allEmployees = array_merge($newEmployees, $existingEmployees);
 
+            $payrollRunId = null;
+            if ($dynamicEngineEnabled) {
+                $period = \App\Models\PayrollPeriod::firstOrCreate(
+                    ['tenant_id' => $tenantId, 'year_month' => $request->payroll_month],
+                    ['status' => 'open']
+                );
+                $payrollRunId = \App\Models\PayrollRun::create([
+                    'tenant_id' => $tenantId,
+                    'payroll_period_id' => $period->id,
+                    'run_number' => \App\Models\PayrollRun::where('payroll_period_id', $period->id)->count() + 1,
+                    'status' => 'calculating',
+                    'engine_version' => 'dynamic_v1',
+                    'triggered_by' => Auth::id(),
+                    'started_at' => now(),
+                ])->id;
+            }
+
             foreach ($allEmployees as $employee) {
                 try {
-                    $result = $this->processEmployeeMonthlyPayroll(
-                        $employee,
-                        $request->payroll_month,
-                        $startDate,
-                        $endDate,
-                        (bool) ($request->include_overtime       ?? false),
-                        (bool) ($request->include_loan_deductions ?? false)
-                    );
+                    $result = $dynamicEngineEnabled
+                        ? $this->processEmployeeMonthlyPayrollDynamic(
+                            $employee,
+                            $request->payroll_month,
+                            $payrollRunId,
+                            (bool) ($request->include_loan_deductions ?? false)
+                        )
+                        : $this->processEmployeeMonthlyPayroll(
+                            $employee,
+                            $request->payroll_month,
+                            $startDate,
+                            $endDate,
+                            (bool) ($request->include_overtime       ?? false),
+                            (bool) ($request->include_loan_deductions ?? false)
+                        );
 
                     if ($result) {
                         $processedCount++;
@@ -246,6 +343,14 @@ class MonthlyPayrollController extends Controller
                     $errors[] = "Employee {$employee->name} (ID: {$employee->employee_id}): " . $e->getMessage();
                     Log::error("Payroll processing error for employee {$employee->id}: " . $e->getMessage());
                 }
+            }
+
+            if ($payrollRunId) {
+                \App\Models\PayrollRun::whereKey($payrollRunId)->update([
+                    'status' => 'calculated',
+                    'completed_at' => now(),
+                    'employees_included' => $processedCount,
+                ]);
             }
 
             DB::commit();
@@ -286,7 +391,15 @@ class MonthlyPayrollController extends Controller
         bool $includeOvertime       = true,
         bool $includeLoanDeductions = true
     ) {
-        $userPayroll = $employee->currentPayroll;
+        // Use the salary structure that was actually effective during the
+        // month being processed — not whichever row is flagged is_current
+        // *today*. Without this, re-running or backfilling a historical
+        // month after a raise would silently apply today's salary instead
+        // of the one in effect back then.
+        $userPayroll = UserPayroll::forUser($employee->id)
+            ->effective($endDate)
+            ->orderByDesc('effective_from')
+            ->first();
 
         if (!$userPayroll) {
             throw new \Exception("No active payroll assignment found.");
@@ -295,7 +408,7 @@ class MonthlyPayrollController extends Controller
         $payrollMaster      = $userPayroll->payrollMaster;
         $calculationType    = $payrollMaster->payroll_calculation_type ?? 'day_based';
         $workingHoursPerDay = $payrollMaster->working_hours_per_day    ?? 8;
-        $tenantId           = session('tenant_id');
+        $tenantId           = $this->currentTenantId();
 
         Log::channel('daily')->info('===== PAYROLL CALCULATION START =====', [
             'employee_id'      => $employee->id,
@@ -355,7 +468,7 @@ class MonthlyPayrollController extends Controller
         $overtimeRateApplied      = 0.0;
 
         // Get attendance summary (uses raw SQL)
-        $attendanceSummary = $this->calculateAttendanceSummary($employee->id, $startDate, $endDate, $tenantId);
+        $attendanceSummary = $this->calculateAttendanceSummary($employee->id, $startDate, $endDate, $tenantId, (float) $workingHoursPerDay);
 
         // =====================================================================
         // HOUR-BASED CALCULATION - FIXED VERSION
@@ -374,7 +487,10 @@ class MonthlyPayrollController extends Controller
             $totalPayableHours = $totalActualHours + $paidLeaveHours;
             
             // 4. Calculate hourly rate
-            $hourlyRate = $userPayroll->basic_salary / max(1, $expectedTotalHours);
+            $hourlyRate = $this->overtimeHourlyRate(
+                $userPayroll->basic_salary, 'hour_based', $workingHoursPerDay, $calendarDays, $workingDays,
+                $payrollMaster->ot_rate_divisor_mode ?? 'calendar_days', $payrollMaster->ot_fixed_working_days ?? 26
+            );
             
             // 5. Proration factor based on payable hours (capped at 100%)
             $prorationFactor = $expectedTotalHours == 0 
@@ -480,8 +596,10 @@ class MonthlyPayrollController extends Controller
             if ($includeOvertime && $approvedOvertimeHours > 0) {
                 $overtimeSettings = $this->getOvertimeSettings($tenantId);
                 $rateMultiplier = $overtimeSettings->rate_multiplier ?? 1.5;
-                $dailyRate = $userPayroll->basic_salary / max(1, $calendarDays);
-                $hourlyRate = $dailyRate / max(1, $workingHoursPerDay);
+                $hourlyRate = $this->overtimeHourlyRate(
+                    $userPayroll->basic_salary, 'day_based', $workingHoursPerDay, $calendarDays, $workingDays,
+                    $payrollMaster->ot_rate_divisor_mode ?? 'calendar_days', $payrollMaster->ot_fixed_working_days ?? 26
+                );
                 $overtimeRateApplied = $hourlyRate * $rateMultiplier;
                 $overtimeAmount = $approvedOvertimeHours * $overtimeRateApplied;
 
@@ -501,23 +619,37 @@ class MonthlyPayrollController extends Controller
         }
 
         // =====================================================================
-        // LOAN DEDUCTIONS
+        // LOAN DEDUCTIONS -- always computed (for display via
+        // loan_deduction_computed) even when $includeLoanDeductions is
+        // false; only applied to totals/ledger when the flag is on.
         // =====================================================================
-        $loanDeductions = 0.0;
+        $loanDeductionDue = $this->calculateLoanDeductions($employee->id, $yearMonth, $tenantId);
+        $loanDeductions = $includeLoanDeductions ? $loanDeductionDue : 0.0;
 
-        if ($includeLoanDeductions) {
-            $loanDeductions = $this->calculateLoanDeductions($employee->id, $yearMonth, $tenantId);
+        // Bulk generation has no per-employee UI to interactively resolve a
+        // shortfall the way Edit Payroll does -- so instead of allowing a
+        // negative net pay, cap the deduction at what's actually available
+        // and let this get flagged for the admin to review individually.
+        $availableForLoan = max(0, array_sum($earnings) - array_sum($employeeDeductions));
+        if ($loanDeductions > $availableForLoan) {
+            Log::channel('daily')->warning('Loan Deduction Capped During Bulk Generation', [
+                'employee_id' => $employee->id,
+                'month' => $yearMonth,
+                'due' => $loanDeductions,
+                'capped_to' => $availableForLoan,
+            ]);
+            $loanDeductions = round($availableForLoan, 2);
+        }
 
-            if ($loanDeductions > 0) {
-                $employeeDeductions['loan'] = $loanDeductions;
+        if ($loanDeductions > 0) {
+            $employeeDeductions['loan'] = $loanDeductions;
 
-                Log::channel('daily')->info('Loan Deductions Applied', [
-                    'employee_id'         => $employee->id,
-                    'employee_name'       => $employee->name,
-                    'month'               => $yearMonth,
-                    'total_loan_deduction' => $loanDeductions,
-                ]);
-            }
+            Log::channel('daily')->info('Loan Deductions Applied', [
+                'employee_id'         => $employee->id,
+                'employee_name'       => $employee->name,
+                'month'               => $yearMonth,
+                'total_loan_deduction' => $loanDeductions,
+            ]);
         }
 
         // =====================================================================
@@ -593,6 +725,8 @@ class MonthlyPayrollController extends Controller
             'professional_tax'          => $employeeDeductions['pt'] ?? 0,
             'tds'                       => $employeeDeductions['tds'] ?? 0,
             'loan_deduction'            => $employeeDeductions['loan'] ?? 0,
+            'loan_deduction_enabled'    => $includeLoanDeductions,
+            'loan_deduction_computed'   => $loanDeductionDue,
             'other_deductions'          => $employeeDeductions['other'] ?? 0,
             // Employer Contributions (STORED but NOT deducted from salary)
             'employer_provident_fund'   => $employerContributions['employer_pf'] ?? 0,
@@ -617,7 +751,164 @@ class MonthlyPayrollController extends Controller
 
         // Mark loan repayments paid -- NO inner transaction; we are already inside one
         if ($includeLoanDeductions && $loanDeductions > 0) {
-            $this->updateLoanRepayments($employee->id, $yearMonth, $loanDeductions, $tenantId);
+            $this->updateLoanRepayments($employee->id, $yearMonth, $loanDeductions, $tenantId, $monthlyPayroll->id);
+        }
+
+        return $monthlyPayroll;
+    }
+
+    // =========================================================================
+    // Payroll rebuild — Phase 8 cutover: dynamic-engine counterpart
+    // =========================================================================
+
+    /**
+     * Computes via PayrollCalculationEngine (the Phase 2 dynamic engine)
+     * instead of this controller's legacy fixed-column math, but persists
+     * into the exact same monthly_payrolls columns (plus payroll_run_id /
+     * engine_version) so every existing payslip view, PDF, and export
+     * keeps rendering unchanged. Only reached for a tenant flagged onto the
+     * dynamic engine (see store()); never called on the legacy path.
+     */
+    private function processEmployeeMonthlyPayrollDynamic(
+        $employee,
+        string $yearMonth,
+        ?int $payrollRunId,
+        bool $includeLoanDeductions = true
+    ) {
+        $tenantId = $this->currentTenantId();
+
+        $result = app(\App\Services\Payroll\PayrollCalculationEngine::class)
+            ->calculate($employee, $tenantId, $yearMonth, $includeLoanDeductions);
+
+        // Same auto-cap policy as the legacy path: bulk generation has no
+        // per-employee UI to interactively resolve a shortfall, so cap the
+        // applied loan deduction at what's actually available rather than
+        // allowing a negative net pay.
+        if ($result['loan_deduction'] > 0) {
+            $nonLoanDeductions = $result['total_deductions'] - $result['loan_deduction'];
+            $availableForLoan = max(0, $result['gross_earnings'] - $nonLoanDeductions);
+
+            if ($result['loan_deduction'] > $availableForLoan) {
+                Log::channel('daily')->warning('Loan Deduction Capped During Bulk Generation (dynamic engine)', [
+                    'employee_id' => $employee->id,
+                    'month' => $yearMonth,
+                    'due' => $result['loan_deduction'],
+                    'capped_to' => $availableForLoan,
+                ]);
+
+                $cappedLoan = round($availableForLoan, 2);
+                $result['total_deductions'] = round($nonLoanDeductions + $cappedLoan, 2);
+                $result['net_payable'] = round($result['gross_earnings'] - $result['total_deductions'], 2);
+                $result['loan_deduction'] = $cappedLoan;
+
+                foreach ($result['line_items'] as &$li) {
+                    if ($li['code'] === 'loan_deduction') {
+                        $li['amount'] = $cappedLoan;
+                    }
+                }
+                unset($li);
+            }
+        }
+
+        $context = $result['context'];
+        $earnings = collect($result['line_items'])->where('component_type', 'earning')->keyBy('code');
+        $deductions = collect($result['line_items'])->where('component_type', 'deduction')->keyBy('code');
+        $employer = collect($result['line_items'])->where('component_type', 'employer_contribution')->keyBy('code');
+
+        $earningColumnMap = [
+            'basic' => 'basic_salary', 'hra' => 'hra', 'conveyance' => 'conveyence',
+            'medical_allowance' => 'medical_allowance', 'children_allowance' => 'children_allowance',
+            'post_allowance' => 'post_allowance', 'leave_travel_allowance' => 'leave_travel_allowance',
+            'monthly_incentive' => 'monthly_incentive', 'special_allowance' => 'special_allowance',
+        ];
+        $deductionColumnMap = [
+            'pf_employee' => 'provident_fund', 'esi_employee' => 'esi',
+            'pt' => 'professional_tax', 'tds' => 'tds',
+        ];
+        $employerColumnMap = [
+            'pf_employer' => 'employer_provident_fund', 'esi_employer' => 'employer_esi',
+        ];
+
+        $columns = [
+            'user_id' => $employee->id,
+            'employee_payroll_id' => optional($employee->currentPayroll)->id, // may be null -- a dynamic-only assignment has no legacy UserPayroll row
+            'payroll_run_id' => $payrollRunId,
+            'engine_version' => 'dynamic_v1',
+            'payroll_month' => $yearMonth,
+            'processing_date' => now(),
+            'total_working_days' => (int) round($context['calendar_days']),
+            'payable_days' => $context['payable_days'],
+            'present_days' => (int) round($context['present_days']),
+            'half_days' => $context['half_days'],
+            'absent_days' => (int) round($context['absent_days']),
+            'paid_leaves' => $context['paid_leave_days'],
+            'unpaid_leaves' => $context['unpaid_leave_days'],
+            'holidays' => (int) round($context['holidays']),
+            'week_offs' => (int) round($context['week_offs']),
+            'overtime_hours' => $context['approved_overtime_hours'],
+            'actual_worked_hours' => $context['actual_worked_hours'],
+            'loan_deduction' => $result['loan_deduction'],
+            'loan_deduction_enabled' => $includeLoanDeductions,
+            'loan_deduction_computed' => $result['loan_deduction_due'],
+            'gross_earnings' => $result['gross_earnings'],
+            'total_deductions' => $result['total_deductions'],
+            'net_payable' => $result['net_payable'],
+            'payment_status' => 'pending',
+            'processed_by' => Auth::id(),
+            'remarks' => 'Processed via dynamic payroll engine (Phase 8).',
+        ];
+
+        foreach ($earningColumnMap as $code => $column) {
+            $columns[$column] = round((float) optional($earnings->get($code))['amount'], 2) ?: 0;
+        }
+        foreach ($deductionColumnMap as $code => $column) {
+            $columns[$column] = round((float) optional($deductions->get($code))['amount'], 2) ?: 0;
+        }
+        foreach ($employerColumnMap as $code => $column) {
+            $columns[$column] = round((float) optional($employer->get($code))['amount'], 2) ?: 0;
+        }
+
+        $monthlyPayroll = MonthlyPayroll::create($columns);
+
+        // Payslip line-item log — every component (including ones with no
+        // fixed column, like arrears/bonus or a custom admin-created one)
+        // shows up via the existing "additional components" section the
+        // payslip views already render. employer_contribution lines are
+        // skipped here (the legacy component_type enum only allows
+        // earning/deduction) since they're already fully represented by the
+        // employer_provident_fund/employer_esi fixed columns above.
+        foreach ($result['line_items'] as $li) {
+            if (! in_array($li['component_type'], ['earning', 'deduction', 'reimbursement'], true)) {
+                continue;
+            }
+
+            PayrollComponent::create([
+                'monthly_payroll_id' => $monthlyPayroll->id,
+                'component_name' => $li['name'],
+                'component_type' => $li['component_type'] === 'deduction' ? 'deduction' : 'earning',
+                'amount' => $li['amount'],
+                'is_taxable' => $li['is_taxable'],
+            ]);
+        }
+
+        if ($includeLoanDeductions && $result['loan_deduction'] > 0) {
+            $this->updateLoanRepayments($employee->id, $yearMonth, $result['loan_deduction'], $tenantId, $monthlyPayroll->id);
+        }
+
+        // Now that this payslip is actually persisted, close the loop from
+        // Phase 6: mark whatever arrears/bonus rows it just paid out.
+        \App\Models\PayrollArrears::where('tenant_id', $tenantId)
+            ->where('user_id', $employee->id)
+            ->where('status', 'pending')
+            ->update(['status' => 'included_in_payroll', 'target_monthly_payroll_id' => $monthlyPayroll->id]);
+
+        $period = \App\Models\PayrollPeriod::where('tenant_id', $tenantId)->where('year_month', $yearMonth)->first();
+        if ($period) {
+            \App\Models\PayrollBonus::where('tenant_id', $tenantId)
+                ->where('user_id', $employee->id)
+                ->where('status', 'approved')
+                ->where('target_payroll_period_id', $period->id)
+                ->update(['status' => 'included_in_payroll']);
         }
 
         return $monthlyPayroll;
@@ -693,7 +984,7 @@ class MonthlyPayrollController extends Controller
             $attendanceObj->scheduled_shift_end = $row->scheduled_shift_end;
             
             // Use shift-based status calculation
-            $status = $this->getAttendanceStatusByShift($hours, $attendanceObj);
+            $status = $this->getAttendanceStatusByShift($hours, $attendanceObj, $tenantId, $dateStr);
             
             if ($status === 'Present') {
                 $attendanceSet[$dateStr] = 'present';
@@ -706,8 +997,24 @@ class MonthlyPayrollController extends Controller
         // ------------------------------------------------------------------
         // Step 2 -- Approved leaves via raw SQL (tenant_id scoped)
         // ------------------------------------------------------------------
-        $unpaidLeaveTypeIds = [3]; // keep as-is per project requirement
-     
+        // Tenant-configurable unpaid-leave detection: leave_types.is_unpaid,
+        // backfilled from the code='lwp' marker (see
+        // 2026_09_12_201126_add_is_unpaid_to_leave_types_table). Replaces the
+        // old `$unpaidLeaveTypeIds = [3]` hardcode, which only ever matched
+        // one specific tenant's LWP row and silently misclassified every
+        // other tenant's unpaid leave as paid.
+        $unpaidLeaveTypeIds = LeaveType::where('tenant_id', $tenantId)
+            ->where('is_unpaid', true)
+            ->pluck('id')
+            ->all();
+
+        if (empty($unpaidLeaveTypeIds)) {
+            throw new \Exception(
+                'No leave type is configured as unpaid (Leave Without Pay) for this company. ' .
+                'Please mark the correct leave type as unpaid in Leave Type settings before running payroll.'
+            );
+        }
+
         $leaveRows = DB::select("
             SELECT
                 DATE_FORMAT(start_date, '%Y-%m-%d') AS leave_start,
@@ -829,16 +1136,30 @@ class MonthlyPayrollController extends Controller
      
         // ------------------------------------------------------------------
         // Sandwich rule -- group consecutive non-working days and evaluate
-        // both boundaries. tenant_id scoped on the tenants lookup.
+        // both boundaries.
+        //
+        // BUG FIX: this used to run `SELECT sandwich FROM tenants`, but that
+        // column does not exist anywhere in the schema (confirmed via
+        // information_schema) -- the setting lives on attendance_policies
+        // (sandwich_leave) instead, resolved via the tenant-configurable
+        // PolicyResolver used elsewhere in the attendance module. The old
+        // query threw a QueryException on every single call, which was
+        // silently swallowed by store()'s per-employee try/catch -- meaning
+        // day-based payroll processing failed for every employee, every
+        // time, with the failure only visible as a per-employee error
+        // message an admin could easily miss.
         // ------------------------------------------------------------------
-        $sandwichRow = DB::selectOne(
-            'SELECT sandwich FROM tenants WHERE id = ? LIMIT 1',
-            [$tenantId]
-        );
-        $sandwichEnabled = $sandwichRow ? (bool) $sandwichRow->sandwich : true;
-     
+        $yearMonthForPolicy = Carbon::parse($startDate)->format('Y-m');
+        $sandwichEnabled = app(\App\Services\Attendance\PolicyResolver::class)
+            ->forTenantMonth((int) $tenantId, $yearMonthForPolicy)
+            ->sandwichLeave;
+
+        // 'paid_leave' counts as "worked" for this boundary check — the
+        // sandwich rule is meant to penalize unexplained absence flanking a
+        // weekoff/holiday, not compensated leave the employee was actually
+        // approved and paid for.
         $workedDates = array_keys(
-            array_filter($allDates, fn($t) => $t === 'present' || $t === 'half_day')
+            array_filter($allDates, fn($t) => $t === 'present' || $t === 'half_day' || $t === 'paid_leave')
         );
         $workedFlip = array_flip($workedDates);
      
@@ -922,10 +1243,28 @@ class MonthlyPayrollController extends Controller
         int    $userId,
         string $startDate,
         string $endDate,
-        ?int   $tenantId = null
+        ?int   $tenantId = null,
+        float  $stdHoursPerDay = 8.0
     ): array {
+        // Tier 2 / T2-E — source the figures from the one attested rollup so the
+        // payslip always matches the attendance module. Same return keys.
+        if (config('attendance.payroll_readthrough')) {
+            $yearMonth = Carbon::parse($startDate)->format('Y-m');
+            $pd = app(\App\Services\Attendance\PayrollDaysService::class)
+                ->forMonth($userId, $yearMonth, $tenantId);
+
+            return [
+                'present_days'        => $pd['present_days'] + ($pd['half_days'] * 0.5),
+                'full_days'           => (int) $pd['present_days'],
+                'half_days'           => (int) $pd['half_days'],
+                'absent_by_hours'     => (int) $pd['absent_days'],
+                'total_working_hours' => round($pd['actual_worked_hours'], 2),
+                'overtime_hours'      => round($pd['overtime_hours'], 2),
+            ];
+        }
+
         $rows = DB::select("
-            SELECT total_hours, worked_hours, scheduled_shift_start, scheduled_shift_end
+            SELECT DATE_FORMAT(date, '%Y-%m-%d') AS att_date, total_hours, worked_hours, scheduled_shift_start, scheduled_shift_end
             FROM   attendances
             WHERE  user_id   = ?
               AND  tenant_id = ?
@@ -938,7 +1277,6 @@ class MonthlyPayrollController extends Controller
         $absentByHours     = 0;
         $totalWorkingHours = 0.0;
         $overtimeHours     = 0.0;
-        $stdHoursPerDay    = 8.0;
 
         foreach ($rows as $row) {
             // Calculate total hours using worked_hours first
@@ -948,13 +1286,13 @@ class MonthlyPayrollController extends Controller
             } else {
                 $hours = $this->parseHours($row->total_hours ?? '0');
             }
-            
+
             // Create attendance object for shift-based calculation
             $attendanceObj = new \stdClass();
             $attendanceObj->scheduled_shift_start = $row->scheduled_shift_start;
             $attendanceObj->scheduled_shift_end = $row->scheduled_shift_end;
-            
-            $status = $this->getAttendanceStatusByShift($hours, $attendanceObj);
+
+            $status = $this->getAttendanceStatusByShift($hours, $attendanceObj, $tenantId, $row->att_date);
             
             if ($status === 'Present') {
                 $fullDays++;
@@ -982,155 +1320,48 @@ class MonthlyPayrollController extends Controller
     }
 
     // =========================================================================
-    // LOAN DEDUCTIONS -- raw SQL, tenant_id scoped
+    // LOAN DEDUCTIONS -- delegates to LoanDeductionService (EMI + lumpsum)
     // =========================================================================
 
     private function calculateLoanDeductions(int $userId, string $yearMonth, ?int $tenantId = null): float
     {
-        $activeLoans = DB::select("
-            SELECT id, loan_number
-            FROM   loans
-            WHERE  user_id          = ?
-              AND  tenant_id        = ?
-              AND  status           = 'active'
-              AND  repayment_type   = 'emi'
-              AND  remaining_amount > 0
-        ", [$userId, $tenantId]);
-
-        if (empty($activeLoans)) {
+        if (! $tenantId) {
             return 0.0;
         }
 
-        $totalDeduction   = 0.0;
-        $deductionsDetail = [];
-
-        foreach ($activeLoans as $loan) {
-            $repayment = DB::selectOne("
-                SELECT id, emi_amount
-                FROM   loan_repayments
-                WHERE  loan_id   = ?
-                  AND  tenant_id = ?
-                  AND  month     = ?
-                  AND  status    = 'pending'
-                LIMIT 1
-            ", [$loan->id, $tenantId, $yearMonth]);
-
-            if ($repayment) {
-                $totalDeduction     += $repayment->emi_amount;
-                $deductionsDetail[]  = [
-                    'loan_id'      => $loan->id,
-                    'loan_number'  => $loan->loan_number,
-                    'amount'       => $repayment->emi_amount,
-                    'repayment_id' => $repayment->id,
-                ];
-            }
-        }
-
-        if ($totalDeduction > 0) {
-            Log::channel('daily')->info('Loan Deductions Calculated', [
-                'user_id'         => $userId,
-                'month'           => $yearMonth,
-                'total_deduction' => $totalDeduction,
-                'details'         => $deductionsDetail,
-            ]);
-        }
-
-        return round($totalDeduction, 2);
+        return $this->loanDeductionService->totalDue($userId, $tenantId, $yearMonth);
     }
 
     /**
-     * Mark pending loan repayments as paid.
-     * NOTE: Do NOT open a new DB transaction here -- the caller already has one open.
-     *       All raw queries are tenant_id scoped.
+     * Applies $deductedAmount against this month's due loan installments
+     * (EMI and lumpsum both) via LoanDeductionService, oldest-due-first,
+     * full/partial per item. Does NOT open its own DB transaction -- the
+     * caller already has one open.
      */
-    private function updateLoanRepayments(int $userId, string $yearMonth, float $deductedAmount, ?int $tenantId = null): void
+    private function updateLoanRepayments(int $userId, string $yearMonth, float $deductedAmount, ?int $tenantId = null, ?int $monthlyPayrollId = null): void
     {
-        if ($deductedAmount <= 0) {
+        if ($deductedAmount <= 0 || ! $tenantId) {
             return;
         }
 
-        $pendingRepayments = DB::select("
-            SELECT lr.id, lr.emi_amount, lr.loan_id
-            FROM   loan_repayments lr
-            INNER JOIN loans l ON l.id = lr.loan_id
-            WHERE  l.user_id        = ?
-              AND  l.tenant_id      = ?
-              AND  l.status         = 'active'
-              AND  l.repayment_type = 'emi'
-              AND  lr.tenant_id     = ?
-              AND  lr.month         = ?
-              AND  lr.status        = 'pending'
-        ", [$userId, $tenantId, $tenantId, $yearMonth]);
+        $result = $this->loanDeductionService->applyDeduction(
+            $userId,
+            $tenantId,
+            $yearMonth,
+            $deductedAmount,
+            $monthlyPayrollId,
+            Auth::id()
+        );
 
-        if (empty($pendingRepayments)) {
-            return;
-        }
-
-        foreach ($pendingRepayments as $repayment) {
-            DB::update("
-                UPDATE loan_repayments
-                SET    status           = 'paid',
-                       paid_amount      = ?,
-                       paid_date        = ?,
-                       payment_mode     = 'salary_deduction',
-                       is_auto_deducted = 1,
-                       salary_month     = ?,
-                       remarks          = 'Auto deducted via payroll',
-                       processed_by     = ?
-                WHERE  id        = ?
-                  AND  tenant_id = ?
-            ", [$repayment->emi_amount, now(), $yearMonth, Auth::id(), $repayment->id, $tenantId]);
-
-            $loan = DB::selectOne("
-                SELECT id, loan_number, remaining_amount, loan_application_id
-                FROM   loans
-                WHERE  id        = ?
-                  AND  tenant_id = ?
-                LIMIT 1
-            ", [$repayment->loan_id, $tenantId]);
-
-            if (!$loan) {
-                continue;
-            }
-
-            $newRemaining = $loan->remaining_amount - $repayment->emi_amount;
-
-            DB::update("
-                UPDATE loans
-                SET    remaining_amount = ?
-                WHERE  id        = ?
-                  AND  tenant_id = ?
-            ", [max(0, $newRemaining), $loan->id, $tenantId]);
-
-            if ($newRemaining <= 0) {
-                DB::update("
-                    UPDATE loans
-                    SET    status      = 'closed',
-                           closed_date = ?
-                    WHERE  id        = ?
-                      AND  tenant_id = ?
-                ", [now(), $loan->id, $tenantId]);
-
-                if ($loan->loan_application_id) {
-                    DB::update("
-                        UPDATE loan_applications
-                        SET    status = 'closed'
-                        WHERE  id        = ?
-                          AND  tenant_id = ?
-                    ", [$loan->loan_application_id, $tenantId]);
-                }
-            }
-
+        if ($result['applied_total'] > 0) {
             Log::channel('daily')->info('Loan Repayment Processed', [
-                'user_id'     => $userId,
-                'loan_id'     => $loan->id,
-                'loan_number' => $loan->loan_number,
-                'amount'      => $repayment->emi_amount,
-                'remaining'   => $newRemaining,
-                'month'       => $yearMonth,
+                'user_id' => $userId,
+                'month' => $yearMonth,
+                'applied_total' => $result['applied_total'],
+                'shortfall' => $result['shortfall'],
+                'unapplied_excess' => $result['unapplied_excess'],
             ]);
         }
-        // Outer transaction in processEmployeeMonthlyPayroll handles commit/rollback
     }
 
     // =========================================================================
@@ -1274,6 +1505,84 @@ class MonthlyPayrollController extends Controller
         ", [$tenantId]);
     }
 
+    /**
+     * Single source of truth for the hourly rate used to price overtime, so
+     * the live edit-payroll preview can never drift from what generation
+     * actually persists. Mirrors the two branches inline above exactly:
+     *  - day_based:  (basic_salary / daysDivisor) / workingHoursPerDay
+     *  - hour_based: basic_salary / (workingDays * workingHoursPerDay)
+     *
+     * $divisorMode controls what "daysDivisor" means for day_based payroll
+     * only (hour_based already divides by actual working days, not calendar
+     * days, so it isn't affected): 'calendar_days' (default — the original,
+     * unchanged behavior) divides by the number of days in the month;
+     * 'fixed_working_days' divides by a fixed count ($fixedWorkingDays,
+     * commonly 26) instead, matching the statutory-OT-rate convention some
+     * tenants expect. Per-tenant, via payroll_masters.ot_rate_divisor_mode —
+     * defaults to 'calendar_days' for every existing master, so no tenant's
+     * computed OT rate changes unless they explicitly opt in.
+     */
+    private function overtimeHourlyRate(
+        float $basicSalary,
+        string $calculationType,
+        float $workingHoursPerDay,
+        int $calendarDays,
+        float $workingDays,
+        string $divisorMode = 'calendar_days',
+        int $fixedWorkingDays = 26
+    ): float {
+        if ($calculationType === 'hour_based') {
+            $expectedTotalHours = $workingDays * $workingHoursPerDay;
+
+            return $basicSalary / max(1, $expectedTotalHours);
+        }
+
+        $daysDivisor = $divisorMode === 'fixed_working_days'
+            ? max(1, $fixedWorkingDays)
+            : max(1, $calendarDays);
+
+        $dailyRate = $basicSalary / $daysDivisor;
+
+        return $dailyRate / max(1, $workingHoursPerDay);
+    }
+
+    /**
+     * Price a batch of overtime hours (any mix of just-approved / still-pending
+     * requests -- approval doesn't change the hours) at this payslip's real
+     * hourly rate × the tenant's overtime_settings.rate_multiplier. Shared by
+     * the Edit Payroll "non-approved overtime" preview and by update()'s
+     * server-side recompute after auto-approving, so both can never disagree.
+     */
+    private function overtimeAmountForHours(
+        float $hours,
+        ?UserPayroll $userPayroll,
+        string $payrollMonth,
+        $totalWorkingDaysBasis,
+        ?int $tenantId
+    ): array {
+        if ($hours <= 0 || !$userPayroll) {
+            return ['amount' => 0.0, 'rate' => 0.0];
+        }
+
+        $calcType = ($userPayroll->payrollMaster
+            && $userPayroll->payrollMaster->payroll_calculation_type === 'hour_based')
+            ? 'hour_based' : 'day_based';
+        $workingHoursPerDay = $userPayroll->payrollMaster->working_hours_per_day ?? 8;
+        $calendarDays = Carbon::createFromFormat('Y-m', $payrollMonth)->daysInMonth;
+        $workingDaysBasis = $totalWorkingDaysBasis ?: $calendarDays;
+
+        $hourlyRate = $this->overtimeHourlyRate(
+            $userPayroll->basic_salary, $calcType, $workingHoursPerDay, $calendarDays, $workingDaysBasis,
+            $userPayroll->payrollMaster->ot_rate_divisor_mode ?? 'calendar_days',
+            $userPayroll->payrollMaster->ot_fixed_working_days ?? 26
+        );
+        $overtimeSettings = $this->getOvertimeSettings($tenantId);
+        $rateMultiplier = (float) ($overtimeSettings->rate_multiplier ?? 1.5);
+        $rate = round($hourlyRate * $rateMultiplier, 2);
+
+        return ['amount' => round($hours * $rate, 2), 'rate' => $rate];
+    }
+
     // =========================================================================
     // EARNINGS & DEDUCTIONS
     // =========================================================================
@@ -1375,7 +1684,12 @@ class MonthlyPayrollController extends Controller
     {
         // Save earnings
         foreach ($earnings as $key => $amount) {
-            if ($amount > 0) {
+            // != 0, not > 0 -- a negative manual-adjustment component (e.g. a
+            // clawback) must still get its own line-item row, since the
+            // persisted totals (array_sum() over these same arrays) already
+            // include it regardless. Skipping it here would leave the
+            // line-item breakdown unable to reconcile to the persisted total.
+            if ($amount != 0) {
                 PayrollComponent::create([
                     'monthly_payroll_id' => $monthlyPayrollId,
                     'component_name'     => $this->formatComponentName($key),
@@ -1389,7 +1703,7 @@ class MonthlyPayrollController extends Controller
 
         // Save employee deductions (deducted from salary)
         foreach ($employeeDeductions as $key => $amount) {
-            if ($amount > 0 && !in_array($key, ['employer_pf', 'employer_esi'])) {
+            if ($amount != 0 && !in_array($key, ['employer_pf', 'employer_esi'])) {
                 PayrollComponent::create([
                     'monthly_payroll_id' => $monthlyPayrollId,
                     'component_name'     => $this->getDeductionName($key),
@@ -1403,7 +1717,7 @@ class MonthlyPayrollController extends Controller
 
         // Save employer contributions (INFORMATIONAL only - NOT deducted)
         foreach ($employerContributions as $key => $amount) {
-            if ($amount > 0) {
+            if ($amount != 0) {
                 PayrollComponent::create([
                     'monthly_payroll_id' => $monthlyPayrollId,
                     'component_name'     => $this->getEmployerContributionName($key),
@@ -1473,14 +1787,22 @@ class MonthlyPayrollController extends Controller
                 WHERE  user_id   = ?
                   AND  tenant_id = ?
                 LIMIT 1
-            ", [$monthlyPayroll->user_id, session('tenant_id')]);
+            ", [$monthlyPayroll->user_id, $this->currentTenantId()]);
             
             $userPayroll = $monthlyPayroll->user->payrolls()
                 ->where('is_current', 1)
                 ->where('status', 1)
                 ->first();
 
-            return view('client.payroll.monthly-payroll.show', compact('monthlyPayroll', 'bankDetails','userPayroll'));
+            // Policy alone only encodes the state precondition (not pending) --
+            // the show() route itself only requires payroll,view, so also gate
+            // on the same payroll,manage permission the reopen route enforces,
+            // otherwise the button would appear for a viewer who'd just get a
+            // permission-denied redirect on click.
+            $canReopen = auth()->user()->can('reopen', $monthlyPayroll)
+                && $this->rbacService->can(auth()->user(), 'payroll', 'manage');
+
+            return view('client.payroll.monthly-payroll.show', compact('monthlyPayroll', 'bankDetails', 'userPayroll', 'canReopen'));
         } catch (\Exception $e) {
             Log::error('Monthly payroll show error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Payroll record not found.');
@@ -1495,7 +1817,7 @@ class MonthlyPayrollController extends Controller
                 'user.payrolls' => fn($q) => $q->where('is_current', true),
             ])->findOrFail($id);
 
-            if ($monthlyPayroll->payment_status !== 'pending') {
+            if (auth()->user()->cannot('update', $monthlyPayroll)) {
                 return redirect()->route('monthly-payrolls.index')
                     ->with('error', 'Only pending payroll records can be edited.');
             }
@@ -1509,8 +1831,49 @@ class MonthlyPayrollController extends Controller
                 ->where('is_current', 1)
                 ->where('status', 1)
                 ->first();
-            
-            return view('client.payroll.monthly-payroll.edit', compact('monthlyPayroll', 'months','userPayroll'));
+
+            $loanDueItems = $this->loanDeductionService->dueItems(
+                $monthlyPayroll->user_id,
+                $monthlyPayroll->tenant_id,
+                $monthlyPayroll->payroll_month
+            );
+            $loanDueTotal = round($loanDueItems->sum('balance_due'), 2);
+
+            // ---- Overtime: approved breakdown + non-approved (pending) preview ----
+            [$otYear, $otMonth] = explode('-', $monthlyPayroll->payroll_month);
+
+            $approvedOvertimeRequests = OvertimeRequest::forMonth($otYear, $otMonth)
+                ->approved()
+                ->where('user_id', $monthlyPayroll->user_id)
+                ->orderBy('date')
+                ->get();
+
+            $pendingOvertimeRequests = OvertimeRequest::forMonth($otYear, $otMonth)
+                ->pending()
+                ->where('user_id', $monthlyPayroll->user_id)
+                ->orderBy('date')
+                ->get();
+
+            $canApproveOvertime = $this->rbacService->can(auth()->user(), 'overtime', 'approve');
+
+            $overtimeSettings = $this->getOvertimeSettings($monthlyPayroll->tenant_id);
+            $overtimeRateMultiplier = (float) ($overtimeSettings->rate_multiplier ?? 1.5);
+
+            $pendingOvertimeHours = round(
+                (float) $pendingOvertimeRequests->sum(fn ($r) => (float) $r->final_overtime_hours), 2
+            );
+            $pendingOvertimeCalc = $this->overtimeAmountForHours(
+                $pendingOvertimeHours, $userPayroll, $monthlyPayroll->payroll_month,
+                $monthlyPayroll->total_working_days, $monthlyPayroll->tenant_id
+            );
+            $pendingOvertimeRate = $pendingOvertimeCalc['rate'];
+            $pendingOvertimeAmount = $pendingOvertimeCalc['amount'];
+
+            return view('client.payroll.monthly-payroll.edit', compact(
+                'monthlyPayroll', 'months', 'userPayroll', 'loanDueItems', 'loanDueTotal',
+                'approvedOvertimeRequests', 'pendingOvertimeRequests', 'canApproveOvertime',
+                'overtimeRateMultiplier', 'pendingOvertimeRate', 'pendingOvertimeHours', 'pendingOvertimeAmount'
+            ));
         } catch (\Exception $e) {
             Log::error('Payroll edit error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Payroll record not found.');
@@ -1531,9 +1894,79 @@ class MonthlyPayrollController extends Controller
             'provident_fund'     => 'required|numeric|min:0',
             'esi'                => 'required|numeric|min:0',
             'professional_tax'   => 'required|numeric|min:0',
+            'tds'                => 'nullable|numeric|min:0',
             'actual_worked_hours' => 'nullable|numeric|min:0',
             'remarks'            => 'nullable|string',
+            'loan_deduction'              => 'nullable|numeric|min:0',
+            'loan_deduction_enabled'      => 'nullable|boolean',
+            'confirm_negative_net_payable' => 'nullable|boolean',
+            'include_pending_overtime'    => 'nullable|boolean',
+            'pending_overtime_request_ids'   => 'nullable|array',
+            'pending_overtime_request_ids.*' => 'integer|exists:overtime_requests,id',
         ]);
+
+        // Preview (read-only) of the pending-overtime amount that would be
+        // auto-approved and folded into this payslip, so the negative-net-pay
+        // gate below sees the real total -- the actual approval + authoritative
+        // recompute happen again, for real, inside the transaction further down.
+        $pendingOvertimePreviewAmount = 0.0;
+        if ($request->boolean('include_pending_overtime')) {
+            $mpForPreview = MonthlyPayroll::find($id);
+            if ($mpForPreview) {
+                $requestedIdsForPreview = array_map('intval', (array) $request->input('pending_overtime_request_ids', []));
+                [$pyYear, $pyMonth] = explode('-', $mpForPreview->payroll_month);
+                $eligiblePreview = OvertimeRequest::forMonth($pyYear, $pyMonth)
+                    ->pending()
+                    ->where('user_id', $mpForPreview->user_id)
+                    ->where('tenant_id', $mpForPreview->tenant_id)
+                    ->whereIn('id', $requestedIdsForPreview)
+                    ->get();
+                $previewUserPayroll = $mpForPreview->user->payrolls()
+                    ->where('is_current', 1)->where('status', 1)->first();
+                $previewHours = round((float) $eligiblePreview->sum(fn ($r) => (float) $r->final_overtime_hours), 2);
+                $pendingOvertimePreviewAmount = $this->overtimeAmountForHours(
+                    $previewHours, $previewUserPayroll, $mpForPreview->payroll_month,
+                    $mpForPreview->total_working_days, $mpForPreview->tenant_id
+                )['amount'];
+            }
+        }
+
+        // Computed here (not just inside the try block) so the
+        // negative-net-pay confirmation gate below can run as part of
+        // validation, before anything is persisted.
+        $grossEarningsPreview = (float) $request->basic_salary
+            + (float) $request->hra
+            + (float) $request->conveyence
+            + (float) $request->medical_allowance
+            + (float) ($request->children_allowance ?? 0)
+            + (float) ($request->post_allowance ?? 0)
+            + (float) ($request->leave_travel_allowance ?? 0)
+            + (float) ($request->monthly_incentive ?? 0)
+            + (float) ($request->special_allowance ?? 0)
+            + (float) ($request->overtime_amount ?? 0)
+            + $pendingOvertimePreviewAmount;
+
+        $loanDeductionEnabled = $request->boolean('loan_deduction_enabled', true);
+        $requestedLoanDeduction = $loanDeductionEnabled ? (float) ($request->loan_deduction ?? 0) : 0.0;
+
+        $totalDeductionsPreview = (float) $request->provident_fund
+            + (float) $request->esi
+            + (float) $request->professional_tax
+            + (float) ($request->tds ?? 0)
+            + $requestedLoanDeduction
+            + (float) ($request->other_deductions ?? 0);
+
+        $netPayablePreview = round($grossEarningsPreview - $totalDeductionsPreview, 2);
+
+        $validator->after(function ($v) use ($request, $netPayablePreview) {
+            if ($netPayablePreview < 0 && ! $request->boolean('confirm_negative_net_payable')) {
+                $v->errors()->add(
+                    'loan_deduction',
+                    'Net payable would be ₹' . number_format($netPayablePreview, 2) . ' (negative). '
+                        . 'Reduce the loan deduction amount, or check "Proceed anyway" to confirm.'
+                );
+            }
+        });
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -1542,10 +1975,22 @@ class MonthlyPayrollController extends Controller
         try {
             DB::beginTransaction();
 
-            $monthlyPayroll = MonthlyPayroll::findOrFail($id);
+            // lockForUpdate() -- two concurrent saves of the same payslip
+            // (e.g. two admins with the edit page open at once) could
+            // otherwise interleave their component delete-then-recreate and
+            // loan-ledger resync, corrupting either.
+            $monthlyPayroll = MonthlyPayroll::lockForUpdate()->findOrFail($id);
 
-            if ($monthlyPayroll->payment_status !== 'pending') {
+            if (auth()->user()->cannot('update', $monthlyPayroll)) {
+                DB::rollBack();
+
                 return redirect()->back()->with('error', 'Only pending payroll records can be edited.');
+            }
+
+            if ($monthlyPayroll->tenant_id && app(\App\Services\Attendance\PeriodLockService::class)->isLocked($monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month)) {
+                DB::rollBack();
+
+                return redirect()->back()->with('error', $monthlyPayroll->payroll_month . ' is locked. Reopen the period before editing this payroll.');
             }
 
             // Check if hour-based
@@ -1554,8 +1999,58 @@ class MonthlyPayrollController extends Controller
                 ->where('status', 1)
                 ->first();
                 
-            $isHourBased = $userPayroll && $userPayroll->payrollMaster 
+            $isHourBased = $userPayroll && $userPayroll->payrollMaster
                 && $userPayroll->payrollMaster->payroll_calculation_type === 'hour_based';
+
+            // ---- Overtime: the "approved" hours/amount inputs stay exactly
+            // what the payroll editor typed (fully editable, unchanged
+            // behavior). If they opted to include non-approved overtime,
+            // re-verify permission + the request IDs server-side (never trust
+            // the checkbox/IDs from the client alone), auto-approve exactly
+            // those requests via the same bulk-approve path the Overtime page
+            // uses, and fold the *server-computed* delta on top. ----
+            $overtimeHours  = (float) ($request->overtime_hours ?? 0);
+            $overtimeAmount = (float) ($request->overtime_amount ?? 0);
+
+            if ($request->boolean('include_pending_overtime')) {
+                $requestedOvertimeIds = array_map('intval', (array) $request->input('pending_overtime_request_ids', []));
+                [$otYear, $otMonth] = explode('-', $monthlyPayroll->payroll_month);
+                $eligibleOvertimeIds = OvertimeRequest::forMonth($otYear, $otMonth)
+                    ->pending()
+                    ->where('user_id', $monthlyPayroll->user_id)
+                    ->where('tenant_id', $monthlyPayroll->tenant_id)
+                    ->whereIn('id', $requestedOvertimeIds)
+                    ->pluck('id')
+                    ->all();
+
+                if (!empty($eligibleOvertimeIds)) {
+                    $approvalResult = $this->overtimeApprovalService->bulkApprove(
+                        auth()->user(), $monthlyPayroll->tenant_id, $eligibleOvertimeIds
+                    );
+
+                    if (!$approvalResult['authorized']) {
+                        DB::rollBack();
+
+                        return redirect()->back()
+                            ->with('error', 'You do not have permission to approve overtime requests.')
+                            ->withInput();
+                    }
+
+                    if ($approvalResult['approved_count'] > 0) {
+                        $newlyApproved = OvertimeRequest::whereIn('id', $approvalResult['approved_ids'])->get();
+                        $newlyApprovedHours = round(
+                            (float) $newlyApproved->sum(fn ($r) => (float) $r->final_overtime_hours), 2
+                        );
+                        $newlyApprovedCalc = $this->overtimeAmountForHours(
+                            $newlyApprovedHours, $userPayroll, $monthlyPayroll->payroll_month,
+                            $monthlyPayroll->total_working_days, $monthlyPayroll->tenant_id
+                        );
+
+                        $overtimeHours  += $newlyApprovedHours;
+                        $overtimeAmount += $newlyApprovedCalc['amount'];
+                    }
+                }
+            }
 
             $grossEarnings = $request->basic_salary
                 + $request->hra
@@ -1566,21 +2061,28 @@ class MonthlyPayrollController extends Controller
                 + ($request->leave_travel_allowance ?? 0)
                 + ($request->monthly_incentive     ?? 0)
                 + ($request->special_allowance     ?? 0)
-                + ($request->overtime_amount       ?? 0);
+                + $overtimeAmount;
 
             $totalDeductions = $request->provident_fund
                 + $request->esi
                 + $request->professional_tax
-                + ($request->loan_deduction   ?? 0)
+                + ($request->tds ?? 0)
+                + $requestedLoanDeduction
                 + ($request->other_deductions ?? 0);
 
             $netPayable = $grossEarnings - $totalDeductions;
+
+            $loanDueTotal = $this->loanDeductionService->totalDue(
+                $monthlyPayroll->user_id,
+                $monthlyPayroll->tenant_id,
+                $monthlyPayroll->payroll_month
+            );
 
             $updateData = [
                 'payroll_month'          => $request->payroll_month,
                 'present_days'           => $request->present_days,
                 'paid_leaves'            => $request->paid_leaves           ?? 0,
-                'overtime_hours'         => $request->overtime_hours        ?? 0,
+                'overtime_hours'         => $overtimeHours,
                 'basic_salary'           => $request->basic_salary,
                 'hra'                    => $request->hra,
                 'conveyence'             => $request->conveyence,
@@ -1590,11 +2092,14 @@ class MonthlyPayrollController extends Controller
                 'leave_travel_allowance' => $request->leave_travel_allowance ?? 0,
                 'monthly_incentive'      => $request->monthly_incentive     ?? 0,
                 'special_allowance'      => $request->special_allowance     ?? 0,
-                'overtime_amount'        => $request->overtime_amount       ?? 0,
+                'overtime_amount'        => $overtimeAmount,
                 'provident_fund'         => $request->provident_fund,
                 'esi'                    => $request->esi,
                 'professional_tax'       => $request->professional_tax,
-                'loan_deduction'         => $request->loan_deduction        ?? 0,
+                'tds'                    => $request->tds ?? 0,
+                'loan_deduction'         => $requestedLoanDeduction,
+                'loan_deduction_enabled' => $loanDeductionEnabled,
+                'loan_deduction_computed' => $loanDueTotal,
                 'other_deductions'       => $request->other_deductions      ?? 0,
                 'gross_earnings'         => $grossEarnings,
                 'total_deductions'       => $totalDeductions,
@@ -1623,14 +2128,15 @@ class MonthlyPayrollController extends Controller
                 'lta'        => $request->leave_travel_allowance ?? 0,
                 'incentive'  => $request->monthly_incentive     ?? 0,
                 'special'    => $request->special_allowance     ?? 0,
-                'overtime'   => $request->overtime_amount       ?? 0,
+                'overtime'   => $overtimeAmount,
             ];
 
             $employeeDeductions = [
                 'pf'    => $request->provident_fund,
                 'esi'   => $request->esi,
                 'pt'    => $request->professional_tax,
-                'loan'  => $request->loan_deduction   ?? 0,
+                'tds'   => $request->tds ?? 0,
+                'loan'  => $requestedLoanDeduction,
                 'other' => $request->other_deductions ?? 0,
             ];
 
@@ -1640,6 +2146,23 @@ class MonthlyPayrollController extends Controller
             ];
 
             $this->savePayrollComponents($id, $earnings, $employeeDeductions, $employerContributions);
+
+            // Sync the loan ledger to match what was actually saved on this
+            // payslip -- idempotent (applyDeduction()/revokeForPayroll()
+            // both first reverse whatever this monthly_payroll_id previously
+            // applied), so re-editing and resaving never double-deducts.
+            if ($loanDeductionEnabled && $requestedLoanDeduction > 0) {
+                $this->loanDeductionService->applyDeduction(
+                    $monthlyPayroll->user_id,
+                    $monthlyPayroll->tenant_id,
+                    $monthlyPayroll->payroll_month,
+                    $requestedLoanDeduction,
+                    $monthlyPayroll->id,
+                    Auth::id()
+                );
+            } else {
+                $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $monthlyPayroll->tenant_id);
+            }
 
             DB::commit();
 
@@ -1659,12 +2182,23 @@ class MonthlyPayrollController extends Controller
         try {
             $monthlyPayroll = MonthlyPayroll::findOrFail($id);
 
-            if ($monthlyPayroll->payment_status !== 'pending') {
+            if (auth()->user()->cannot('delete', $monthlyPayroll)) {
                 return redirect()->back()
                     ->with('error', 'Cannot delete payroll that is already ' . $monthlyPayroll->payment_status);
             }
 
+            $tenantId = $monthlyPayroll->tenant_id;
+            if ($tenantId && app(\App\Services\Attendance\PeriodLockService::class)->isLocked($tenantId, $monthlyPayroll->payroll_month)) {
+                return redirect()->back()
+                    ->with('error', $monthlyPayroll->payroll_month . ' is locked. Reopen the period before deleting this payroll.');
+            }
+
             DB::beginTransaction();
+            // Reverse whatever loan-ledger allocation this payslip applied --
+            // otherwise the loan_repayments row is left orphaned (FK nulled by
+            // the cascade below) while still marked paid, permanently
+            // desyncing the loan balance from any surviving payslip.
+            $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $tenantId);
             PayrollComponent::where('monthly_payroll_id', $id)->delete();
             $monthlyPayroll->delete();
             DB::commit();
@@ -1675,6 +2209,67 @@ class MonthlyPayrollController extends Controller
             DB::rollBack();
             Log::error('Delete payroll error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to delete payroll: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Payroll Audit Phase 3 — H8. Deliberate, audited alternative to the
+     * unrestricted force_reprocess bypass (C4) for correcting a
+     * processed/paid payslip: flips payment_status back to 'pending' so the
+     * normal, already-policy-gated edit()/update() flow becomes available
+     * again. Nothing else needs to change here -- update() already
+     * idempotently resyncs the loan ledger and re-validates any OT
+     * auto-approval on every save, so the actual correction is handled
+     * correctly by the existing edit flow once this unlocks it.
+     */
+    public function reopen(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string|min:5|max:500',
+        ]);
+
+        try {
+            $monthlyPayroll = MonthlyPayroll::findOrFail($id);
+
+            if (auth()->user()->cannot('reopen', $monthlyPayroll)) {
+                return redirect()->back()->with(
+                    'error',
+                    $monthlyPayroll->payment_status === 'pending'
+                        ? 'This payroll is already pending -- nothing to reopen.'
+                        : 'You do not have permission to reopen this payroll for correction.'
+                );
+            }
+
+            $tenantId = $monthlyPayroll->tenant_id;
+            if ($tenantId && app(\App\Services\Attendance\PeriodLockService::class)->isLocked($tenantId, $monthlyPayroll->payroll_month)) {
+                return redirect()->back()
+                    ->with('error', $monthlyPayroll->payroll_month . ' is locked. Reopen the period before reopening this payroll for correction.');
+            }
+
+            $previousStatus = $monthlyPayroll->payment_status;
+
+            DB::beginTransaction();
+            $monthlyPayroll->update(['payment_status' => 'pending']);
+
+            PayrollAuditLog::create([
+                'tenant_id' => $tenantId,
+                'auditable_type' => MonthlyPayroll::class,
+                'auditable_id' => $monthlyPayroll->id,
+                'action' => 'reopened',
+                'actor_id' => Auth::id(),
+                'old_values' => ['payment_status' => $previousStatus],
+                'new_values' => ['payment_status' => 'pending', 'reason' => $request->reason],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+            DB::commit();
+
+            return redirect()->route('monthly-payrolls.edit', $id)
+                ->with('success', 'Payroll reopened for correction -- make your changes and save.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Reopen payroll error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to reopen payroll: ' . $e->getMessage());
         }
     }
 
@@ -1714,10 +2309,37 @@ class MonthlyPayrollController extends Controller
 
             $monthlyPayroll->update($updateData);
 
+            $this->maybeLockPeriod($monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month, $request->payment_status);
+
             return redirect()->back()->with('success', 'Payment status updated successfully.');
         } catch (\Exception $e) {
             Log::error('Update status error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update status: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Tier 2 / T2-E — freeze a tenant's attendance for a month once its payroll
+     * is processed or paid, so later edits require an explicit override.
+     */
+    private function maybeLockPeriod(?int $tenantId, ?string $payrollMonth, string $status): void
+    {
+        if (! config('attendance.period_autolock') || ! $tenantId || ! $payrollMonth) {
+            return;
+        }
+        if (! in_array($status, ['processed', 'paid'], true)) {
+            return;
+        }
+
+        try {
+            app(\App\Services\Attendance\PeriodLockService::class)
+                ->lock((int) $tenantId, $payrollMonth, \Illuminate\Support\Facades\Auth::id(), 'Payroll ' . $status);
+            event(new \App\Events\AttendanceDomainEvent('attendance.month_finalised', (int) $tenantId, [
+                'year_month' => $payrollMonth,
+                'reason' => 'payroll ' . $status,
+            ]));
+        } catch (\Throwable $e) {
+            Log::warning('maybeLockPeriod failed: ' . $e->getMessage());
         }
     }
 
@@ -1741,9 +2363,16 @@ class MonthlyPayrollController extends Controller
                 $updateData['payment_date'] = now();
             }
 
+            $affected = MonthlyPayroll::whereIn('id', $request->ids)
+                ->get(['tenant_id', 'payroll_month'])->unique(fn ($r) => $r->tenant_id . $r->payroll_month);
+
             MonthlyPayroll::whereIn('id', $request->ids)->update($updateData);
 
             DB::commit();
+
+            foreach ($affected as $row) {
+                $this->maybeLockPeriod($row->tenant_id, $row->payroll_month, $request->payment_status);
+            }
 
             return response()->json([
                 'success' => true,
@@ -1766,7 +2395,7 @@ class MonthlyPayrollController extends Controller
     public function generatePayslip($id)
     {
         try {
-            $tenantId       = session('tenant_id');
+            $tenantId       = $this->currentTenantId();
             $monthlyPayroll = MonthlyPayroll::with([
                 'user',
                 'user.basicDetails',
@@ -1804,48 +2433,6 @@ class MonthlyPayrollController extends Controller
         } catch (\Exception $e) {
             Log::error('Generate payslip error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to generate payslip: ' . $e->getMessage());
-        }
-    }
-
-    public function viewPayslip($id)
-    {
-        try {
-            $monthlyPayroll = MonthlyPayroll::with([
-                'user',
-                'user.basicDetails',
-                'user.jobDetails.department',
-                'user.jobDetails.designation',
-                'components',
-                'payrollMaster',
-            ])->findOrFail($id);
-
-            $bankDetails = DB::selectOne("
-                SELECT *
-                FROM   user_bank_details
-                WHERE  user_id   = ?
-                  AND  tenant_id = ?
-                LIMIT 1
-            ", [$monthlyPayroll->user_id, session('tenant_id')]);
-
-            $company = [
-                'name'     => config('app.name'),
-                'address'  => 'Your Company Address',
-                'location' => 'Your Location',
-                'logo'     => public_path('assets/images/logo.png'),
-            ];
-
-            $pdf = Pdf::loadView('client.payroll.monthly-payroll.pdf-payslip', [
-                'monthlyPayroll' => $monthlyPayroll,
-                'bankDetails'    => $bankDetails,
-                'company'        => $company,
-            ]);
-
-            $pdf->setPaper('A4', 'portrait');
-
-            return $pdf->stream('payslip.pdf');
-        } catch (\Exception $e) {
-            Log::error('View payslip error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to view payslip: ' . $e->getMessage());
         }
     }
 
@@ -1927,10 +2514,7 @@ class MonthlyPayrollController extends Controller
                 'processor',
             ])->findOrFail($id);
 
-            if (
-                $authUser->id !== $monthlyPayroll->user_id
-                && !in_array($authUser->role, ['admin', 'hr'])
-            ) {
+            if (!$this->scopeCoversOwner($authUser, 'payroll', 'view', $monthlyPayroll->user_id)) {
                 abort(403, 'Unauthorized access.');
             }
 
@@ -1945,11 +2529,11 @@ class MonthlyPayrollController extends Controller
                 WHERE  user_id   = ?
                   AND  tenant_id = ?
                 LIMIT 1
-            ", [$monthlyPayroll->user_id, session('tenant_id')]);
+            ", [$monthlyPayroll->user_id, $this->currentTenantId()]);
 
             $company = DB::selectOne("
                 SELECT * FROM tenants WHERE id = ? LIMIT 1
-            ", [session('tenant_id')]);
+            ", [$this->currentTenantId()]);
 
             $pdf = Pdf::loadView('client.payroll.monthly-payroll.pdf', [
                 'monthlyPayroll'  => $monthlyPayroll,
@@ -1984,10 +2568,7 @@ class MonthlyPayrollController extends Controller
                 'processor',
             ])->findOrFail($id);
 
-            if (
-                $authUser->id !== $monthlyPayroll->user_id
-                && !in_array($authUser->role, ['admin', 'hr'])
-            ) {
+            if (!$this->scopeCoversOwner($authUser, 'payroll', 'view', $monthlyPayroll->user_id)) {
                 abort(403, 'Unauthorized access.');
             }
 
@@ -2002,11 +2583,11 @@ class MonthlyPayrollController extends Controller
                 WHERE  user_id   = ?
                   AND  tenant_id = ?
                 LIMIT 1
-            ", [$monthlyPayroll->user_id, session('tenant_id')]);
+            ", [$monthlyPayroll->user_id, $this->currentTenantId()]);
 
             $company = DB::selectOne("
                 SELECT * FROM tenants WHERE id = ? LIMIT 1
-            ", [session('tenant_id')]);
+            ", [$this->currentTenantId()]);
 
             $pdf = Pdf::loadView('client.payroll.monthly-payroll.pdf', [
                 'monthlyPayroll'  => $monthlyPayroll,
@@ -2033,22 +2614,50 @@ class MonthlyPayrollController extends Controller
         try {
             $employeeIds  = $request->employee_ids;
             $payrollMonth = $request->payroll_month;
+            $includeLoans = $request->boolean('include_loans', true);
+            $tenantId     = $this->currentTenantId();
 
             $totalGross      = 0.0;
             $totalDeductions = 0.0;
+            $totalLoans      = 0.0;
+
+            // Anchor to the requested payroll month's end date, not "today",
+            // so previewing an estimate for a past/backfilled month reflects
+            // the salary structure actually in effect during that month.
+            $estimateAsOf = $payrollMonth
+                ? Carbon::parse($payrollMonth . '-01')->endOfMonth()->toDateString()
+                : now()->toDateString();
 
             $employees = User::whereIn('id', $employeeIds)
                 ->where('role', '!=', 'admin')
-                ->with(['currentPayroll' => fn($q) => $q->where('is_current', true)])
                 ->get();
 
             foreach ($employees as $employee) {
-                if ($employee->currentPayroll) {
-                    $payroll          = $employee->currentPayroll;
-                    $totalGross      += $payroll->gross_salary       ?? 0;
-                    $totalDeductions += ($payroll->provident_fund    ?? 0)
-                        + ($payroll->esi               ?? 0)
-                        + ($payroll->professional_tax  ?? 0);
+                $payroll = UserPayroll::forUser($employee->id)
+                    ->effective($estimateAsOf)
+                    ->orderByDesc('effective_from')
+                    ->first();
+
+                if ($payroll) {
+                    $grossForEmployee = (float) ($payroll->gross_salary ?? 0);
+                    $statutoryDeductions = (float) ($payroll->provident_fund ?? 0)
+                        + (float) ($payroll->esi ?? 0)
+                        + (float) ($payroll->professional_tax ?? 0);
+
+                    $loanForEmployee = 0.0;
+                    if ($includeLoans && $tenantId) {
+                        $loanDue = $this->loanDeductionService->totalDue($employee->id, $tenantId, $payrollMonth);
+                        // Same auto-cap policy bulk generation uses: never let
+                        // the estimate (or the eventual run) push an
+                        // employee's net pay negative -- there's no
+                        // per-employee UI in a bulk preview to ask them to
+                        // adjust it interactively the way Edit Payroll does.
+                        $loanForEmployee = min($loanDue, max(0, $grossForEmployee - $statutoryDeductions));
+                    }
+
+                    $totalGross      += $grossForEmployee;
+                    $totalDeductions += $statutoryDeductions + $loanForEmployee;
+                    $totalLoans      += $loanForEmployee;
                 }
             }
 
@@ -2056,6 +2665,7 @@ class MonthlyPayrollController extends Controller
                 'success'        => true,
                 'total_gross'    => $totalGross,
                 'total_deductions' => $totalDeductions,
+                'total_loans'    => $totalLoans,
                 'total_net'      => $totalGross - $totalDeductions,
                 'working_days'   => Carbon::createFromFormat('Y-m', $payrollMonth)->daysInMonth,
                 'proration_info' => 'Estimates are based on full-month gross. Actual values depend on attendance.',
@@ -2093,33 +2703,10 @@ class MonthlyPayrollController extends Controller
         }
     }
 
-    public function exportSimple(Request $request)
-    {
-        try {
-            $query = MonthlyPayroll::with(['user']);
-
-            if ($request->filled('month'))   $query->where('payroll_month',  $request->month);
-            if ($request->filled('status'))  $query->where('payment_status', $request->status);
-            if ($request->filled('user_id')) $query->where('user_id',        $request->user_id);
-
-            $payrolls = $query->orderBy('payroll_month', 'desc')
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            if ($payrolls->isEmpty()) {
-                return redirect()->back()->with('error', 'No records found to export with current filters.');
-            }
-
-            return $this->buildCsvResponse($payrolls, 'payroll_export_' . date('Y-m-d_His') . '.csv', false);
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to export: ' . $e->getMessage());
-        }
-    }
-
     /**
      * Build a CSV download response.
      * $detailed = true  -> full columns (used by bulk export with selected IDs)
-     * $detailed = false -> summary columns (used by filtered exportSimple)
+     * $detailed = false -> summary columns
      */
     private function buildCsvResponse($payrolls, string $filename, bool $detailed)
     {

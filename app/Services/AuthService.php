@@ -10,17 +10,33 @@ use Illuminate\Support\Facades\Log;
 class AuthService
 {
     public function __construct(
-        protected AuthRepositoryInterface $repo
+        protected AuthRepositoryInterface $repo,
+        protected LoginAttemptService $loginAttempts,
+        protected AuthAuditService $audit
     ) {
     }
 
     public function login($employeeId, $password, $fcmToken = null, $deviceId = null, $platform = null)
     {
-       
+        $tenantId = app()->bound('current_tenant') ? app('current_tenant')->id : null;
+
+        // Consecutive-failure lockout, independent of the route-level
+        // throttle:login rate limit — see LoginAttemptService docblock.
+        if ($this->loginAttempts->isLockedOut($employeeId)) {
+            $this->audit->logAccountLockout($tenantId, $employeeId);
+
+            return [
+                'success' => false,
+                'message' => $this->loginAttempts->lockoutMessage($employeeId),
+            ];
+        }
+
         $user = $this->repo->findByEmployeeId($employeeId);
-         
+
         if (!$user) {
-          
+            $this->loginAttempts->recordFailure($employeeId);
+            $this->audit->logLoginFailed($tenantId, $employeeId);
+
             return [
                 'success' => false,
                 'message' => 'Employee not found.'
@@ -34,6 +50,9 @@ class AuthService
         }
 
         if (!Hash::check($password, $user->password)) {
+            $this->loginAttempts->recordFailure($employeeId);
+            $this->audit->logLoginFailed($tenantId, $employeeId);
+
             return [
                 'success' => false,
                 'message' => 'Invalid password.'
@@ -46,13 +65,25 @@ class AuthService
                 'message' => 'Account is inactive.'
             ];
         }
-        
+
+        $this->loginAttempts->clear($employeeId);
+        $this->audit->logLoginSuccess($user->id, $user->tenant_id);
+
         // Generate token using JWT
         $token = auth('api')->login($user);
         if ($fcmToken) {
             $this->storeFcmToken($user, $fcmToken, $deviceId, $platform);
         }
-        // $user->last_login_token = $token;
+
+        // Single-device-login: a fresh device token is issued on every login
+        // and persisted here; CheckSingleDeviceLogin compares this against
+        // the client's Device-Token header on every subsequent request, so
+        // logging in on a new device invalidates any other active session.
+        // The response's `last_login_token` field below is what the client
+        // is expected to store and echo back.
+        $user->last_login_token = \Illuminate\Support\Str::random(60);
+        $user->save();
+
         Auth::login($user);
         return [
             'success' => true,

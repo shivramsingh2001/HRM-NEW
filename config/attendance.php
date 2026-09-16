@@ -40,4 +40,48 @@ return [
     */
     'overtime_after_hours' => env('ATTENDANCE_OVERTIME_AFTER_HOURS', 9),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Async downstream recompute (Tier 1 / W2)
+    |--------------------------------------------------------------------------
+    |
+    | When true, a write through AttendanceEntryService no longer runs the
+    | late-policy + monthly-summary recompute inside the request — it queues
+    | RecalculateAttendanceMonth instead and stamps attendance_summaries.stale_at.
+    | Requires a running queue worker on the "attendance" queue. Leave false
+    | until that worker exists; the summary read path self-heals stale rows.
+    |
+    */
+    'async_recompute' => env('ATTENDANCE_ASYNC_RECOMPUTE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Monthly-summary read-through (Tier 1 / W3)
+    |--------------------------------------------------------------------------
+    |
+    | When true, screens that show a monthly rollup read the persisted
+    | attendance_summaries row (via AttendanceSummaryService::getMonthly) instead
+    | of recomputing from raw rows on every request. Output keys are unchanged.
+    | Leave false until `php artisan attendance:summary-diff` confirms parity.
+    |
+    */
+    'summary_readthrough' => env('ATTENDANCE_SUMMARY_READTHROUGH', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payroll attendance read-through + period lock (Tier 2 / T2-E)
+    |--------------------------------------------------------------------------
+    |
+    | payroll_readthrough: monthly payroll sources its attendance figures from
+    |   AttendanceSummaryService::getMonthly (via PayrollDaysService) instead of
+    |   its own raw-SQL recompute. Same return keys. Validate with
+    |   `php artisan attendance:payroll-days-diff` before enabling.
+    |
+    | period_autolock: when a MonthlyPayroll row moves to processed/paid, lock
+    |   that tenant+month so attendance edits require an explicit override.
+    |
+    */
+    'payroll_readthrough' => env('ATTENDANCE_PAYROLL_READTHROUGH', false),
+    'period_autolock' => env('ATTENDANCE_PERIOD_AUTOLOCK', false),
+
 ];

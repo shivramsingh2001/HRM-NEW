@@ -14,12 +14,15 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\AttendanceRegularizationNotificationService;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 use Carbon\Carbon;
 use Exception;
 
 class AttendanceRegularizationController extends Controller
 {
-    
+    use AuthorizesByScope;
+
      /**
      * @var AttendanceRegularizationNotificationService
      */
@@ -95,10 +98,10 @@ class AttendanceRegularizationController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'request_type' => 'required|in:missed_punch_in,missed_punch_out,wrong_punch_time,attendance',
+            'request_type' => 'required|in:in_time,out_time,both,full_day,wfh_not_marked,technical_issue',
             'date' => 'required|date|before_or_equal:today',
-            'in_time' => 'required_if:request_type,missed_punch_in,wrong_punch_time|nullable|date_format:H:i',
-            'out_time' => 'required_if:request_type,missed_punch_out,wrong_punch_time|nullable|date_format:H:i',
+            'in_time' => 'required_if:request_type,in_time,both|nullable|date_format:H:i',
+            'out_time' => 'required_if:request_type,out_time,both|nullable|date_format:H:i',
             'reason' => 'required|string|min:10|max:1000',
             'file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048'
         ], [
@@ -217,10 +220,10 @@ class AttendanceRegularizationController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'request_type' => 'required|in:missed_punch_in,missed_punch_out,wrong_punch_time,attendance',
+            'request_type' => 'required|in:in_time,out_time,both,full_day,wfh_not_marked,technical_issue',
             'date' => 'required|date|before_or_equal:today',
-            'in_time' => 'required_if:request_type,missed_punch_in,wrong_punch_time|nullable|date_format:H:i',
-            'out_time' => 'required_if:request_type,missed_punch_out,wrong_punch_time|nullable|date_format:H:i',
+            'in_time' => 'required_if:request_type,in_time,both|nullable|date_format:H:i',
+            'out_time' => 'required_if:request_type,out_time,both|nullable|date_format:H:i',
             'reason' => 'required|string|min:10|max:1000',
             'file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048'
         ]);
@@ -266,6 +269,7 @@ class AttendanceRegularizationController extends Controller
             }
 
             // Handle file upload
+            $filePath = null;
             if ($request->hasFile('file')) {
                 // Delete old file
                 if ($regularization->file) {
@@ -279,13 +283,17 @@ class AttendanceRegularizationController extends Controller
             }
 
             // Update regularization
-            $regularization->update([
+            $updateData = [
                 'date' => $request->date,
                 'request_type' => $request->request_type,
                 'in_time' => $request->in_time,
                 'out_time' => $request->out_time,
                 'reason' => $request->reason,
-            ]);
+            ];
+            if ($filePath !== null) {
+                $updateData['file'] = $filePath;
+            }
+            $regularization->update($updateData);
             
             DB::commit();
             //  try {
@@ -399,8 +407,11 @@ class AttendanceRegularizationController extends Controller
         }
 
         try {
+            // `attendance_regularizations.status` enum is (pending,approved,rejected)
+            // — there is no 'cancelled'. Record it as rejected with a note instead.
             $regularization->update([
-                'status' => 'cancelled'
+                'status' => 'rejected',
+                'approval_remarks' => 'Cancelled by the requester',
             ]);
 
             return response()->json([
@@ -518,18 +529,19 @@ class AttendanceRegularizationController extends Controller
     public function manage(Request $request)
     {
         $authUser = Auth::user();
-        
-        // Check if user has permission
-        if (!in_array($authUser->role, ['manager', 'admin', 'hr'])) {
+
+        // Check if user has permission (was: hardcoded !in_array(role, [manager,admin,hr]))
+        $scope = app(RbacService::class)->scopeFor($authUser, 'attendance', 'approve');
+        if ($scope === null) {
             abort(403, 'Unauthorized access');
         }
-        
+
         // Build query using Eloquent
         $query = AttendanceRegularization::with(['user', 'approver'])
             ->where('tenant_id', $authUser->tenant_id);
-        
-        // If manager, only show requests where user's reporting head is current user
-        if ($authUser->role == 'manager') {
+
+        // Team scope — only requests where the user's reporting head is the current user
+        if ($scope === 'team') {
             $query->whereHas('user.jobDetails', function($q) use ($authUser) {
                 $q->where('reporting_head', $authUser->id);
             });
@@ -567,12 +579,12 @@ class AttendanceRegularizationController extends Controller
         // Calculate statistics using Eloquent
         $statsQuery = AttendanceRegularization::where('tenant_id', $authUser->tenant_id);
         
-        if ($authUser->role == 'manager') {
+        if ($scope === 'team') {
             $statsQuery->whereHas('user.jobDetails', function($q) use ($authUser) {
                 $q->where('reporting_head', $authUser->id);
             });
         }
-        
+
         $totalRequests = (clone $statsQuery)->count();
         $pendingRequests = (clone $statsQuery)->where('status', 'pending')->count();
         $approvedRequests = (clone $statsQuery)->where('status', 'approved')->count();
@@ -601,13 +613,9 @@ class AttendanceRegularizationController extends Controller
         try {
             $authUser = Auth::user();
 
-            // Check authorization
-            if (!in_array($authUser->role, ['manager', 'admin', 'hr'], true)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized access. Only managers, admins, and HR can process requests.'
-                ], 403);
-            }
+            // Coarse "can approve regularizations at all" is enforced at the
+            // route level (permission:attendance,approve). Per-record team
+            // ownership is checked below via scopeCoversOwner().
 
             // Validate request
             $validator = Validator::make($request->all(), [
@@ -644,28 +652,34 @@ class AttendanceRegularizationController extends Controller
                 ], 400);
             }
 
-            // For managers, verify they are the reporting head
-            if ($authUser->role == 'manager') {
-                $reportingHead = $regularization->user->jobDetails->reporting_head ?? null;
+            // Tier 2 / T2-A — if the tenant configured an approval workflow for
+            // regularizations, route the decision through it (multi-level, SLA,
+            // delegation). Returns null when no workflow exists → legacy path.
+            try {
+                $ar = app(\App\Services\Approvals\ApprovalService::class)
+                    ->decide('regularization', $regularization, $authUser, $request->status, $request->remarks);
+                if ($ar !== null) {
+                    $msg = $ar->status === 'pending'
+                        ? 'Recorded. Awaiting the next approval level.'
+                        : "Regularization request {$ar->status} successfully.";
 
-                if (!$reportingHead) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'User does not have a reporting head assigned. Please contact admin.'
-                    ], 400);
+                    return response()->json(['success' => true, 'message' => $msg]);
                 }
-
-                if ($reportingHead != $authUser->id) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You are not authorized to process this request. Only the reporting head can process it.'
-                    ], 403);
-                }
+            } catch (\RuntimeException $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
             }
 
-            // Approval + attendance creation must be atomic: if
-            // createAttendanceFromRegularization() throws (e.g. future date),
-            // the status change is rolled back too.
+            // Verify this request's owner falls within the caller's granted
+            // scope (was: hardcoded "if role==manager, check reporting_head").
+            if (!$this->scopeCoversOwner($authUser, 'attendance', 'approve', $regularization->user_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to process this request. Only the reporting head (or an admin/HR user) can process it.'
+                ], 403);
+            }
+
+            // Approval + attendance write go through AttendanceEntryService so the
+            // row is complete (status/shift/is_regularized) + audited + refreshed.
             DB::beginTransaction();
             try {
                 $regularization->status = $request->status;
@@ -675,26 +689,14 @@ class AttendanceRegularizationController extends Controller
                 $regularization->save();
 
                 if ($request->status == 'approved') {
-                    $this->createAttendanceFromRegularization($regularization);
+                    app(\App\Services\Attendance\AttendanceEntryService::class)
+                        ->applyRegularization($regularization, $authUser);
                 }
 
                 DB::commit();
             } catch (\Throwable $e) {
                 DB::rollBack();
                 throw $e;
-            }
-
-            // Refresh the policy-resolved status + monthly summary for the day.
-            if ($request->status == 'approved') {
-                try {
-                    $ym = \Carbon\Carbon::parse($regularization->date)->format('Y-m');
-                    app(\App\Services\Attendance\LatePolicyService::class)
-                        ->recalculateMonth((int) $regularization->user_id, (int) $regularization->tenant_id, $ym);
-                    app(\App\Services\AttendanceSummaryService::class)
-                        ->updateMonthlySummary((int) $regularization->user_id, $ym, (int) $regularization->tenant_id);
-                } catch (\Throwable $e) {
-                    Log::error('Post-regularization recompute failed: ' . $e->getMessage());
-                }
             }
 
             // Notifications after commit so a delivery failure cannot undo a valid approval.
@@ -725,58 +727,6 @@ class AttendanceRegularizationController extends Controller
                 'message' => 'An error occurred while processing the request. Please try again later.'
             ], 500);
         }
-    }
-
-    /**
-     * Create or update attendance record from approved regularization
-     */
-    private function createAttendanceFromRegularization($regularization)
-    {
-        $regularizationDate = Carbon::parse($regularization->date);
-
-        // Check if date is in future
-        if ($regularizationDate->isFuture()) {
-            throw new \Exception('Cannot create attendance for future date.');
-        }
-
-        // Find or create attendance record (scoped to the regularization's tenant)
-        $attendance = Attendance::firstOrNew([
-            'tenant_id' => $regularization->tenant_id,
-            'user_id' => $regularization->user_id,
-            'date' => $regularization->date
-        ]);
-
-        $attendance->tenant_id = $regularization->tenant_id;
-        $attendance->regularization_id = $regularization->id;
-        $attendance->is_regularized = 1;
-        $attendance->regularized_by = Auth::id();
-        $attendance->regularized_at = now();
-        $attendance->status = 1; // Mark as present/processed
-        
-        // Set clock in time if provided
-        if ($regularization->in_time) {
-            $attendance->clock_in = Carbon::parse($regularizationDate->format('Y-m-d') . ' ' . $regularization->in_time);
-        }
-
-        // Set clock out time if provided
-        if ($regularization->out_time) {
-            $attendance->clock_out = Carbon::parse($regularizationDate->format('Y-m-d') . ' ' . $regularization->out_time);
-        }
-
-        // Calculate total hours if both times are set
-        if ($regularization->in_time && $regularization->out_time) {
-            $calc = new \App\Services\Attendance\AttendanceCalculator();
-            $seconds = $calc->workedSeconds(
-                Carbon::parse($attendance->clock_in),
-                Carbon::parse($attendance->clock_out)
-            );
-            $attendance->total_hours = $calc->formatDuration($seconds);
-            $attendance->worked_hours = $calc->decimalHours($seconds);
-        }
-
-        $attendance->save();
-
-        return $attendance;
     }
 
     /**
@@ -831,14 +781,20 @@ class AttendanceRegularizationController extends Controller
                     'in_time' => 'badge-type-in',
                     'out_time' => 'badge-type-out',
                     'both' => 'badge-type-both',
-                    default => 'bg-secondary'
+                    'full_day' => 'badge-type-fullday',
+                    'wfh_not_marked' => 'badge-type-wfh',
+                    'technical_issue' => 'badge-type-tech',
+                    default => 'badge-type-in'
                 },
-                
+
                 'request_type_text' => match($regularization->request_type) {
                     'in_time' => 'In Time Only',
                     'out_time' => 'Out Time Only',
                     'both' => 'Both In & Out',
-                    default => ucfirst($regularization->request_type)
+                    'full_day' => 'Full Day Missed Punch',
+                    'wfh_not_marked' => 'WFH Not Marked',
+                    'technical_issue' => 'System/Technical Issue',
+                    default => ucfirst(str_replace('_', ' ', $regularization->request_type))
                 }
             ];
 

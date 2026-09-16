@@ -90,7 +90,7 @@
 @section('create-modal')
     <!-- Add Expense Type Modal -->
     <div class="modal fade-scale" id="addexpensetypeModal" tabindex="-1" aria-labelledby="addexpensetypeModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -143,7 +143,7 @@
 
     <!-- Edit Expense Type Modal -->
     <div class="modal fade-scale" id="editexpensetypeModal" tabindex="-1" aria-labelledby="editexpensetypeModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">

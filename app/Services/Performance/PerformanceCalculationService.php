@@ -538,9 +538,13 @@ protected function calculateOverallScore(array $scores): float
     private function isPaidLeave($leaveTypeId): bool
     {
         try {
+            // Single authoritative signal (leave_types.is_unpaid) — was a
+            // fragile string-match on the display name, independent of both
+            // MonthlyPayrollController's is_unpaid check and LeaveService's
+            // ledger writes, which could silently disagree with this one.
             $leaveType = DB::table('leave_types')->where('id', $leaveTypeId)->first();
             if (!$leaveType) return true;
-            return !str_contains(strtolower($leaveType->name ?? ''), 'unpaid');
+            return !((bool) ($leaveType->is_unpaid ?? false));
         } catch (\Exception $e) {
             return true;
         }

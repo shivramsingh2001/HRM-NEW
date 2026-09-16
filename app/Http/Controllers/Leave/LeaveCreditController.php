@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Services\AuditLogger;
+use App\Services\RbacService;
 
 class LeaveCreditController extends Controller
 {
@@ -35,7 +37,14 @@ class LeaveCreditController extends Controller
             ->get();
     
         $leaveTypes = LeaveType::where('tenant_id', $tenantId)->where('status', 1)->get();
-    
+
+        // For the "Manual Credit" modal's employee select
+        $users = User::with('jobDetails')
+            ->where('tenant_id', $tenantId)
+            ->where('status', 1)
+            ->orderBy('name')
+            ->get();
+
         // Get PAGINATED users with their leave balances
         $allUsers = User::with(['jobDetails', 'leaveBalance.leaveType'])
             ->withSum('leaveBalance as total_balance', 'balance')
@@ -72,6 +81,7 @@ class LeaveCreditController extends Controller
             'totalTransactions',
             'recentTransactions',
             'leaveTypes',
+            'users',
             'allUsers',
             'usersWithBalanceCount',
             'usersWithoutBalance'
@@ -111,51 +121,36 @@ class LeaveCreditController extends Controller
         $year = $request->get('year', Carbon::now()->year);
         $userId = $request->get('user_id');
 
-        // ========== QUERY 1: Get ALL transactions for summary (NO PAGINATION) ==========
-        $summaryQuery = LeaveTransaction::with(['user', 'leaveType'])
-            ->where('tenant_id', $tenantId)
-            ->where('transaction_type', 'add')
-            ->whereYear('created_at', $year);
+        // One filter definition, reused for both queries below instead of
+        // building the same where()/whereYear()/when() chain twice and
+        // running two separate full scans per page load.
+        $baseQuery = function () use ($tenantId, $year, $month, $userId) {
+            return LeaveTransaction::query()
+                ->where('leave_transactions.tenant_id', $tenantId)
+                ->where('leave_transactions.transaction_type', 'add')
+                ->whereYear('leave_transactions.created_at', $year)
+                ->when($month != 'all', fn ($q) => $q->whereMonth('leave_transactions.created_at', $month))
+                ->when($userId, fn ($q) => $q->where('leave_transactions.user_id', $userId));
+        };
 
-        if ($month != 'all') {
-            $summaryQuery->whereMonth('created_at', $month);
-        }
+        // Summary by leave type: a grouped SQL aggregate (rows = distinct
+        // leave types) instead of pulling every matching transaction into
+        // PHP just to sum/group them there.
+        $summaryByType = $baseQuery()
+            ->join('leave_types', 'leave_transactions.leave_type', '=', 'leave_types.id')
+            ->selectRaw('leave_types.id as leave_type_id, leave_types.name as type, SUM(leave_transactions.total_leaves) as total_credited, COUNT(*) as count')
+            ->groupBy('leave_types.id', 'leave_types.name')
+            ->get()
+            ->keyBy('leave_type_id');
 
-        if ($userId) {
-            $summaryQuery->where('user_id', $userId);
-        }
-
-        // Get ALL transactions for summary calculations
-        $allTransactions = $summaryQuery->orderBy('created_at', 'desc')->get();
-
-        // Summary by leave type using ALL transactions
-        $summaryByType = $allTransactions->groupBy('leave_type')
-            ->map(function ($items) {
-                return [
-                    'type' => $items->first()->leaveType->name ?? 'Unknown',
-                    'total_credited' => $items->sum('total_leaves'),
-                    'count' => $items->count()
-                ];
-            });
-
-        // ========== SUMMARY STATS using $allTransactions ==========
-        $totalCreditedAmount = $allTransactions->sum('total_leaves');
-        $totalTransactionsCount = $allTransactions->count();
+        $totalCreditedAmount = (float) $summaryByType->sum('total_credited');
+        $totalTransactionsCount = (int) $summaryByType->sum('count');
         $averageCreditAmount = $totalTransactionsCount > 0
             ? $totalCreditedAmount / $totalTransactionsCount
             : 0;
 
-        // ========== QUERY 2: Get paginated transactions for table ==========
-        $paginatedTransactions = LeaveTransaction::with(['user', 'leaveType'])
-            ->where('tenant_id', $tenantId)
-            ->where('transaction_type', 'add')
-            ->whereYear('created_at', $year)
-            ->when($month != 'all', function ($q) use ($month) {
-                return $q->whereMonth('created_at', $month);
-            })
-            ->when($userId, function ($q) use ($userId) {
-                return $q->where('user_id', $userId);
-            })
+        $paginatedTransactions = $baseQuery()
+            ->with(['user', 'leaveType'])
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString(); // Preserve query parameters in pagination links
@@ -384,11 +379,15 @@ class LeaveCreditController extends Controller
             return false;
         }
 
-        // Get or create leave balance
+        // Get or create leave balance (scoped per leave type — matching every
+        // other balance lookup in this module; without leave_type_id here,
+        // a tenant with 2+ auto-credited leave types would share one balance
+        // row across all of them).
         $balance = LeaveBalance::firstOrCreate(
             [
                 'user_id' => $user->id,
-                'tenant_id' => $user->tenant_id
+                'tenant_id' => $user->tenant_id,
+                'leave_type_id' => $leaveType->id,
             ],
             [
                 'balance' => 0,
@@ -497,7 +496,7 @@ class LeaveCreditController extends Controller
             case 'monthly':
                 return $date->copy()->startOfMonth();
             case 'yearly':
-                return Carbon::create($date->year, 4, 1);
+                return Carbon::create($date->year, config('leave.fiscal_year_start_month'), config('leave.fiscal_year_start_day'));
             default:
                 return $date;
         }
@@ -587,12 +586,12 @@ class LeaveCreditController extends Controller
                 return $joiningDate->copy()->addMonth()->startOfMonth();
 
             case 'yearly':
-                // Next April 1st
-                $nextApril = Carbon::create($joiningDate->year, 4, 1);
-                if ($joiningDate->gt($nextApril)) {
-                    $nextApril->addYear();
+                // Next fiscal-year-start date (config('leave.fiscal_year_start_*'))
+                $nextFiscalStart = Carbon::create($joiningDate->year, config('leave.fiscal_year_start_month'), config('leave.fiscal_year_start_day'));
+                if ($joiningDate->gt($nextFiscalStart)) {
+                    $nextFiscalStart->addYear();
                 }
-                return $nextApril;
+                return $nextFiscalStart;
 
             default:
                 return null;
@@ -604,6 +603,13 @@ class LeaveCreditController extends Controller
      */
     public function manualCredit(Request $request)
     {
+        // Was completely ungated — any authenticated user could hit this
+        // endpoint and credit anyone's leave balance. 'leave','manage' is
+        // granted to admin/hr only in config/rbac.php.
+        if (!app(RbacService::class)->can(Auth::user(), 'leave', 'manage')) {
+            return response()->json(['success' => false, 'message' => 'You do not have permission to adjust leave balances.'], 403);
+        }
+
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'leave_type_id' => 'required|exists:leave_types,id',
@@ -648,6 +654,12 @@ class LeaveCreditController extends Controller
                 'updated_at' => now()
             ]);
 
+            app(AuditLogger::class)->record(
+                'tenant_user', Auth::id(), (int) $user->tenant_id, 'leave.balance_credited',
+                'LeaveBalance', $balance->id, ['balance' => $beforeBalance],
+                ['balance' => $afterBalance, 'leave_type_id' => $leaveType->id, 'target_user_id' => $user->id, 'remarks' => $request->remarks]
+            );
+
             DB::commit();
 
             return response()->json([
@@ -662,6 +674,92 @@ class LeaveCreditController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Manual debit adjustment — the counterpart manualCredit() never had.
+     * Same validation/ledger pattern, transaction_type='sub', with a floor
+     * (config('leave.max_negative_balance'), default 0) so an adjustment
+     * can't push a user arbitrarily far into a negative balance.
+     */
+    public function manualDebit(Request $request)
+    {
+        if (!app(RbacService::class)->can(Auth::user(), 'leave', 'manage')) {
+            return response()->json(['success' => false, 'message' => 'You do not have permission to adjust leave balances.'], 403);
+        }
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'leave_type_id' => 'required|exists:leave_types,id',
+            'debit_value' => 'required|numeric|min:0.01',
+            'remarks' => 'required|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $user = User::find($request->user_id);
+            $leaveType = LeaveType::find($request->leave_type_id);
+
+            $balance = LeaveBalance::firstOrCreate(
+                ['user_id' => $user->id, 'tenant_id' => $user->tenant_id, 'leave_type_id' => $leaveType->id],
+                ['balance' => 0]
+            );
+
+            $beforeBalance = (float) $balance->balance;
+            $afterBalance = $beforeBalance - $request->debit_value;
+            $floor = (float) config('leave.max_negative_balance', 0);
+
+            $minAllowed = abs($floor) == 0 ? 0.0 : -abs($floor);
+            if ($afterBalance < $minAllowed) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => "This adjustment would take the balance to {$afterBalance}, below the allowed minimum of {$minAllowed}.",
+                ], 400);
+            }
+
+            $balance->update(['balance' => $afterBalance]);
+
+            LeaveTransaction::create([
+                'tenant_id' => $user->tenant_id,
+                'user_id' => $user->id,
+                'leave_type' => $leaveType->id,
+                'transaction_type' => 'sub',
+                'total_leaves' => $request->debit_value,
+                'leaves_count' => $request->debit_value,
+                'before_leaves' => $beforeBalance,
+                'after_leaves' => $afterBalance,
+                'transaction_date' => now()->toDateTimeString(),
+                'leave_detail' => 'paid',
+                'remarks' => $request->remarks,
+                'status' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            app(AuditLogger::class)->record(
+                'tenant_user', Auth::id(), (int) $user->tenant_id, 'leave.balance_debited',
+                'LeaveBalance', $balance->id, ['balance' => $beforeBalance],
+                ['balance' => $afterBalance, 'leave_type_id' => $leaveType->id, 'target_user_id' => $user->id, 'remarks' => $request->remarks]
+            );
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Leave balance debited successfully',
+                'new_balance' => $afterBalance,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error in manual debit: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
             ], 500);
         }
     }

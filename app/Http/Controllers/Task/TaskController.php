@@ -8,6 +8,8 @@ use App\Models\Task;
 use App\Models\TaskAssign;
 use App\Models\TaskUpdate;
 use App\Models\TaskApproval;
+use App\Models\TaskComment;
+use App\Models\TaskAttachment;
 use App\Models\User;
 use App\Models\UserBasicDetail;
 use App\Services\TaskNotificationService;
@@ -26,17 +28,19 @@ use Illuminate\Support\FacadesLog;
 class TaskController extends Controller
 {
     protected $notificationService;
+    protected $permissions;
 
-    public function __construct(TaskNotificationService $notificationService)
+    public function __construct(TaskNotificationService $notificationService, \App\Services\TaskPermissionService $permissions)
     {
         $this->notificationService = $notificationService;
+        $this->permissions = $permissions;
     }
     public function tasksAssignedByMe(Request $request)
     {
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['manager', 'admin', 'hr'])) {
+            if (!$this->permissions->isManagerTier($authUser)) {
                 return redirect()->back()->with('error', 'Unauthorized access.');
             }
 
@@ -74,7 +78,7 @@ class TaskController extends Controller
                         $q->where('task_assigns.assigned_to', $request->assigned_to);
                     }
                     if (
-                        in_array($authUser->role, ['admin', 'hr'])
+                        $this->permissions->isElevated($authUser)
                         && $request->filled('assigned_by') && $request->assigned_by != 'all'
                     ) {
                         $q->where('task_assigns.assigned_by', $request->assigned_by);
@@ -164,9 +168,9 @@ class TaskController extends Controller
                 ->select('users.id', 'users.name', 'users.employee_id', 'users.email')
                 ->where('users.status', 1);
 
-            if (in_array($authUser->role, ['admin', 'hr'])) {
+            if ($this->permissions->isElevated($authUser)) {
                 $users = $usersQuery->orderBy('users.name')->get();
-            } elseif ($authUser->role == 'manager') {
+            } elseif ($this->permissions->isManagerTier($authUser)) {
                 $ids = UserJobDetail::where('reporting_head', $authUser->id)->pluck('user_id')->toArray();
                 $ids[] = $authUser->id;
                 $users = $usersQuery->whereIn('users.id', $ids)->orderBy('users.name')->get();
@@ -175,7 +179,7 @@ class TaskController extends Controller
             }
 
             $assigners = [];
-            if (in_array($authUser->role, ['admin', 'hr'])) {
+            if ($this->permissions->isElevated($authUser)) {
                 $assigners = User::join('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
                     ->select('users.id', 'users.name', 'users.employee_id', 'users.email')
                     ->where('users.status', 1)
@@ -329,9 +333,27 @@ class TaskController extends Controller
             // Get projects for filter dropdown
             $projects = Project::select('id', 'name')->get();
 
+            // For the Add Task drawer's "assign to someone else"/"group"
+            // options (visible to manager/hr, hidden for plain employees).
+            // Was admin-only (hr fell through to the empty else branch,
+            // despite isElevated() treating admin+hr as equally privileged
+            // everywhere else in this controller).
+            if ($this->permissions->isElevated($authUser)) {
+                $users = User::where('role', '!=', 'admin')->where('status', 1)->get();
+            } elseif ($this->permissions->isManagerTier($authUser)) {
+                $users = User::select('users.*')
+                    ->join('user_job_details', 'users.id', '=', 'user_job_details.user_id')
+                    ->where('users.status', 1)
+                    ->where('user_job_details.reporting_head', $authUser->id)
+                    ->get();
+            } else {
+                $users = collect();
+            }
+
             return view('client.task.view-assigned-to-task', compact(
                 'tasks',
                 'projects',
+                'users',
                 'totalTasks',
                 'pendingTasks',
                 'approvedTasks',
@@ -347,46 +369,19 @@ class TaskController extends Controller
         }
     }
 
+    /**
+     * The dedicated "Create Task" page was retired in favor of the Add Task
+     * drawer embedded directly in the assigned-by-me / assigned-to-me list
+     * pages. This redirect keeps any old bookmark/link to this route working
+     * instead of 404ing.
+     */
     public function create(Request $request)
     {
         $authUser = Auth::user();
 
-        // if (!in_array($authUser->role, ['manager', 'admin'])) {
-        //     return redirect()->back()->with('error', 'Unauthorized access. Only managers or admins can view assigned tasks.');
-        // }
-
-        $userId = $authUser->id;
-
-        $query = Project::whereIn('projects.status', ['ongoing', 'pending']);
-
-        // If user is NOT admin, filter projects
-        if ($authUser->role !== 'admin') {
-            $query->leftJoin('project_assigns', function ($join) use ($userId) {
-                $join->on('projects.id', '=', 'project_assigns.project_id')
-                    ->where('project_assigns.user_id', $userId)
-                    ->where('project_assigns.status', 1);
-            })
-                ->where(function ($q) use ($userId) {
-                    $q->where('projects.project_head', $userId)  // User is project head
-                        ->orWhereNotNull('project_assigns.id');    // User is team member
-                });
-        }
-
-        $data['projects'] = $query->select('projects.*')->distinct()->get();
-
-        if ($authUser->role == 'admin') {
-            // Admin can see all active users
-            $data['users'] = User::where('role', "!=", "admin")->where('status', 1)->get();
-        } else {
-            // Show only users who report to this auth user
-            $data['users'] = User::select('users.*')
-                ->join('user_job_details', 'users.id', '=', 'user_job_details.user_id')
-                ->where('users.status', 1)
-                ->where('user_job_details.reporting_head', $authUser->id)
-                ->get();
-        }
-
-        return view('client.task.create-task', $data);
+        return redirect()->route(
+            $this->permissions->isManagerTier($authUser) ? 'task.assigned-by-me' : 'task.assigned-to-me'
+        );
     }
 
     public function store(Request $request)
@@ -418,7 +413,10 @@ class TaskController extends Controller
 
         $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
         DB::beginTransaction();
@@ -504,7 +502,10 @@ class TaskController extends Controller
 
             DB::commit();
 
-            // Notify everyone (loop so groups get notified too)
+            // Notify everyone (loop so groups get notified too). Mail is
+            // queued (Mail::to()->queue()) rather than sent synchronously —
+            // previously a group task blocked the HTTP response on one
+            // synchronous SMTP round-trip per member.
             $assigneeUser = User::find($assignedBy);
             foreach ($memberIds as $uid) {
                 try {
@@ -512,100 +513,66 @@ class TaskController extends Controller
                     if ($assignedUser && $this->notificationService) {
                         $this->notificationService->notifyTaskAssigned($task, $assignedUser, $assigneeUser);
                     }
-                    $this->sendTaskEmails($task, $authUser, $assignedUser);
+                    $this->sendTaskAssignedEmail($task, $authUser, $assignedUser);
                 } catch (Exception $e) {
                     Log::error('Group notify/email failed for user ' . $uid . ': ' . $e->getMessage());
                 }
+            }
+
+            // Creator confirmation — sent once per task, not once per member
+            // (previously sendTaskEmails() sent this inside the per-member
+            // loop, so a group task creator received N duplicate emails).
+            try {
+                $this->sendTaskCreatedEmail($task, $authUser);
+            } catch (Exception $e) {
+                Log::error('Task-created confirmation email failed: ' . $e->getMessage());
             }
 
             $msg = $isGroup
                 ? 'Group task created and assigned to ' . count($memberIds) . ' members.'
                 : 'Task created and assigned successfully!';
 
-            return redirect()
-                ->route($isSelf ? 'task.assigned-to-me' : 'task.assigned-by-me')
-                ->with('success', $msg);
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'data' => $task,
+            ]);
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Task store error: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'An error occurred. ' . $e->getMessage())
-                ->withInput();
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred. ' . $e->getMessage(),
+            ], 500);
         }
     }
 
-    private function sendTaskEmails($task, $creator, $assignee)
+    private function sendTaskAssignedEmail($task, $creator, $assignee)
     {
-        $emailsSent = [];
-        $emailErrors = [];
-        // Email to assignee
         try {
-            Log::info('Attempting to send email to assignee: ' . $assignee->email);
-
-            // First try send() to test immediately
-            Mail::to($assignee->email)->send(new TaskAssignedMail(
+            Mail::to($assignee->email)->queue(new TaskAssignedMail(
                 $task,
                 $assignee,
                 $creator,
                 'assigned'
             ));
-
-            $emailsSent[] = $assignee->email;
-            Log::info('✅ Email sent to assignee: ' . $assignee->email);
         } catch (Exception $e) {
-            $emailErrors[] = "Failed to send email to {$assignee->name} ({$assignee->email})";
-            Log::error('❌ Email to assignee failed: ' . $e->getMessage());
+            Log::error("Failed to queue assignment email to {$assignee->email}: " . $e->getMessage());
         }
+    }
 
-        // Email to creator
+    private function sendTaskCreatedEmail($task, $creator)
+    {
         try {
-            Log::info('Attempting to send email to creator: ' . $creator->email);
-
-            Mail::to($creator->email)->send(new TaskAssignedMail(
+            Mail::to($creator->email)->queue(new TaskAssignedMail(
                 $task,
                 $creator,
                 $creator,
                 'created'
             ));
-
-            $emailsSent[] = $creator->email;
-            Log::info('✅ Email sent to creator: ' . $creator->email);
         } catch (Exception $e) {
-            $emailErrors[] = "Failed to send email to {$creator->name} ({$creator->email})";
-            Log::error('❌ Email to creator failed: ' . $e->getMessage());
+            Log::error("Failed to queue creation email to {$creator->email}: " . $e->getMessage());
         }
-
-        // Prepare result message
-        $result = [
-            'success_count' => count($emailsSent),
-            'failed_count' => count($emailErrors),
-            'success_emails' => $emailsSent,
-            'failed_emails' => $emailErrors,
-            'message' => $this->generateEmailResultMessage(count($emailsSent), count($emailErrors))
-        ];
-
-        Log::info('Email sending result: ' . $result['message']);
-
-        return $result;
-    }
-
-    private function generateEmailResultMessage($successCount, $failedCount)
-    {
-        $total = $successCount + $failedCount;
-
-        if ($total === 0) {
-            return "No emails were sent.";
-        }
-
-        if ($successCount === $total) {
-            return "✅ All {$successCount} email(s) sent successfully!";
-        }
-
-        if ($failedCount === $total) {
-            return "❌ Failed to send all {$failedCount} email(s).";
-        }
-
-        return "⚠️ Sent {$successCount} email(s) successfully, but failed to send {$failedCount} email(s).";
     }
 
     private function generateUniqueTaskCode()
@@ -722,9 +689,7 @@ class TaskController extends Controller
             }
 
             // Check if user is the one who assigned this task
-            $isAssignedBy = TaskAssign::where('task_id', $id)
-                ->where('assigned_by', $authUser->id)
-                ->first();
+            $isAssignedBy = $this->permissions->isTaskAssigner($authUser, $id);
 
             if (!$isAssignedBy) {
                 return response()->json([
@@ -781,6 +746,111 @@ class TaskController extends Controller
         }
     }
 
+    /**
+     * JSON prefill for the Edit Task drawer.
+     */
+    public function edit($id)
+    {
+        $authUser = Auth::user();
+
+        $task = Task::find($id);
+        if (!$task) {
+            return response()->json(['success' => false, 'message' => 'Task not found.'], 404);
+        }
+
+        $isAssignedBy = $this->permissions->isTaskAssigner($authUser, $id);
+
+        if (!$isAssignedBy) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the person who assigned this task can edit it.'
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id'             => $task->id,
+                'title'          => $task->title,
+                'description'    => $task->description,
+                'project_id'     => $task->project_id,
+                'priority'       => $task->priority,
+                'deadline_date'  => $task->deadline_date,
+                'status'         => $task->status,
+                'task_mode'      => $task->task_mode,
+            ],
+        ]);
+    }
+
+    /**
+     * Update a task's core fields (title/description/priority/deadline/project).
+     * Reassigning members/group composition is a separate flow — not handled here.
+     */
+    public function update(Request $request, $id)
+    {
+        $authUser = Auth::user();
+
+        $task = Task::find($id);
+        if (!$task) {
+            return response()->json(['success' => false, 'message' => 'Task not found.'], 404);
+        }
+
+        $isAssignedBy = $this->permissions->isTaskAssigner($authUser, $id);
+
+        if (!$isAssignedBy) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the person who assigned this task can edit it.'
+            ], 403);
+        }
+
+        // Same editable-window rule as delete(): once a task is completed,
+        // approved, rejected or cancelled its record is final.
+        $editableStatuses = ['pending', 'in_progress', 'hold'];
+        if (!in_array($task->status, $editableStatuses)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Task can only be edited while Pending, In Progress or Hold. Current status: ' . ucfirst(str_replace('_', ' ', $task->status))
+            ], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title'         => 'required|string|max:255',
+            'project_id'    => 'nullable|exists:projects,id',
+            'description'   => 'required|string',
+            'deadline_date' => 'required|date|after_or_equal:today',
+            'priority'      => 'required|in:low,medium,high,critical',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $task->title = $request->title;
+            $task->description = $request->description;
+            $task->project_id = $request->project_id;
+            $task->priority = $request->priority;
+            $task->deadline_date = $request->deadline_date;
+            $task->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Task updated successfully',
+                'data' => $task,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Task update error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update task.'
+            ], 500);
+        }
+    }
+
     public function bulkStatusUpdate(Request $request)
     {
         try {
@@ -794,26 +864,82 @@ class TaskController extends Controller
             ]);
 
             // Get only tasks where the auth user is assigned
-            $assignedTaskIds = TaskAssign::whereIn('task_id', $request->task_ids)
+            $assigns = TaskAssign::whereIn('task_id', $request->task_ids)
                 ->where('assigned_to', $authUser->id)
-                ->pluck('task_id')
-                ->toArray();
+                ->get()
+                ->keyBy('task_id');
 
-            if (empty($assignedTaskIds)) {
+            if ($assigns->isEmpty()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tasks found that are assigned to you'
                 ], 400);
             }
 
-            // Update only tasks assigned to the auth user
-            Task::whereIn('id', $assignedTaskIds)
-                ->where('status', 'pending')
-                ->update(['status' => $request->status]);
+            $tasks = Task::whereIn('id', $assigns->keys())->get()->keyBy('id');
+
+            $updated = [];
+            $skipped = [];
+
+            DB::beginTransaction();
+            try {
+                foreach ($assigns as $taskId => $assign) {
+                    $task = $tasks->get($taskId);
+                    if (!$task) {
+                        $skipped[] = ['task_id' => $taskId, 'reason' => 'Task not found'];
+                        continue;
+                    }
+
+                    if (in_array($task->status, ['approved', 'rejected', 'cancelled'])) {
+                        $skipped[] = ['task_id' => $taskId, 'reason' => 'Cannot update a ' . $task->status . ' task'];
+                        continue;
+                    }
+
+                    if ($task->task_mode === 'group') {
+                        // Same per-member path as TaskUpdate(): only this
+                        // member's individual_status changes, then the parent
+                        // status is recomputed from the group completion rule.
+                        $assign->individual_status = $request->status;
+                        if ($request->filled('remarks')) {
+                            $assign->individual_remarks = $request->remarks;
+                        }
+                        if ($request->status === 'in_progress' && !$assign->started_at) {
+                            $assign->started_at = now();
+                        }
+                        if ($request->status === 'completed') {
+                            $assign->completed_at = now();
+                        }
+                        $assign->save();
+                        $this->recomputeGroupStatus($task);
+                    } else {
+                        $task->status = $request->status;
+                        $task->save();
+                    }
+
+                    TaskUpdate::create([
+                        'tenant_id'  => $task->tenant_id ?? 1,
+                        'task_id'    => $task->id,
+                        'updated_by' => $authUser->id,
+                        'status'     => $request->status,
+                        'remarks'    => '[Bulk update] ' . ($request->remarks ?? ''),
+                    ]);
+
+                    $updated[] = $taskId;
+                }
+
+                DB::commit();
+            } catch (Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
 
             return response()->json([
-                'success' => true,
-                'message' => count($assignedTaskIds) . ' tasks updated successfully',
+                'success' => count($updated) > 0,
+                'message' => count($updated) . ' task(s) updated' . (count($skipped) ? ', ' . count($skipped) . ' skipped' : ''),
+                'data' => [
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                ],
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -937,7 +1063,10 @@ class TaskController extends Controller
 
             DB::commit();
 
-            // Notify assigner
+            // Notify the assigner — explicitly resolved from this member's own
+            // assignment row, not re-derived from an arbitrary task_assigns row
+            // (a group task has one row per member, all sharing the same
+            // assigned_by, so $assign here is a safe, correct source).
             try {
                 if ($this->notificationService) {
                     $this->notificationService->notifyTaskStatusUpdate(
@@ -945,7 +1074,8 @@ class TaskController extends Controller
                         $authUser,
                         $oldStatus,
                         $task->status,
-                        $request->remarks
+                        $request->remarks,
+                        User::find($assign->assigned_by)
                     );
                 }
             } catch (Exception $e) {
@@ -989,11 +1119,11 @@ class TaskController extends Controller
                 ], 400);
             }
 
-            $taskAssign = TaskAssign::where('task_id', $request->task_id)
-                ->where('assigned_by', $authUser->id)
-                ->first();
+            // Any assigner row authorizes the action; the approval itself is
+            // recorded against every assignee below, not just this one row.
+            $isAssigner = $this->permissions->isTaskAssigner($authUser, $request->task_id);
 
-            if (!$taskAssign) {
+            if (!$isAssigner) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Only the person who assigned this task can approve/reject it.'
@@ -1007,17 +1137,32 @@ class TaskController extends Controller
                 ], 400);
             }
 
+            // Full membership of the task — for a group task this is every
+            // member, not an arbitrary single row. For an individual task
+            // it's the one assignee.
+            $allAssigns = TaskAssign::where('task_id', $request->task_id)->get();
+            $completerAssigns = $task->task_mode === 'group'
+                ? $allAssigns->where('individual_status', 'completed')
+                : $allAssigns;
+            if ($completerAssigns->isEmpty()) {
+                $completerAssigns = $allAssigns;
+            }
+
             $oldStatus = $task->status;
             DB::beginTransaction();
 
-            // Create task approval
-            TaskApproval::create([
-                'task_id' => $request->task_id,
-                'approved_by' => $authUser->id,
-                'completed_by' => $taskAssign->assigned_to,
-                'status' => $request->status,
-                'remarks' => $request->remarks,
-            ]);
+            // One approval record per member who actually completed their
+            // part, so a group task's approval history reflects who did the
+            // work instead of an arbitrary first row.
+            foreach ($completerAssigns as $completerAssign) {
+                TaskApproval::create([
+                    'task_id' => $request->task_id,
+                    'approved_by' => $authUser->id,
+                    'completed_by' => $completerAssign->assigned_to,
+                    'status' => $request->status,
+                    'remarks' => $request->remarks,
+                ]);
+            }
 
             // Update main task
             $task->status = $request->status;
@@ -1030,7 +1175,9 @@ class TaskController extends Controller
                 // Generate new unique task code
                 $newTaskCode = $this->generateUniqueTaskCode();
 
-                // Create new task with same details
+                // Create new task with same details, preserving group mode so
+                // rework doesn't silently collapse a group task down to a
+                // single assignee.
                 $newTask = Task::create([
                     'task_code' => $newTaskCode,
                     'title' => $task->title,
@@ -1044,34 +1191,47 @@ class TaskController extends Controller
                     'voice_file' => $task->voice_file,
                     'parent_task_id' => $task->id,
                     'rejection_remarks' => $request->remarks,
+                    'task_mode' => $task->task_mode,
+                    'group_completion_rule' => $task->group_completion_rule,
+                    'completion_threshold' => $task->completion_threshold,
+                    'group_lead_id' => $task->group_lead_id,
                 ]);
 
-                // Create new assignment for the same user
-                TaskAssign::create([
-                    'task_id' => $newTask->id,
-                    'assigned_by' => $taskAssign->assigned_by,
-                    'assigned_to' => $taskAssign->assigned_to,
-                    'status' => 'assigned',
-                ]);
+                // Recreate the full original membership on the reworked task
+                // (all group members, not just the completer).
+                foreach ($allAssigns as $prevAssign) {
+                    TaskAssign::create([
+                        'task_id' => $newTask->id,
+                        'assigned_by' => $prevAssign->assigned_by,
+                        'assigned_to' => $prevAssign->assigned_to,
+                        'member_role' => $prevAssign->member_role,
+                        'status' => 'assigned',
+                        'individual_status' => 'pending',
+                    ]);
+                }
             }
 
             DB::commit();
 
-            // Send notification
-            try {
-                $assignedUser = User::find($taskAssign->assigned_to);
-                if ($assignedUser && $this->notificationService) {
-
-                    $this->notificationService->notifyTaskStatusUpdate(
-                        $task,
-                        $authUser,
-                        $oldStatus,
-                        $request->status,
-                        $request->remarks
-                    );
+            // Notify every member, not just one — explicit receiver per
+            // iteration, since the service can't guess which member a given
+            // loop pass concerns.
+            foreach ($allAssigns as $notifyAssign) {
+                try {
+                    $assignedUser = User::find($notifyAssign->assigned_to);
+                    if ($assignedUser && $this->notificationService) {
+                        $this->notificationService->notifyTaskStatusUpdate(
+                            $task,
+                            $authUser,
+                            $oldStatus,
+                            $request->status,
+                            $request->remarks,
+                            $assignedUser
+                        );
+                    }
+                } catch (Exception $e) {
+                    Log::error('Failed to send task notification: ' . $e->getMessage());
                 }
-            } catch (Exception $e) {
-                Log::error('Failed to send task notification: ' . $e->getMessage());
             }
 
             $message = $request->status == 'approved'
@@ -1098,19 +1258,9 @@ class TaskController extends Controller
         try {
             $authUser = Auth::user();
 
-            $isAdminOrHR = in_array($authUser->role, ['admin', 'hr']);
-
-            // For non-admin/non-HR users, check access
-            if (!$isAdminOrHR) {
-                $hasAccess = TaskAssign::where('task_id', $id)
-                    ->where(function ($q) use ($authUser) {
-                        $q->where('assigned_to', $authUser->id)
-                            ->orWhere('assigned_by', $authUser->id);
-                    })->exists();
-                if (!$hasAccess) {
-                    return redirect()->route('task.assigned-by-me')
-                        ->with('error', 'You do not have access to this task.');
-                }
+            if (!$this->permissions->canAccessTask($authUser, $id)) {
+                return redirect()->route('task.assigned-by-me')
+                    ->with('error', 'You do not have access to this task.');
             }
 
             // Get task basic details with profile images
@@ -1126,6 +1276,7 @@ class TaskController extends Controller
                 'tasks.deadline_date',
                 'tasks.file',
                 'tasks.voice_file',
+                'projects.id as project_id',
                 'projects.name as project_name',
                 'projects.project_code',
                 'projects.description as project_description',
@@ -1173,6 +1324,15 @@ class TaskController extends Controller
                     'task_assigns.completed_at'
                 )->get();
 
+            // The main $task query above joins task_assigns unscoped, so for
+            // a group task its assigned_to_id/name reflect an arbitrary
+            // member row (whichever MySQL returns first), not necessarily
+            // the current user. Resolve the current user's own membership
+            // explicitly from $task->members (which has every row) instead
+            // of trusting the joined single-row fields for "is this task
+            // mine to update" checks.
+            $myAssignment = $task->members->firstWhere('user_id', $authUser->id);
+
             // Get all task updates with profile images
             $updates = TaskUpdate::select([
                 'task_updates.id',
@@ -1208,11 +1368,16 @@ class TaskController extends Controller
                 ->leftJoin('user_basic_details as approver_ubd', 'approver.id', '=', 'approver_ubd.user_id')
                 ->where('task_approvals.task_id', $id)
                 ->orderBy('task_approvals.created_at', 'desc')
-                ->first();
+                // A group task now gets one approval record per completing
+                // member (see TaskController::TaskApproval) — show the full
+                // history, not just an arbitrary/latest single record.
+                ->get();
 
-            // Calculate days remaining/overdue
-            $deadlineDate = $task->deadline_date ? \Carbon\Carbon::parse($task->deadline_date) : null;
-            $currentDate = \Carbon\Carbon::now();
+            // Calculate days remaining/overdue — calendar-date comparison
+            // (using Carbon::now() here would make a task due "today" look
+            // overdue/0-days-remaining the moment any time passed today).
+            $deadlineDate = $task->deadline_date ? \Carbon\Carbon::parse($task->deadline_date)->startOfDay() : null;
+            $currentDate = \Carbon\Carbon::today();
 
             if ($deadlineDate) {
                 $daysRemaining = $currentDate->diffInDays($deadlineDate, false);
@@ -1229,6 +1394,9 @@ class TaskController extends Controller
             // Get default profile image path
             $defaultProfileImage = asset('assets/images/avatar/1.png');
 
+            $comments = TaskComment::with('user')->where('task_id', $id)->orderBy('created_at', 'desc')->get();
+            $attachments = TaskAttachment::with('uploadedBy')->where('task_id', $id)->orderBy('created_at', 'desc')->get();
+
             return view('client.task.view-task-detail', compact(
                 'task',
                 'updates',
@@ -1237,12 +1405,156 @@ class TaskController extends Controller
                 'isOverdue',
                 'formattedTaskDate',
                 'formattedDeadlineDate',
-                'defaultProfileImage'
+                'defaultProfileImage',
+                'comments',
+                'attachments',
+                'myAssignment'
             ));
         } catch (Exception $e) {
             Log::error('Task detail error: ' . $e->getMessage());
             return redirect()->back()
                 ->with('error', 'An error occurred. Please try again later.' . $e->getMessage());
         }
+    }
+
+    public function addComment(Request $request, $taskId)
+    {
+        $authUser = Auth::user();
+
+        if (!Task::where('id', $taskId)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Task not found.'], 404);
+        }
+
+        if (!$this->permissions->canAccessTask($authUser, $taskId)) {
+            return response()->json(['success' => false, 'message' => 'You do not have access to this task.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'comment' => 'required|string|max:2000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $comment = TaskComment::create([
+            'task_id' => $taskId,
+            'user_id' => $authUser->id,
+            'comment' => $request->comment,
+        ]);
+
+        $comment->load('user');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment added.',
+            'data' => [
+                'id' => $comment->id,
+                'comment' => $comment->comment,
+                'user_name' => $comment->user->name ?? 'Unknown',
+                'created_at' => $comment->created_at->format('d M Y, h:i A'),
+                'created_at_human' => $comment->created_at->diffForHumans(),
+                'can_delete' => true,
+            ],
+        ]);
+    }
+
+    public function deleteComment($id)
+    {
+        $authUser = Auth::user();
+        $comment = TaskComment::find($id);
+
+        if (!$comment) {
+            return response()->json(['success' => false, 'message' => 'Comment not found.'], 404);
+        }
+
+        // Comment author, or admin/hr, may delete.
+        if (!$this->permissions->canManageOwnedResource($authUser, $comment->user_id)) {
+            return response()->json(['success' => false, 'message' => 'You cannot delete this comment.'], 403);
+        }
+
+        $comment->delete();
+
+        return response()->json(['success' => true, 'message' => 'Comment deleted.']);
+    }
+
+    public function uploadAttachment(Request $request, $taskId)
+    {
+        $authUser = Auth::user();
+
+        if (!Task::where('id', $taskId)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Task not found.'], 404);
+        }
+
+        if (!$this->permissions->canAccessTask($authUser, $taskId)) {
+            return response()->json(['success' => false, 'message' => 'You do not have access to this task.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'files'   => 'required|array|min:1|max:5',
+            'files.*' => 'file|mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $dest = public_path('uploads/task/attachments');
+        if (!file_exists($dest)) {
+            mkdir($dest, 0755, true);
+        }
+
+        $created = [];
+        foreach ($request->file('files') as $file) {
+            $filename = time() . '_' . uniqid() . '.' . strtolower($file->getClientOriginalExtension());
+            $file->move($dest, $filename);
+
+            $attachment = TaskAttachment::create([
+                'task_id' => $taskId,
+                'uploaded_by' => $authUser->id,
+                'file_path' => 'uploads/task/attachments/' . $filename,
+                'file_name' => $file->getClientOriginalName(),
+                'file_type' => $file->getClientOriginalExtension(),
+                'file_size' => $file->getSize(),
+                'created_at' => now(),
+            ]);
+            $attachment->load('uploadedBy');
+            $created[] = [
+                'id' => $attachment->id,
+                'file_name' => $attachment->file_name,
+                'file_url' => $attachment->file_url,
+                'file_type' => $attachment->file_type,
+                'formatted_size' => $attachment->formatted_size,
+                'uploaded_by_name' => $attachment->uploadedBy->name ?? 'Unknown',
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => count($created) . ' file(s) uploaded.',
+            'data' => $created,
+        ]);
+    }
+
+    public function deleteAttachment($id)
+    {
+        $authUser = Auth::user();
+        $attachment = TaskAttachment::find($id);
+
+        if (!$attachment) {
+            return response()->json(['success' => false, 'message' => 'Attachment not found.'], 404);
+        }
+
+        if (!$this->permissions->canManageOwnedResource($authUser, $attachment->uploaded_by)) {
+            return response()->json(['success' => false, 'message' => 'You cannot delete this attachment.'], 403);
+        }
+
+        if ($attachment->file_path && file_exists(public_path($attachment->file_path))) {
+            @unlink(public_path($attachment->file_path));
+        }
+
+        $attachment->delete();
+
+        return response()->json(['success' => true, 'message' => 'Attachment deleted.']);
     }
 }

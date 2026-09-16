@@ -3,8 +3,8 @@
 @section('style')
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-light: #eef2ff;
+            --primary: #1e3a8a;
+            --primary-light: #e3edfe;
             --success: #22c55e;
             --danger: #ef4444;
             --warning: #f59e0b;
@@ -86,7 +86,7 @@
         .form-control:focus {
             border-color: var(--primary);
             outline: none;
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
         }
 
         .form-control.is-invalid {
@@ -99,8 +99,8 @@
         }
 
         .form-control.prorated {
-            background: #fefce8 !important;
-            border-color: var(--warning) !important;
+            background: #eef3fd !important;
+            border-color: var(--primary) !important;
         }
 
         .form-control.hour-based {
@@ -141,7 +141,7 @@
         .employee-avatar {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, var(--primary), #818cf8);
+            background: linear-gradient(135deg, var(--primary), #2563eb);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -196,21 +196,21 @@
         }
 
         .alert-info {
-            background: #e6f3ff;
-            border: 1px solid #b8daff;
-            color: #004085;
+            background: #e3edfe;
+            border: 1px solid #93c5fd;
+            color: #1e3a8a;
         }
 
         .alert-warning {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
+            background: #bfd3f7;
+            border: 1px solid #60a5fa;
+            color: #1e3a8a;
         }
 
         .alert-success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
+            background: #1e3a8a;
+            border: 1px solid #1e3a8a;
+            color: #ffffff;
         }
 
         .alert-info i, .alert-warning i, .alert-success i {
@@ -244,13 +244,13 @@
         }
 
         .calculation-type-badge.day-based {
-            background: #dbeafe;
-            color: #1e40af;
+            background: #bfd3f7;
+            color: #1e3a8a;
         }
 
         .calculation-type-badge.hour-based {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .total-box {
@@ -319,7 +319,7 @@
         }
 
         .btn-primary:hover {
-            background: #4338ca;
+            background: #16295e;
         }
 
         .btn-secondary {
@@ -412,7 +412,7 @@
 
         .input-group:focus-within {
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
         }
 
         .input-group-text {
@@ -439,22 +439,22 @@
         }
 
         .employer-section {
-            background: #f0fdf4;
-            border: 1px dashed #86efac;
+            background: #eef3fd;
+            border: 1px dashed #93c5fd;
             border-radius: 8px;
             padding: 10px 12px;
             margin-top: 4px;
         }
 
         .employer-section .section-title {
-            border-bottom-color: #86efac;
-            color: #166534;
+            border-bottom-color: #93c5fd;
+            color: #1e3a8a;
         }
 
         .employer-section .input-group-text {
-            background: #dcfce7;
-            border-right-color: #86efac;
-            color: #166534;
+            background: #dbeafe;
+            border-right-color: #93c5fd;
+            color: #1e3a8a;
         }
 
         .summary-grid {
@@ -542,23 +542,23 @@
         }
 
         .status-badge.pending {
-            background: #fef3c7;
-            color: #92400e;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .status-badge.processed {
-            background: #dbeafe;
-            color: #1e40af;
+            background: #bfd3f7;
+            color: #1e3a8a;
         }
 
         .status-badge.paid {
-            background: #d1fae5;
-            color: #065f46;
+            background: #1e3a8a;
+            color: #ffffff;
         }
 
         .status-badge.cancelled {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #e2e8f0;
+            color: #475569;
         }
 
         .view-toggle {
@@ -711,21 +711,21 @@
         .annual-ctc-box {
             padding: 10px 14px;
             margin-top: 10px;
-            background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+            background: linear-gradient(135deg, #f5f3ff, #e3edfe);
             border-radius: 8px;
-            border: 1px solid #c4b5fd;
+            border: 1px solid #93c5fd;
         }
 
         .annual-ctc-box .annual-label {
             font-size: 11px;
-            color: #6d28d9;
+            color: #16295e;
             font-weight: 500;
         }
 
         .annual-ctc-box .annual-value {
             font-size: 22px;
             font-weight: 700;
-            color: #7c3aed;
+            color: #1e3a8a;
         }
 
         .annual-ctc-box .annual-breakdown {
@@ -734,7 +734,7 @@
             margin-top: 4px;
             flex-wrap: wrap;
             font-size: 10px;
-            color: #6d28d9;
+            color: #16295e;
         }
 
         .calculation-toggle {
@@ -758,8 +758,8 @@
         }
 
         .badge-hour-based {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1e3a8a;
             padding: 2px 10px;
             border-radius: 12px;
             font-size: 10px;
@@ -820,7 +820,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <form action="{{ route('monthly-payrolls.update', $monthlyPayroll->id) }}" method="POST" id="editPayrollForm">
@@ -983,15 +983,15 @@
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
-                                    <label>OT Hours</label>
+                                    <label>Approved OT Hours</label>
                                     <input type="number" step="0.5" name="overtime_hours" id="overtime_hours" class="form-control"
                                         value="{{ old('overtime_hours', $monthlyPayroll->overtime_hours ?? 0) }}">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
-                                    <label>OT Rate</label>
-                                    <input type="number" step="0.01" class="form-control" 
+                                    <label>Approved OT Rate</label>
+                                    <input type="number" step="0.01" class="form-control"
                                         value="{{ $monthlyPayroll->overtime_rate ?? 0 }}" readonly>
                                 </div>
                             </div>
@@ -1040,7 +1040,7 @@
                                 @endphp
                             </span></span>
                             @if(($monthlyPayroll->paid_leaves ?? 0) > 0)
-                                <span class="info-item" style="background: #fef3c7; padding: 2px 8px; border-radius: 4px; color: #92400e;">
+                                <span class="info-item" style="background: #e3edfe; padding: 2px 8px; border-radius: 4px; color: #1e3a8a;">
                                     <i class="feather-calendar"></i> <strong>Paid Leaves:</strong> {{ $monthlyPayroll->paid_leaves ?? 0 }} days
                                     ({{ ($monthlyPayroll->paid_leaves ?? 0) * ($userPayroll && $userPayroll->payrollMaster ? $userPayroll->payrollMaster->working_hours_per_day ?? 8 : 8) }} hrs)
                                 </span>
@@ -1125,7 +1125,7 @@
                     <!-- ============================================================ -->
                     <div class="form-section">
                         <div class="section-title">
-                            <span><i class="feather-trending-up me-1" style="color: var(--success);"></i>Earnings</span>
+                            <span><i class="feather-trending-up me-1" style="color: var(--primary);"></i>Earnings</span>
                             <span style="font-size: 10px; color: var(--gray-500);"><i class="feather-edit-2"></i> Editable</span>
                         </div>
                         <div class="component-card">
@@ -1189,10 +1189,10 @@
                                             class="form-control prorated-field"
                                             value="{{ old('special_allowance', $monthlyPayroll->special_allowance ?? 0) }}">
                                     </div>
-                                    <div class="input-group" style="background: #f0fdf4; border-color: #86efac;">
-                                        <span class="input-group-text" style="background: #dcfce7; color: #166534;">OT</span>
+                                    <div class="input-group" style="background: #eef3fd; border-color: #93c5fd;">
+                                        <span class="input-group-text" style="background: #dbeafe; color: #1e3a8a;">OT</span>
                                         <input type="number" step="0.01" name="overtime_amount" id="overtime_amount"
-                                            class="form-control" style="background: #f0fdf4;"
+                                            class="form-control" style="background: #eef3fd;"
                                             value="{{ old('overtime_amount', $monthlyPayroll->overtime_amount ?? 0) }}">
                                     </div>
                                 </div>
@@ -1201,11 +1201,143 @@
                     </div>
 
                     <!-- ============================================================ -->
+                    <!-- OVERTIME SECTION -- approved breakdown + non-approved include -->
+                    <!-- ============================================================ -->
+                    <div class="form-section">
+                        <div class="section-title">
+                            <span><i class="feather-clock me-1" style="color: var(--gray-600);"></i>Overtime</span>
+                            <span style="font-size: 10px; color: var(--gray-500);"><i class="feather-edit-2"></i> Approved amount above is editable</span>
+                        </div>
+
+                        @if($approvedOvertimeRequests->isNotEmpty())
+                            <div class="component-card">
+                                <div class="component-header">
+                                    <span class="component-title"><i class="feather-check-circle"></i> Approved this month</span>
+                                    <span style="font-size: 9px; color: var(--gray-500);">{{ $overtimeRateMultiplier }}x rate</span>
+                                </div>
+                                <div class="component-body">
+                                    @foreach($approvedOvertimeRequests as $otRow)
+                                        <div class="component-row" style="justify-content: space-between; flex-wrap: wrap;">
+                                            <span class="text-muted-small">{{ \Carbon\Carbon::parse($otRow->date)->format('d M Y') }} &mdash; {{ $otRow->reason }}</span>
+                                            <span class="text-muted-small">{{ number_format($otRow->final_overtime_hours, 2) }} hrs</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($pendingOvertimeRequests->isNotEmpty())
+                            @php
+                                $includePendingDefault = old('include_pending_overtime', false);
+                            @endphp
+                            <div class="component-card" style="margin-top: {{ $approvedOvertimeRequests->isNotEmpty() ? '8px' : '0' }};">
+                                <div class="component-header">
+                                    <span class="component-title"><i class="feather-alert-circle"></i> Non-approved (pending) this month</span>
+                                    <span style="font-size: 9px; color: var(--gray-500);">{{ $pendingOvertimeHours }} hrs</span>
+                                </div>
+                                <div class="component-body">
+                                    @foreach($pendingOvertimeRequests as $otRow)
+                                        <div class="component-row" style="justify-content: space-between; flex-wrap: wrap;">
+                                            <span class="text-muted-small">{{ \Carbon\Carbon::parse($otRow->date)->format('d M Y') }} &mdash; {{ $otRow->reason }}</span>
+                                            <span class="text-muted-small">{{ number_format($otRow->overtime_hours, 2) }} hrs</span>
+                                        </div>
+                                    @endforeach
+                                    <div class="component-row" style="justify-content: space-between; font-weight: 600; border-top: 1px solid var(--gray-200); margin-top: 4px; padding-top: 4px;">
+                                        <span class="text-muted-small">System-calculated pending total</span>
+                                        <span class="text-muted-small">{{ $pendingOvertimeHours }} hrs &mdash; ₹{{ number_format($pendingOvertimeAmount, 2) }}</span>
+                                    </div>
+                                </div>
+
+                                @if($canApproveOvertime)
+                                    <div class="calculation-toggle" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--gray-100);">
+                                        <span class="toggle-label">Include non-approved overtime in this payroll</span>
+                                        <div class="form-check form-switch mb-0">
+                                            <input class="form-check-input" type="checkbox" id="include_pending_overtime_toggle"
+                                                {{ $includePendingDefault ? 'checked' : '' }}>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="include_pending_overtime" id="include_pending_overtime" value="{{ $includePendingDefault ? 1 : 0 }}">
+                                    @foreach($pendingOvertimeRequests as $otRow)
+                                        <input type="hidden" name="pending_overtime_request_ids[]" value="{{ $otRow->id }}">
+                                    @endforeach
+                                    <div class="alert alert-warning" style="font-size: 11px; padding: 8px 12px; margin: 8px 0 0;">
+                                        <i class="feather-alert-triangle me-1"></i>
+                                        Checking this will directly approve these overtime hours as part of saving this payroll
+                                        (<span id="pendingOtIncludedPreview">+{{ $pendingOvertimeHours }} hrs, +₹{{ number_format($pendingOvertimeAmount, 2) }}</span>).
+                                    </div>
+                                @else
+                                    <div class="text-muted-small" style="margin-top: 8px;">
+                                        <i class="feather-lock"></i> Requires overtime-approval permission to include in this payroll.
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- ============================================================ -->
+                    <!-- LOAN DEDUCTIONS SECTION                                      -->
+                    <!-- ============================================================ -->
+                    @if($loanDueItems->isNotEmpty())
+                        @php
+                            $loanEnabledDefault = old('loan_deduction_enabled', ($monthlyPayroll->loan_deduction_enabled ?? true) ? 1 : 0);
+                            $loanAmountDefault = old('loan_deduction', $monthlyPayroll->loan_deduction > 0 ? $monthlyPayroll->loan_deduction : $loanDueTotal);
+                        @endphp
+                        <div class="form-section">
+                            <div class="section-title">
+                                <span><i class="feather-credit-card me-1" style="color: var(--gray-600);"></i>Loan Deductions</span>
+                                <div class="calculation-toggle">
+                                    <span class="toggle-label">Deduct from this payslip</span>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" id="loan_deduction_enabled_toggle"
+                                            {{ $loanEnabledDefault ? 'checked' : '' }}>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="loan_deduction_enabled" id="loan_deduction_enabled" value="{{ $loanEnabledDefault ? 1 : 0 }}">
+                            <div class="component-card">
+                                <div class="component-header">
+                                    <span class="component-title"><i class="feather-list"></i> Due this month (EMI + Lump Sum)</span>
+                                    <span style="font-size: 9px; color: var(--gray-500);">₹</span>
+                                </div>
+                                <div class="component-body">
+                                    @foreach($loanDueItems as $item)
+                                        <div class="component-row" style="justify-content: space-between; flex-wrap: wrap;">
+                                            <span class="text-muted-small">
+                                                Loan #{{ $item['loan_number'] }}
+                                                <span class="badge-hour-based" style="margin-left:4px;">{{ strtoupper($item['type']) }}</span>
+                                                @if($item['already_paid'] > 0)
+                                                    <span class="text-muted-small">&mdash; partial: ₹{{ number_format($item['already_paid'], 2) }} already paid</span>
+                                                @endif
+                                            </span>
+                                            <span class="text-muted-small">₹{{ number_format($item['balance_due'], 2) }}</span>
+                                        </div>
+                                    @endforeach
+                                    <div class="component-row" style="justify-content: space-between; font-weight: 600; border-top: 1px solid var(--gray-200); margin-top: 4px; padding-top: 4px;">
+                                        <span class="text-muted-small">System-calculated total due</span>
+                                        <span class="text-muted-small">₹{{ number_format($loanDueTotal, 2) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="loanNegativeNetWarning" class="alert alert-warning" style="display:none; font-size: 11px; padding: 8px 12px; margin: 8px 0 0;">
+                                <div><i class="feather-alert-triangle me-1"></i><span id="loanNegativeNetWarningText"></span></div>
+                                <div class="form-check mt-1 mb-0">
+                                    <input class="form-check-input" type="checkbox" name="confirm_negative_net_payable" id="confirm_negative_net_payable" value="1">
+                                    <label class="form-check-label" for="confirm_negative_net_payable" style="font-size: 11px;">
+                                        I understand net payable will be negative &mdash; proceed anyway
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <input type="hidden" name="loan_deduction_enabled" id="loan_deduction_enabled" value="1">
+                    @endif
+
+                    <!-- ============================================================ -->
                     <!-- DEDUCTIONS SECTION                                           -->
                     <!-- ============================================================ -->
                     <div class="form-section">
                         <div class="section-title">
-                            <span><i class="feather-trending-down me-1" style="color: var(--danger);"></i>Deductions</span>
+                            <span><i class="feather-trending-down me-1" style="color: var(--gray-600);"></i>Deductions</span>
                             <span style="font-size: 10px; color: var(--gray-500);"><i class="feather-edit-2"></i> Editable</span>
                         </div>
                         <div class="component-card">
@@ -1243,7 +1375,8 @@
                                         <span class="input-group-text">Loan</span>
                                         <input type="number" step="0.01" name="loan_deduction" id="loan_deduction"
                                             class="form-control"
-                                            value="{{ old('loan_deduction', $monthlyPayroll->loan_deduction ?? 0) }}">
+                                            value="{{ $loanAmountDefault ?? old('loan_deduction', $monthlyPayroll->loan_deduction ?? 0) }}"
+                                            {{ ($loanEnabledDefault ?? 1) ? '' : 'disabled' }}>
                                     </div>
                                     <div class="input-group">
                                         <span class="input-group-text">Other</span>
@@ -1261,36 +1394,36 @@
                     <!-- ============================================================ -->
                     <div class="employer-section">
                         <div class="section-title">
-                            <span><i class="feather-briefcase me-1" style="color: #166534;"></i>Employer</span>
-                            <span style="font-size: 9px; color: #166534;"><i class="feather-info"></i> Part of CTC</span>
+                            <span><i class="feather-briefcase me-1" style="color: #1e3a8a;"></i>Employer</span>
+                            <span style="font-size: 9px; color: #1e3a8a;"><i class="feather-info"></i> Part of CTC</span>
                         </div>
-                        <div class="component-card" style="border-color: #86efac;">
-                            <div class="component-header" style="background: #dcfce7; border-bottom-color: #86efac;">
-                                <span class="component-title" style="color: #166534;">
+                        <div class="component-card" style="border-color: #93c5fd;">
+                            <div class="component-header" style="background: #dbeafe; border-bottom-color: #93c5fd;">
+                                <span class="component-title" style="color: #1e3a8a;">
                                     <i class="feather-plus-circle"></i> Employer Cost
                                 </span>
-                                <span style="font-size: 9px; color: #166534;">₹</span>
+                                <span style="font-size: 9px; color: #1e3a8a;">₹</span>
                             </div>
                             <div class="component-body">
                                 <div class="component-row">
-                                    <div class="input-group" style="border-color: #86efac;">
-                                        <span class="input-group-text" style="background: #dcfce7; border-right-color: #86efac; color: #166534;">Employer PF</span>
+                                    <div class="input-group" style="border-color: #93c5fd;">
+                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #1e3a8a;">Employer PF</span>
                                         <input type="number" step="0.01" name="employer_provident_fund" id="employer_pf"
-                                            class="form-control" style="background: #f0fdf4;"
+                                            class="form-control" style="background: #eef3fd;"
                                             value="{{ old('employer_provident_fund', $monthlyPayroll->employer_provident_fund ?? 0) }}" readonly>
                                     </div>
-                                    <div class="input-group" style="border-color: #86efac;">
-                                        <span class="input-group-text" style="background: #dcfce7; border-right-color: #86efac; color: #166534;">Employer ESI</span>
+                                    <div class="input-group" style="border-color: #93c5fd;">
+                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #1e3a8a;">Employer ESI</span>
                                         <input type="number" step="0.01" name="employer_esi" id="employer_esi"
-                                            class="form-control" style="background: #f0fdf4;"
+                                            class="form-control" style="background: #eef3fd;"
                                             value="{{ old('employer_esi', $monthlyPayroll->employer_esi ?? 0) }}" readonly>
                                     </div>
-                                    <div class="input-group" style="border-color: #86efac; grid-column: span 2;">
-                                        <span class="input-group-text" style="background: #dcfce7; border-right-color: #86efac; color: #166534; min-width: 90px;">
+                                    <div class="input-group" style="border-color: #93c5fd; grid-column: span 2;">
+                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #1e3a8a; min-width: 90px;">
                                             <i class="feather-pie-chart"></i> Total
                                         </span>
                                         <input type="text" class="form-control" id="total_employer_cost" 
-                                            style="background: #f0fdf4; font-weight: 600; color: #166534;"
+                                            style="background: #eef3fd; font-weight: 600; color: #1e3a8a;"
                                             value="₹{{ number_format(($monthlyPayroll->employer_provident_fund ?? 0) + ($monthlyPayroll->employer_esi ?? 0), 2) }}" readonly>
                                     </div>
                                 </div>
@@ -1308,15 +1441,15 @@
                         </div>
                         <div class="summary-grid">
                             <div class="summary-item">
-                                <div class="summary-label"><i class="feather-trending-up" style="color: var(--success);"></i> Gross</div>
-                                <div class="summary-value" style="color: var(--success);">
+                                <div class="summary-label"><i class="feather-trending-up" style="color: var(--primary);"></i> Gross</div>
+                                <div class="summary-value" style="color: var(--primary);">
                                     <span id="gross_display">₹{{ number_format($monthlyPayroll->gross_earnings, 2) }}</span>
                                     <small>/m</small>
                                 </div>
                             </div>
                             <div class="summary-item">
-                                <div class="summary-label"><i class="feather-trending-down" style="color: var(--danger);"></i> Deductions</div>
-                                <div class="summary-value" style="color: var(--danger);">
+                                <div class="summary-label"><i class="feather-trending-down" style="color: var(--gray-600);"></i> Deductions</div>
+                                <div class="summary-value" style="color: var(--gray-600);">
                                     <span id="deductions_display">₹{{ number_format($monthlyPayroll->total_deductions, 2) }}</span>
                                     <small>/m</small>
                                 </div>
@@ -1337,9 +1470,9 @@
                                     <small>/m</small>
                                 </div>
                             </div>
-                            <div class="summary-item" style="border-left: 2px solid #8b5cf6;">
-                                <div class="summary-label"><i class="feather-pie-chart" style="color: #8b5cf6;"></i> Monthly CTC</div>
-                                <div class="summary-value" style="font-size: 18px; color: #8b5cf6;">
+                            <div class="summary-item" style="border-left: 2px solid #2563eb;">
+                                <div class="summary-label"><i class="feather-pie-chart" style="color: #2563eb;"></i> Monthly CTC</div>
+                                <div class="summary-value" style="font-size: 18px; color: #2563eb;">
                                     <span id="monthly_ctc_display">
                                         ₹{{ number_format(($monthlyPayroll->gross_earnings ?? 0) + ($monthlyPayroll->employer_provident_fund ?? 0) + ($monthlyPayroll->employer_esi ?? 0), 2) }}
                                     </span>
@@ -1381,7 +1514,16 @@
         // ================================================================
         const isHourBased = {{ $calcType === 'hour_based' ? 'true' : 'false' }};
         const workingHoursPerDay = {{ $userPayroll && $userPayroll->payrollMaster ? $userPayroll->payrollMaster->working_hours_per_day ?? 8 : 8 }};
-        
+        // Tenant's real overtime rate multiplier (overtime_settings.rate_multiplier) --
+        // used instead of a hardcoded 1.5 so this preview matches what the backend
+        // actually persists (see MonthlyPayrollController::overtimeAmountForHours()).
+        const overtimeRateMultiplier = {{ $overtimeRateMultiplier ?? 1.5 }};
+        // Server-computed preview for the non-approved overtime block -- the
+        // authoritative amount is always recomputed server-side on save; this is
+        // only used to keep the live gross/net totals accurate before submit.
+        let pendingOvertimePreviewAmount = {{ $pendingOvertimeAmount ?? 0 }};
+        let includePendingOvertime = {{ ($includePendingDefault ?? false) ? 'true' : 'false' }};
+
         console.log('Calculation Type:', isHourBased ? 'Hour-Based' : 'Day-Based');
         console.log('Working Hours Per Day:', workingHoursPerDay);
 
@@ -1686,9 +1828,13 @@
                     let expectedHours = parseFloat($('#expected_hours').val()) || 1;
                     hourlyRate = originalPayroll.full_month_basic / expectedHours;
                 } else {
-                    hourlyRate = basicSalary / originalPayroll.total_working_days / 8;
+                    // total_working_days is persisted as the full calendar-day count for
+                    // day-based payrolls (see MonthlyPayrollController::overtimeHourlyRate()),
+                    // and workingHoursPerDay comes from the payroll master -- matching the
+                    // backend's formula exactly instead of a hardcoded "/ 8".
+                    hourlyRate = basicSalary / originalPayroll.total_working_days / workingHoursPerDay;
                 }
-                let overtimeAmount = overtimeHours * hourlyRate * 1.5;
+                let overtimeAmount = overtimeHours * hourlyRate * overtimeRateMultiplier;
                 $('#overtime_amount').val(overtimeAmount.toFixed(2));
                 return overtimeAmount;
             }
@@ -1705,7 +1851,8 @@
             let lta = parseFloat($('#lta').val()) || 0;
             let incentive = parseFloat($('#monthly_incentive').val()) || 0;
             let special = parseFloat($('#special_allowance').val()) || 0;
-            let overtime = parseFloat($('#overtime_amount').val()) || 0;
+            let overtime = (parseFloat($('#overtime_amount').val()) || 0)
+                + (includePendingOvertime ? pendingOvertimePreviewAmount : 0);
             let pf = parseFloat($('#pf').val()) || 0;
             let esi = parseFloat($('#esi').val()) || 0;
             let pt = parseFloat($('#pt').val()) || 0;
@@ -1731,7 +1878,58 @@
             $('#gross_earnings').val(gross.toFixed(2));
             $('#total_deductions').val(deductions.toFixed(2));
             $('#net_payable').val(net.toFixed(2));
+
+            updateLoanNegativeNetWarning(net);
         }
+
+        // ================================================================
+        // LOAN DEDUCTION: enable/disable toggle + negative-net-pay warning
+        // ================================================================
+        function updateLoanNegativeNetWarning(net) {
+            let $warning = $('#loanNegativeNetWarning');
+            if (!$warning.length) {
+                return;
+            }
+            if (net < 0) {
+                $('#loanNegativeNetWarningText').text(
+                    'Net payable would be ₹' + formatNumber(net) + ' (negative). Reduce the loan deduction amount, or check the box below to proceed anyway.'
+                );
+                $warning.show();
+            } else {
+                $warning.hide();
+                $('#confirm_negative_net_payable').prop('checked', false);
+            }
+        }
+
+        $('#loan_deduction_enabled_toggle').on('change', function() {
+            let enabled = $(this).is(':checked');
+            $('#loan_deduction_enabled').val(enabled ? 1 : 0);
+            let $loanInput = $('#loan_deduction');
+
+            if (enabled) {
+                $loanInput.prop('disabled', false);
+                if (!parseFloat($loanInput.val())) {
+                    $loanInput.val('{{ $loanDueTotal ?? 0 }}');
+                }
+            } else {
+                $loanInput.prop('disabled', true).val(0);
+            }
+
+            calculateTotals();
+        });
+
+        $('#loan_deduction').on('input change', function() {
+            calculateTotals();
+        });
+
+        // ================================================================
+        // OVERTIME: include non-approved (pending) overtime toggle
+        // ================================================================
+        $('#include_pending_overtime_toggle').on('change', function() {
+            includePendingOvertime = $(this).is(':checked');
+            $('#include_pending_overtime').val(includePendingOvertime ? 1 : 0);
+            calculateTotals();
+        });
 
         // ================================================================
         // EVENT HANDLERS

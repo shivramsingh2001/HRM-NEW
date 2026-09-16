@@ -37,6 +37,7 @@ class MarkAttendanceRequest extends FormRequest
                 Rule::exists('users', 'id')->where('tenant_id', $tenantId),
             ],
             'date' => ['required', 'date', 'before_or_equal:today'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:date', 'before_or_equal:today'],
             'status' => ['required', Rule::in(AttendanceStatus::markable())],
             'clock_in' => ['nullable', 'date_format:H:i', 'required_if:status,present,half_day'],
             'clock_out' => ['nullable', 'date_format:H:i', 'required_if:status,present,half_day'],

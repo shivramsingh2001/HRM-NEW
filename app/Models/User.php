@@ -6,14 +6,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use App\Traits\TenantTrait;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use TenantTrait, HasApiTokens, HasFactory, Notifiable;
+    use TenantTrait, HasFactory, Notifiable;
 
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
@@ -42,6 +41,7 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'employee_id',
+        'card_number',
         'password',
         'role',
         'contact',
@@ -153,6 +153,17 @@ class User extends Authenticatable implements JWTSubject
     public function currentPayroll()
     {
         return $this->hasOne(UserPayroll::class, 'user_id')->where('is_current', true);
+    }
+
+    /** Payroll rebuild — Phase 8: the dynamic-engine equivalent of currentPayroll(). */
+    public function dynamicPayrollStructures()
+    {
+        return $this->hasMany(\App\Models\PayrollEmployeeStructure::class, 'user_id');
+    }
+
+    public function currentDynamicPayrollStructure()
+    {
+        return $this->hasOne(\App\Models\PayrollEmployeeStructure::class, 'user_id')->where('is_current', true);
     }
 
     public function monthlyPayrolls()

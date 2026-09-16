@@ -84,6 +84,45 @@ class AttendanceCalculator
     }
 
     /**
+     * Tier 1 / W4 — a local wall-clock "Y-m-d H:i:s" string in $tz as a UTC
+     * Carbon. Null for empty / zero / unparseable input.
+     */
+    public function toUtc(?string $localDateTime, string $tz): ?Carbon
+    {
+        if (empty($localDateTime) || str_starts_with((string) $localDateTime, '0000-00-00')) {
+            return null;
+        }
+        try {
+            return Carbon::parse($localDateTime, $tz)->utc();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Tier 1 / W4 — the true instant of a punch on an attendance row: the
+     * `{$field}_utc` column when present, else the legacy local string parsed in
+     * the row's own `tz` (falling back to $tz). Returns a UTC Carbon or null.
+     *
+     * @param  object|array  $row  needs {$field}, optionally {$field}_utc and tz
+     */
+    public function instant($row, string $field, string $tz): ?Carbon
+    {
+        $get = fn ($k) => is_array($row) ? ($row[$k] ?? null) : ($row->{$k} ?? null);
+
+        $utc = $get($field . '_utc');
+        if (! empty($utc) && ! str_starts_with((string) $utc, '0000-00-00')) {
+            try {
+                return Carbon::parse($utc, 'UTC');
+            } catch (\Throwable $e) {
+                // fall through to the local string
+            }
+        }
+
+        return $this->toUtc($get($field), $get('tz') ?: $tz);
+    }
+
+    /**
      * Minutes the clock-in is late versus the scheduled start, after the shift's
      * grace period. 0 when on time / early / no shift.
      */

@@ -13,10 +13,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Services\OvertimeNotificationService;
+use App\Traits\AuthorizesByScope;
 use Illuminate\Support\Facades\Log;
 
 class OvertimeController extends Controller
 {
+    use AuthorizesByScope;
+
     protected $notificationService;
 
     public function __construct(OvertimeNotificationService $notificationService)
@@ -406,7 +409,7 @@ class OvertimeController extends Controller
             }
 
             // Check authorization
-            if (!in_array($authUser->role, ['admin', 'manager']) && $request->user_id != $authUser->id) {
+            if (!$this->scopeCoversOwner($authUser, 'overtime', 'view', (int) $request->user_id)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access to this request'

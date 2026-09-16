@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Services\RbacService;
 
 class ProjectController extends Controller
 {
@@ -39,21 +40,20 @@ class ProjectController extends Controller
             $query->selectRaw('(SELECT COUNT(*) FROM project_assigns WHERE project_id = projects.id) as total_members');
             $query->selectRaw('(SELECT COUNT(*) FROM project_assigns WHERE project_id = projects.id AND status = "1") as active_members');
 
-            // Role-based filtering
-            switch ($authUser->role) {
-                case 'admin':
-                case 'hr':
-                    // Admin/HR: See all projects (no filter)
-                    break;
-
-                case 'manager':
-                    // Manager: See all projects with assignment flags
+            // Permission-based filtering (was a fixed role switch that
+            // silently locked out any custom role holding a real
+            // projects:view grant).
+            $projectScope = app(RbacService::class)->scopeFor($authUser, 'projects', 'view');
+            switch ($projectScope) {
+                case 'company':
+                case 'team':
+                    // See all projects, with assignment flags for this user.
                     $query->selectRaw('EXISTS(SELECT 1 FROM project_assigns WHERE project_id = projects.id AND user_id = ' . $authUser->id . ') as is_assigned');
                     $query->selectRaw('EXISTS(SELECT 1 FROM project_assigns WHERE project_id = projects.id AND user_id = ' . $authUser->id . ' AND is_head = "1") as is_project_head');
                     break;
 
-                case 'employee':
-                    // Employee: See only projects they're assigned to
+                case 'own':
+                    // See only projects they're assigned to
                     $query->join('project_assigns as pa', function ($join) use ($authUser) {
                         $join->on('projects.id', '=', 'pa.project_id')
                             ->where('pa.user_id', '=', $authUser->id);
@@ -83,7 +83,7 @@ class ProjectController extends Controller
             $projects = $query->get();
 
             // Enhance the response with additional details
-            $enhancedProjects = $projects->map(function ($project) use ($authUser) {
+            $enhancedProjects = $projects->map(function ($project) use ($authUser, $projectScope) {
 
                 // Get project members using ProjectAssign model
                 $members = ProjectAssign::where('project_id', $project->id)
@@ -119,8 +119,8 @@ class ProjectController extends Controller
                     ->filter()
                     ->values();
 
-                // For employee role, only show minimal member info
-                if ($authUser->role === 'employee') {
+                // For own-scope viewers, only show minimal member info
+                if ($projectScope === 'own') {
                     $members = $members->map(function ($member) {
                         return [
                             'id' => $member['id'],
@@ -186,7 +186,7 @@ class ProjectController extends Controller
                 'user_role' => $authUser->role,
                 'viewing_as' => [
                     'role' => $authUser->role,
-                    'can_view_all' => in_array($authUser->role, ['admin', 'hr', 'manager'])
+                    'can_view_all' => $projectScope !== 'own'
                 ]
             ], 200);
         } catch (Exception $e) {

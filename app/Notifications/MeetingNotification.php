@@ -69,6 +69,15 @@ class MeetingNotification extends Notification
                 }
                 break;
                 
+            case 'rescheduled':
+                $baseData['title'] = '🔄 Meeting Rescheduled';
+                $baseData['message'] = 'Meeting "' . $this->meeting->title . '" has been rescheduled to ' .
+                    Carbon::parse($this->meeting->meeting_date)->format('d M Y') . ' at ' . $this->meeting->start_time . '.';
+                if ($this->remarks) {
+                    $baseData['remarks'] = $this->remarks;
+                }
+                break;
+
             case 'cancelled':
                 $baseData['title'] = '❌ Meeting Cancelled';
                 $baseData['message'] = 'Meeting "' . $this->meeting->title . '" scheduled for ' . 

@@ -19,23 +19,25 @@
             font-size: 0.875em;
             color: #dc3545;
         }
+
+        /* ==================== BLUE THEME, COMPACT SPACING ==================== */
+        .personal-info .row.mb-4 { margin-bottom: 14px !important; }
+        .personal-info label { font-size: 12px; }
+        .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #eaeef5; }
+        .personal-info .form-control { font-size: 12px; border-color: #eaeef5; }
+        .personal-info .fs-12 { font-size: 11px !important; }
+        .card-body.personal-info { padding: 16px 18px; }
+        .alert-info { background: #e3edfe; border-color: #dfe5f0; color: #1e3a8a; font-size: 12px; }
+        /* .btn-primary now matches the shared theme default exactly
+           (theme-custom.css) — no page-local override needed. */
+        .btn.btn-lg { padding: 8px 20px; font-size: 13px; }
     </style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Apply Leave</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('leave.view') }}">Leave</a></li>
-                <li class="breadcrumb-item active">Apply Leave</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Apply Leave" :parent="['label' => 'Leave', 'route' => 'leave.view']" />
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 18px !important;">
         <div class="row">
             <div class="col-lg-12">
                 <div class="card border-top-0">

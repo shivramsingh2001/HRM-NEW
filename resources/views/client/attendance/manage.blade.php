@@ -20,8 +20,8 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
         }
 
         /* Consistent initials style - same color for all */
@@ -29,7 +29,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #4f46e5;
+            background: #1e3a8a;
             /* Single consistent color */
             color: white;
             border-radius: 50%;
@@ -72,12 +72,12 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #4f46e5 !important;
+            color: #1e3a8a !important;
             opacity: 0.8;
         }
 
@@ -90,96 +90,8 @@
         .text-muted {
             color: #64748b !important;
         }
-    /* ==================== STATS CARDS ==================== */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    .stats-card {
-        background: white;
-        border-radius: 16px;
-        padding: 20px 16px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        transition: all 0.3s ease;
-        border: 1px solid #edf2f7;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stats-icon-wrapper {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        transition: all 0.3s ease;
-    }
-
-    .total-card .stats-icon-wrapper {
-        background: rgba(79, 70, 229, 0.1);
-    }
-
-    .total-card .stats-icon-wrapper i {
-        color: #4f46e5;
-        font-size: 24px;
-    }
-
-    .pending-card .stats-icon-wrapper {
-        background: rgba(245, 158, 11, 0.1);
-    }
-
-    .pending-card .stats-icon-wrapper i {
-        color: #f59e0b;
-        font-size: 24px;
-    }
-
-    .approved-card .stats-icon-wrapper {
-        background: rgba(16, 185, 129, 0.1);
-    }
-
-    .approved-card .stats-icon-wrapper i {
-        color: #10b981;
-        font-size: 24px;
-    }
-
-    .rejected-card .stats-icon-wrapper {
-        background: rgba(239, 68, 68, 0.1);
-    }
-
-    .rejected-card .stats-icon-wrapper i {
-        color: #ef4444;
-        font-size: 24px;
-    }
-
-    .stats-content {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .stats-amount-main {
-        font-size: 24px;
-        font-weight: 700;
-        color: #1e293b;
-        line-height: 1.3;
-        margin-bottom: 4px;
-    }
-
-    .stats-label {
-        font-size: 11px;
-        font-weight: 600;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        margin-bottom: 6px;
-    }
+    /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
+       are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
     .stats-count {
         display: flex;
@@ -226,13 +138,13 @@
     }
 
     .filter-title i {
-        color: #4f46e5;
+        color: #1e3a8a;
         font-size: 16px;
     }
 
     .filter-title span {
-        background: #eef2ff;
-        color: #4f46e5;
+        background: #e3edfe;
+        color: #1e3a8a;
         font-size: 11px;
         font-weight: 600;
         padding: 2px 8px;
@@ -301,7 +213,7 @@
     }
 
     .search-wrapper .form-control:focus {
-        border-color: #4f46e5;
+        border-color: #1e3a8a;
         outline: none;
         background: white;
     }
@@ -321,7 +233,7 @@
     }
 
     .filter-select:focus {
-        border-color: #4f46e5;
+        border-color: #1e3a8a;
         outline: none;
         background-color: white;
     }
@@ -329,7 +241,7 @@
     .apply-btn {
         height: 36px;
         padding: 0 16px;
-        background: #4f46e5;
+        background: #1e3a8a;
         color: white;
         border: none;
         border-radius: 8px;
@@ -344,7 +256,7 @@
     }
 
     .apply-btn:hover {
-        background: #4338ca;
+        background: #16295e;
     }
 
     .reset-btn {
@@ -404,7 +316,7 @@
     }
 
     .filter-tag i {
-        color: #4f46e5;
+        color: #1e3a8a;
         font-size: 11px;
     }
 
@@ -420,9 +332,9 @@
     }
 
     .filter-tag.clear-all {
-        background: #eef2ff;
-        border-color: #4f46e5;
-        color: #4f46e5;
+        background: #e3edfe;
+        border-color: #1e3a8a;
+        color: #1e3a8a;
         font-weight: 600;
         text-decoration: none;
         padding: 3px 10px;
@@ -466,11 +378,11 @@
         width: 36px;
         height: 36px;
         border-radius: 10px;
-        background: #eef2ff;
+        background: #e3edfe;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #4f46e5;
+        color: #1e3a8a;
         font-weight: 600;
         font-size: 14px;
         text-transform: uppercase;
@@ -494,7 +406,7 @@
     .reporting-head-badge {
         font-size: 10px;
         background: #e0e7ff;
-        color: #4f46e5;
+        color: #1e3a8a;
         padding: 2px 8px;
         border-radius: 20px;
         margin-left: 5px;
@@ -532,23 +444,39 @@
     }
 
     .badge.bg-purple {
-        background: #ede9fe !important;
-        color: #5b21b6;
+        background: #e3edfe !important;
+        color: #1e3a8a;
     }
 
     .badge-type-in {
-        background: #dbeafe !important;
-        color: #1e40af;
+        background: #e3edfe !important;
+        color: #1e3a8a;
     }
 
     .badge-type-out {
-        background: #fef3c7 !important;
-        color: #92400e;
+        background: #dbeafe !important;
+        color: #2563eb;
     }
 
     .badge-type-both {
-        background: #e0e7ff !important;
-        color: #4f46e5;
+        background: #bfd3f7 !important;
+        color: #1e3a8a;
+    }
+
+    .badge-type-fullday {
+        background: #93c5fd !important;
+        color: #1e3a8a;
+    }
+
+    .badge-type-wfh {
+        background: #eef3fd !important;
+        color: #2563eb;
+        border: 1px solid #bfd3f7;
+    }
+
+    .badge-type-tech {
+        background: #e2e8f0 !important;
+        color: #475569;
     }
 
     /* ==================== ACTION BUTTONS ==================== */
@@ -593,9 +521,9 @@
     }
 
     .action-btn.view:hover {
-        color: #4f46e5;
-        border-color: #4f46e5;
-        background: #eef2ff;
+        color: #1e3a8a;
+        border-color: #1e3a8a;
+        background: #e3edfe;
     }
 
     .action-btn:disabled {
@@ -612,7 +540,7 @@
     }
 
     .file-preview a {
-        color: #4f46e5;
+        color: #1e3a8a;
         text-decoration: none;
         font-size: 11px;
         display: flex;
@@ -685,18 +613,18 @@
 
     .status-select {
         width: 100%;
-        padding: 10px;
+        padding: 6px 10px;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 11.5px;
         margin-bottom: 15px;
         transition: all 0.2s;
     }
 
     .status-select:focus {
-        border-color: #4f46e5;
+        border-color: #1e3a8a;
         outline: none;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
     }
 
     .status-select.approve-selected {
@@ -715,23 +643,57 @@
 
     .remarks-input textarea {
         width: 100%;
-        padding: 10px;
+        padding: 6px 10px;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 11.5px;
         resize: vertical;
         transition: all 0.2s;
     }
 
     .remarks-input textarea:focus {
-        border-color: #4f46e5;
+        border-color: #1e3a8a;
         outline: none;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
     }
 
-    .modal-header {
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid #edf2f7;
+    #viewModal .modal-header {
+        padding: 10px 16px;
+        border-bottom: none;
+        background: #1e3a8a;
+    }
+
+    #viewModal .modal-title {
+        font-size: 13px !important;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    #viewModal .modal-header .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+        opacity: 0.85;
+        font-size: 11px;
+    }
+
+    /* Process Regularization Request modal - matches the Regularization request modal exactly */
+    #approvalModal .modal-header {
+        background: #fff !important;
+        padding: 10px 16px !important;
+        border-bottom: 1px solid #edf2f7 !important;
+    }
+
+    #approvalModal .modal-header .fs-18 {
+        font-size: 13px !important;
+        color: #1e293b !important;
+    }
+
+    #approvalModal .modal-body {
+        padding: 1.5rem !important;
+    }
+
+    #approvalModal .modal-footer {
+        padding: 12px 16px;
+        border-top: 1px solid #edf2f7;
     }
 
     .modal-body {
@@ -741,6 +703,33 @@
     .modal-footer {
         padding: 1rem 1.5rem;
         border-top: 1px solid #edf2f7;
+    }
+
+    #approvalModal .btn,
+    #viewModal .btn {
+        font-size: 11.5px !important;
+        padding: 6px 14px !important;
+    }
+
+    #approvalModal .btn-primary {
+        background: #1e3a8a !important;
+        border-color: #1e3a8a !important;
+    }
+
+    #approvalModal .btn-primary:hover {
+        background: #16295e !important;
+        border-color: #16295e !important;
+    }
+
+    #approvalModal .btn-modal-cancel {
+        background: #eef3fd !important;
+        border-color: #bfd3f7 !important;
+        color: #1e3a8a !important;
+    }
+
+    #approvalModal .btn-modal-cancel:hover {
+        background: #dbeafe !important;
+        color: #1e3a8a !important;
     }
 
     .employee-detail-card {
@@ -761,11 +750,11 @@
         width: 48px;
         height: 48px;
         border-radius: 12px;
-        background: #eef2ff;
+        background: #e3edfe;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #4f46e5;
+        color: #1e3a8a;
         font-weight: 600;
         font-size: 18px;
     }
@@ -804,8 +793,8 @@
     }
 
     .page-item.active .page-link {
-        background: #4f46e5;
-        border-color: #4f46e5;
+        background: #1e3a8a;
+        border-color: #1e3a8a;
         color: white;
     }
 
@@ -883,7 +872,7 @@
     </div>
 </div>
 
-<div class="main-content" style="padding: 30px !important;">
+<div class="main-content" style="padding: 20px !important;">
     <!-- Stats Cards -->
     <div class="stats-grid">
         <div class="stats-card total-card">
@@ -1024,6 +1013,9 @@
                         <option value="in_time" {{ request('request_type') == 'in_time' ? 'selected' : '' }}>In Time</option>
                         <option value="out_time" {{ request('request_type') == 'out_time' ? 'selected' : '' }}>Out Time</option>
                         <option value="both" {{ request('request_type') == 'both' ? 'selected' : '' }}>Both</option>
+                        <option value="full_day" {{ request('request_type') == 'full_day' ? 'selected' : '' }}>Full Day Missed Punch</option>
+                        <option value="wfh_not_marked" {{ request('request_type') == 'wfh_not_marked' ? 'selected' : '' }}>WFH Not Marked</option>
+                        <option value="technical_issue" {{ request('request_type') == 'technical_issue' ? 'selected' : '' }}>System/Technical Issue</option>
                     </select>
                 </div>
 
@@ -1149,6 +1141,8 @@
                                     <th>Reason</th>
                                     <th>Attachment</th>
                                     <th>Status</th>
+                                    <th>Approved By</th>
+                                    <th>Approval Time</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -1178,13 +1172,19 @@
                                                     'in_time' => 'badge-type-in',
                                                     'out_time' => 'badge-type-out',
                                                     'both' => 'badge-type-both',
-                                                    default => 'bg-secondary'
+                                                    'full_day' => 'badge-type-fullday',
+                                                    'wfh_not_marked' => 'badge-type-wfh',
+                                                    'technical_issue' => 'badge-type-tech',
+                                                    default => 'badge-type-in'
                                                 };
                                                 $typeText = match($regularization->request_type) {
                                                     'in_time' => 'In Time',
                                                     'out_time' => 'Out Time',
                                                     'both' => 'Both',
-                                                    default => ucfirst($regularization->request_type)
+                                                    'full_day' => 'Full Day',
+                                                    'wfh_not_marked' => 'WFH Not Marked',
+                                                    'technical_issue' => 'Technical Issue',
+                                                    default => ucfirst(str_replace('_', ' ', $regularization->request_type))
                                                 };
                                             @endphp
                                             <span class="badge {{ $typeClass }}">
@@ -1244,6 +1244,20 @@
                                                 {{ ucfirst($regularization->status) }}
                                             </span>
                                         </td>
+                                        <td>
+                                            @if($regularization->approver)
+                                                <span class="fw-medium">{{ $regularization->approver->name }}</span>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($regularization->approved_date)
+                                                {{ \Carbon\Carbon::parse($regularization->approved_date)->format('d M Y, h:i A') }}
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
                                         <td class="text-center">
                                             @if($regularization->status == 'pending')
                                                 <button class="action-btn approve" onclick="openApprovalModal({{ $regularization->id }})"
@@ -1259,7 +1273,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="10" class="text-center py-5">
+                                        <td colspan="12" class="text-center py-5">
                                             <div class="empty-state">
                                                 <i class="feather-clock"></i>
                                                 <h4>No Regularization Requests Found</h4>
@@ -1296,58 +1310,47 @@
 
 @section('create-modal')
 <!-- Single Approval Modal with Status Select -->
-<div class="modal fade" id="approvalModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Process Regularization Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<x-ui.modal id="approvalModal" title="Process Regularization Request" bodyOnly>
+    <x-slot:footer>
+        <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="approvalSubmitBtn" form="approvalForm">
+            <i class="feather-check-circle me-2"></i>Submit
+        </button>
+    </x-slot:footer>
+    <form id="approvalForm">
+        @csrf
+        <input type="hidden" name="id" id="approval_id">
+
+        <!-- Employee Details Card -->
+        <div class="employee-detail-card" id="employeeDetailCard" style="display: none;">
+            <div class="employee-detail-row">
+                <div class="employee-detail-avatar" id="employeeAvatar"></div>
+                <div class="employee-detail-info">
+                    <h6 id="employeeName"></h6>
+                    <p id="employeeEmail"></p>
+                    <p id="requestDate"></p>
+                </div>
             </div>
-            <form id="approvalForm">
-                @csrf
-                <input type="hidden" name="id" id="approval_id">
-                
-                <div class="modal-body">
-                    <!-- Employee Details Card -->
-                    <div class="employee-detail-card" id="employeeDetailCard" style="display: none;">
-                        <div class="employee-detail-row">
-                            <div class="employee-detail-avatar" id="employeeAvatar"></div>
-                            <div class="employee-detail-info">
-                                <h6 id="employeeName"></h6>
-                                <p id="employeeEmail"></p>
-                                <p id="requestDate"></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Status Selection -->
-                    <div class="form-group mb-3">
-                        <label class="fw-semibold mb-2">Action <span class="text-danger">*</span></label>
-                        <select class="status-select" name="status" id="approval_status" required>
-                            <option value="" disabled selected>-- Select Action --</option>
-                            <option value="approved" class="text-success">✓ Approve Request</option>
-                            <option value="rejected" class="text-danger">✗ Reject Request</option>
-                        </select>
-                    </div>
-
-                    <!-- Remarks -->
-                    <div class="remarks-input">
-                        <label class="fw-semibold mb-2">Remarks <small class="text-muted">(Optional)</small></label>
-                        <textarea name="remarks" id="approval_remarks" rows="3" 
-                                  placeholder="Add any comments or remarks..."></textarea>
-                    </div>
-                </div>
-                
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="approvalSubmitBtn">
-                        <i class="feather-check-circle me-2"></i>Submit
-                    </button>
-                </div>
-            </form>
         </div>
-    </div>
-</div>
+
+        <!-- Status Selection -->
+        <div class="form-group mb-3">
+            <label class="fw-semibold mb-2">Action <span class="text-danger">*</span></label>
+            <select class="status-select" name="status" id="approval_status" required>
+                <option value="" disabled selected>-- Select Action --</option>
+                <option value="approved" class="text-success">✓ Approve Request</option>
+                <option value="rejected" class="text-danger">✗ Reject Request</option>
+            </select>
+        </div>
+
+        <!-- Remarks -->
+        <div class="remarks-input">
+            <label class="fw-semibold mb-2">Remarks <small class="text-muted">(Optional)</small></label>
+            <textarea name="remarks" id="approval_remarks" rows="3"
+                      placeholder="Add any comments or remarks..."></textarea>
+        </div>
+    </form>
+</x-ui.modal>
 
 <!-- View Details Modal (keep this separate) -->
 <div class="modal fade" id="viewModal" tabindex="-1" aria-hidden="true">

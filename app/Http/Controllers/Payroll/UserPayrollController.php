@@ -11,9 +11,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use App\Traits\BlocksLegacyPayrollWrites;
 
 class UserPayrollController extends Controller
 {
+    use BlocksLegacyPayrollWrites;
+
     public function index(Request $request)
     {
         $query = UserPayroll::with(['user', 'payrollMaster']);
@@ -66,6 +69,10 @@ class UserPayrollController extends Controller
      */
     public function store(Request $request)
     {
+        if ($blocked = $this->blockedByDynamicCutover()) {
+            return $blocked;
+        }
+
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
             'payroll_master_id' => 'nullable|exists:payroll_masters,id',
@@ -207,7 +214,10 @@ class UserPayrollController extends Controller
      */
     public function update(Request $request, $id)
     {
-       
+        if ($blocked = $this->blockedByDynamicCutover()) {
+            return $blocked;
+        }
+
         $userPayroll = UserPayroll::findOrFail($id);
 
         $validator = Validator::make($request->all(), [

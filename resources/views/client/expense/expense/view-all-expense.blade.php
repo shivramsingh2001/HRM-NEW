@@ -841,7 +841,7 @@
         <!--</div>-->
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row g-3 mb-2">
             <div class="col-xxl-3 col-md-6">
                 <div class="card stretch stretch-full stat-card border-primary" style="cursor: pointer;">

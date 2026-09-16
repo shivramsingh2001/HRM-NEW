@@ -10,9 +10,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use App\Services\RbacService;
+use App\Services\Attendance\OvertimeApprovalService;
+use App\Traits\AuthorizesByScope;
 
 class OvertimeController extends Controller
 {
+    use AuthorizesByScope;
+
     /**
      * Display list of overtime requests
      */
@@ -308,18 +313,16 @@ class OvertimeController extends Controller
                     'user_job_details.reporting_head'
                 );
 
-            // Role-based access control
-            if ($authUser->role === 'admin') {
-                // Admin can see all requests
-                // No additional conditions needed
-            } elseif ($authUser->role === 'manager') {
-                // Manager can see requests of their team members
+            // Permission-based access control
+            $overtimeScope = app(RbacService::class)->scopeFor($authUser, 'overtime', 'view');
+            if ($overtimeScope === null) {
+                abort(403, 'You do not have permission to view overtime requests.');
+            } elseif ($overtimeScope === 'team') {
                 $query->where(function ($q) use ($authUser) {
                     $q->where('user_job_details.reporting_head', $authUser->id)
                         ->orWhere('overtime_requests.user_id', $authUser->id);
                 });
-            } else {
-                // Regular employees can only see their own requests
+            } elseif ($overtimeScope === 'own') {
                 $query->where('overtime_requests.user_id', $authUser->id);
             }
 
@@ -341,7 +344,7 @@ class OvertimeController extends Controller
                 $query->whereDate('overtime_requests.date', '<=', $request->to_date);
             }
 
-            if ($request->filled('employee') && in_array($authUser->role, ['admin', 'manager', 'hr'])) {
+            if ($request->filled('employee') && $overtimeScope !== 'own') {
                 $query->where('overtime_requests.user_id', $request->employee);
             }
 
@@ -401,15 +404,13 @@ class OvertimeController extends Controller
             $employeesQuery = User::where('status', 1)
                 ->select('id', 'name', 'email', 'employee_id');
 
-            if ($authUser->role === 'manager') {
-                // Get team members for manager
+            if ($overtimeScope === 'team') {
                 $employeesQuery->where(function ($q) use ($authUser) {
                     $q->whereHas('jobDetails', function ($query) use ($authUser) {
                         $query->where('reporting_head', $authUser->id);
                     })->orWhere('id', $authUser->id);
                 });
-            } elseif ($authUser->role !== 'admin') {
-                // Regular employee - only themselves
+            } elseif ($overtimeScope !== 'company') {
                 $employeesQuery->where('id', $authUser->id);
             }
 
@@ -478,7 +479,7 @@ class OvertimeController extends Controller
             }
 
             // Check authorization
-            if (!in_array($authUser->role, ['admin', 'manager']) && $request->user_id != $authUser->id) {
+            if (!$this->scopeCoversOwner($authUser, 'overtime', 'view', (int) $request->user_id)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized'
@@ -504,8 +505,7 @@ class OvertimeController extends Controller
     }
     public function pendingApprovals(Request $request)
     {
-        // Check if user is admin or manager
-        if (!in_array(auth()->user()->role, ['admin', 'manager'])) {
+        if (!app(RbacService::class)->can(auth()->user(), 'overtime', 'approve')) {
             abort(403, 'Unauthorized access');
         }
 
@@ -514,6 +514,10 @@ class OvertimeController extends Controller
         $query = OvertimeRequest::with('user')
             ->where('tenant_id', $tenantId)
             ->where('status', 'pending');
+
+        // Previously unrestricted beyond the coarse gate above — a manager
+        // saw every tenant's pending requests here, not just their team's.
+        $query = $this->applyScope($query, 'user_id', auth()->user(), 'overtime', 'approve');
 
         // Apply filters
         if ($request->has('from_date') && $request->from_date) {
@@ -533,35 +537,19 @@ class OvertimeController extends Controller
         return view('admin.overtime-approvals', compact('pendingRequests'));
     }
     /**
-     * Roles allowed to approve/reject overtime.
-     */
-    private const APPROVER_ROLES = ['admin', 'hr', 'manager'];
-
-    /**
      * A manager may only act on overtime raised by their own reportees.
      * Admin / HR may act on any request in their tenant.
      */
     private function managerMayAct($authUser, OvertimeRequest $overtimeRequest): bool
     {
-        if (in_array($authUser->role, ['admin', 'hr'], true)) {
-            return true;
-        }
-
-        if ($authUser->role === 'manager') {
-            return \App\Models\UserJobDetail::where('user_id', $overtimeRequest->user_id)
-                ->where('tenant_id', $authUser->tenant_id)
-                ->where('reporting_head', $authUser->id)
-                ->exists();
-        }
-
-        return false;
+        return $this->scopeCoversOwner($authUser, 'overtime', 'approve', $overtimeRequest->user_id);
     }
 
     public function approve(Request $request, $id)
     {
         $authUser = auth()->user();
 
-        if (!in_array($authUser->role, self::APPROVER_ROLES, true)) {
+        if (!app(RbacService::class)->can($authUser, 'overtime', 'approve')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized to approve requests'
@@ -621,6 +609,24 @@ class OvertimeController extends Controller
             ], 422);
         }
 
+        // Tier 2 / T2-A — route through the approval workflow when configured.
+        // Stage the approved hours so the outcome handler's COALESCE picks them up.
+        $overtimeRequest->approved_hours = $approvedHours;
+        $overtimeRequest->save();
+        try {
+            $ar = app(\App\Services\Approvals\ApprovalService::class)
+                ->decide('overtime', $overtimeRequest, $authUser, 'approved', $request->comments);
+            if ($ar !== null) {
+                $msg = $ar->status === 'pending'
+                    ? 'Recorded. Awaiting the next approval level.'
+                    : 'Overtime request ' . $ar->status . ' successfully';
+
+                return response()->json(['success' => true, 'message' => $msg, 'data' => $overtimeRequest->fresh()]);
+            }
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
+        }
+
         $overtimeRequest->update([
             'status' => 'approved',
             'approved_by' => auth()->user()->id,
@@ -643,7 +649,7 @@ class OvertimeController extends Controller
     {
         $authUser = auth()->user();
 
-        if (!in_array($authUser->role, self::APPROVER_ROLES, true)) {
+        if (!app(RbacService::class)->can($authUser, 'overtime', 'approve')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized to reject requests'
@@ -688,6 +694,21 @@ class OvertimeController extends Controller
             ], 422);
         }
 
+        // Tier 2 / T2-A — route through the approval workflow when configured.
+        try {
+            $ar = app(\App\Services\Approvals\ApprovalService::class)
+                ->decide('overtime', $overtimeRequest, $authUser, 'rejected', $request->rejection_reason);
+            if ($ar !== null) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Overtime request ' . $ar->status,
+                    'data' => $overtimeRequest->fresh(),
+                ]);
+            }
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
+        }
+
         $overtimeRequest->update([
             'status' => 'rejected',
             'approved_by' => auth()->user()->id,
@@ -705,16 +726,9 @@ class OvertimeController extends Controller
     /**
      * Bulk approve multiple requests (Admin/Manager only)
      */
-    public function bulkApprove(Request $request)
+    public function bulkApprove(Request $request, OvertimeApprovalService $overtimeApprovalService)
     {
         $authUser = auth()->user();
-
-        if (!in_array($authUser->role, self::APPROVER_ROLES, true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized to approve requests'
-            ], 403);
-        }
 
         $validator = Validator::make($request->all(), [
             'request_ids' => 'required|array',
@@ -730,32 +744,19 @@ class OvertimeController extends Controller
 
         $tenantId = $authUser->tenant_id ?? null;
 
-        $query = OvertimeRequest::where('tenant_id', $tenantId)
-            ->whereIn('id', $request->request_ids)
-            ->where('status', 'pending');
+        $result = $overtimeApprovalService->bulkApprove($authUser, $tenantId, $request->request_ids);
 
-        // Managers may only bulk-approve their own reportees.
-        if ($authUser->role === 'manager') {
-            $query->whereIn('user_id', function ($q) use ($authUser, $tenantId) {
-                $q->select('user_id')
-                    ->from('user_job_details')
-                    ->where('reporting_head', $authUser->id)
-                    ->where('tenant_id', $tenantId);
-            });
+        if (!$result['authorized']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized to approve requests'
+            ], 403);
         }
-
-        $updatedCount = $query->update([
-            'status' => 'approved',
-            'approved_by' => $authUser->id,
-            // populate approved_hours so payroll does not fall back to the raw request
-            'approved_hours' => DB::raw('COALESCE(approved_hours, overtime_hours)'),
-            'approved_at' => now(),
-        ]);
 
         return response()->json([
             'success' => true,
-            'message' => "{$updatedCount} request(s) approved successfully",
-            'count' => $updatedCount
+            'message' => "{$result['approved_count']} request(s) approved successfully",
+            'count' => $result['approved_count']
         ]);
     }
 

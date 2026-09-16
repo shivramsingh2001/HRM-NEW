@@ -30,7 +30,11 @@ class BranchController extends Controller
         }
 
         try {
-            $branch = Branch::create($request->all());
+            // validated(), not all() — Branch uses $guarded = [] (mass
+            // assignment fully open), so passing the raw request let any
+            // extra field the client sent (e.g. tenant_id, id) through
+            // untouched, bypassing TenantTrait's own-tenant auto-stamp.
+            $branch = Branch::create($validator->validated());
 
             return response()->json([
                 'success' => true,
@@ -62,7 +66,7 @@ class BranchController extends Controller
         }
 
         try {
-            $branch->update($request->all());
+            $branch->update($validator->validated());
 
             return response()->json([
                 'success' => true,

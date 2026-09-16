@@ -139,6 +139,65 @@ class MeetingNotificationService
     }
 
     /**
+     * Send notification when a meeting is rescheduled to a new date/time —
+     * distinct from notifyMeetingUpdated() so participants get a clear
+     * "old time -> new time" message instead of a generic "field changed"
+     * one, and so `type` in the notification payload lets the mobile app
+     * treat it differently (e.g. re-prompt for RSVP).
+     */
+    public function notifyMeetingRescheduled(Meeting $meeting, $oldDate, $oldStartTime, $oldEndTime)
+    {
+        try {
+            $participants = $meeting->participants()->with('user')->get();
+
+            if ($participants->isEmpty()) {
+                return false;
+            }
+
+            $rescheduler = auth()->user();
+
+            $data = [
+                'meeting_id' => $meeting->id,
+                'title' => $meeting->title,
+                'old_meeting_date' => $oldDate,
+                'old_start_time' => $oldStartTime,
+                'old_end_time' => $oldEndTime,
+                'meeting_date' => $meeting->meeting_date,
+                'start_time' => $meeting->start_time,
+                'end_time' => $meeting->end_time,
+                'type' => 'meeting_rescheduled'
+            ];
+
+            $title = '🔄 Meeting Rescheduled';
+            $body = 'Meeting "' . $meeting->title . '" moved from ' .
+                    Carbon::parse($oldDate . ' ' . $oldStartTime)->format('d M Y, h:i A') . ' to ' .
+                    Carbon::parse($meeting->meeting_date . ' ' . $meeting->start_time)->format('d M Y, h:i A');
+
+            foreach ($participants as $participant) {
+                $user = $participant->user;
+                if ($user) {
+                    $this->sendNotification($user, $title, $body, $data);
+                    $user->notify(new MeetingNotification($meeting, 'rescheduled', json_encode($data)));
+                }
+            }
+
+            Log::info('Meeting reschedule notifications sent', [
+                'meeting_id' => $meeting->id,
+                'participant_count' => $participants->count()
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send meeting reschedule notifications', [
+                'error' => $e->getMessage(),
+                'meeting_id' => $meeting->id
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Send notification when meeting is cancelled
      */
     public function notifyMeetingCancelled(Meeting $meeting, $reason = null)
@@ -202,8 +261,13 @@ class MeetingNotificationService
         try {
             $now = Carbon::now();
             
-            // Get meetings that are scheduled and have reminder time
+            // Get meetings that are scheduled, haven't had a reminder sent
+            // yet, and have a reminder time. Filtering on reminder_sent here
+            // (rather than only after sending) is what makes this safe to
+            // call on a tight schedule — without it, every run would resend
+            // to every meeting still inside its reminder window.
             $meetings = Meeting::where('status', 'scheduled')
+                ->where('reminder_sent', false)
                 ->where('meeting_date', '>=', $now->toDateString())
                 ->where(function ($q) use ($now) {
                     $q->whereRaw("CONCAT(meeting_date, ' ', start_time) >= ?", [$now->toDateTimeString()]);
@@ -214,12 +278,15 @@ class MeetingNotificationService
 
             foreach ($meetings as $meeting) {
                 $meetingDateTime = Carbon::parse($meeting->meeting_date . ' ' . $meeting->start_time);
-                $minutesUntilMeeting = $now->diffInMinutes($meetingDateTime, false);
-                
+                // Unsigned diff + an explicit gt() check avoids relying on
+                // diffInMinutes()'s sign convention for $absolute=false,
+                // which has changed between Carbon major versions.
+                $minutesUntilMeeting = $meetingDateTime->gt($now) ? $now->diffInMinutes($meetingDateTime) : 0;
+
                 // Send reminder if meeting is within reminder minutes
                 if ($minutesUntilMeeting > 0 && $minutesUntilMeeting <= ($meeting->reminder_minutes_before ?? 15)) {
                     $participants = $meeting->participants()->with('user')->get();
-                    
+
                     $data = [
                         'meeting_id' => $meeting->id,
                         'title' => $meeting->title,
@@ -232,7 +299,7 @@ class MeetingNotificationService
                     ];
 
                     $title = '⏰ Meeting Reminder';
-                    $body = 'Reminder: Meeting "' . $meeting->title . '" starts in ' . 
+                    $body = 'Reminder: Meeting "' . $meeting->title . '" starts in ' .
                             $minutesUntilMeeting . ' minutes at ' . $meeting->start_time;
 
                     foreach ($participants as $participant) {
@@ -242,7 +309,8 @@ class MeetingNotificationService
                             $user->notify(new MeetingNotification($meeting, 'reminder', $minutesUntilMeeting));
                         }
                     }
-                    
+
+                    $meeting->update(['reminder_sent' => true]);
                     $reminderCount++;
                 }
             }

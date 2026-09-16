@@ -2,6 +2,48 @@
 
 @section('style')
 <style>
+    /* ==================== EDIT PROJECT MODAL - small font, blue theme ==================== */
+    #editProjectModal .modal-header {
+        background: #fff !important;
+        border-bottom: 1px solid #edf2f7 !important;
+        padding: 10px 16px !important;
+    }
+    #editProjectModal .modal-header .fs-18 {
+        font-size: 13px !important;
+        color: #1e293b !important;
+    }
+    #editProjectModal .modal-header .fs-11 {
+        font-size: 10px !important;
+    }
+    #editProjectModal .form-group label {
+        font-size: 11px !important;
+    }
+    #editProjectModal .form-control {
+        font-size: 11.5px !important;
+        padding: 6px 10px !important;
+    }
+    #editProjectModal .btn {
+        font-size: 11.5px !important;
+        padding: 6px 14px !important;
+    }
+    #editProjectModal .btn-primary {
+        background: #1e3a8a !important;
+        border-color: #1e3a8a !important;
+    }
+    #editProjectModal .btn-primary:hover {
+        background: #16295e !important;
+        border-color: #16295e !important;
+    }
+    #editProjectModal .btn-modal-cancel {
+        background: #eef3fd !important;
+        border: 1px solid #bfd3f7 !important;
+        color: #1e3a8a !important;
+    }
+    #editProjectModal .btn-modal-cancel:hover {
+        background: #dbeafe !important;
+        color: #1e3a8a !important;
+    }
+
     /* Toast Container Styles */
     #toast-container {
         z-index: 1090;
@@ -62,7 +104,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row">
             <div class="col-lg-12">
                 <div class="card border-top-0">
@@ -89,7 +131,7 @@
                                     </h5>
                                     <div>
                                          @if(in_array($role,['admin','hr','manager']))
-                                        <a href="javascript:void(0);" class="btn btn-warning me-2" data-bs-toggle="modal"
+                                        <a href="javascript:void(0);" class="btn btn-primary me-2" data-bs-toggle="modal"
                                             data-bs-target="#editProjectModal">
                                             <i class="feather-edit me-1"></i>Edit Project
                                         </a>
@@ -389,7 +431,7 @@
 
                                     <div class="col-12">
                                         <div class="d-flex justify-content-end gap-2">
-                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                                            <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">
                                                 Cancel
                                             </button>
                                             <button type="submit" class="btn btn-primary">

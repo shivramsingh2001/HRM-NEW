@@ -80,11 +80,8 @@
             opacity: 0.8;
         }
 
-        /* Employee name styling */
-        .employee-name {
-            color: #1e293b;
-            font-weight: 500;
-        }
+        /* .employee-name/.employee-email are centralized in client.layout.head
+           (12px/600-weight name, 8px email) — no local override here. */
 
         .text-muted {
             color: #64748b !important;
@@ -152,6 +149,10 @@
         .toggle-switch.face-toggle.active {
             background: #4f46e5;
             /* Different color for face register toggle */
+        }
+
+        .toggle-switch.location-toggle.active {
+            background: #0ea5e9;
         }
 
         /* ==================== ATTENDANCE TYPE SELECT ==================== */
@@ -453,97 +454,11 @@
             color: currentColor;
         }
 
-        /* ==================== STATS CARDS ==================== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
+        /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
+           in client.layout.head (single blue-only theme) — no local copy. */
 
-        .stats-card {
-            background: white;
-            border: 1px solid #edf2f7;
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
-
-        .stats-card:hover {
-            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
-            border-color: #cbd5e1;
-            transform: translateY(-2px);
-        }
-
-        .stats-icon {
-            width: 48px;
-            height: 48px;
-            background: #eef2ff;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 16px;
-        }
-
-        .stats-icon i {
-            font-size: 24px;
-            color: #4f46e5;
-        }
-
-        .stats-info h3 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 4px 0;
-            color: #1e293b;
-            line-height: 1.2;
-        }
-
-        .stats-info p {
-            font-size: 13px;
-            color: #64748b;
-            margin: 0;
-        }
-
-        /* ==================== EMPLOYEE AVATAR ==================== */
-        .employee-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #fff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: all 0.2s;
-        }
-
-        .employee-avatar:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .employee-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .employee-details {
-            line-height: 1.4;
-        }
-
-        .employee-name {
-            font-weight: 600;
-            color: #1e293b;
-            font-size: 14px;
-        }
-
-        .employee-email {
-            font-size: 11px;
-            color: #64748b;
-        }
+        /* .employee-avatar/.employee-info/.employee-details/.employee-name/
+           .employee-email are centralized in client.layout.head — no local copy. */
 
         /* ==================== TABLE STYLES ==================== */
         .table {
@@ -858,7 +773,7 @@
     <!-- [ page-header ] end -->
 
     <!-- [ Main Content ] start -->
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
 
 
@@ -1106,13 +1021,31 @@
                             <span class="badge bg-success">
                                 <i class="feather-check me-1"></i>Active: {{ $activeEmployees }}
                             </span>
+                            @if (!empty($fieldTrackingEnabled))
+                                <span class="badge bg-primary" title="Field-tracking seats in use / purchased">
+                                    <i class="feather-map-pin me-1"></i>Field tracking:
+                                    <span id="ltSeatsUsed">{{ $fieldTrackingSeatsUsed }}</span> / {{ $fieldTrackingSeats }}
+                                </span>
+                            @endif
                         </div>
                     </div>
                     <div class="card-body p-0">
+                        @if (!empty($fieldTrackingEnabled))
+                            <div id="ltBulkBar" class="d-none align-items-center gap-2 px-3 py-2"
+                                 style="background:#eef2ff;border-bottom:1px solid #c7d2fe;font-size:13px;">
+                                <span id="ltBulkCount" class="fw-semibold">0 selected</span>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="bulkLocationTracking(1)">Enable tracking</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkLocationTracking(0)">Disable tracking</button>
+                                <button type="button" class="btn btn-sm btn-link" onclick="ltClearSelection()">Clear</button>
+                            </div>
+                        @endif
                         <div class="table-responsive">
                             <table class="table" id="employeeList1">
                                 <thead>
                                     <tr>
+                                        @if (!empty($fieldTrackingEnabled))
+                                            <th style="width:28px"><input type="checkbox" id="ltSelectAll"></th>
+                                        @endif
                                         <th width="50">#</th>
                                         <th>Employee</th>
                                         {{-- <th>Employee ID</th> --}}
@@ -1123,12 +1056,18 @@
                                         <th>Status</th>
                                         <th>Face Register</th>
                                         <th>Attendance Type</th>
+                                        @if (!empty($fieldTrackingEnabled))
+                                            <th>Field Tracking</th>
+                                        @endif
                                         <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($users as $user)
                                         <tr>
+                                            @if (!empty($fieldTrackingEnabled))
+                                                <td><input type="checkbox" class="lt-row-sel" value="{{ $user->id }}"></td>
+                                            @endif
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
                                                 <a href="{{ route('employee.show', ['id' => encrypt($user->id)]) }}">
@@ -1211,6 +1150,23 @@
                                                     </option>
                                                 </select>
                                             </td>
+                                            @if (!empty($fieldTrackingEnabled))
+                                                <td>
+                                                    <div class="status-toggle">
+                                                        <div class="toggle-switch location-toggle {{ $user->location_tracking_enabled ? 'active' : '' }}"
+                                                            onclick="toggleLocationTracking({{ $user->id }}, {{ (int) $user->location_tracking_enabled }})">
+                                                            <div class="toggle-circle"></div>
+                                                        </div>
+                                                        <span class="status-label {{ $user->location_tracking_enabled ? 'registered' : 'not-registered' }}"
+                                                            id="loc-status-label-{{ $user->id }}">
+                                                            {{ $user->location_tracking_enabled ? 'Tracking' : 'Off' }}
+                                                        </span>
+                                                        @if (($user->type ?? '') !== 'field')
+                                                            <small class="text-muted d-block" style="font-size:10px;">office employee</small>
+                                                        @endif
+                                                    </div>
+                                                </td>
+                                            @endif
                                             <td class="text-center">
                                                 <div class="dropdown">
                                                     <a href="#" class="action-btn" data-bs-toggle="dropdown"
@@ -1463,6 +1419,100 @@
                 }
             });
         }
+
+        // ==================== FIELD GPS TRACKING ====================
+        function toggleLocationTracking(userId, current) {
+            const event = window.event;
+            const row = event.target.closest('tr');
+            const toggle = row ? row.querySelector('.toggle-switch.location-toggle') : null;
+            const label = document.getElementById(`loc-status-label-${userId}`);
+            const newStatus = current == 1 ? 0 : 1;
+
+            if (toggle) { toggle.style.pointerEvents = 'none'; toggle.style.opacity = '0.6'; }
+
+            $.ajax({
+                url: "{{ route('employee.toggle-location-tracking') }}",
+                type: "POST",
+                data: { id: userId, enabled: newStatus, _token: "{{ csrf_token() }}" },
+                success: function (response) {
+                    if (response.success) {
+                        if (toggle && label) {
+                            toggle.classList.toggle('active', newStatus == 1);
+                            label.textContent = newStatus == 1 ? 'Tracking' : 'Off';
+                            label.className = `status-label ${newStatus == 1 ? 'registered' : 'not-registered'}`;
+                            toggle.setAttribute('onclick', `toggleLocationTracking(${userId}, ${newStatus})`);
+                        }
+                        if (typeof response.seats_used !== 'undefined') {
+                            const el = document.getElementById('ltSeatsUsed');
+                            if (el) el.textContent = response.seats_used;
+                        }
+                        toastr.success(response.message || 'Updated');
+                    } else {
+                        toastr.error(response.message || 'Could not update field tracking');
+                    }
+                    if (toggle) { toggle.style.pointerEvents = ''; toggle.style.opacity = ''; }
+                },
+                error: function (xhr) {
+                    toastr.error('Error updating field tracking. Please try again.');
+                    console.error(xhr);
+                    if (toggle) { toggle.style.pointerEvents = ''; toggle.style.opacity = ''; }
+                }
+            });
+        }
+
+        function ltSelectedIds() {
+            return Array.from(document.querySelectorAll('.lt-row-sel:checked')).map(c => c.value);
+        }
+        function ltSyncBulkBar() {
+            const bar = document.getElementById('ltBulkBar');
+            if (!bar) return;
+            const n = ltSelectedIds().length;
+            bar.classList.toggle('d-none', n === 0);
+            bar.classList.toggle('d-flex', n > 0);
+            const c = document.getElementById('ltBulkCount');
+            if (c) c.textContent = `${n} selected`;
+        }
+        function ltClearSelection() {
+            document.querySelectorAll('.lt-row-sel:checked').forEach(c => (c.checked = false));
+            const all = document.getElementById('ltSelectAll');
+            if (all) all.checked = false;
+            ltSyncBulkBar();
+        }
+        function bulkLocationTracking(enabled) {
+            const ids = ltSelectedIds();
+            if (!ids.length) { toastr.info('Select employees first'); return; }
+            $.ajax({
+                url: "{{ route('employee.bulk-location-tracking') }}",
+                type: "POST",
+                data: { user_ids: ids, enabled: enabled, _token: "{{ csrf_token() }}" },
+                success: function (response) {
+                    if (response.status) {
+                        toastr.success(response.message);
+                        if (response.data && typeof response.data.seats_used !== 'undefined') {
+                            const el = document.getElementById('ltSeatsUsed');
+                            if (el) el.textContent = response.data.seats_used;
+                        }
+                        setTimeout(() => window.location.reload(), 900);
+                    } else {
+                        toastr.error(response.message || 'Bulk update failed');
+                    }
+                },
+                error: function (xhr) {
+                    toastr.error('Bulk update failed. Please try again.');
+                    console.error(xhr);
+                }
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const all = document.getElementById('ltSelectAll');
+            if (all) {
+                all.addEventListener('change', function () {
+                    document.querySelectorAll('.lt-row-sel').forEach(c => (c.checked = all.checked));
+                    ltSyncBulkBar();
+                });
+            }
+            document.querySelectorAll('.lt-row-sel').forEach(c => c.addEventListener('change', ltSyncBulkBar));
+        });
 
         // Update Attendance Type
         function updateAttendanceType(selectElement) {

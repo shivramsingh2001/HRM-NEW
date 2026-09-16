@@ -2,188 +2,42 @@
 
 @section('style')
     <style>
-        /* ==================== STATS CARDS ==================== */
+        /* ==================== STATS CARDS — same anatomy as the dashboard's
+           Total Employees KPI card ==================== */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
+            gap: 10px;
+            margin-bottom: 14px;
         }
 
-        /* Stats Card Base Styles */
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.3s ease;
-            border: 1px solid #edf2f7;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Card-specific gradient borders */
-        .total-credit-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
-        }
-
-        .total-used-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #10b981, #34d399);
-        }
-
-        .balance-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-        }
-
-        .transactions-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
-        }
-
-        /* Icon Wrapper */
-        .stats-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-        }
-
-
-        /* Card-specific icon backgrounds */
-        .total-credit-card .stats-icon-wrapper {
-            background: rgba(79, 70, 229, 0.1);
-        }
-
-        .total-credit-card .stats-icon-wrapper i {
-            color: #4f46e5;
-            font-size: 24px;
-        }
-
-        .total-used-card .stats-icon-wrapper {
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .total-used-card .stats-icon-wrapper i {
-            color: #10b981;
-            font-size: 24px;
-        }
-
-        .balance-card .stats-icon-wrapper {
-            background: rgba(245, 158, 11, 0.1);
-        }
-
-        .balance-card .stats-icon-wrapper i {
-            color: #f59e0b;
-            font-size: 24px;
-        }
-
-        .transactions-card .stats-icon-wrapper {
-            background: rgba(99, 102, 241, 0.1);
-        }
-
-        .transactions-card .stats-icon-wrapper i {
-            color: #6366f1;
-            font-size: 24px;
-        }
-
-        /* Content Styles */
-        .stats-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .stats-amount-main {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e293b;
-            line-height: 1.3;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .stats-label {
-            font-size: 10px;
-            font-weight: 500;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-bottom: 6px;
-        }
-
-        .stats-count {
-            display: flex;
-            align-items: baseline;
-            gap: 4px;
-        }
-
-        .count-number {
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .count-text {
-            font-size: 11px;
-            color: #64748b;
-            font-weight: 400;
-        }
+        /* .kpi5-* is centralized in client.layout.head — no local copy. */
 
         /* ==================== PROFILE HEADER ==================== */
         .profile-header {
             background: white;
-            border-radius: 20px;
-            border: 1px solid #edf2f7;
-            padding: 20px;
-            margin-bottom: 24px;
+            border-radius: 12px;
+            border: 1px solid #eaeef5;
+            padding: 12px 14px;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
-            gap: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            gap: 14px;
+            box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
         }
 
         .profile-avatar {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
-            border-radius: 20px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #93c5fd 100%);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 15px;
             font-weight: 700;
             color: white;
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
+            flex: none;
         }
 
         .profile-info {
@@ -191,28 +45,29 @@
         }
 
         .profile-name {
-            font-size: 24px;
+            font-size: 12px;
             font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 4px;
+            color: #1a2236;
+            margin-bottom: 2px;
         }
 
         .profile-meta {
             display: flex;
-            gap: 20px;
-            color: #64748b;
-            font-size: 14px;
+            flex-wrap: wrap;
+            gap: 12px;
+            color: #6b7385;
+            font-size: 10.5px;
         }
 
         .profile-meta-item {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .profile-meta-item i {
-            color: #4f46e5;
-            font-size: 14px;
+            color: #1e3a8a;
+            font-size: 10.5px;
         }
 
         /* ==================== FILTER SECTION ==================== */
@@ -236,14 +91,14 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             color: #1e293b;
         }
 
         .filter-title i {
-            color: #4f46e5;
-            font-size: 16px;
+            color: #1e3a8a;
+            font-size: 12px;
         }
 
         .filter-select {
@@ -274,58 +129,59 @@
         /* ==================== BALANCE SUMMARY TABLE ==================== */
         .balance-summary-card {
             background: white;
-            border-radius: 16px;
-            border: 1px solid #edf2f7;
+            border-radius: 12px;
+            border: 1px solid #eaeef5;
             overflow: hidden;
-            margin-bottom: 24px;
+            margin-bottom: 14px;
         }
 
         .balance-summary-header {
-            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-            padding: 20px 24px;
-            border-bottom: 1px solid #edf2f7;
+            background: #f7f8fb;
+            padding: 10px 14px;
+            border-bottom: 1px solid #eaeef5;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .balance-summary-header i {
-            width: 40px;
-            height: 40px;
-            background: #4f46e5;
+            width: 28px;
+            height: 28px;
+            background: #1e3a8a;
             color: white;
-            border-radius: 12px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 11.5px;
+            flex: none;
         }
 
         .balance-summary-header h5 {
             margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #1e293b;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #1a2236;
         }
 
         .balance-summary-header p {
-            margin: 4px 0 0;
-            font-size: 13px;
-            color: #64748b;
+            margin: 2px 0 0;
+            font-size: 10.5px;
+            color: #6b7385;
         }
 
         /* ==================== TABLE STYLES ==================== */
         .table-card {
             background: white;
-            border-radius: 16px;
-            border: 1px solid #edf2f7;
+            border-radius: 12px;
+            border: 1px solid #eaeef5;
             overflow: hidden;
         }
 
         .table-header {
-            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-            padding: 20px 24px;
-            border-bottom: 1px solid #edf2f7;
+            background: #f7f8fb;
+            padding: 10px 14px;
+            border-bottom: 1px solid #eaeef5;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -333,31 +189,33 @@
 
         .table-header h5 {
             margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #1e293b;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #1a2236;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .table-header h5 i {
-            color: #4f46e5;
-            font-size: 20px;
+            color: #1e3a8a;
+            font-size: 11.5px;
         }
 
         .table-badge {
-            background: #e0e7ff;
-            color: #4f46e5;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
+            background: #e3edfe;
+            color: #1e3a8a;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
         }
 
         .table-responsive {
-            padding: 0 24px 24px 24px;
+            padding: 0 14px 14px 14px;
         }
+
+        /* Table font/spacing is centralized in client.layout.head — no local copy. */
 
 
         /* ==================== BADGES ==================== */
@@ -372,23 +230,23 @@
         }
 
         .badge-credit {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1d4ed8;
         }
 
         .badge-debit {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .badge-purple {
             background: #e0e7ff;
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         /* ==================== AMOUNT STYLES ==================== */
         .amount-credit {
-            color: #059669;
+            color: #1d4ed8;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
@@ -396,7 +254,7 @@
         }
 
         .amount-debit {
-            color: #dc2626;
+            color: #1d4ed8;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
@@ -430,14 +288,14 @@
 
         .empty-state h4 {
             color: #334155;
-            font-size: 18px;
+            font-size: 11.5px;
             font-weight: 600;
             margin-bottom: 8px;
         }
 
         .empty-state p {
             color: #64748b;
-            font-size: 14px;
+            font-size: 12px;
             margin-bottom: 20px;
         }
 
@@ -445,7 +303,7 @@
         .btn-action {
             padding: 8px 20px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 11.5px;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
@@ -469,12 +327,12 @@
         }
 
         .btn-primary {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #4338ca;
+            background: #1e3a8a;
             transform: translateY(-2px);
         }
 
@@ -521,35 +379,10 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Employee Transactions</h5>
-            </div>
-            <ul class="breadcrumb">
-                {{-- <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('leave-credit.index') }}">Leave Credit</a></li> --}}
-                <li class="breadcrumb-item"><a href="{{ route('leave-credit.reports') }}">Reports</a></li>
-                <li class="breadcrumb-item active">Transactions</li>
-            </ul>
-        </div>
-        {{-- <div class="page-header-right ms-auto">
-        <div class="page-header-right-items">
-            <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                <a href="{{ route('leave-credit.reports') }}" class="btn-action btn-back">
-                    <i class="feather-arrow-left"></i>
-                    Back to Reports
-                </a>
-                <button onclick="window.print()" class="btn-action btn-primary">
-                    <i class="feather-printer"></i>
-                    Print Statement
-                </button>
-            </div>
-        </div>
-    </div> --}}
+    <x-ui.page-header title="Employee Transactions" :parent="['label' => 'Reports', 'route' => 'leave-credit.reports']" />
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 18px !important;">
         <!-- Stats Cards -->
         @php
             $totalCredited = $balanceByType->sum('total_credited');
@@ -559,62 +392,62 @@
 
         <div class="stats-grid">
             <!-- Total Credited Card -->
-            <div class="stats-card total-credit-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-arrow-down"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-arrow-down"></i></span>
+                    <span class="kpi5-pill">{{ $transactions->where('transaction_type', 'add')->count() }} txns</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ number_format($totalCredited, 2) }} days</div>
-                    <div class="stats-label">Total Credited</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $transactions->where('transaction_type', 'add')->count() }}</span>
-                        <span class="count-text">Transactions</span>
-                    </div>
+                <div class="kpi5-value">{{ number_format($totalCredited, 1) }}</div>
+                <div class="kpi5-label">Total Credited (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ number_format($totalUsed, 1) }}</span><span class="l">Used</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($currentBalance, 1) }}</span><span class="l">Balance</span></div>
                 </div>
             </div>
 
             <!-- Total Used Card -->
-            <div class="stats-card total-used-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-arrow-up"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-arrow-up"></i></span>
+                    <span class="kpi5-pill">{{ $transactions->where('transaction_type', 'sub')->count() }} txns</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ number_format($totalUsed, 2) }} days</div>
-                    <div class="stats-label">Total Used</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $transactions->where('transaction_type', 'sub')->count() }}</span>
-                        <span class="count-text">Transactions</span>
-                    </div>
+                <div class="kpi5-value">{{ number_format($totalUsed, 1) }}</div>
+                <div class="kpi5-label">Total Used (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ number_format($totalCredited, 1) }}</span><span class="l">Credited</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($currentBalance, 1) }}</span><span class="l">Balance</span></div>
                 </div>
             </div>
 
             <!-- Current Balance Card -->
-            <div class="stats-card balance-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-wallet"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-wallet"></i></span>
+                    <span class="kpi5-pill">{{ $balanceByType->count() }} types</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ number_format($currentBalance, 2) }} days</div>
-                    <div class="stats-label">Current Balance</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $balanceByType->count() }}</span>
-                        <span class="count-text">Leave Types</span>
-                    </div>
+                <div class="kpi5-value">{{ number_format($currentBalance, 1) }}</div>
+                <div class="kpi5-label">Current Balance (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ number_format($totalCredited, 1) }}</span><span class="l">Credited</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($totalUsed, 1) }}</span><span class="l">Used</span></div>
                 </div>
             </div>
 
             <!-- Total Transactions Card -->
-            <div class="stats-card transactions-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-exchange-alt"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-exchange-alt"></i></span>
+                    <span class="kpi5-pill">Records</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ $transactions->count() }}</div>
-                    <div class="stats-label">Total Transactions</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $transactions->count() }}</span>
-                        <span class="count-text">Records</span>
-                    </div>
+                <div class="kpi5-value">{{ $transactions->count() }}</div>
+                <div class="kpi5-label">Total Transactions</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $transactions->where('transaction_type', 'add')->count() }}</span><span class="l">Credits</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $transactions->where('transaction_type', 'sub')->count() }}</span><span class="l">Debits</span></div>
                 </div>
             </div>
         </div>

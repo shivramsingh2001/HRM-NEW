@@ -259,26 +259,63 @@ class ShiftController extends Controller
      */
     private function fetchUserShiftData($userId, $startDate, $endDate)
     {
-        // ✅ FIX: Parse date strings to Carbon before formatting
-        $shifts = UserShift::with('shift')
-            ->where('user_id', $userId)
-            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->get()
-            ->map(function ($userShift) {
-                // Parse the date string to Carbon
-                $date = Carbon::parse($userShift->date);
-                
-                return [
-                    'date' => $date->format('Y-m-d'),
-                    'shift_id' => $userShift->shift->id ?? null,
-                    'shift_name' => $userShift->shift->name ?? null,
-                    'start_time' => $userShift->shift->start_time ?? null,
-                    'end_time' => $userShift->shift->end_time ?? null,
-                    'status' => $userShift->status ?? 'upcoming',
+        $tenantId = (int) (optional(Auth::user())->tenant_id
+            ?: \Illuminate\Support\Facades\DB::table('users')->where('id', $userId)->value('tenant_id'));
+
+        $resolver = app(\App\Services\Attendance\TenantShiftResolver::class);
+        $fixedShift = ($tenantId && !$resolver->isCustomShifts($tenantId))
+            ? $resolver->defaultShift($tenantId)
+            : null;
+
+        if ($fixedShift) {
+            // Custom shifts are off — one fixed company shift for every working
+            // date in range; skip the weekly-off weekdays so combineShiftData
+            // renders them as Week Off. Keys unchanged.
+            $today = Carbon::today();
+            $dayOffNames = UserWeekoffs::where('user_id', $userId)
+                ->where('off_type', 'day_based')
+                ->pluck('day_name')
+                ->all();
+
+            $shifts = collect();
+            for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
+                if (in_array($d->format('l'), $dayOffNames, true)) {
+                    continue;
+                }
+                $ds = $d->toDateString();
+                $shifts[$ds] = [
+                    'date' => $ds,
+                    'shift_id' => $fixedShift->id,
+                    'shift_name' => $fixedShift->name,
+                    'start_time' => $fixedShift->start_time ?? null,
+                    'end_time' => $fixedShift->end_time ?? null,
+                    'status' => $d->lt($today) ? 'completed' : 'upcoming',
                     'type' => 'Shift',
-                    'color_code' => $userShift->shift->color_code ?? '#3b82f6'
+                    'color_code' => $fixedShift->color_code ?? '#3b82f6',
                 ];
-            })->keyBy('date');
+            }
+        } else {
+            // ✅ FIX: Parse date strings to Carbon before formatting
+            $shifts = UserShift::with('shift')
+                ->where('user_id', $userId)
+                ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+                ->get()
+                ->map(function ($userShift) {
+                    // Parse the date string to Carbon
+                    $date = Carbon::parse($userShift->date);
+
+                    return [
+                        'date' => $date->format('Y-m-d'),
+                        'shift_id' => $userShift->shift->id ?? null,
+                        'shift_name' => $userShift->shift->name ?? null,
+                        'start_time' => $userShift->shift->start_time ?? null,
+                        'end_time' => $userShift->shift->end_time ?? null,
+                        'status' => $userShift->status ?? 'upcoming',
+                        'type' => 'Shift',
+                        'color_code' => $userShift->shift->color_code ?? '#3b82f6'
+                    ];
+                })->keyBy('date');
+        }
 
         // ✅ FIX: Parse week off dates properly
         $dateWeekOffs = UserWeekoffs::where('user_id', $userId)

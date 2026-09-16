@@ -107,58 +107,8 @@
             color: #4f46e5;
         }
 
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.3s ease;
-            border: 1px solid #edf2f7;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
-
-        .stats-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.15);
-        }
-
-        .stats-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(79, 70, 229, 0.1);
-        }
-
-        .stats-icon i {
-            font-size: 24px;
-            color: #4f46e5;
-        }
-
-        .stats-info h3 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0;
-            color: #1e293b;
-        }
-
-        .stats-info p {
-            font-size: 13px;
-            color: #64748b;
-            margin: 4px 0 0;
-        }
+        /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
+           in client.layout.head (single blue-only theme) — no local copy. */
 
         /* Filter Section */
         .filter-wrapper {
@@ -477,7 +427,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         {{-- Success/Error Messages --}}
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show mb-4">

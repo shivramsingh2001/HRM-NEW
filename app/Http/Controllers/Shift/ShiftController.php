@@ -43,66 +43,33 @@ class ShiftController extends Controller
                 $query->whereBetween('created_at', [$request->from_date, $request->to_date]);
             }
 
-            // Get paginated results with query string
-            $shifts = $query->orderBy('id', 'desc')->paginate(12)->withQueryString();
-
-            Log::info('Total records found: ' . $shifts->total());
+            // Per-shift "assigned this month" count for the list column
+            $currentMonth = Carbon::now();
+            $shifts = $query->withCount(['userShifts as assigned_this_month' => function ($q) use ($currentMonth) {
+                $q->whereMonth('date', $currentMonth->month)->whereYear('date', $currentMonth->year);
+            }])->orderBy('id', 'desc')->paginate(12)->withQueryString();
 
             // Get statistics
             $totalShifts = Shift::count();
             $activeShifts = Shift::where('status', 1)->count();
             $inactiveShifts = Shift::where('status', 0)->count();
 
-            $currentMonth = Carbon::now();
             $assignedShiftsCount = UserShift::whereMonth('date', $currentMonth->month)
                 ->whereYear('date', $currentMonth->year)
                 ->count();
-
-            $upcomingShiftsCount = UserShift::where('date', '>=', Carbon::today())
-                ->where('status', 'upcoming')
-                ->count();
-
-            // Get assigned shifts for the current month
-            $assignedShiftsList = UserShift::with(['user', 'shift'])
-                ->whereMonth('date', $currentMonth->month)
-                ->whereYear('date', $currentMonth->year)
-                ->orderBy('date', 'desc')
-                ->limit(20)
-                ->get();
-
-            // Get departments for assignment modal
-            $departments = Department::where('status', 1)->get(['id', 'name']);
-
-            // Get all active users for assignment
-            $users = User::where('status', 1)
-                ->select('id', 'name', 'employee_id')
-                ->orderBy('name')
-                ->get();
 
             return view('client.shift.index', compact(
                 'shifts',
                 'totalShifts',
                 'activeShifts',
                 'inactiveShifts',
-                'assignedShiftsCount',
-                'upcomingShiftsCount',
-                'assignedShiftsList',
-                'departments',
-                'users'
+                'assignedShiftsCount'
             ));
         } catch (Exception $e) {
             Log::error('Shift index error: ' . $e->getMessage());
 
             return back()->with('error', 'Failed to load shifts. Please try again.');
         }
-    }
-
-    /**
-     * Show create form
-     */
-    public function create()
-    {
-        return view('shift.create');
     }
 
     /**
@@ -116,8 +83,8 @@ class ShiftController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255|unique:shifts,name',
                 'start_time' => 'required|date_format:H:i',
-                'end_time' => 'required|date_format:H:i|after:start_time',
-                'total_hours' => 'required|numeric|min:0.5|max:24',
+                // No after:start_time — end <= start means the shift crosses midnight.
+                'end_time' => 'required|date_format:H:i',
                 'description' => 'nullable|string|max:500',
                 'grace_minutes' => 'nullable|integer|min:0|max:120',
                 'color_code' => 'nullable|string|max:7',
@@ -136,7 +103,7 @@ class ShiftController extends Controller
                 'name' => $request->name,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
-                'total_hours' => $request->total_hours,
+                'total_hours' => $this->computeTotalHours($request->start_time, $request->end_time, $request->break_time),
                 'description' => $request->description,
                 'grace_minutes' => $request->grace_minutes ?? 0,
                 'color_code' => $request->color_code ?? '#3b82f6',
@@ -164,19 +131,6 @@ class ShiftController extends Controller
     }
 
     /**
-     * Show edit form
-     */
-    public function edit($id)
-    {
-        try {
-            $shift = Shift::findOrFail($id);
-            return view('shift.edit', compact('shift'));
-        } catch (Exception $e) {
-            return back()->with('error', 'Shift not found');
-        }
-    }
-
-    /**
      * Update the specified shift
      */
     public function update(Request $request, $id)
@@ -194,8 +148,8 @@ class ShiftController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255|unique:shifts,name,' . $id,
                 'start_time' => 'required|date_format:H:i',
-                'end_time' => 'required|date_format:H:i|after:start_time',
-                'total_hours' => 'required|numeric|min:0.5|max:24',
+                // No after:start_time — end <= start means the shift crosses midnight.
+                'end_time' => 'required|date_format:H:i',
                 'description' => 'nullable|string|max:500',
                 'grace_minutes' => 'nullable|integer|min:0|max:120',
                 'status' => 'nullable|boolean',
@@ -216,7 +170,7 @@ class ShiftController extends Controller
                 'name' => $request->name,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
-                'total_hours' => $request->total_hours,
+                'total_hours' => $this->computeTotalHours($request->start_time, $request->end_time, $request->break_time),
                 'description' => $request->description,
                 'grace_minutes' => $request->grace_minutes ?? 0,
                 'color_code' => $request->color_code ?? '#3b82f6',
@@ -240,6 +194,20 @@ class ShiftController extends Controller
                 'message' => 'Shift update failed. Please try again.'
             ], 500);
         }
+    }
+
+    /**
+     * Working hours for a shift = span (handling midnight crossing) minus break.
+     */
+    private function computeTotalHours($start, $end, $break): float
+    {
+        $s = Carbon::parse($start);
+        $e = Carbon::parse($end);
+        if ($e->lessThanOrEqualTo($s)) {
+            $e->addDay(); // crosses midnight
+        }
+
+        return round(max(0, $s->diffInMinutes($e) - (int) ($break ?? 0)) / 60, 2);
     }
 
     /**
@@ -305,6 +273,18 @@ class ShiftController extends Controller
                 ], 400);
             }
 
+            // The tenant's fixed company shift (used when custom shifts are off).
+            $isDefaultShift = \App\Models\Tenant::where('id', $shift->tenant_id)
+                ->where('default_shift_id', $id)
+                ->exists();
+
+            if ($isDefaultShift) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Cannot delete the company default shift. Change it in Shift Settings instead.'
+                ], 400);
+            }
+
             DB::beginTransaction();
 
             $shiftName = $shift->name;
@@ -328,48 +308,172 @@ class ShiftController extends Controller
     }
 
     /**
-     * Show assign shift view
+     * The "Shift Roster" page — which employee is on which shift (Day or Week
+     * grid), plus the assign-shift modal + the assignments list.
      */
-    public function assignView()
+    public function roster(Request $request)
     {
         try {
-            $shifts = Shift::where('status', 1)->get();
-            $departments = Department::where('status', 1)->get(['id', 'name']);
-            $users = User::where('status', 1)
-                ->select('id', 'name', 'employee_id')
-                ->orderBy('name')
-                ->get();
+            $tenantId = Auth::user()->tenant_id;
+            $view = in_array($request->input('view'), ['week', 'month'], true) ? $request->input('view') : 'day';
+            $anchor = $request->filled('date') ? Carbon::parse($request->date) : Carbon::today();
 
-            return view('shift.assign', compact('shifts', 'departments', 'users'));
+            if ($view === 'week') {
+                $start = $anchor->copy()->startOfWeek(Carbon::MONDAY);
+                $dates = collect(range(0, 6))->map(fn ($i) => $start->copy()->addDays($i));
+            } elseif ($view === 'month') {
+                $start = $anchor->copy()->startOfMonth();
+                $dates = collect(range(0, $anchor->daysInMonth - 1))->map(fn ($i) => $start->copy()->addDays($i));
+            } else {
+                $dates = collect([$anchor->copy()]);
+            }
+            $dateStrings = $dates->map(fn ($d) => $d->format('Y-m-d'))->all();
+
+            // Employees (paginated)
+            $userQuery = User::where('tenant_id', $tenantId)
+                ->where('status', 1)
+                ->where('role', '!=', 'admin')
+                ->with(['jobDetails.department', 'jobDetails.designation', 'basicDetails']);
+
+            // A manager only sees their own direct reportees on the roster.
+            if (Auth::user()->role === 'manager') {
+                $managerId = Auth::id();
+                $userQuery->whereHas('jobDetails', fn ($q) => $q->where('reporting_head', $managerId));
+            }
+
+            if ($request->filled('search')) {
+                $s = $request->search;
+                $userQuery->where(function ($q) use ($s) {
+                    $q->where('name', 'LIKE', "%{$s}%")->orWhere('employee_id', 'LIKE', "%{$s}%");
+                });
+            }
+            if ($request->filled('department_id')) {
+                $deptId = $request->department_id;
+                $userQuery->whereHas('jobDetails', fn ($q) => $q->where('department', $deptId));
+            }
+
+            $perPage = $view === 'month' ? 12 : ($view === 'week' ? 15 : 25);
+            $users = $userQuery->orderBy('name')->paginate($request->input('per_page', $perPage))->withQueryString();
+            $userIds = collect($users->items())->pluck('id');
+
+            // Bulk maps
+            $assignments = UserShift::with('shift')
+                ->where('tenant_id', $tenantId)
+                ->whereIn('user_id', $userIds)
+                ->whereIn('date', $dateStrings)
+                ->get()
+                ->keyBy(fn ($r) => $r->user_id . '|' . Carbon::parse($r->date)->format('Y-m-d'));
+
+            $weekoffs = UserWeekoffs::where('tenant_id', $tenantId)
+                ->where('status', 1)
+                ->whereIn('user_id', $userIds)
+                ->get()
+                ->groupBy('user_id');
+
+            $clockedIn = DB::table('attendances')
+                ->where('tenant_id', $tenantId)
+                ->whereIn('user_id', $userIds)
+                ->whereIn('date', $dateStrings)
+                ->whereNotNull('clock_in')
+                ->get(['user_id', 'date'])
+                ->map(fn ($r) => $r->user_id . '|' . Carbon::parse($r->date)->format('Y-m-d'))
+                ->flip();
+
+            // Build the grid: cells[userId][Y-m-d] = ['type' => shift|weekoff|unassigned, ...]
+            $cells = [];
+            foreach ($userIds as $uid) {
+                foreach ($dates as $d) {
+                    $ds = $d->format('Y-m-d');
+                    $key = $uid . '|' . $ds;
+                    $row = $assignments->get($key);
+
+                    if ($row && $row->shift) {
+                        $cells[$uid][$ds] = [
+                            'type' => 'shift',
+                            'name' => $row->shift->name,
+                            'color' => $row->shift->color_code ?: '#4f46e5',
+                            'start' => $row->shift->start_time,
+                            'end' => $row->shift->end_time,
+                            'shift_id' => $row->shift_id,
+                            'status' => $row->status,
+                        ];
+                    } elseif ($this->isWeekOffOn($weekoffs->get($uid), $d)) {
+                        $cells[$uid][$ds] = ['type' => 'weekoff'];
+                    } else {
+                        $cells[$uid][$ds] = ['type' => 'unassigned'];
+                    }
+
+                    $cells[$uid][$ds]['clocked_in'] = $clockedIn->has($key);
+                }
+            }
+
+            $shifts = Shift::where('tenant_id', $tenantId)->where('status', 1)
+                ->orderBy('name')->get(['id', 'name', 'color_code', 'start_time', 'end_time']);
+            $departments = Department::where('status', 1)->orderBy('name')->get(['id', 'name']);
+
+            // Full employee list for the assign modal + the assignments-list filter.
+            $allUsers = User::where('tenant_id', $tenantId)
+                ->where('status', 1)
+                ->where('role', '!=', 'admin')
+                ->orderBy('name')
+                ->get(['id', 'name', 'employee_id']);
+
+            $weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+            return view('client.shift.roster', [
+                'users' => $users,
+                'dates' => $dates,
+                'view' => $view,
+                'anchor' => $anchor,
+                'cells' => $cells,
+                'shifts' => $shifts,
+                'departments' => $departments,
+                'allUsers' => $allUsers,
+                'weekdays' => $weekdays,
+                'shiftFilter' => $request->input('shift_id'),
+            ]);
         } catch (Exception $e) {
-            Log::error('Assign view error: ' . $e->getMessage());
-            return back()->with('error', 'Failed to load assign page');
+            Log::error('Shift roster error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to load the shift roster');
         }
     }
 
     /**
-     * Get departments for AJAX
+     * Is $date a week-off for a user, given their pre-loaded UserWeekoffs collection?
+     * Same predicate as checkDateIsWeekOff(), collection-based.
      */
-    public function getDepartments()
+    private function isWeekOffOn($userWeekoffs, Carbon $date): bool
     {
-        try {
-            $departments = Department::where('status', 1)
-                ->select('id', 'name', 'code')
-                ->orderBy('name')
-                ->get();
-
-            return response()->json([
-                'status' => true,
-                'data' => $departments
-            ], 200);
-        } catch (Exception $e) {
-            Log::error('Get departments error: ' . $e->getMessage());
-
-            return response()->json([
-                'status' => false,
-                'message' => 'Failed to fetch departments'
-            ], 500);
+        if (!$userWeekoffs) {
+            return false;
         }
+
+        $ds = $date->format('Y-m-d');
+        $dayName = $date->format('l');
+
+        foreach ($userWeekoffs as $wo) {
+            if ($wo->off_type === 'day_based') {
+                if (strtolower($wo->day_name ?? '') !== strtolower($dayName)) {
+                    continue;
+                }
+                if ($wo->start_date && $ds < Carbon::parse($wo->start_date)->format('Y-m-d')) {
+                    continue;
+                }
+                if ($wo->end_date && $ds > Carbon::parse($wo->end_date)->format('Y-m-d')) {
+                    continue;
+                }
+                return true;
+            }
+            if ($wo->off_type === 'date_based') {
+                if ($wo->start_date && $wo->end_date
+                    && $ds >= Carbon::parse($wo->start_date)->format('Y-m-d')
+                    && $ds <= Carbon::parse($wo->end_date)->format('Y-m-d')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -421,30 +525,6 @@ class ShiftController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Unable to fetch users'
-            ], 500);
-        }
-    }
-
-    /**
-     * Get available shifts for dropdown
-     */
-    public function getAvailableShifts()
-    {
-        try {
-            $shifts = Shift::where('status', 1)
-                ->orderBy('name')
-                ->get(['id', 'name', 'start_time', 'end_time', 'color_code']);
-
-            return response()->json([
-                'status' => true,
-                'data' => $shifts
-            ], 200);
-        } catch (Exception $e) {
-            Log::error('Get available shifts error: ' . $e->getMessage());
-
-            return response()->json([
-                'status' => false,
-                'message' => 'Failed to fetch shifts'
             ], 500);
         }
     }
@@ -578,7 +658,7 @@ class ShiftController extends Controller
                 ], 200);
             }
 
-            return redirect()->route('shift.index')
+            return redirect()->route('shift.roster')
                 ->with('success', $message);
         } catch (Exception $e) {
             DB::rollBack();
@@ -858,123 +938,6 @@ class ShiftController extends Controller
     }
 
 
-    private function isWeekOff($userId, Carbon $date, $request)
-    {
-        // If no week-off settings in the request, return false
-        if (!$request->week_off_type) {
-            return false;
-        }
-
-        // Build query to check if this date is a week-off
-        $query = UserWeekoffs::where('user_id', $userId)
-            ->where('status', 1); // Only active week-offs
-
-        // For DAY-BASED week-offs (e.g., every Saturday, Sunday)
-        // We check if the day name matches AND the date is within the range
-        if ($request->week_off_type === 'day_based' && !empty($request->week_off_days)) {
-            $currentDayName = $date->format('l'); // Get day name (e.g., "Saturday")
-
-            // Check if current day is in the selected week-off days
-            if (in_array($currentDayName, $request->week_off_days)) {
-                // For day-based week-offs, we need to check if there's an active week-off record
-                // that covers this date range
-                $exists = $query->where('off_type', 'day_based')
-                    ->where('day_name', $currentDayName)
-                    ->where(function ($q) use ($date) {
-                        $q->whereNull('start_date') // If no start date, it's valid for all time
-                            ->orWhereDate('start_date', '<=', $date->toDateString());
-                    })
-                    ->where(function ($q) use ($date) {
-                        $q->whereNull('end_date') // If no end date, it's valid for all future
-                            ->orWhereDate('end_date', '>=', $date->toDateString());
-                    })
-                    ->exists();
-
-                if ($exists) {
-                    Log::info("Day-based week-off found", [
-                        'user_id' => $userId,
-                        'date' => $date->toDateString(),
-                        'day' => $currentDayName
-                    ]);
-                    return true;
-                }
-            }
-        }
-
-        // For DATE-BASED week-offs (specific dates)
-        if ($request->week_off_type === 'date_based' && !empty($request->week_off_dates)) {
-            $dateString = $date->toDateString();
-
-            // Check if this exact date is in the selected dates
-            if (in_array($dateString, $request->week_off_dates)) {
-                return true;
-            }
-
-            // Also check if there are any week-off records covering this date
-            $exists = $query->where('off_type', 'date_based')
-                ->whereDate('start_date', '<=', $dateString)
-                ->whereDate('end_date', '>=', $dateString)
-                ->exists();
-
-            if ($exists) {
-                Log::info("Date-based week-off found", [
-                    'user_id' => $userId,
-                    'date' => $dateString
-                ]);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Get user shifts with filters
-     */
-    public function getUserShifts(Request $request)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'user_id' => 'required|exists:users,id',
-                'start_date' => 'required|date',
-                'end_date' => 'nullable|date|after_or_equal:start_date',
-                'status' => 'nullable|in:upcoming,ongoing,completed,missed,cancelled'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => false,
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $query = UserShift::with(['shift'])
-                ->where('user_id', $request->user_id)
-                ->whereBetween('date', [
-                    $request->start_date,
-                    $request->end_date ?? $request->start_date
-                ]);
-
-            if ($request->has('status') && $request->status !== '') {
-                $query->where('status', $request->status);
-            }
-
-            $userShifts = $query->orderBy('date')->get();
-
-            return response()->json([
-                'status' => true,
-                'data' => $userShifts
-            ], 200);
-        } catch (Exception $e) {
-            Log::error('Get user shifts error: ' . $e->getMessage());
-
-            return response()->json([
-                'status' => false,
-                'message' => 'Failed to fetch user shifts'
-            ], 500);
-        }
-    }
-
     /**
      * Update single user shift
      */
@@ -983,7 +946,7 @@ class ShiftController extends Controller
         $validator = Validator::make($request->all(), [
             'user_shift_id' => 'required|exists:user_shifts,id',
             'shift_id' => 'required|exists:shifts,id',
-            'status' => 'nullable|in:upcoming,ongoing,complete,missed,cancelled',
+            'status' => 'nullable|in:upcoming,ongoing,complete',
             'reason' => 'nullable|string|max:500'
         ]);
 
@@ -1021,47 +984,6 @@ class ShiftController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to update shift'.$e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get shift summary for dashboard
-     */
-    public function getShiftSummary(Request $request)
-    {
-        try {
-            $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now()->startOfMonth();
-            $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now()->endOfMonth();
-
-            $summary = [
-                'total_shifts' => Shift::count(),
-                'active_shifts' => Shift::where('status', 1)->count(),
-                'assigned_shifts' => UserShift::whereBetween('date', [$startDate, $endDate])->count(),
-                'by_status' => [
-                    'upcoming' => UserShift::whereBetween('date', [$startDate, $endDate])
-                        ->where('status', 'upcoming')->count(),
-                    'ongoing' => UserShift::whereBetween('date', [$startDate, $endDate])
-                        ->where('status', 'ongoing')->count(),
-                    'completed' => UserShift::whereBetween('date', [$startDate, $endDate])
-                        ->where('status', 'completed')->count(),
-                    'missed' => UserShift::whereBetween('date', [$startDate, $endDate])
-                        ->where('status', 'missed')->count(),
-                    'cancelled' => UserShift::whereBetween('date', [$startDate, $endDate])
-                        ->where('status', 'cancelled')->count()
-                ]
-            ];
-
-            return response()->json([
-                'status' => true,
-                'data' => $summary
-            ], 200);
-        } catch (Exception $e) {
-            Log::error('Get shift summary error: ' . $e->getMessage());
-
-            return response()->json([
-                'status' => false,
-                'message' => 'Failed to fetch shift summary'
             ], 500);
         }
     }
@@ -1112,35 +1034,6 @@ class ShiftController extends Controller
     }
 
     /**
-     * Display user shifts management page
-     */
-    public function userShifts(Request $request)
-    {
-        try {
-            $users = User::where('status', 1)
-                ->select('id', 'name', 'employee_id')
-                ->orderBy('name')
-                ->get();
-
-            $shifts = Shift::where('status', 1)
-                ->orderBy('name')
-                ->get(['id', 'name', 'start_time', 'end_time', 'color_code']);
-
-            $departments = Department::where('status', 1)
-                ->select('id', 'name')
-                ->get();
-
-            $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now()->startOfMonth();
-            $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now()->endOfMonth();
-
-            return view('client.shift.user_shifts', compact('users', 'shifts', 'departments', 'startDate', 'endDate'));
-        } catch (Exception $e) {
-            Log::error('User shifts view error: ' . $e->getMessage());
-            return back()->with('error', 'Failed to load user shifts page');
-        }
-    }
-
-    /**
      * Get user shifts data for AJAX/datatable
      */
     public function getUserShiftsData(Request $request)
@@ -1151,7 +1044,7 @@ class ShiftController extends Controller
                 'to_date' => 'required|date|after_or_equal:from_date',
                 'user_id' => 'nullable|exists:users,id',
                 'shift_id' => 'nullable|exists:shifts,id',
-                'status' => 'nullable|in:upcoming,ongoing,completed,missed,cancelled'
+                'status' => 'nullable|in:upcoming,ongoing,complete'
             ]);
 
             if ($validator->fails()) {
@@ -1177,6 +1070,22 @@ class ShiftController extends Controller
                 $query->where('status', $request->status);
             }
 
+            // Summary over the WHOLE filtered set (not just the current page).
+            // Cloned Eloquent builder so the tenant global scope still applies.
+            $counts = (clone $query)
+                ->reorder()
+                ->select('status', DB::raw('COUNT(*) as c'))
+                ->groupBy('status')
+                ->pluck('c', 'status');
+            $summary = [
+                'total' => (int) $counts->sum(),
+                'by_status' => [
+                    'upcoming' => (int) ($counts['upcoming'] ?? 0),
+                    'ongoing' => (int) ($counts['ongoing'] ?? 0),
+                    'complete' => (int) ($counts['complete'] ?? 0),
+                ],
+            ];
+
             $userShifts = $query->orderBy('date', 'desc')
                 ->orderBy('user_id')
                 ->paginate($request->per_page ?? 20);
@@ -1184,6 +1093,7 @@ class ShiftController extends Controller
             return response()->json([
                 'status' => true,
                 'data' => $userShifts->items(),
+                'summary' => $summary,
                 'pagination' => [
                     'total' => $userShifts->total(),
                     'per_page' => $userShifts->perPage(),
@@ -1211,7 +1121,7 @@ class ShiftController extends Controller
             'user_shifts' => 'required|array',
             'user_shifts.*.id' => 'required|exists:user_shifts,id',
             'user_shifts.*.shift_id' => 'required|exists:shifts,id',
-            'user_shifts.*.status' => 'required|in:upcoming,ongoing,completed,missed,cancelled'
+            'user_shifts.*.status' => 'required|in:upcoming,ongoing,complete'
         ]);
 
         if ($validator->fails()) {

@@ -6,13 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\ProjectAssign;
+use App\Services\TaskPermissionService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class ProjectController extends Controller
 {
+    protected $permissions;
+
+    public function __construct(TaskPermissionService $permissions)
+    {
+        $this->permissions = $permissions;
+    }
+
     public function index(Request $request)
     {
         $data['users'] = User::whereIn('role', ['manager', 'employee'])
@@ -25,7 +34,7 @@ class ProjectController extends Controller
         $projectsQuery = Project::with(['headUser', 'assigns']);
 
         // Apply role-based filtering
-        if ($user->role == 'admin' || $user->role == 'hr') {
+        if ($this->permissions->isElevated($user)) {
             // Admin and HR can see all projects
             $projectsQuery = $projectsQuery->latest();
         } else {
@@ -44,9 +53,13 @@ class ProjectController extends Controller
 
         // Calculate statistics
         $data['total_projects'] = $allProjects->count();
-        $data['active_projects'] = $allProjects->where('status', 'active')->count(); // Adjust status value as needed
-        $data['ongoing_projects'] = $allProjects->where('status', 'ongoing')->count(); // Adjust status value as needed
-        $data['completed_projects'] = $allProjects->where('status', 'completed')->count(); // Adjust status value as needed
+        // "active" = not yet completed/cancelled (ongoing, pending, or on hold).
+        // Previously filtered on 'status' == 'active', which isn't a valid value
+        // in the projects.status enum (ongoing/pending/hold/completed/cancelled),
+        // so this stat was always 0.
+        $data['active_projects'] = $allProjects->whereIn('status', ['ongoing', 'pending', 'hold'])->count();
+        $data['ongoing_projects'] = $allProjects->where('status', 'ongoing')->count();
+        $data['completed_projects'] = $allProjects->where('status', 'completed')->count();
 
         // Calculate assignments and heads
         $data['total_assignments'] = $allProjects->sum(function ($project) {
@@ -108,7 +121,11 @@ class ProjectController extends Controller
                 'start_date' => $request->start_date,
                 'deadline_date' => $request->deadline_date,
                 'project_head' => $request->project_head,
-                'status' => '1',
+                // Was '1' — projects.status is a string enum
+                // (ongoing/pending/hold/completed/cancelled), and MySQL silently
+                // accepted '1' as that enum's 1-based positional index (=
+                // 'ongoing' today, purely by coincidence of column order).
+                'status' => 'ongoing',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -184,6 +201,94 @@ class ProjectController extends Controller
         $data['users'] = DB::table('users')->where('status', 1)->get();
         $data['project'] = Project::with(['headUser', 'assigns', 'assigns.users', 'assigns.users.basicDetails', 'assigns.users.jobDetails', 'assigns.users.jobDetails.Designation', 'assigns.users.jobDetails.Department'])->where('id', $id)->first();
         return view('client.project.project-detail', $data);
+    }
+
+    /**
+     * JSON list of a project's active team members — e.g. for populating an
+     * "assign from project team" dropdown elsewhere in the app.
+     */
+    public function getMembers($id)
+    {
+        try {
+            $projectId = decrypt($id);
+        } catch (\Exception $e) {
+            $projectId = $id;
+        }
+
+        $project = Project::find($projectId);
+        if (!$project) {
+            return response()->json(['success' => false, 'message' => 'Project not found.'], 404);
+        }
+
+        $members = ProjectAssign::with('user')
+            ->where('project_id', $projectId)
+            ->where('status', 1)
+            ->get()
+            ->map(function ($assign) {
+                return [
+                    'id' => $assign->user->id ?? null,
+                    'name' => $assign->user->name ?? null,
+                    'email' => $assign->user->email ?? null,
+                    'employee_id' => $assign->user->employee_id ?? null,
+                    'is_head' => (bool) $assign->is_head,
+                ];
+            })
+            ->filter(fn ($m) => $m['id'] !== null)
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $members]);
+    }
+
+    /**
+     * Only elevated roles or the project head may delete a project, and only
+     * while it isn't completed — mirrors Task::delete()'s editable-window
+     * rule. Tasks under the project are NOT cascade-deleted (project_id is
+     * simply orphaned to null) — a project's task history should survive
+     * the project record itself being removed.
+     */
+    public function destroy($id)
+    {
+        try {
+            $authUser = auth()->user();
+
+            try {
+                $projectId = decrypt($id);
+            } catch (\Exception $e) {
+                $projectId = $id;
+            }
+
+            $project = Project::find($projectId);
+            if (!$project) {
+                return response()->json(['success' => false, 'message' => 'Project not found.'], 404);
+            }
+
+            $isHead = $project->project_head == $authUser->id;
+            if (!$this->permissions->isElevated($authUser) && !$isHead) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only an admin, HR, or the project head can delete this project.',
+                ], 403);
+            }
+
+            if ($project->status === 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A completed project cannot be deleted.',
+                ], 422);
+            }
+
+            DB::beginTransaction();
+            \App\Models\Task::where('project_id', $projectId)->update(['project_id' => null]);
+            ProjectAssign::where('project_id', $projectId)->delete();
+            $project->delete();
+            DB::commit();
+
+            return response()->json(['success' => true, 'message' => 'Project deleted successfully.']);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Project delete error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to delete project.'], 500);
+        }
     }
 
     public function update(Request $request, $id)

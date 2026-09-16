@@ -37,42 +37,11 @@
             box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
         }
 
-        /* ── Stats Cards ── */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .stats-card {
-            background: #fff;
-            border: 1px solid #eef2f6;
-            border-radius: 8px;
-            padding: 10px 12px;
-            text-align: center;
-            transition: all 0.2s;
-        }
-
-        .stats-card:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
-            border-color: #cbd5e1;
-        }
-
-        .stats-number {
-            font-size: 22px;
-            font-weight: 700;
-            color: #1e293b;
-            line-height: 1.2;
-        }
-
-        .stats-label {
-            font-size: 10px;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            margin-top: 4px;
-        }
+        /* .stats-grid/.stats-card/.stats-number/.stats-label are centralized
+           in client.layout.head (single blue-only theme) — no local copy.
+           This page's cards have no icon, so stack number/label vertically
+           and center them instead of the shared side-by-side icon layout. */
+        .stats-card { flex-direction: column; text-align: center; }
 
         /* ── Filter ── */
         .filter-wrapper {
@@ -539,7 +508,7 @@
                                         </div>
                                         @if ($candidate->current_company)
                                             <small class="text-muted"
-                                                style="font-size:10px;">{{ $candidate->current_company }}</small>
+                                                style="font-size:8px;">{{ $candidate->current_company }}</small>
                                         @endif
                                     </td>
                                     <td>

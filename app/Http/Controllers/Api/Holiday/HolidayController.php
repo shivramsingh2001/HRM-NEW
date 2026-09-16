@@ -19,7 +19,7 @@ class HolidayController extends Controller
             $holidays = Holiday::whereYear('start_date', $currentYear)
                 ->where('status','1')
                 ->orderBy('start_date', 'asc')
-                ->get(['id','start_date','name','description']);
+                ->get(['id','start_date','end_date','name','description']);
             return response()->json([
                 'success' => true,
                 'message' => "Data fetched successfully!!!",

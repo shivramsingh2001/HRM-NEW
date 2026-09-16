@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MonthlyPayroll;
 use App\Models\User;
 use App\Models\Tenant;
+use App\Traits\ResolvesCurrentTenant;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Log;
 
 class PayrollController extends Controller
 {
+    use ResolvesCurrentTenant;
+
     /**
      * Get list of all payslips for the authenticated user
      */
@@ -157,7 +160,7 @@ class PayrollController extends Controller
                 ->first();
 
             // Get tenant/company details
-            $tenant_id = $user->tenant_id ?? session('tenant_id');
+            $tenant_id = $this->currentTenantId($user);
             $company = DB::table('tenants')->where('id', $tenant_id)->first();
 
             // Generate PDF
@@ -172,7 +175,7 @@ class PayrollController extends Controller
             $filename = 'payslip_' . $monthlyPayroll->user->employee_id . '_' . $monthlyPayroll->payroll_month . '.pdf';
 
             // For API requests, return JSON with base64
-            if ($request->wantsJson() || $request->has('api')) {
+            if (request()->wantsJson() || request()->has('api')) {
                 $pdfContent = $pdf->output();
                 $base64Pdf = base64_encode($pdfContent);
                 
@@ -238,7 +241,7 @@ class PayrollController extends Controller
                 ->first();
 
             // Get tenant/company details
-            $tenant_id = $user->tenant_id ?? session('tenant_id');
+            $tenant_id = $this->currentTenantId($user);
             $company = DB::table('tenants')->where('id', $tenant_id)->first();
 
             // Generate PDF
@@ -296,7 +299,7 @@ class PayrollController extends Controller
                 ->first();
 
             // Get tenant/company details
-            $tenant_id = $user->tenant_id ?? session('tenant_id');
+            $tenant_id = $this->currentTenantId($user);
             $company = DB::table('tenants')->where('id', $tenant_id)->first();
 
             // Generate PDF

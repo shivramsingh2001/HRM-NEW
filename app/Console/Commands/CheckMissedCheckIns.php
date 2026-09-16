@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\User;
 use App\Notifications\MissedCheckInNotification;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -97,6 +98,11 @@ class CheckMissedCheckIns extends Command
                 )
                 ->get();
 
+            // Tenants with custom shifts OFF have no user_shifts rows — synthesise
+            // one row per active user from the tenant's fixed company shift so
+            // they still get missed-check-in alerts.
+            $userShifts = $userShifts->concat($this->fixedShiftTargets($checkDate));
+
             $this->info('📊 Found ' . $userShifts->count() . ' users with shifts on ' . $checkDate->toDateString());
             Log::info('Users with shifts', [
                 'date' => $checkDate->toDateString(),
@@ -168,7 +174,7 @@ class CheckMissedCheckIns extends Command
 
                     // Only mark once something actually succeeded, so a fully
                     // failed run does not permanently block retries.
-                    $this->markNotificationSent($userShift->user_shift_id);
+                    $this->markNotificationSent($userShift, $checkDate);
 
                     Log::warning('Missed check-in detected and notified', [
                         'user_id' => $userShift->user_id,
@@ -235,19 +241,86 @@ class CheckMissedCheckIns extends Command
     }
 
     /**
-     * Mark the user_shift row as notified (persistent per-day dedupe).
+     * Mark this shift row as notified (persistent per-day dedupe). Real
+     * user_shifts rows use their column; synthesised fixed-shift rows
+     * (user_shift_id === null) use a per-day cache key instead.
      */
-    private function markNotificationSent($userShiftId)
+    private function markNotificationSent($userShift, Carbon $checkDate)
     {
-        DB::table('user_shifts')
-            ->where('id', $userShiftId)
-            ->update([
-                'missed_checkin_notified' => 1,
-                'missed_checkin_notified_at' => now(),
-                'updated_at' => now(),
-            ]);
+        if (!empty($userShift->user_shift_id)) {
+            DB::table('user_shifts')
+                ->where('id', $userShift->user_shift_id)
+                ->update([
+                    'missed_checkin_notified' => 1,
+                    'missed_checkin_notified_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
-        Log::info('Marked missed check-in notification as sent', ['user_shift_id' => $userShiftId]);
+            Log::info('Marked missed check-in notification as sent', ['user_shift_id' => $userShift->user_shift_id]);
+            return;
+        }
+
+        Cache::put(
+            $this->fixedShiftDedupeKey($userShift->tenant_id, $userShift->user_id, $checkDate),
+            1,
+            now()->addDay()->startOfDay()
+        );
+        Log::info('Marked missed check-in notification as sent (fixed shift)', [
+            'tenant_id' => $userShift->tenant_id,
+            'user_id' => $userShift->user_id,
+        ]);
+    }
+
+    private function fixedShiftDedupeKey($tenantId, $userId, Carbon $checkDate): string
+    {
+        return "missed_checkin:{$tenantId}:{$userId}:{$checkDate->toDateString()}";
+    }
+
+    /**
+     * Synthesise a shift row per active user for every tenant that has custom
+     * shifts OFF and a configured default shift. Matches the stdClass shape of
+     * the user_shifts query in handle().
+     */
+    private function fixedShiftTargets(Carbon $checkDate)
+    {
+        $rows = collect();
+
+        $tenants = DB::table('tenants')
+            ->where('custom_shifts_enabled', 0)
+            ->whereNotNull('default_shift_id')
+            ->get(['id', 'default_shift_id']);
+
+        foreach ($tenants as $tenant) {
+            $shift = DB::table('shifts')
+                ->where('id', $tenant->default_shift_id)
+                ->where('tenant_id', $tenant->id)
+                ->first(['start_time', 'grace_minutes']);
+
+            if (!$shift || !$shift->start_time) {
+                continue;
+            }
+
+            $users = DB::table('users')
+                ->where('tenant_id', $tenant->id)
+                ->where('status', 1)
+                ->get(['id', 'name']);
+
+            foreach ($users as $user) {
+                $rows->push((object) [
+                    'user_shift_id' => null,
+                    'user_id' => $user->id,
+                    'missed_checkin_notified' => Cache::has(
+                        $this->fixedShiftDedupeKey($tenant->id, $user->id, $checkDate)
+                    ) ? 1 : 0,
+                    'user_name' => $user->name,
+                    'tenant_id' => $tenant->id,
+                    'start_time' => $shift->start_time,
+                    'grace_minutes' => $shift->grace_minutes ?? 0,
+                ]);
+            }
+        }
+
+        return $rows;
     }
 
     /**

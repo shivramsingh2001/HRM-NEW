@@ -5,11 +5,11 @@
     <style>
         /* ==================== EMPLOYEE HEADER ==================== */
         .employee-header {
-            background: linear-gradient(145deg, #4f46e5, #7c3aed);
+            background: linear-gradient(145deg, #1e3a8a, #1e3a8a);
             padding: 24px 28px;
             border-radius: 16px;
             margin-bottom: 28px;
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.15);
+            box-shadow: 0 8px 20px rgba(30, 58, 138, 0.15);
             color: white;
         }
 
@@ -72,7 +72,7 @@
 
         .detail-card:hover {
             border-color: var(--primary);
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.08);
+            box-shadow: 0 8px 20px rgba(30, 58, 138, 0.08);
         }
 
         .card-header-custom {
@@ -109,8 +109,8 @@
         }
 
         .card-badge-hour {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1e3a8a;
             padding: 4px 10px;
             border-radius: 30px;
             font-size: 11px;
@@ -166,12 +166,12 @@
         }
 
         .amount-positive {
-            color: var(--success);
+            color: #1e3a8a;
             font-weight: 600;
         }
 
         .amount-negative {
-            color: var(--danger);
+            color: #475569;
             font-weight: 600;
         }
 
@@ -202,7 +202,7 @@
         .net-amount {
             font-size: 36px;
             font-weight: 700;
-            color: var(--success);
+            color: #1e3a8a;
             line-height: 1.2;
             margin: 10px 0 5px;
         }
@@ -246,19 +246,19 @@
         }
 
         .stat-positive {
-            color: var(--success);
+            color: #1e3a8a;
         }
 
         .stat-negative {
-            color: var(--danger);
+            color: #475569;
         }
 
         .stat-warning {
-            color: var(--warning);
+            color: #2563eb;
         }
 
         .stat-info {
-            color: var(--info);
+            color: #60a5fa;
         }
 
         /* ==================== HOUR-BASED SPECIFIC ==================== */
@@ -479,7 +479,7 @@
         .form-control:focus {
             border-color: var(--primary);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
         }
 
         /* ==================== RESPONSIVE ==================== */
@@ -548,7 +548,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Success/Error Messages -->
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -723,7 +723,7 @@
                                 <strong>Proration:</strong> <span class="highlight">{{ number_format($pct, 1) }}%</span>
                             </span>
                             @if(($monthlyPayroll->paid_leaves ?? 0) > 0)
-                                <span class="info-item" style="background: #fef3c7; padding: 2px 10px; border-radius: 4px; color: #92400e;">
+                                <span class="info-item" style="background: #e3edfe; padding: 2px 10px; border-radius: 4px; color: #1e3a8a;">
                                     <i class="feather-calendar"></i>
                                     <strong>Paid Leaves:</strong> {{ $monthlyPayroll->paid_leaves ?? 0 }} days
                                     ({{ $paidLeaveHours }} hrs)
@@ -930,9 +930,9 @@
 
                 <!-- Net Payable Card -->
                 <div class="detail-card net-payable-card">
-                    <div class="card-header-custom" style="border-bottom-color: var(--success-light);">
+                    <div class="card-header-custom" style="border-bottom-color: #93c5fd;">
                         <h6 class="card-title">
-                            <i class="fa-solid fa-rupee-sign" style="color: var(--success);"></i>
+                            <i class="fa-solid fa-rupee-sign" style="color: #1e3a8a;"></i>
                             Net Payable
                         </h6>
                     </div>
@@ -945,7 +945,7 @@
                             {{ number_format(($monthlyPayroll->actual_worked_hours ?? 0) + (($monthlyPayroll->paid_leaves ?? 0) * ($userPayroll && $userPayroll->payrollMaster ? $userPayroll->payrollMaster->working_hours_per_day ?? 8 : 8)), 2) }} 
                             payable hours @ ₹{{ number_format($monthlyPayroll->hourly_rate ?? 0, 2) }}/hr
                             @if(($monthlyPayroll->paid_leaves ?? 0) > 0)
-                                <span style="color: #92400e; background: #fef3c7; padding: 1px 6px; border-radius: 4px;">
+                                <span style="color: #1e3a8a; background: #e3edfe; padding: 1px 6px; border-radius: 4px;">
                                     +{{ ($monthlyPayroll->paid_leaves ?? 0) * ($userPayroll && $userPayroll->payrollMaster ? $userPayroll->payrollMaster->working_hours_per_day ?? 8 : 8) }} hrs leaves
                                 </span>
                             @endif
@@ -987,28 +987,76 @@
         </div>
 
         <!-- Action Buttons -->
-        <!--<div class="action-buttons">-->
-        <!--    <div class="d-flex gap-2 flex-wrap justify-content-center">-->
-        <!--        <a href="{{ route('monthly-payrolls.payslip', $monthlyPayroll->id) }}" class="btn btn-success" target="_blank">-->
-        <!--            <i class="feather-file-text"></i> Generate Payslip-->
-        <!--        </a>-->
+        <div class="action-buttons">
+            <div class="d-flex gap-2 flex-wrap justify-content-center">
+                <a href="{{ route('monthly-payrolls.payslip', $monthlyPayroll->id) }}" class="btn btn-success" target="_blank">
+                    <i class="feather-file-text"></i> Generate Payslip
+                </a>
 
-        <!--        @if ($monthlyPayroll->payment_status == 'pending')-->
-        <!--            <button type="button" class="btn btn-warning" onclick="showStatusModal({{ $monthlyPayroll->id }})">-->
-        <!--                <i class="feather-edit"></i> Update Status-->
-        <!--            </button>-->
-        <!--            <a href="{{ route('monthly-payrolls.edit', $monthlyPayroll->id) }}" class="btn btn-primary">-->
-        <!--                <i class="feather-edit-2"></i> Edit Payroll-->
-        <!--            </a>-->
-        <!--        @endif-->
+                @if ($monthlyPayroll->payment_status == 'pending')
+                    <button type="button" class="btn btn-warning" onclick="showStatusModal({{ $monthlyPayroll->id }})">
+                        <i class="feather-edit"></i> Update Status
+                    </button>
+                    <a href="{{ route('monthly-payrolls.edit', $monthlyPayroll->id) }}" class="btn btn-primary">
+                        <i class="feather-edit-2"></i> Edit Payroll
+                    </a>
+                @endif
 
-        <!--        <a href="{{ route('monthly-payrolls.index', ['month' => $monthlyPayroll->payroll_month]) }}"-->
-        <!--            class="btn btn-outline-secondary">-->
-        <!--            <i class="feather-arrow-left"></i> Back to List-->
-        <!--        </a>-->
-        <!--    </div>-->
-        <!--</div>-->
+                <a href="{{ route('monthly-payrolls.index', ['month' => $monthlyPayroll->payroll_month]) }}"
+                    class="btn btn-outline-secondary">
+                    <i class="feather-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+
+        @if ($canReopen)
+            <div class="action-buttons">
+                <div class="d-flex gap-2 flex-wrap justify-content-center">
+                    <button type="button" class="btn btn-outline-warning" onclick="showReopenModal()">
+                        <i class="feather-rotate-ccw"></i> Reopen for Correction
+                    </button>
+                </div>
+            </div>
+        @endif
     </div>
+
+    @if ($canReopen)
+        <!-- Reopen for Correction Modal -->
+        <div class="modal fade" id="reopenModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="feather-rotate-ccw"></i>
+                            Reopen Payroll for Correction
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form method="POST" action="{{ route('monthly-payrolls.reopen', $monthlyPayroll->id) }}">
+                        @csrf
+                        <div class="modal-body">
+                            <p class="text-muted" style="font-size: 12px;">
+                                This payroll is currently <strong>{{ ucfirst($monthlyPayroll->payment_status) }}</strong>.
+                                Reopening sets it back to <strong>Pending</strong> so it can be edited, and records who
+                                reopened it and why. Use Edit Payroll afterward to make the actual correction.
+                            </p>
+                            <div class="form-group">
+                                <label>Reason (required)</label>
+                                <textarea name="reason" class="form-control" rows="3" minlength="5" maxlength="500"
+                                    placeholder="Why does this payroll need to be reopened?" required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-warning">Reopen for Correction</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <!-- Status Update Modal -->
     <div class="modal fade" id="statusModal" tabindex="-1">
@@ -1095,6 +1143,10 @@
             let url = "{{ route('monthly-payrolls.status', ':id') }}".replace(':id', id);
             $('#statusForm').attr('action', url);
             $('#statusModal').modal('show');
+        }
+
+        function showReopenModal() {
+            $('#reopenModal').modal('show');
         }
     </script>
 @endsection

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Otp;
 use App\Services\AuthService;
+use App\Services\LoginAttemptService;
+use App\Services\AuthAuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -23,15 +25,30 @@ use Carbon\Carbon;
 class AuthController extends Controller
 {
     public function __construct(
-        protected AuthService $service
+        protected AuthService $service,
+        protected LoginAttemptService $loginAttempts,
+        protected AuthAuditService $audit
     ) {
+    }
+
+    private function currentTenantId(): ?int
+    {
+        return app()->bound('current_tenant') ? app('current_tenant')->id : null;
     }
 
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'employee_id' => 'required',
-            'password' => 'required|min:8|max:12',
+            // Deliberately just "required|string" here, not a length policy
+            // — this validates the SUBMITTED password against Hash::check(),
+            // it isn't setting one. A min/max here previously caused a real
+            // lockout bug: a password legitimately set via resetPassword()
+            // (then allowing 6 chars) could fail this rule's min:8 before
+            // Hash::check() ever ran, making login impossible. Password
+            // *policy* belongs on resetPassword()/changePassword(), where a
+            // new password is actually being chosen.
+            'password' => 'required|string',
              'fcm_token' => 'nullable|string',  // Added
             'device_id' => 'nullable|string',   // Added
             'platform' => 'nullable|string|in:android,ios',
@@ -106,7 +123,9 @@ class AuthController extends Controller
         
         $validator = Validator::make($request->all(), [
             'current_password' => 'required',
-            'new_password' => 'required|min:6|max:10|different:current_password',
+            // Unified policy — see resetPassword() for rationale (was
+            // min:6|max:10, inconsistent with login()'s former min:8).
+            'new_password' => ['required', 'different:current_password', \Illuminate\Validation\Rules\Password::min(8)->mixedCase()->numbers()],
             'confirm_password' => 'required|same:new_password',
         ], [
             'new_password.different' => 'New password must be different from current password',
@@ -133,6 +152,7 @@ class AuthController extends Controller
             $user->password = Hash::make($request->new_password);
             $user->save();
             DB::commit();
+            $this->audit->logPasswordChanged($user->id, $user->tenant_id);
             return response()->json([
                 'success' => true,
                 'message' => 'Password changed successfully'
@@ -162,20 +182,27 @@ class AuthController extends Controller
     
         try {
             $email = $request->email;
-            
+
             // Find user
             $user = User::where('email', $email)->first();
-            
+
+            // Deliberately generic regardless of whether the email matched —
+            // returning a distinct "not found" message here is a classic
+            // account-enumeration leak (an attacker can probe which emails
+            // exist). If no user matched, skip the token/email work below
+            // and return the exact same response either way.
             if (!$user) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'User not found with this email address'
+                    'success' => true,
+                    'message' => 'If that email address is registered, a password reset link has been sent.'
                 ], 200);
             }
-    
+
+            $this->audit->logPasswordResetRequested($user->id, $user->tenant_id);
+
             // Generate token - plain text
             $token = Str::random(60);
-            
+
             // Store HASHED token in database
             DB::table('password_reset_tokens')->updateOrInsert(
                 ['email' => $email],
@@ -184,7 +211,7 @@ class AuthController extends Controller
                     'created_at' => now()
                 ]
             );
-    
+
             // Generate reset link - use rawurlencode for special characters
             $resetLink = url("/reset-password?token=" . rawurlencode($token) . "&email=" . rawurlencode($email));
             
@@ -193,9 +220,9 @@ class AuthController extends Controller
     
             return response()->json([
                 'success' => true,
-                'message' => 'Password reset link has been sent to your email'
+                'message' => 'If that email address is registered, a password reset link has been sent.'
             ], 200);
-    
+
         } catch (Exception $e) {
     
             return response()->json([
@@ -210,7 +237,11 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|exists:users,email',
             'token' => 'required',
-            'password' => 'required|min:6|max:10|confirmed',
+            // Unified policy (was min:6|max:10, inconsistent with login()'s
+            // former min:8 — that mismatch could make a freshly-reset
+            // password unable to log in at all). No artificial max: bcrypt
+            // truncates at 72 bytes regardless, that's the real ceiling.
+            'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::min(8)->mixedCase()->numbers()],
         ]);
     
         if ($validator->fails()) {
@@ -260,9 +291,13 @@ class AuthController extends Controller
                 }
             } 
     
-            // Check if token is expired (24 hours)
+            // Check if token is expired. Was addMinutes(5) despite the
+            // comment saying 24 hours — a 5-minute real-world window from
+            // "request email" to "click link" was almost certainly an
+            // accidental typo, not an intentional security choice. 60
+            // minutes is a standard industry default for email-based resets.
             $createdAt = Carbon::parse($resetRecord->created_at);
-            if ($createdAt->addMinutes(5)->isPast()) {
+            if ($createdAt->addMinutes(60)->isPast()) {
                 DB::table('password_reset_tokens')->where('email', $email)->delete();
                 return response()->json([
                     'success' => false,
@@ -283,10 +318,12 @@ class AuthController extends Controller
             // Update password
             $user->password = Hash::make($request->password);
             $user->save();
-    
+
             // Delete the used token
             DB::table('password_reset_tokens')->where('email', $email)->delete();
-         
+
+            $this->audit->logPasswordResetCompleted($user->id, $user->tenant_id);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Password has been reset successfully'
@@ -420,7 +457,7 @@ class AuthController extends Controller
                 ]);
             }
             
-            $otp = mt_rand(100000, 999999);
+            $otp = random_int(100000, 999999);
             // $otp = 123456;
             Otp::create([
                 'mobile_no' => $mobile,
@@ -432,9 +469,8 @@ class AuthController extends Controller
             //     'message' => 'OTP Sent Successfully !!!',
             // ], 200);
 
-            $username = env('AIRTEL_USERNAME');
-            $password = env('AIRTEL_PASSWORD');
-            $credentials = $username . ':' . $password;
+            $username = config('sms.airtel.username');
+            $password = config('sms.airtel.password');
             $url = "https://iqsms.airtel.in/api/v1/send-prepaid-sms";
 
             $response = Http::withHeaders([
@@ -442,20 +478,22 @@ class AuthController extends Controller
                 'content-type' => 'application/json',
                 'Authorization' => 'Basic ' . base64_encode($username . ':' . $password)
             ])->post($url, [
-                "customerId" => env('CUSTOMER_ID'),
+                "customerId" => config('sms.airtel.customer_id'),
                 "destinationAddress" => [$request->mobile_no],
-                "dltTemplateId" => env('DLT_TEMPLATE_ID'),
-                "entityId" => env('ENTITY_ID'),
+                "dltTemplateId" => config('sms.airtel.dlt_template_id'),
+                "entityId" => config('sms.airtel.entity_id'),
                 "message" => "Dear user,{$otp}. is your verification code for SHURT HRMS. Please keep this code confidential and do not share it with anyone",
-                "messageType" => env('MESSAGE_TYPE'),
-                "sourceAddress" => env('SOURCE_ADDRESS')
+                "messageType" => config('sms.airtel.message_type'),
+                "sourceAddress" => config('sms.airtel.source_address')
             ]);
             if ($response->successful()) {
+                $this->audit->logOtpRequested($this->currentTenantId(), $mobile);
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Otp Sent Successfully!!!',
-                    // 'otp'     => $otp, 
-                    // 'sms_api_response' => $response->body() 
+                    // 'otp'     => $otp,
+                    // 'sms_api_response' => $response->body()
                 ], 200);
             } else {
                 return response()->json([
@@ -487,6 +525,14 @@ class AuthController extends Controller
             ], 200);
         }
         try {
+            $lockoutKey = 'otp:' . $request->mobile_no;
+            if ($this->loginAttempts->isLockedOut($lockoutKey)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $this->loginAttempts->lockoutMessage($lockoutKey),
+                ], 200);
+            }
+
             $otpRecord = Otp::where('mobile_no', $request->mobile_no)
                 ->where('otp', $request->otp)
                 ->where('is_used',0)
@@ -494,17 +540,22 @@ class AuthController extends Controller
                 ->first();
 
             if (!$otpRecord) {
+                $this->loginAttempts->recordFailure($lockoutKey);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid OTP.',
                 ], 200);
             }
             if (now()->gt($otpRecord->expire_at)) {
+                $this->loginAttempts->recordFailure($lockoutKey);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'OTP has expired.',
                 ], 200);
             }
+            $this->loginAttempts->clear($lockoutKey);
             $otpRecord->update(['is_used' => true]);
             $user = User::with('jobDetails')->where('contact', $request->mobile_no)
                 ->whereIn('role', ['employee', 'manager'])
@@ -512,7 +563,7 @@ class AuthController extends Controller
 
             if (!$user) {
                 return response()->json([
-                    'success' => true,
+                    'success' => false,
                     'message' => 'Account not found',
                 ]);
             }
@@ -529,10 +580,18 @@ class AuthController extends Controller
             $fcmToken = $request->fcm_token;
             $deviceId = $request->device_id;
             $platform = $request->platform;
-            
+
             if ($fcmToken) {
                 $this->storeFcmToken($user, $fcmToken, $deviceId, $platform);
             }
+
+            // Single-device-login: see AuthService::login() for the full
+            // rationale — same mechanism, mirrored here for the OTP path.
+            $user->last_login_token = \Illuminate\Support\Str::random(60);
+            $user->save();
+
+            $this->audit->logOtpVerified($user->id, $user->tenant_id);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Login Successfully',

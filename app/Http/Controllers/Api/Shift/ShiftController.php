@@ -173,15 +173,55 @@ class ShiftController extends Controller
      */
     private function fetchUserShiftData($userId, $startDate, $endDate)
     {
-        // Get assigned shifts with eager loading
-        $shifts = UserShift::with('shift')
-            ->where('user_id', $userId)
-            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->get()
+        $tenantId = (int) (optional(Auth::user())->tenant_id
+            ?: DB::table('users')->where('id', $userId)->value('tenant_id'));
+
+        $resolver = app(\App\Services\Attendance\TenantShiftResolver::class);
+        $fixedShift = ($tenantId && !$resolver->isCustomShifts($tenantId))
+            ? $resolver->defaultShift($tenantId)
+            : null;
+
+        if ($fixedShift) {
+            // Custom shifts are off — the whole company is on one fixed shift.
+            // Emit a "Shift" entry for every working date in range; skip the
+            // weekly-off weekdays so combineShiftData renders them as Week Off.
+            // Response keys are unchanged.
+            $start = $fixedShift->start_time ? Carbon::parse($fixedShift->start_time)->format('h:i A') : null;
+            $end = $fixedShift->end_time ? Carbon::parse($fixedShift->end_time)->format('h:i A') : null;
+            $today = Carbon::today();
+
+            $dayOffNames = UserWeekoffs::where('user_id', $userId)
+                ->where('off_type', 'day_based')
+                ->pluck('day_name')
+                ->all();
+
+            $shifts = collect();
+            for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
+                if (in_array($d->format('l'), $dayOffNames, true)) {
+                    continue;
+                }
+                $ds = $d->toDateString();
+                $shifts[$ds] = [
+                    'date' => $ds,
+                    'shift_id' => $fixedShift->id,
+                    'shift_name' => $fixedShift->name,
+                    'start_time' => $start,
+                    'end_time' => $end,
+                    'status' => $d->lt($today) ? 'completed' : 'upcoming',
+                    'type' => 'Shift',
+                    'color_code' => $fixedShift->color_code ?? '#3b82f6',
+                ];
+            }
+        } else {
+            // Get assigned shifts with eager loading
+            $shifts = UserShift::with('shift')
+                ->where('user_id', $userId)
+                ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+                ->get()
                        ->map(function ($userShift) {
                 $startTime = $userShift->shift->start_time ?? null;
                 $endTime = $userShift->shift->end_time ?? null;
-                
+
                 // Format times if they exist (do it once here)
                 if ($startTime) {
                     $startTime = Carbon::parse($startTime)->format('h:i A');
@@ -189,10 +229,10 @@ class ShiftController extends Controller
                 if ($endTime) {
                     $endTime = Carbon::parse($endTime)->format('h:i A');
                 }
-                
+
                 return [
-                    'date' => $userShift->date instanceof Carbon 
-                        ? $userShift->date->format('Y-m-d') 
+                    'date' => $userShift->date instanceof Carbon
+                        ? $userShift->date->format('Y-m-d')
                         : Carbon::parse($userShift->date)->format('Y-m-d'),
                     'shift_id' => $userShift->shift->id ?? null,
                     'shift_name' => $userShift->shift->name ?? null,
@@ -203,6 +243,7 @@ class ShiftController extends Controller
                     'color_code' => $userShift->shift->color_code ?? '#3b82f6'
                 ];
             })->keyBy('date');
+        }
 
 
         // Get date-based week offs

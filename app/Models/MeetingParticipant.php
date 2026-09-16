@@ -5,14 +5,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\TenantTrait;
 
 class MeetingParticipant extends Model
 {
-    use HasFactory;
+    use TenantTrait, HasFactory;
 
     protected $fillable = [
         'tenant_id', 'meeting_id', 'user_id', 'role', 'is_mom_writer',
-        'attendance_status', 'reminder_sent',
+        'attendance_status', 'response_comments', 'responded_at',
+        'joined_at', 'left_at', 'reminder_sent',
     ];
 
     protected $casts = [

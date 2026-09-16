@@ -650,7 +650,7 @@
 
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Modern Filter Section -->
         <div class="filter-wrapper">
             <div class="filter-header">

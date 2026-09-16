@@ -15,6 +15,7 @@ class PayrollComponent extends Model
 
     protected $fillable = [
         'monthly_payroll_id',
+        'payroll_component_master_id',
         'component_name',
         'component_type',
         'amount',
@@ -31,6 +32,11 @@ class PayrollComponent extends Model
     public function monthlyPayroll()
     {
         return $this->belongsTo(MonthlyPayroll::class);
+    }
+
+    public function componentMaster()
+    {
+        return $this->belongsTo(PayrollComponentMaster::class, 'payroll_component_master_id');
     }
 
     // Scopes

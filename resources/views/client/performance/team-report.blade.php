@@ -314,7 +314,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
 
         <!-- Stats Cards -->
         <div class="stats-grid">

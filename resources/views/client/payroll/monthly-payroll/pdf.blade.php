@@ -384,6 +384,79 @@
                         <td style="width: 50%;">
                             <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
                                 <tbody>
+                                    <td style="width: 60%; border: 1px solid #000000; padding: 8px; text-align: left; font-size: 14px;">Special Allowance</td>
+                                    <td style="width: 40%; border: 1px solid #000000; padding: 8px; text-align: right; font-size: 14px;">{{ number_format($monthlyPayroll->special_allowance ?? 0, 2) }}</td>
+                                </tbody>
+                            </table>
+                        </td>
+                        <td style="width: 50%;"></td>
+                    </tr>
+                    <tr>
+                        <td style="width: 50%;">
+                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
+                                <tbody>
+                                    <td style="width: 60%; border: 1px solid #000000; padding: 8px; text-align: left; font-size: 14px;">Overtime</td>
+                                    <td style="width: 40%; border: 1px solid #000000; padding: 8px; text-align: right; font-size: 14px;">{{ number_format($monthlyPayroll->overtime_amount ?? 0, 2) }}</td>
+                                </tbody>
+                            </table>
+                        </td>
+                        <td style="width: 50%;"></td>
+                    </tr>
+                    {{--
+                        Any component that only exists as a payroll_components row -- custom
+                        bonuses, arrears, or anything the dynamic engine produced with no
+                        dedicated fixed column above -- rendered here so the downloadable PDF
+                        can't diverge from what show.blade.php already displays on screen.
+                    --}}
+                    @php
+                        $pdfFixedEarningNames = [
+                            'Basic Salary', 'HRA', 'Conveyance Allowance', 'Medical Allowance',
+                            'Children Allowance', 'Post Allowance', 'Leave Travel Allowance',
+                            'Monthly Incentive', 'Special Allowance', 'Overtime',
+                        ];
+                        $pdfFixedDeductionNames = [
+                            'Provident Fund', 'ESI', 'Professional Tax', 'TDS',
+                            'Loan Deduction', 'Other Deductions',
+                        ];
+                        $pdfExtraEarnings = $monthlyPayroll->components
+                            ? $monthlyPayroll->components->where('component_type', 'earning')
+                                ->whereNotIn('component_name', $pdfFixedEarningNames)
+                            : collect();
+                        $pdfExtraDeductions = $monthlyPayroll->components
+                            ? $monthlyPayroll->components->where('component_type', 'deduction')
+                                ->whereNotIn('component_name', $pdfFixedDeductionNames)
+                            : collect();
+                    @endphp
+                    @foreach ($pdfExtraEarnings as $extraEarning)
+                        <tr>
+                            <td style="width: 50%;">
+                                <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
+                                    <tbody>
+                                        <td style="width: 60%; border: 1px solid #000000; padding: 8px; text-align: left; font-size: 14px;">{{ $extraEarning->component_name }}</td>
+                                        <td style="width: 40%; border: 1px solid #000000; padding: 8px; text-align: right; font-size: 14px;">{{ number_format($extraEarning->amount, 2) }}</td>
+                                    </tbody>
+                                </table>
+                            </td>
+                            <td style="width: 50%;"></td>
+                        </tr>
+                    @endforeach
+                    @foreach ($pdfExtraDeductions as $extraDeduction)
+                        <tr>
+                            <td style="width: 50%;"></td>
+                            <td style="width: 50%;">
+                                <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
+                                    <tbody>
+                                        <td style="width: 60%; border: 1px solid #000000; padding: 8px; text-align: left; font-size: 14px;">{{ $extraDeduction->component_name }}</td>
+                                        <td style="width: 40%; border: 1px solid #000000; padding: 8px; text-align: right; font-size: 14px;">{{ number_format($extraDeduction->amount, 2) }}</td>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    @endforeach
+                    <tr>
+                        <td style="width: 50%;">
+                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
+                                <tbody>
                                     <th style="width: 60%; border: 1px solid #000000; padding: 8px; text-align: left; font-size: 14px;">Gross Earnings (A)</th>
                                     <th style="width: 40%; border: 1px solid #000000; padding: 8px; text-align: right; font-size: 14px;">{{ number_format($monthlyPayroll->gross_earnings ?? 0, 2) }}</th>
                                 </tbody>

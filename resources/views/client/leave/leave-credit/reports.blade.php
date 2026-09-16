@@ -2,170 +2,17 @@
 
 @section('style')
     <style>
-        /* ==================== STATS CARDS ==================== */
+        /* ==================== STATS CARDS — same anatomy as the dashboard's
+           Total Employees KPI card: icon + pill, bold value + label,
+           divider, 2 footer stats ==================== */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
+            gap: 10px;
+            margin-bottom: 14px;
         }
 
-        /* Stats Card Base Styles */
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.3s ease;
-            border: 1px solid #edf2f7;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Card-specific gradient borders */
-        .total-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
-        }
-
-        .types-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #10b981, #34d399);
-        }
-
-        .transactions-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-        }
-
-        .average-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
-        }
-
-        /* Icon Wrapper */
-        .stats-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-        }
-
-        .stats-card:hover .stats-icon-wrapper {
-            transform: scale(1.05);
-        }
-
-        /* Card-specific icon backgrounds */
-        .total-card .stats-icon-wrapper {
-            background: rgba(79, 70, 229, 0.1);
-        }
-
-        .total-card .stats-icon-wrapper i {
-            color: #4f46e5;
-            font-size: 24px;
-        }
-
-        .types-card .stats-icon-wrapper {
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .types-card .stats-icon-wrapper i {
-            color: #10b981;
-            font-size: 24px;
-        }
-
-        .transactions-card .stats-icon-wrapper {
-            background: rgba(245, 158, 11, 0.1);
-        }
-
-        .transactions-card .stats-icon-wrapper i {
-            color: #f59e0b;
-            font-size: 24px;
-        }
-
-        .average-card .stats-icon-wrapper {
-            background: rgba(99, 102, 241, 0.1);
-        }
-
-        .average-card .stats-icon-wrapper i {
-            color: #6366f1;
-            font-size: 24px;
-        }
-
-        /* Content Styles */
-        .stats-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .stats-amount-main {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e293b;
-            line-height: 1.3;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .stats-label {
-            font-size: 10px;
-            font-weight: 500;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-bottom: 6px;
-        }
-
-        .stats-count {
-            display: flex;
-            align-items: baseline;
-            gap: 4px;
-        }
-
-        .stats-card:hover .stats-count {
-            background: white;
-            border-color: currentColor;
-        }
-
-        .count-number {
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .count-text {
-            font-size: 11px;
-            color: #64748b;
-            font-weight: 400;
-        }
+        /* .kpi5-* is centralized in client.layout.head — no local copy. */
 
         @media (max-width: 1400px) {
             .stats-grid {
@@ -206,19 +53,19 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             color: #1e293b;
         }
 
         .filter-title i {
-            color: #4f46e5;
-            font-size: 16px;
+            color: #1e3a8a;
+            font-size: 12px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -239,12 +86,12 @@
         }
 
         .clear-all-link:hover {
-            background: #fee2e2;
-            color: #ef4444;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .clear-all-link i {
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .filter-row {
@@ -287,7 +134,7 @@
         .apply-btn {
             height: 36px;
             padding: 0 16px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             border-radius: 8px;
@@ -302,7 +149,7 @@
         }
 
         .apply-btn:hover {
-            background: #4338ca;
+            background: #1e3a8a;
         }
 
         .reset-btn {
@@ -362,7 +209,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 11px;
         }
 
@@ -374,13 +221,13 @@
         }
 
         .filter-tag .remove-tag:hover {
-            color: #ef4444;
+            color: #1e3a8a;
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
@@ -405,7 +252,7 @@
 
         .table td {
             vertical-align: middle;
-            font-size: 13px;
+            font-size: 11.5px;
             padding: 12px 16px;
             border-bottom: 1px solid #f1f5f9;
         }
@@ -426,13 +273,13 @@
         }
 
         .badge.bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
+            background: #e3edfe !important;
+            color: #1d4ed8;
         }
 
         .badge.bg-danger {
-            background: #fee2e2 !important;
-            color: #991b1b;
+            background: #e3edfe !important;
+            color: #1e3a8a;
         }
 
         .badge.bg-info {
@@ -441,19 +288,19 @@
         }
 
         .badge.bg-warning {
-            background: #fef3c7 !important;
-            color: #92400e;
+            background: #e3edfe !important;
+            color: #2563eb;
         }
 
         .badge.bg-purple {
             background: #e0e7ff !important;
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         /* Credit Badge */
         .credit-badge {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1d4ed8;
             padding: 4px 10px;
             border-radius: 20px;
             font-size: 11px;
@@ -472,13 +319,13 @@
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 12px;
             flex-shrink: 0;
         }
 
@@ -495,7 +342,7 @@
         .employee-name {
             font-weight: 600;
             color: #1e293b;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .employee-email {
@@ -513,7 +360,7 @@
         }
 
         .amount-after {
-            color: #059669;
+            color: #1d4ed8;
             font-weight: 700;
         }
 
@@ -534,14 +381,14 @@
 
         .empty-state h4 {
             color: #334155;
-            font-size: 18px;
+            font-size: 11.5px;
             font-weight: 600;
             margin-bottom: 8px;
         }
 
         .empty-state p {
             color: #64748b;
-            font-size: 14px;
+            font-size: 12px;
             margin-bottom: 20px;
         }
 
@@ -553,7 +400,7 @@
         }
 
         .page-header-title h5 {
-            font-size: 20px;
+            font-size: 12px;
             font-weight: 700;
             color: #1e293b;
             margin: 0;
@@ -566,7 +413,7 @@
         }
 
         .breadcrumb-item {
-            font-size: 13px;
+            font-size: 11.5px;
         }
 
         .breadcrumb-item a {
@@ -575,7 +422,7 @@
         }
 
         .breadcrumb-item.active {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-weight: 500;
         }
 
@@ -598,8 +445,8 @@
 
         .btn-icon:hover {
             background: #f8fafc;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         .btn-light-brand {
@@ -608,10 +455,10 @@
         }
 
         .btn-primary {
-            background: #4f46e5;
+            background: #1e3a8a;
             border: none;
             padding: 8px 16px;
-            font-size: 13px;
+            font-size: 11.5px;
             font-weight: 500;
             border-radius: 8px;
             color: white;
@@ -621,7 +468,7 @@
         }
 
         .btn-primary:hover {
-            background: #4338ca;
+            background: #1e3a8a;
             transform: translateY(-1px);
         }
 
@@ -629,17 +476,17 @@
             background: #e0e7ff;
             border: none;
             padding: 8px 16px;
-            font-size: 13px;
+            font-size: 11.5px;
             font-weight: 500;
             border-radius: 8px;
-            color: #4f46e5;
+            color: #1e3a8a;
             display: inline-flex;
             align-items: center;
             gap: 8px;
         }
 
         .btn-info:hover {
-            background: #c7d2fe;
+            background: #93c5fd;
             transform: translateY(-1px);
         }
 
@@ -700,100 +547,115 @@
             color: #64748b;
             font-size: 12px;
         }
+
+        /* Table font/spacing is centralized in client.layout.head — no local copy. */
     </style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Leave Credit Reports</h5>
-            </div>
-            <ul class="breadcrumb">
+    <x-ui.page-header title="Leave Credit Reports" :parent="['label' => 'Leave Credit', 'route' => 'leave-credit.index']" />
 
-                <li class="breadcrumb-item"><a href="{{ route('leave-credit.index') }}">Leave Credit</a></li>
-                <li class="breadcrumb-item active">Reports</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex d-md-none">
-                    <a href="#" class="page-header-right-close-toggle">
-                        <i class="feather-arrow-left me-2"></i>
-                        <span>Back</span>
-                    </a>
+    <div class="main-content" style="padding: 18px !important;">
+        <!-- Filters -->
+        <div class="filter-wrapper">
+            <div class="filter-header">
+                <div class="filter-title">
+                    <i class="feather-filter"></i>
+                    <span>Filters</span>
                 </div>
-
-            </div>
-            <div class="d-md-none d-flex align-items-center">
-                <a href="#" class="page-header-right-open-toggle">
-                    <i class="feather-align-right fs-20"></i>
+                <a href="{{ route('leave-credit.reports') }}" class="clear-all-link">
+                    <i class="feather-x-circle"></i> Clear all
                 </a>
             </div>
+            <form method="GET" action="{{ route('leave-credit.reports') }}" class="filter-row">
+                <div class="filter-item">
+                    <select name="month" class="filter-select" onchange="this.form.submit()">
+                        <option value="all" {{ $month == 'all' ? 'selected' : '' }}>All Months</option>
+                        @foreach ($months as $num => $name)
+                            <option value="{{ $num }}" {{ (string) $month === (string) $num ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <select name="year" class="filter-select" onchange="this.form.submit()">
+                        @for ($y = now()->year; $y >= now()->year - 4; $y--)
+                            <option value="{{ $y }}" {{ (string) $year === (string) $y ? 'selected' : '' }}>{{ $y }}</option>
+                        @endfor
+                    </select>
+                </div>
+                <div class="filter-item" style="min-width: 200px;">
+                    <select name="user_id" class="filter-select" onchange="this.form.submit()">
+                        <option value="">All Employees</option>
+                        @foreach ($users as $u)
+                            <option value="{{ $u->id }}" {{ (string) $userId === (string) $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="submit" class="apply-btn">
+                    <i class="feather-check"></i> Apply
+                </button>
+            </form>
         </div>
-    </div>
 
-    <div class="main-content" style="padding: 30px !important;">
         <!-- Stats Cards -->
         <div class="stats-grid">
             <!-- Total Credits Card -->
-            <div class="stats-card total-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-coins"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-coins"></i></span>
+                    <span class="kpi5-pill">{{ $totalTransactionsCount }} txns</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ number_format($totalCreditedAmount, 2) }} days</div>
-                    <div class="stats-label">Total Credits</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $totalTransactionsCount }}</span>
-                        <span class="count-text">Transactions</span>
-                    </div>
+                <div class="kpi5-value">{{ number_format($totalCreditedAmount, 2) }}</div>
+                <div class="kpi5-label">Total Credits (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $summaryByType->count() }}</span><span class="l">Types</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($averageCreditAmount, 1) }}</span><span class="l">Avg/Txn</span></div>
                 </div>
             </div>
 
             <!-- Leave Types Card -->
-            <div class="stats-card types-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-tags"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-tags"></i></span>
+                    <span class="kpi5-pill">Active</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ $summaryByType->count() }}</div>
-                    <div class="stats-label">Leave Types</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $summaryByType->count() }}</span>
-                        <span class="count-text">Active</span>
-                    </div>
+                <div class="kpi5-value">{{ $summaryByType->count() }}</div>
+                <div class="kpi5-label">Leave Types</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $totalTransactionsCount }}</span><span class="l">Txns</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($totalCreditedAmount, 1) }}</span><span class="l">Total Days</span></div>
                 </div>
             </div>
 
             <!-- Total Transactions Card -->
-            <div class="stats-card transactions-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-exchange-alt"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-exchange-alt"></i></span>
+                    <span class="kpi5-pill">Records</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">{{ $totalTransactionsCount }}</div>
-                    <div class="stats-label">Transactions</div>
-                    <div class="stats-count">
-                        <span class="count-number">{{ $totalTransactionsCount }}</span>
-                        <span class="count-text">Records</span>
-                    </div>
+                <div class="kpi5-value">{{ $totalTransactionsCount }}</div>
+                <div class="kpi5-label">Transactions</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $summaryByType->count() }}</span><span class="l">Types</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($averageCreditAmount, 1) }}</span><span class="l">Avg Days</span></div>
                 </div>
             </div>
 
             <!-- Average Credit Card -->
-            <div class="stats-card average-card">
-                <div class="stats-icon-wrapper">
-                    <i class="fas fa-chart-line"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="fas fa-chart-line"></i></span>
+                    <span class="kpi5-pill">Per Txn</span>
                 </div>
-                <div class="stats-content">
-                    <div class="stats-amount-main">
-                        {{ number_format($averageCreditAmount, 2) }} days
-                    </div>
-                    <div class="stats-label">Average Credit</div>
-                    <div class="stats-count">
-                        <span class="count-number">Per Transaction</span>
-                    </div>
+                <div class="kpi5-value">{{ number_format($averageCreditAmount, 2) }}</div>
+                <div class="kpi5-label">Average Credit (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $totalTransactionsCount }}</span><span class="l">Txns</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ number_format($totalCreditedAmount, 1) }}</span><span class="l">Total Days</span></div>
                 </div>
             </div>
         </div>

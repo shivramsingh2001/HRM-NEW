@@ -17,8 +17,10 @@ use Illuminate\Support\Facades\DB;
  */
 class LatePolicyService
 {
-    public function __construct(private AttendanceCalculator $calc)
-    {
+    public function __construct(
+        private AttendanceCalculator $calc,
+        private PolicyResolver $policies,
+    ) {
     }
 
     /**
@@ -30,12 +32,11 @@ class LatePolicyService
         $start = Carbon::parse($yearMonth . '-01')->startOfMonth()->format('Y-m-d');
         $end = Carbon::parse($yearMonth . '-01')->endOfMonth()->format('Y-m-d');
 
-        $policy = DB::table('tenants')
-            ->where('id', $tenantId)
-            ->first(['late_halfday_enabled', 'monthly_late_allowance']);
-
-        $enabled = (bool) ($policy->late_halfday_enabled ?? false);
-        $allowance = $policy->monthly_late_allowance ?? null; // null = unlimited
+        // Anchor to the policy in force on the 1st of the month so a later-dated
+        // policy change never retroactively re-grades a closed month.
+        $policy = $this->policies->forTenantMonth($tenantId, $yearMonth);
+        $enabled = $policy->lateHalfdayEnabled;
+        $allowance = $policy->monthlyLateAllowance;
 
         $rows = DB::table('attendances')
             ->where('tenant_id', $tenantId)
@@ -45,10 +46,20 @@ class LatePolicyService
             ->orderBy('clock_in')
             ->get();
 
+        DB::transaction(function () use ($rows, $enabled, $allowance, $policy) {
+            $this->applyRows($rows, $enabled, $allowance, $policy);
+        });
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection  $rows
+     */
+    private function applyRows($rows, bool $enabled, int $allowance, AttendancePolicySnapshot $policy): void
+    {
         $lateSeen = 0;
 
         foreach ($rows as $row) {
-            [$base, $fraction] = $this->baseStatus($row);
+            [$base, $fraction] = $this->baseStatus($row, $policy);
 
             $effective = $base;
             $note = null;
@@ -60,14 +71,12 @@ class LatePolicyService
             if ($isLate && !$row->is_regularized) {
                 $lateSeen++;
 
-                if ($enabled && $allowance !== null && $lateSeen > (int) $allowance) {
+                if ($enabled && $lateSeen > $allowance) {
                     $effective = 'half_day';
                     $fraction = 0.50;
                     $note = "late #{$lateSeen} exceeds monthly allowance of {$allowance} → half day";
-                } else {
-                    $note = $enabled && $allowance !== null
-                        ? "late #{$lateSeen} within monthly allowance of {$allowance}"
-                        : null;
+                } elseif ($enabled) {
+                    $note = "late #{$lateSeen} within monthly allowance of {$allowance}";
                 }
             }
 
@@ -88,7 +97,7 @@ class LatePolicyService
      *
      * @return array{0:string,1:float}  [status, day_fraction]
      */
-    private function baseStatus($row): array
+    private function baseStatus($row, AttendancePolicySnapshot $policy): array
     {
         $status = $row->attendance_status;
 
@@ -97,7 +106,7 @@ class LatePolicyService
         $isManual = ($row->attendance_type === 'manual') || !empty($row->marked_by);
         if ($isManual) {
             return match ($status) {
-                'on_leave', 'absent' => [$status, 0.00],
+                'on_leave', 'absent', 'holiday', 'weekoff' => [$status, 0.00],
                 'half_day', 'first_half_leave', 'second_half_leave' => [$status, 0.50],
                 default => [$status ?: 'present', 1.00],
             };
@@ -133,7 +142,7 @@ class LatePolicyService
             ]);
         }
 
-        $class = $this->classify($hours, $expected);
+        $class = $policy->classify($hours, $expected);
 
         if ($class === 'absent') {
             return ['absent', 0.00];
@@ -142,25 +151,9 @@ class LatePolicyService
             return ['half_day', 0.50];
         }
 
-        // Full day worked — was the arrival late?
-        $isLate = ($status === 'late') || ((int) ($row->late_minutes ?? 0) > 0);
+        // Full day worked — was the arrival late (past the grace window)?
+        $isLate = ($status === 'late') || $policy->isLate((int) ($row->late_minutes ?? 0));
 
         return [$isLate ? 'late' : ($status === 'overtime' ? 'overtime' : 'present'), 1.00];
-    }
-
-    private function classify(float $hours, int $expectedSeconds): string
-    {
-        if ($expectedSeconds > 0) {
-            $ratio = ($hours * 3600) / $expectedSeconds;
-            if ($ratio >= (float) config('attendance.ratio.present', 0.9)) {
-                return 'present';
-            }
-            return $ratio >= (float) config('attendance.ratio.half', 0.5) ? 'half_day' : 'absent';
-        }
-
-        if ($hours >= (float) config('attendance.fallback_hours.present', 8)) {
-            return 'present';
-        }
-        return $hours >= (float) config('attendance.fallback_hours.half', 4) ? 'half_day' : 'absent';
     }
 }

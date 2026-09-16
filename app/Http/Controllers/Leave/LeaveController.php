@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Leave;
 
 use App\Http\Controllers\Controller;
 use App\Models\Leave;
-use App\Models\LeaveTransaction;
 use App\Models\LeaveType;
 use App\Models\User;
 use App\Models\UserJobDetail;
 use App\Models\LeaveBalance;
+use App\Services\LeaveService;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -18,6 +20,8 @@ use Illuminate\Support\Facades\Validator;
 
 class LeaveController extends Controller
 {
+    use AuthorizesByScope;
+
     public function index(Request $request)
     {
         try {
@@ -58,41 +62,33 @@ class LeaveController extends Controller
                 return $leave;
             });
 
-            // Get counts based on filters
-            $totalLeaveQuery = Leave::where('user_id', $userId);
-            $pendingLeaveQuery = Leave::where('user_id', $userId)->where('status', 'pending');
-            $approvedLeaveQuery = Leave::where('user_id', $userId)->where('status', 'approved');
-            $rejectLeaveQuery = Leave::where('user_id', $userId)->where('status', 'cancelled');
-
-            // Apply same filters to count queries if they exist
+            // Get counts based on filters — one conditional-SUM query instead
+            // of four separate sum() round trips over the same filtered set.
+            $statsQuery = Leave::where('user_id', $userId);
             if ($request->filled('status')) {
-                $totalLeaveQuery->where('status', $request->status);
-                $pendingLeaveQuery->where('status', $request->status);
-                $approvedLeaveQuery->where('status', $request->status);
-                $rejectLeaveQuery->where('status', $request->status);
+                $statsQuery->where('status', $request->status);
             }
-
             if ($request->filled('from_date')) {
-                $totalLeaveQuery->whereDate('start_date', '>=', $request->from_date);
-                $pendingLeaveQuery->whereDate('start_date', '>=', $request->from_date);
-                $approvedLeaveQuery->whereDate('start_date', '>=', $request->from_date);
-                $rejectLeaveQuery->whereDate('start_date', '>=', $request->from_date);
+                $statsQuery->whereDate('start_date', '>=', $request->from_date);
+            }
+            if ($request->filled('to_date')) {
+                $statsQuery->whereDate('start_date', '<=', $request->to_date);
             }
 
-            if ($request->filled('to_date')) {
-                $totalLeaveQuery->whereDate('start_date', '<=', $request->to_date);
-                $pendingLeaveQuery->whereDate('start_date', '<=', $request->to_date);
-                $approvedLeaveQuery->whereDate('start_date', '<=', $request->to_date);
-                $rejectLeaveQuery->whereDate('start_date', '<=', $request->to_date);
-            }
+            $stats = $statsQuery->selectRaw("
+                COALESCE(SUM(leave_count), 0) as total_leave,
+                COALESCE(SUM(CASE WHEN status = 'pending' THEN leave_count ELSE 0 END), 0) as pending_leave,
+                COALESCE(SUM(CASE WHEN status = 'approved' THEN leave_count ELSE 0 END), 0) as approved_leave,
+                COALESCE(SUM(CASE WHEN status = 'cancelled' THEN leave_count ELSE 0 END), 0) as reject_leave
+            ")->first();
 
             $data = [
-                'totalLeave' => $totalLeaveQuery->sum('leave_count'),
-                'pendingLeave' => $pendingLeaveQuery->sum('leave_count'),
-                'approvedLeave' => $approvedLeaveQuery->sum('leave_count'),
+                'totalLeave' => $stats->total_leave,
+                'pendingLeave' => $stats->pending_leave,
+                'approvedLeave' => $stats->approved_leave,
                 'balanceLeave' => max(0, $available),
                 'unpaidLeave' => $available < 0 ? abs($available) : 0,
-                'rejectLeave' => $rejectLeaveQuery->sum('leave_count'),
+                'rejectLeave' => $stats->reject_leave,
                 'leaves' => $leaves,
                 'filters' => [
                     'status' => $request->status,
@@ -112,8 +108,12 @@ class LeaveController extends Controller
 
     public function create()
     {
-        $userId = Auth::id();
-        $data['leaveTypes'] = LeaveType::where('status', 1)->get();
+        $user = Auth::user();
+        $userId = $user->id;
+        // Explicit tenant_id filter as defense-in-depth alongside the
+        // TenantTrait global scope, which silently no-ops outside a request
+        // context (console commands/queued jobs).
+        $data['leaveTypes'] = LeaveType::where('status', 1)->where('tenant_id', $user->tenant_id)->get();
         $balances = LeaveBalance::where('user_id', $userId)
                     ->get()
                     ->keyBy('leave_type_id');
@@ -139,9 +139,11 @@ class LeaveController extends Controller
         try {
             $user = Auth::user();
             $start = Carbon::parse($request->start_date);
-            $leaveTypeId = $request->leave_type;
             $end = Carbon::parse($request->end_date);
-            $isLWP = ($leaveTypeId == 3);
+            $leaveTypeId = $request->leave_type;
+            $leaveType = LeaveType::find($leaveTypeId);
+            $leaveService = app(LeaveService::class);
+            $isLWP = $leaveService->isLwpId($leaveTypeId);
 
             if ($end->lt($start)) {
                 return back()
@@ -149,15 +151,41 @@ class LeaveController extends Controller
                     ->with('error', 'End date cannot be before start date.');
             }
 
-            $dates = [];
-            $totalLeaveDays = 0;
-            while ($start->lte($end)) {
-                $dates[] = $start->format('Y-m-d');
-                $start->addDay();
+            // Per-type policy: minimum notice period / max consecutive days
+            // (leave_types columns — nullable, so existing types with
+            // neither configured are completely unaffected).
+            if ($leaveType && $leaveType->min_notice_days) {
+                $noticeGiven = now()->startOfDay()->diffInDays($start->copy()->startOfDay(), false);
+                if ($noticeGiven < $leaveType->min_notice_days) {
+                    return back()
+                        ->withInput()
+                        ->with('error', "{$leaveType->name} requires at least {$leaveType->min_notice_days} day(s) notice.");
+                }
             }
-            foreach ($dates as $i => $date) {
-                $leaveCount = $this->calculateLeaveCountForDate($i, count($dates), $request);
-                $totalLeaveDays += $leaveCount;
+
+            if ($leaveType && $leaveType->max_consecutive_days) {
+                $consecutiveDays = abs($start->diffInDays($end)) + 1;
+                if ($consecutiveDays > $leaveType->max_consecutive_days) {
+                    return back()
+                        ->withInput()
+                        ->with('error', "{$leaveType->name} cannot be taken for more than {$leaveType->max_consecutive_days} consecutive day(s).");
+                }
+            }
+
+            // One request, one row: total_days excludes weekends/holidays,
+            // but start_date/end_date still store the full requested range.
+            $totalLeaveDays = $leaveService->computeLeaveDays(
+                $start->copy(),
+                $end->copy(),
+                $request->start_session,
+                $request->end_session,
+                $user->tenant_id
+            );
+
+            if ($totalLeaveDays <= 0) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'The selected date range has no working days to apply leave for.');
             }
 
             // CHECK AVAILABLE BALANCE (SKIP FOR LWP)
@@ -175,13 +203,28 @@ class LeaveController extends Controller
                 }
             }
 
-
             $filePath = $this->handleFileUpload($request);
-            $leaveRecords = $this->prepareLeaveRecords($user->id, $request, $dates, $filePath);
 
-            // Bulk insert using model
-            foreach ($leaveRecords as $record) {
-                Leave::create($record);
+            $leave = Leave::create([
+                'user_id' => $user->id,
+                'leave_type' => $leaveTypeId,
+                'start_date' => $start->format('Y-m-d'),
+                'start_session' => $request->start_session,
+                'end_date' => $end->format('Y-m-d'),
+                'end_session' => $request->end_session,
+                'leave_count' => $totalLeaveDays,
+                'total_days' => $totalLeaveDays,
+                'reason' => $request->reason,
+                'status' => 'pending',
+                'file' => $filePath,
+            ]);
+
+            // Was mobile-API-only: the web flow submitted leave requests
+            // with nobody (reporting head/HR/admin) ever notified.
+            try {
+                app(\App\Services\LeaveNotificationService::class)->notifyLeaveSubmitted($leave->fresh());
+            } catch (\Throwable $e) {
+                // never block on notification
             }
 
             return redirect()
@@ -207,77 +250,6 @@ class LeaveController extends Controller
             return 'uploads/leave/' . $filename;
         }
         return null;
-    }
-
-    private function prepareLeaveRecords($userId, $request, $dates, $filePath)
-    {
-        $leaveRecords = [];
-        $totalDays = count($dates);
-
-        foreach ($dates as $i => $date) {
-            $session = $this->determineSession($i, $totalDays, $request);
-            $leaveCount = $this->calculateLeaveCount($session);
-
-            $leaveRecords[] = [
-                'user_id' => $userId,
-                'leave_type' => $request->leave_type,
-                'start_date' => $date,
-                'start_session' => $session,
-                'leave_count' => $leaveCount,
-                'reason' => $request->reason,
-                'status' => 'pending',
-                'file' => $filePath,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        return $leaveRecords;
-    }
-
-    private function determineSession($index, $totalDays, $request)
-    {
-        // Single day
-        if ($totalDays == 1) {
-            // If sessions are different, it's a full day
-            if ($this->areSessionsDifferent($request->start_session, $request->end_session)) {
-                return 'fullday';
-            }
-            return $request->start_session;
-        }
-
-        // Multiple days
-        if ($index == 0) {
-            return $request->start_session;
-        } elseif ($index == $totalDays - 1) {
-            return $request->end_session;
-        }
-
-        // Middle days
-        return 'fullday';
-    }
-
-    private function areSessionsDifferent($startSession, $endSession)
-    {
-        // If both are not fullday and they're different
-        if ($startSession != 'fullday' && $endSession != 'fullday' && $startSession != $endSession) {
-            return true;
-        }
-
-        // If one is fullday and other is not
-        if (
-            ($startSession == 'fullday' && $endSession != 'fullday') ||
-            ($startSession != 'fullday' && $endSession == 'fullday')
-        ) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private function calculateLeaveCount($session): float|int
-    {
-        return $session == 'fullday' ? 1 : 0.5;
     }
 
     public function update(Request $request, $id)
@@ -307,6 +279,8 @@ class LeaveController extends Controller
             'leave_type' => 'required|exists:leave_types,id',
             'start_date' => 'required|date',
             'start_session' => 'required|in:session1,session2,fullday',
+            'end_date' => 'required|date',
+            'end_session' => 'required|in:session1,session2,fullday',
             'file' => 'nullable|file|max:2048',
             'reason' => 'required|max:500'
         ]);
@@ -331,16 +305,62 @@ class LeaveController extends Controller
                     ->with('error', 'Only pending leaves can be updated.');
             }
 
+            // Was: a private single-session helper (calculateLeaveCount)
+            // that ignored weekends/holidays and end_session/end_date
+            // entirely, silently producing a wrong leave_count/total_days
+            // whenever a multi-day leave was edited. Now uses the same
+            // computation store() uses, so apply and edit never drift.
+            $start = Carbon::parse($request->start_date);
+            $end = Carbon::parse($request->end_date);
+            $leaveTypeId = (int) $request->leave_type;
+            $leaveService = app(LeaveService::class);
+            $isLwp = $leaveService->isLwpId($leaveTypeId);
+
+            if ($end->lt($start)) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'End date cannot be before start date.');
+            }
+
+            $totalLeaveDays = $leaveService->computeLeaveDays(
+                $start->copy(),
+                $end->copy(),
+                $request->start_session,
+                $request->end_session,
+                $user->tenant_id
+            );
+
+            if ($totalLeaveDays <= 0) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'The selected date range has no working days to apply leave for.');
+            }
+
+            if (!$isLwp) {
+                $balanceRecord = LeaveBalance::where('user_id', $user->id)
+                    ->where('leave_type_id', $leaveTypeId)
+                    ->first();
+                $availableBalance = $balanceRecord ? (float) $balanceRecord->balance : 0;
+
+                if ($availableBalance < $totalLeaveDays) {
+                    return back()
+                        ->withInput()
+                        ->with('error', "Insufficient leave balance. You have {$availableBalance} days available but requested {$totalLeaveDays} days.");
+                }
+            }
+
             DB::beginTransaction();
 
-            $leaveCount = $this->calculateLeaveCount($request->start_session);
             $filePath = $this->handleFileUpload($request);
 
             $leave->update([
-                'leave_type' => $request->leave_type,
+                'leave_type' => $leaveTypeId,
                 'start_date' => $request->start_date,
                 'start_session' => $request->start_session,
-                'leave_count' => $leaveCount,
+                'end_date' => $request->end_date,
+                'end_session' => $request->end_session,
+                'leave_count' => $totalLeaveDays,
+                'total_days' => $totalLeaveDays,
                 'reason' => $request->reason,
                 'file' => $filePath ?? $leave->file,
             ]);
@@ -394,6 +414,15 @@ class LeaveController extends Controller
     {
         $authUser = Auth::user();
 
+        // This is the admin/HR/manager "manage everyone's leave" screen, not
+        // the self-service one — an 'own'-scoped grant (or no grant at all)
+        // means this screen isn't for them; they use index() instead.
+        $scope = app(RbacService::class)->scopeFor($authUser, 'leave', 'view');
+        if (!in_array($scope, ['team', 'company'], true)) {
+            abort(403, 'You do not have permission to view team leave requests.');
+        }
+        $isTeamScoped = $scope === 'team';
+
         // Build query using Eloquent relationships
         $leaveQuery = Leave::with(['user', 'user.jobDetails', 'leaveType'])
             ->join('users', 'leaves.user_id', '=', 'users.id')
@@ -410,9 +439,9 @@ class LeaveController extends Controller
                 'user_job_details.reporting_head'
             );
 
-        // 🔐 Role-based access
-        if (!in_array($authUser->role, ['admin', 'hr'])) {
-            // For managers - show only their team's leaves
+        // 🔐 Permission-driven scope (was: hardcoded !in_array(role, [admin,hr]))
+        if ($isTeamScoped) {
+            // Team scope — show only their team's leaves
             $leaveQuery->where('user_job_details.reporting_head', $authUser->id);
         }
         // Admin and HR can see all leaves
@@ -460,19 +489,27 @@ class LeaveController extends Controller
             return $leave;
         });
 
-        // Get counts for status cards based on user role using Eloquent
+        // Get counts for status cards — one conditional-SUM query instead of
+        // four separate count() round trips over the same scoped set.
         $countsQuery = Leave::query()
             ->join('users', 'leaves.user_id', '=', 'users.id')
             ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id');
 
-        if (!in_array($authUser->role, ['admin', 'hr'])) {
+        if ($isTeamScoped) {
             $countsQuery->where('user_job_details.reporting_head', $authUser->id);
         }
 
-        $totalLeaves = $countsQuery->count();
-        $pendingLeaves = (clone $countsQuery)->where('leaves.status', 'pending')->count();
-        $approvedLeaves = (clone $countsQuery)->where('leaves.status', 'approved')->count();
-        $cancelledLeaves = (clone $countsQuery)->where('leaves.status', 'cancelled')->count();
+        $counts = $countsQuery->selectRaw("
+            COUNT(*) as total_leaves,
+            COALESCE(SUM(CASE WHEN leaves.status = 'pending' THEN 1 ELSE 0 END), 0) as pending_leaves,
+            COALESCE(SUM(CASE WHEN leaves.status = 'approved' THEN 1 ELSE 0 END), 0) as approved_leaves,
+            COALESCE(SUM(CASE WHEN leaves.status = 'cancelled' THEN 1 ELSE 0 END), 0) as cancelled_leaves
+        ")->first();
+
+        $totalLeaves = $counts->total_leaves;
+        $pendingLeaves = $counts->pending_leaves;
+        $approvedLeaves = $counts->approved_leaves;
+        $cancelledLeaves = $counts->cancelled_leaves;
 
         // Get leave types for filter dropdown using Eloquent
         $leaveTypes = LeaveType::where('status', 1)
@@ -483,7 +520,7 @@ class LeaveController extends Controller
         $employeesQuery = User::where('status', 1)
             ->with(['jobDetails']);
 
-        if (!in_array($authUser->role, ['admin', 'hr'])) {
+        if ($isTeamScoped) {
             $employeesQuery->whereHas('jobDetails', function ($q) use ($authUser) {
                 $q->where('reporting_head', $authUser->id);
             });
@@ -528,15 +565,14 @@ class LeaveController extends Controller
         try {
             $authUser = Auth::user();
 
-            // Check if user has required role
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized access. Only admin, HR, or managers can update leave status.'
-                ], 403);
-            }
-
-            // Get the leave with user details
+            // Coarse "can this role approve leave at all" is enforced at the
+            // route level (permission:leave,approve). What's left here is
+            // "does THIS specific leave's owner fall within their granted
+            // scope" — company covers anyone, team covers direct reports
+            // (+ self), own would only cover their own leave (not
+            // meaningful for an approval action, but scopeCoversOwner
+            // handles it correctly regardless of which scope a role ends
+            // up configured with).
             $leave = Leave::with('user.jobDetails')->find($id);
 
             if (!$leave) {
@@ -545,6 +581,39 @@ class LeaveController extends Controller
                     'success' => false,
                     'message' => 'Leave not found.'
                 ], 404);
+            }
+
+            if (!$this->scopeCoversOwner($authUser, 'leave', 'approve', $leave->user_id)) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to update this leave request. Only the reporting head (or an admin/HR user) can process it.'
+                ], 403);
+            }
+
+            // Revoking an already-approved leave (employee returned early, HR
+            // correcting a mistake) is a distinct transition from deciding a
+            // still-pending one — it restores the balance deducted at
+            // approval time instead of going through the (already finalised)
+            // approval workflow again.
+            if ($leave->status === 'approved' && $request->status === 'cancelled') {
+                $result = app(LeaveService::class)->cancelApprovedLeave($leave, $authUser, $request->remarks);
+                if (!$result['success']) {
+                    DB::rollBack();
+                    return response()->json($result, 400);
+                }
+                DB::commit();
+
+                try {
+                    $leaveWithUser = Leave::with('user')->find($leave->id);
+                    if ($leaveWithUser) {
+                        app(\App\Services\LeaveNotificationService::class)->notifyLeaveRejected($leaveWithUser, $request->remarks);
+                    }
+                } catch (\Throwable $e) {
+                    // never block on notification
+                }
+
+                return response()->json($result);
             }
 
             // Check if leave is pending
@@ -556,195 +625,74 @@ class LeaveController extends Controller
                 ], 400);
             }
 
-            // ===== ROLE-BASED AUTHORIZATION =====
+            // Route through the generic multi-level approval engine when the
+            // tenant has configured a 'leave' workflow (Settings > Approvals
+            // — the same engine Overtime/Regularization already use).
+            // decide() returns null when no workflow is configured, so this
+            // is a zero-risk opt-in: every tenant without one falls straight
+            // through to the unchanged direct-approval path below.
+            try {
+                // ApprovalService::act() only accepts 'approved'/'rejected';
+                // Leave's own status vocabulary uses 'cancelled' for a
+                // rejection, so translate before calling decide().
+                $workflowAction = $request->status === 'cancelled' ? 'rejected' : $request->status;
+                $ar = app(\App\Services\Approvals\ApprovalService::class)
+                    ->decide('leave', $leave, $authUser, $workflowAction, $request->remarks);
 
-            // CASE 1: ADMIN or HR - Can approve/reject any leave
-            if (in_array($authUser->role, ['admin', 'hr'])) {
-                // Admin and HR have full access - proceed
-                // No additional checks needed
+                if ($ar !== null) {
+                    DB::commit();
+                    $message = $ar->status === 'pending'
+                        ? 'Recorded. Awaiting the next approval level.'
+                        : ($ar->status === 'approved' ? 'Leave approved successfully' : 'Leave rejected successfully');
+
+                    return response()->json(['success' => true, 'message' => $message, 'workflow_status' => $ar->status]);
+                }
+            } catch (\App\Exceptions\InsufficientLeaveBalanceException $e) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+            } catch (\RuntimeException $e) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
             }
 
-            // CASE 2: MANAGER - Must be the reporting head
-            elseif ($authUser->role === 'manager') {
-                $reportingHeadId = $leave->user->jobDetails->reporting_head ?? null;
+            // No workflow configured for this tenant — single source of
+            // truth in LeaveService (was previously duplicated here with a
+            // bug: this method ignored approveLeave()'s return value
+            // entirely, so an "insufficient balance" rejection still left
+            // the transaction committed and reported "success" to the caller).
+            $leaveService = app(LeaveService::class);
 
-                // Check if user has a reporting head
-                if (!$reportingHeadId) {
-                    DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'User does not have a reporting head assigned.'
-                    ], 400);
-                }
+            $result = $request->status === 'approved'
+                ? $leaveService->approvePendingLeave($leave, $authUser, $request->remarks)
+                : $leaveService->cancelPendingLeave($leave, $authUser, $request->remarks);
 
-                // Verify this manager is the reporting head
-                if ($reportingHeadId != $authUser->id) {
-                    DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You are not authorized to update this leave request. Only the reporting head can process it.'
-                    ], 403);
-                }
-            }
-
-            // Process the leave based on status
-            if ($request->status === 'approved') {
-                $this->approveLeave($leave, $authUser, $request->remarks);
-            } else {
-                $this->cancelLeave($leave, $authUser, $request->remarks);
+            if (!$result['success']) {
+                DB::rollBack();
+                return response()->json($result, 400);
             }
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Leave status updated successfully'
-            ]);
+            // Was mobile-API-only: the web flow's direct (no-workflow)
+            // approve/reject never notified the employee.
+            try {
+                $leaveWithUser = Leave::with('user')->find($leave->id);
+                if ($leaveWithUser) {
+                    $request->status === 'approved'
+                        ? app(\App\Services\LeaveNotificationService::class)->notifyLeaveApproved($leaveWithUser, $request->remarks)
+                        : app(\App\Services\LeaveNotificationService::class)->notifyLeaveRejected($leaveWithUser, $request->remarks);
+                }
+            } catch (\Throwable $e) {
+                // never block on notification
+            }
+
+            return response()->json($result);
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update status: '
+                'message' => 'Failed to update status: ' . $e->getMessage()
             ], 500);
-        }
-    }
-
-    private function approveLeave($leave, $approver, $remarks)
-    {
-        $leaveDays = (float) $leave->leave_count;
-        $tenantId = $leave->tenant_id;
-        $leaveTypeId = $leave->leave_type;
-        $userId = $leave->user_id;
-        $isLWP = ($leaveTypeId == 3);
-
-        if ($isLWP) {
-            Leave::where('id', $leave->id)->update([
-                'status' => 'approved',
-                'status_update_by' => $approver->id,
-                'status_update_remarks' => $remarks
-            ]);
-
-            LeaveTransaction::create([
-                 'leave_id' => $leave->id ?? null,
-                'tenant_id' => $tenantId,
-                'user_id' => $userId,
-                'leave_type' => $leaveTypeId,
-                'transaction_type' => 'sub',
-                'total_leaves' => $leaveDays,
-                'leaves_count' => 0,
-                'leave_detail' => 'unpaid',
-                'before_leaves' => 0,
-                'after_leaves' => 0,
-                'transaction_date' => now(),
-                'status' => 1,
-                'remarks' => "LWP Leave approved: $remarks"
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Leave approved successfully',
-            ], 200);
-        }
-        $balanceRecord = LeaveBalance::where('user_id', $userId)
-            ->where('leave_type_id', $leaveTypeId)
-            ->first();
-
-        $currentBalance = $balanceRecord ? (float) $balanceRecord->balance : 0;
-         if ($currentBalance < $leaveDays) {
-             return response()->json([
-                'success' => true,
-                'message' => "Insufficient leave balance. You have {$currentBalance} days available but requested {$leaveDays} days.",
-            ], 400);
-        }
-        $paidDays = min($currentBalance, $leaveDays);
-        $unpaidDays = $leaveDays - $paidDays;
-        $newBalance = $currentBalance - $paidDays;
-
-        if ($paidDays == $leaveDays) {
-            $leaveDetail = 'paid';
-        } elseif ($paidDays == 0) {
-            $leaveDetail = 'unpaid';
-        } else {
-            $leaveDetail = 'mixed';
-        }
-
-        if ($paidDays > 0 && $balanceRecord) {
-            $balanceRecord->update(['balance' => $newBalance]);
-        }
-
-        Leave::where('id', $leave->id)->update([
-            'status' => 'approved',
-            'status_update_by' => $approver->id,
-            'status_update_remarks' => $remarks
-        ]);
-
-        LeaveTransaction::create([
-            'tenant_id' => $tenantId,
-            'leave_id' => $leave->id ?? null,
-            'user_id' => $userId,
-            'leave_type' => $leaveTypeId,
-            'transaction_type' => 'sub',
-            'total_leaves' => $leaveDays,
-            'leaves_count' => $paidDays,
-            'leave_detail' => $leaveDetail,
-            'before_leaves' => $currentBalance,
-            'after_leaves' => $newBalance,
-            'transaction_date' => now(),
-            'status' => 1,
-            'remarks' => "Leave approved: $remarks"
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Leave approved successfully',
-        ], 200);
-    }
-
-    private function cancelLeave($leave, $approver, $remarks)
-    {
-        // Update leave using model
-        Leave::where('id', $leave->id)->update([
-            'status' => 'cancelled',
-            'status_update_by' => $approver->id,
-            'status_update_remarks' => $remarks
-        ]);
-
-        // Create transaction record for rejected leave using model
-        // LeaveTransaction::create([
-        //     'user_id' => $leave->user_id,
-        //     'leave_type' => $leave->leave_type,
-        //     'transaction_type' => 'sub',
-        //     'total_leaves' => (float) $leave->leave_count,
-        //     'leaves_count' => 0,
-        //     'leave_detail' => 'unpaid',
-        //     'before_leaves' => 0,
-        //     'after_leaves' => 0,
-        //     'transaction_date' => now(),
-        //     'status' => 0,
-        //     'remarks' => "Leave rejected: $remarks"
-        // ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Leave rejected successfully',
-        ], 200);
-    }
-    private function calculateLeaveCountForDate($index, $totalDays, $request)
-    {
-        if ($totalDays == 1) {
-            if ($request->start_session == $request->end_session) {
-                return ($request->start_session == "fullday") ? 1 : 0.5;
-            } else {
-                return 1;
-            }
-        } else {
-            if ($index == 0) {
-                return ($request->start_session == "fullday") ? 1 : 0.5;
-            } elseif ($index == $totalDays - 1) {
-                return ($request->end_session == "fullday") ? 1 : 0.5;
-            } else {
-                return 1;
-            }
         }
     }
 }

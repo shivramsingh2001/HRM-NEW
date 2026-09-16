@@ -145,7 +145,7 @@
     <!-- [ page-header ] end -->
 
     <!-- [ Main Content ] start -->
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row mb-2">
             <div class="col-12">
                 <div class="card bg-gradient-primary text-white"

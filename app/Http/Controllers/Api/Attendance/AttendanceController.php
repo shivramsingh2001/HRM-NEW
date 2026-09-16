@@ -20,10 +20,14 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Request as RequestStore;
 use App\Services\AttendanceNotificationService;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 use Illuminate\Support\Facades\Log;
 
 class AttendanceController extends Controller
 {
+    use AuthorizesByScope;
+
     protected $notificationService;
 
     public function __construct(AttendanceNotificationService $notificationService)
@@ -324,7 +328,7 @@ class AttendanceController extends Controller
         try {
             $userId = Auth::id();
             $today = date('Y-m-d');
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
     
             $user = User::where('users.id', $userId)
                 ->select('users.*', 'user_basic_details.profile_image as profile_image', 'designations.name as designation_name', 'user_job_details.attendance_type as attendance_type')
@@ -373,13 +377,15 @@ class AttendanceController extends Controller
             if ($isWeekoff) {
                 $shiftInfo = 'Week Off';
             } else {
-                $userShift = DB::table('user_shifts')
-                    ->join('shifts', 'user_shifts.shift_id', '=', 'shifts.id')
-                    ->where('user_shifts.user_id', $userId)
-                    ->whereDate('user_shifts.date', $today)
-                    ->select('shifts.name', 'shifts.start_time', 'shifts.end_time')
-                    ->first();
-    
+                // Honours the tenant's custom-shifts toggle. Same string format.
+                $shiftTenantId = (int) (optional(Auth::user())->tenant_id
+                    ?: DB::table('users')->where('id', $userId)->value('tenant_id'));
+
+                $userShift = $shiftTenantId
+                    ? app(\App\Services\Attendance\TenantShiftResolver::class)
+                        ->forUserDate((int) $userId, $shiftTenantId, $today)
+                    : null;
+
                 if ($userShift) {
                     $startTime = date('h:i A', strtotime($userShift->start_time));
                     $endTime = date('h:i A', strtotime($userShift->end_time));
@@ -412,7 +418,12 @@ class AttendanceController extends Controller
                 'designation' => $user->designation_name,
                 'shift' => $shiftInfo,
             ];
-    
+
+            // Additive: tells the app whether to run the continuous GPS tracker
+            // for this employee and at what cadence. No existing key changed.
+            $data['location_tracking'] = app(\App\Services\FieldTracking\FieldTrackingService::class)
+                ->resolveForUser((int) $userId);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Data fetch successfully!!!',
@@ -694,26 +705,39 @@ class AttendanceController extends Controller
             DB::beginTransaction();
     
             try {
-                $attendance = Attendance::create([
-                    'user_id' => $userId,
-                    'shift_id' => $shift->id ?? null,
-                    'branch_id' => $branchId,
-                    'date' => $attendanceDate,
-                    'scheduled_shift_start' => $shift->start_time ?? null,
-                    'scheduled_shift_end' => $shift->end_time ?? null,
-                    'clock_in' => $currentDateTime,
-                    'clock_in_lat' => $request->lat,
-                    'clock_in_long' => $request->long,
-                    'clock_in_address' => $request->address,
-                    'check_in_distance' => $checkInDistance,
-                    'location_verification' => $locationVerification,
-                    'device_id' => $request->device_id,
-                    'ip_address' => $request->ip(),
-                    'wifi_ssid' => $request->wifi_ssid,
-                    'late_minutes' => $lateMinutes,
-                    'attendance_status' => $attendanceStatus,
-                    'status' => 1
-                ]);
+                try {
+                    $attendance = Attendance::create([
+                        'tenant_id' => $user->tenant_id,
+                        'user_id' => $userId,
+                        'shift_id' => $shift->id ?? null,
+                        'branch_id' => $branchId,
+                        'date' => $attendanceDate,
+                        'scheduled_shift_start' => $shift->start_time ?? null,
+                        'scheduled_shift_end' => $shift->end_time ?? null,
+                        'clock_in' => $currentDateTime,
+                        'clock_in_lat' => $request->lat,
+                        'clock_in_long' => $request->long,
+                        'clock_in_address' => $request->address,
+                        'check_in_distance' => $checkInDistance,
+                        'location_verification' => $locationVerification,
+                        'device_id' => $request->device_id,
+                        'ip_address' => $request->ip(),
+                        'wifi_ssid' => $request->wifi_ssid,
+                        'late_minutes' => $lateMinutes,
+                        'attendance_status' => $attendanceStatus,
+                        'status' => 1
+                    ]);
+                } catch (\Illuminate\Database\QueryException $qe) {
+                    if (($qe->errorInfo[1] ?? null) != 1062) {
+                        throw $qe;
+                    }
+                    // Lost the race for the unique (tenant,user,date) key.
+                    DB::rollBack();
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'You have already clocked in for today.'
+                    ], 200);
+                }
     
                 $this->createSuccessLog(
                     $userId,
@@ -743,9 +767,13 @@ class AttendanceController extends Controller
                     Log::error('Clock-in notification failed: ' . $e->getMessage());
                 }
 
+                $lt = app(\App\Services\FieldTracking\FieldTrackingService::class)->resolveForUser((int) $userId);
+
                 return response()->json([
                     'status' => true,
                     'message' => 'Clock-In successful.',
+                    'tracking_enabled' => $lt['enabled'],
+                    'next_ping_seconds' => $lt['enabled'] ? (int) $lt['ping_seconds'] : 0,
                 ], 200);
             } catch (Exception $e) {
                 DB::rollBack();
@@ -767,6 +795,9 @@ class AttendanceController extends Controller
         try {
             AttendanceLog::create([
                 'user_id' => $userId,
+                'actor_id' => $userId,
+                'actor_role' => optional(Auth::user())->role,
+                'source' => $eventType === 'check_out' ? 'clock_out' : 'clock_in',
                 'attendance_id' => $attendanceId,
                 'event_type' => $eventType,
                 'event_time' => Carbon::now(),
@@ -809,6 +840,10 @@ class AttendanceController extends Controller
 
             $logData = [
                 'user_id' => $userId,
+                'actor_id' => $userId,
+                'actor_role' => optional(Auth::user())->role,
+                'source' => $eventType === 'check_out' ? 'clock_out' : 'clock_in',
+                'reason' => is_string($failureReason) ? mb_substr($failureReason, 0, 500) : null,
                 'attendance_id' => null,
                 'event_type' => $eventType,
                 'event_time' => Carbon::now(),
@@ -1173,7 +1208,10 @@ class AttendanceController extends Controller
                         'worked_hours' => $workedHours,
                         'attendance_status' => $attendanceStatus,
                         'shift_status' => 'complete'
-                    ]
+                    ],
+                    // Additive: the app stops the tracker on clock-out regardless.
+                    'tracking_enabled' => false,
+                    'next_ping_seconds' => 0,
                 ], 200);
             } catch (Exception $e) {
                 DB::rollBack();
@@ -1225,23 +1263,36 @@ class AttendanceController extends Controller
 
     private function getUserShiftForDate($userId, $date)
     {
-        $userShift = UserShift::with('shift')
-            ->where('user_id', $userId)
-            ->where('date', $date)
-            ->first();
+        $tenantId = (int) (optional(Auth::user())->tenant_id
+            ?: DB::table('users')->where('id', $userId)->value('tenant_id'));
 
-        if ($userShift && $userShift->shift) {
-            return [
-                'id' => $userShift->shift->id,
-                'user_shift_id' => $userShift->id,
-                'name' => $userShift->shift->name,
-                'start_time' => $userShift->shift->start_time,
-                'end_time' => $userShift->shift->end_time,
-                'grace_minutes' => $userShift->shift->grace_minutes ?? 0
-            ];
+        if (!$tenantId) {
+            return null;
         }
 
-        return null;
+        // Honours the tenant's custom-shifts toggle (fixed company shift when
+        // off, the per-date assignment chain when on). Response keys unchanged.
+        $shift = app(\App\Services\Attendance\TenantShiftResolver::class)
+            ->forUserDate((int) $userId, $tenantId, $date);
+
+        if (!$shift) {
+            return null;
+        }
+
+        $userShiftId = UserShift::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->where('date', $date)
+            ->value('id');
+
+        return [
+            'id' => $shift->id,
+            'user_shift_id' => $userShiftId,
+            'name' => $shift->name,
+            'start_time' => $shift->start_time,
+            'end_time' => $shift->end_time,
+            'grace_minutes' => $shift->grace_minutes ?? 0
+        ];
     }
 
     private function isWeekoffForUser($userId, $date)
@@ -1300,6 +1351,20 @@ class AttendanceController extends Controller
             $userId = Auth::id();
             $today = date('Y-m-d');
 
+            $lt = app(\App\Services\FieldTracking\FieldTrackingService::class)->resolveForUser((int) $userId);
+            $pingOn = $lt['enabled'] ? (int) $lt['ping_seconds'] : 0;
+
+            // When enforcement is on, an employee without the tracking flag is
+            // told to stop and nothing is written (protects the DB from stale apps).
+            if (config('location.enforce_enabled') && ! $lt['enabled']) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Location tracking is not enabled for your account.',
+                    'tracking_enabled' => false,
+                    'next_ping_seconds' => 0,
+                ], 200);
+            }
+
             // NIGHT SHIFT FIX: Look for active attendance from today or yesterday
             $attendance = Attendance::where('user_id', $userId)
                 ->where(function ($query) use ($today) {
@@ -1313,30 +1378,162 @@ class AttendanceController extends Controller
             if (!$attendance) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'User has not clocked in for any active shift.'
+                    'message' => 'User has not clocked in for any active shift.',
+                    'tracking_enabled' => $lt['enabled'],
+                    'next_ping_seconds' => 0,
                 ], 200);
             }
 
             if (!is_null($attendance->clock_out)) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'You have already checked out for this shift.'
+                    'message' => 'You have already checked out for this shift.',
+                    'tracking_enabled' => $lt['enabled'],
+                    'next_ping_seconds' => 0,
                 ], 200);
             }
 
-            AttendanceTrack::create([
+            $row = [
                 'attendance_id' => $attendance->id,
                 'user_id' => $userId,
                 'track_time' => now(),
                 'lat' => $request->lat,
                 'long' => $request->long,
                 'battery_per' => $request->battery_per,
-                'address' => $request->address
-            ]);
+                'address' => $request->address,
+            ];
+
+            if (config('location.async_ingest')) {
+                \App\Jobs\RecordLocationPings::dispatch([$row + [
+                    'tenant_id' => Auth::user()->tenant_id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]]);
+            } else {
+                AttendanceTrack::create($row);
+            }
 
             return response()->json([
                 'status' => true,
                 'message' => 'Location saved successfully.',
+                'tracking_enabled' => $lt['enabled'],
+                'next_ping_seconds' => $pingOn,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occured. Please try again later',
+            ], 500);
+        }
+    }
+
+    /**
+     * Buffered GPS upload — the app collects points locally and flushes a batch
+     * every few minutes. One request + one bulk insert instead of one per ping.
+     * New endpoint; the app switches to it when GET /today reports mode="batch".
+     */
+    public function trackBatch(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'points' => 'required|array|min:1|max:' . (int) config('location.batch_max', 60),
+            'points.*.lat' => 'required|numeric',
+            'points.*.long' => 'required|numeric',
+            'points.*.battery_per' => 'nullable',
+            'points.*.address' => 'nullable|string|max:255',
+            'points.*.track_time' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 200);
+        }
+
+        try {
+            $userId = Auth::id();
+            $today = date('Y-m-d');
+
+            $lt = app(\App\Services\FieldTracking\FieldTrackingService::class)->resolveForUser((int) $userId);
+            $pingOn = $lt['enabled'] ? (int) $lt['ping_seconds'] : 0;
+
+            if (config('location.enforce_enabled') && ! $lt['enabled']) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Location tracking is not enabled for your account.',
+                    'tracking_enabled' => false,
+                    'next_ping_seconds' => 0,
+                ], 200);
+            }
+
+            $attendance = Attendance::where('user_id', $userId)
+                ->where(function ($query) use ($today) {
+                    $query->where('date', $today)
+                        ->orWhere('date', Carbon::parse($today)->subDay()->format('Y-m-d'));
+                })
+                ->whereNull('clock_out')
+                ->orderBy('date', 'desc')
+                ->first();
+
+            if (! $attendance || ! is_null($attendance->clock_out)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No active shift to attach location to.',
+                    'tracking_enabled' => $lt['enabled'],
+                    'next_ping_seconds' => 0,
+                ], 200);
+            }
+
+            $tenantId = Auth::user()->tenant_id;
+            $clockIn = $attendance->clock_in ? Carbon::parse($attendance->clock_in) : null;
+            $upperBound = now()->addMinutes(5);
+
+            $rows = [];
+            $rejected = 0;
+            foreach ($request->input('points') as $p) {
+                try {
+                    $t = is_numeric($p['track_time'])
+                        ? Carbon::createFromTimestamp((int) (strlen((string) $p['track_time']) > 10 ? $p['track_time'] / 1000 : $p['track_time']))
+                        : Carbon::parse($p['track_time']);
+                } catch (\Throwable $e) {
+                    $rejected++;
+                    continue;
+                }
+
+                if (($clockIn && $t->lt($clockIn)) || $t->gt($upperBound)) {
+                    $rejected++;
+                    continue;
+                }
+
+                $rows[] = [
+                    'attendance_id' => $attendance->id,
+                    'user_id' => $userId,
+                    'tenant_id' => $tenantId,
+                    'track_time' => $t->format('Y-m-d H:i:s'),
+                    'lat' => $p['lat'],
+                    'long' => $p['long'],
+                    'battery_per' => $p['battery_per'] ?? null,
+                    'address' => $p['address'] ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            if (! empty($rows)) {
+                if (config('location.async_ingest')) {
+                    \App\Jobs\RecordLocationPings::dispatch($rows);
+                } else {
+                    foreach (array_chunk($rows, 500) as $chunk) {
+                        DB::table('attendance_tracks')->insert($chunk);
+                    }
+                }
+            }
+
+            $saved = count($rows);
+
+            return response()->json([
+                'status' => true,
+                'message' => "Saved {$saved} of " . ($saved + $rejected) . ' points.',
+                'data' => ['saved' => $saved, 'rejected' => $rejected],
+                'tracking_enabled' => $lt['enabled'],
+                'next_ping_seconds' => $pingOn,
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -1391,10 +1588,10 @@ class AttendanceController extends Controller
             $authUser = Auth::user();
 
             $validator = Validator::make($request->all(), [
-                'date' => 'required|date_format:Y-m-d',
-                'request_type' => 'required',
-                'in_time' => 'nullable|date_format:H:i',
-                'out_time' => 'nullable|date_format:H:i|after:in_time',
+                'date' => 'required|date_format:Y-m-d|before_or_equal:today',
+                'request_type' => 'required|in:in_time,out_time,both,full_day,wfh_not_marked,technical_issue',
+                'in_time' => 'required_if:request_type,in_time,both|nullable|date_format:H:i',
+                'out_time' => 'required_if:request_type,out_time,both|nullable|date_format:H:i|after:in_time',
                 'file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
                 'reason' => 'required|string|max:500',
             ]);
@@ -1422,7 +1619,8 @@ class AttendanceController extends Controller
                 $filePath = $request->file('file')->store('attendance_files', 'public');
             }
 
-            AttendanceRegularization::create([
+            $reg = AttendanceRegularization::create([
+                'tenant_id' => $authUser->tenant_id,
                 'user_id' => $authUser->id,
                 'date' => $request->date,
                 'request_type' => $request->request_type,
@@ -1432,6 +1630,14 @@ class AttendanceController extends Controller
                 'reason' => $request->reason,
                 'status' => 'pending'
             ]);
+
+            // Parity with the web submit path.
+            try {
+                app(\App\Services\AttendanceRegularizationNotificationService::class)
+                    ->notifyRegularizationSubmitted($reg);
+            } catch (\Throwable $e) {
+                Log::error('Regularization submit notification failed: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'success' => true,
@@ -1563,7 +1769,7 @@ class AttendanceController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!in_array($authUser->role, ['manager', 'admin'])) {
+            if (!app(RbacService::class)->can($authUser, 'attendance', 'approve')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Only managers, admins or supervisors can approve requests.'
@@ -1713,7 +1919,7 @@ class AttendanceController extends Controller
             $authUser = Auth::user();
             $tenantId = $authUser->tenant_id;
 
-            if (!in_array($authUser->role, ['manager', 'admin'], true)) {
+            if (!app(RbacService::class)->can($authUser, 'attendance', 'approve')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Only managers, admins can approve requests.'
@@ -1759,14 +1965,9 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
-            if (!$regularization->reporting_head) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User does not have a reporting head assigned. Please contact admin.'
-                ], 200);
-            }
-
-            if ($regularization->reporting_head != $authUser->id) {
+            // Admin / HR may process any request in their tenant; a manager may
+            // only process their own reportees'.
+            if (!$this->scopeCoversOwner($authUser, 'attendance', 'approve', (int) $regularization->user_id)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You are not authorized to approve/reject this request. Only the reporting head can process it.'
@@ -1789,51 +1990,37 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
+            $model = AttendanceRegularization::withoutGlobalScopes()
+                ->where('id', $regularizationId)->where('tenant_id', $tenantId)->first();
+
+            // Tier 2 / T2-A — route through the approval workflow when the tenant
+            // has one; returns null → legacy single-approver path below.
+            try {
+                $ar = app(\App\Services\Approvals\ApprovalService::class)
+                    ->decide('regularization', $model, $authUser, $request->status, $request->input('remarks'));
+                if ($ar !== null) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $ar->status === 'pending'
+                            ? 'Recorded. Awaiting the next approval level.'
+                            : 'Attendance Regularizations status updated successfully.',
+                    ], 200);
+                }
+            } catch (\RuntimeException $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 200);
+            }
+
             DB::beginTransaction();
             try {
-                $attendanceRegularization = AttendanceRegularization::where('id', $regularizationId)
-                    ->where('tenant_id', $tenantId)
-                    ->first();
-                $attendanceRegularization->status = $request->status;
-                $attendanceRegularization->approved_by = $authUser->id;
-                $attendanceRegularization->approved_date = now();
-                $attendanceRegularization->save();
+                $model->status = $request->status;
+                $model->approved_by = $authUser->id;
+                $model->approved_date = now();
+                $model->save();
 
                 if ($request->status == 'approved') {
-                    $date = $regularizationDate;
-
-                    $attendance = Attendance::firstOrNew([
-                        'tenant_id' => $regularization->tenant_id,
-                        'user_id'   => $regularization->user_id,
-                        'date'      => $regularization->date
-                    ]);
-
-                    $attendance->tenant_id = $regularization->tenant_id;
-                    $attendance->regularization_id = $regularization->id;
-                    $attendance->is_regularized = 1;
-                    $attendance->regularized_by = $authUser->id;
-                    $attendance->regularized_at = now();
-                    $attendance->status = 1;
-
-                    if ($regularization->in_time) {
-                        $attendance->clock_in = Carbon::parse($date->format('Y-m-d') . ' ' . $regularization->in_time);
-                    }
-
-                    if ($regularization->out_time) {
-                        $attendance->clock_out = Carbon::parse($date->format('Y-m-d') . ' ' . $regularization->out_time);
-                    }
-
-                    if ($regularization->in_time && $regularization->out_time) {
-                        $calc = new \App\Services\Attendance\AttendanceCalculator();
-                        $seconds = $calc->workedSeconds(
-                            Carbon::parse($attendance->clock_in),
-                            Carbon::parse($attendance->clock_out)
-                        );
-                        $attendance->total_hours = $calc->formatDuration($seconds);
-                        $attendance->worked_hours = $calc->decimalHours($seconds);
-                    }
-
-                    $attendance->save();
+                    // Complete + audited + refreshed via the write funnel.
+                    app(\App\Services\Attendance\AttendanceEntryService::class)
+                        ->applyRegularization($model, $authUser);
                 }
 
                 DB::commit();
@@ -1842,8 +2029,16 @@ class AttendanceController extends Controller
                 throw $e;
             }
 
-            if ($request->status == 'approved') {
-                $this->refreshAttendanceDerived($regularization->user_id, $regularization->tenant_id, $regularization->date);
+            // Parity with the web approval path.
+            try {
+                $notifier = app(\App\Services\AttendanceRegularizationNotificationService::class);
+                if ($request->status == 'approved') {
+                    $notifier->notifyRegularizationApproved($model);
+                } else {
+                    $notifier->notifyRegularizationRejected($model);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Regularization notification failed: ' . $e->getMessage());
             }
 
             return response()->json([

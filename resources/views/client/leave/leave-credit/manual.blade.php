@@ -25,7 +25,7 @@
         .card-header-custom i {
             width: 40px;
             height: 40px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border-radius: 12px;
             display: flex;
@@ -67,12 +67,12 @@
         }
 
         .form-label i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 16px;
         }
 
         .required-star {
-            color: #ef4444;
+            color: #1e3a8a;
             margin-left: 4px;
             font-size: 14px;
         }
@@ -114,15 +114,15 @@
         }
 
         .form-control-modern:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
             background: white;
         }
 
         .form-control-modern.is-invalid {
-            border-color: #ef4444;
-            background: #fef2f2;
+            border-color: #1e3a8a;
+            background: #e3edfe;
         }
 
         textarea.form-control-modern {
@@ -155,7 +155,7 @@
         }
 
         .balance-preview-title i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 16px;
         }
 
@@ -186,7 +186,7 @@
         .employee-avatar {
             width: 40px;
             height: 40px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border-radius: 10px;
             display: flex;
@@ -203,11 +203,12 @@
         .employee-name {
             font-weight: 600;
             color: #1e293b;
+            font-size: 12px;
             margin-bottom: 2px;
         }
 
         .employee-meta {
-            font-size: 12px;
+            font-size: 8px;
             color: #64748b;
         }
 
@@ -234,15 +235,15 @@
         }
 
         .btn-primary-modern {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
-            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+            box-shadow: 0 4px 6px rgba(30, 58, 138, 0.2);
         }
 
         .btn-primary-modern:hover:not(:disabled) {
-            background: #4338ca;
+            background: #1e3a8a;
             transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 6px 8px rgba(30, 58, 138, 0.3);
         }
 
         .btn-secondary-modern {
@@ -332,21 +333,21 @@
         }
 
         .alert-success {
-            background: #d1fae5;
-            border: 1px solid #a7f3d0;
-            color: #065f46;
+            background: #e3edfe;
+            border: 1px solid #93c5fd;
+            color: #1d4ed8;
         }
 
         .alert-error {
-            background: #fee2e2;
-            border: 1px solid #fecaca;
-            color: #991b1b;
+            background: #e3edfe;
+            border: 1px solid #93c5fd;
+            color: #1e3a8a;
         }
 
         .alert-warning {
-            background: #fef3c7;
-            border: 1px solid #fde68a;
-            color: #92400e;
+            background: #e3edfe;
+            border: 1px solid #93c5fd;
+            color: #2563eb;
         }
 
         .alert-info {
@@ -386,18 +387,7 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Manual Leave Credit</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('leave-credit.index') }}">Home</a></li>
-                <li class="breadcrumb-item active">Add Leave Credit</li>
-            </ul>
-        </div>
-
-    </div>
+    <x-ui.page-header title="Add Leave Credit" :parent="['label' => 'Leave Credit', 'route' => 'leave-credit.index']" />
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="row">

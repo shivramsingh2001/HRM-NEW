@@ -61,6 +61,7 @@ class LeaveTypeController extends Controller
                 },
             ],
             'description' => 'nullable|string|max:1000',
+            'is_unpaid' => 'nullable|boolean',
         ]);
 
         try {
@@ -71,7 +72,11 @@ class LeaveTypeController extends Controller
                 'credit_type' => $request->credit_type,
                 'credit_value' => $request->credit_value,
                 'status' => 1, // Default status
-
+                // is_unpaid is the single authoritative paid/unpaid signal
+                // (LeaveService/Payroll/Performance all read it) — a tenant
+                // can flag any custom type as unpaid, not just the one
+                // system LWP row.
+                'is_unpaid' => $request->boolean('is_unpaid'),
             ]);
 
             return response()->json([
@@ -118,11 +123,19 @@ class LeaveTypeController extends Controller
             ],
             'description' => 'nullable|string|max:1000',
             'status' => 'nullable|in:0,1',
+            'is_unpaid' => 'nullable|boolean',
         ]);
 
         try {
             // Using Eloquent findOrFail
             $type = LeaveType::findOrFail($id);
+
+            if ($type->isSystemType()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This is a system-managed leave type and cannot be edited.'
+                ], 403);
+            }
 
             // Using Eloquent update method
             $type->update([
@@ -131,6 +144,10 @@ class LeaveTypeController extends Controller
                 'credit_type' => $request->credit_type,
                 'credit_value' => $request->credit_value,
                 'status' => $request->status ?? $type->status,
+                // Preserve the existing flag when the field isn't sent at
+                // all (e.g. a form that doesn't yet expose this control),
+                // rather than silently resetting it to false.
+                'is_unpaid' => $request->has('is_unpaid') ? $request->boolean('is_unpaid') : $type->is_unpaid,
 
             ]);
 
@@ -169,6 +186,13 @@ class LeaveTypeController extends Controller
                 ], 404);
             }
 
+            if ($type->isSystemType()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This is a system-managed leave type and cannot be deactivated.'
+                ], 403);
+            }
+
             // Using Eloquent update
             $type->update([
                 'status' => $request->status,
@@ -196,8 +220,15 @@ class LeaveTypeController extends Controller
             $id = decrypt($id);
             $type = LeaveType::findOrFail($id);
 
+            if ($type->isSystemType()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This is a system-managed leave type and cannot be deleted.'
+                ], 403);
+            }
+
             // Check if leave type is being used in leaves table
-            $leavesCount = $type->leaves()->count(); // Assuming you have relationship
+            $leavesCount = $type->leaves()->count();
 
             if ($leavesCount > 0) {
                 return response()->json([

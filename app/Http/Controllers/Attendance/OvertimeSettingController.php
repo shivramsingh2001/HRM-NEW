@@ -4,25 +4,22 @@ namespace App\Http\Controllers\Attendance;
 
 use App\Http\Controllers\Controller;
 use App\Models\OvertimeSetting;
+use App\Services\RbacService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class OvertimeSettingController extends Controller
 {
     /**
-     * Roles allowed to change tenant overtime policy.
-     */
-    private const MANAGER_ROLES = ['admin', 'hr'];
-
-    /**
      * Reject the request (JSON 403) if the current user may not manage settings.
-     * Route middleware (role:admin,hr) is the primary guard; this is defence in depth.
+     * Route middleware (permission:overtime,manage) is the primary guard; this
+     * is defence in depth.
      */
     private function ensureCanManage(): ?\Illuminate\Http\JsonResponse
     {
         $user = auth()->user();
 
-        if (!$user || !in_array($user->role, self::MANAGER_ROLES, true)) {
+        if (!$user || !app(RbacService::class)->can($user, 'overtime', 'manage')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Only admin and HR can manage overtime settings.',

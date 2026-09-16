@@ -39,6 +39,13 @@ class Tenant extends Model
         'notice_period',
         'late_halfday_enabled',
         'monthly_late_allowance',
+        'custom_shifts_enabled',
+        'default_shift_id',
+        'default_weekoff_days',
+        'field_tracking_enabled',
+        'field_tracking_seats',
+        'field_tracking_ping_seconds',
+        'field_tracking_retention_days',
         'created_by'
     ];
 
@@ -46,6 +53,9 @@ class Tenant extends Model
         'settings' => 'array',
         'deleted_at' => 'datetime',
         'late_halfday_enabled' => 'boolean',
+        'custom_shifts_enabled' => 'boolean',
+        'default_weekoff_days' => 'array',
+        'field_tracking_enabled' => 'boolean',
     ];
 
     protected static function boot()

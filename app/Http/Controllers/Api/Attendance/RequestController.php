@@ -15,9 +15,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 
 class RequestController extends Controller
 {
+    use AuthorizesByScope;
+
     public function type(Request $request)
     {
         try {
@@ -233,8 +237,11 @@ class RequestController extends Controller
         try {
             $user = Auth::user();
     
-            // Check if user has permission (admin, hr, or manager)
-            if (!in_array($user->role, ['admin', 'hr', 'manager'])) {
+            // Check if user has permission (was a fixed role allowlist that
+            // silently locked out any custom role holding a real
+            // requests:view grant)
+            $viewScope = app(RbacService::class)->scopeFor($user, 'requests', 'view');
+            if ($viewScope === null || $viewScope === 'own') {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have permission to view these requests.'
@@ -251,8 +258,8 @@ class RequestController extends Controller
                 }
             ]);
     
-            // Apply role-based filtering
-            if ($user->role == 'manager') {
+            // Apply scope-based filtering
+            if ($viewScope === 'team') {
                 $teamUserIds = UserJobDetail::where('reporting_head', $user->id)
                     ->pluck('user_id')
                     ->toArray();
@@ -389,14 +396,19 @@ class RequestController extends Controller
             ], 200);
         }
         $user = Auth::user();
-        if (!in_array($user->role, ['admin', 'hr', 'manager'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to view these requests.'
-            ], 200);
-        }
         try {
             $existingRequest = RequestStore::findOrFail($id);
+
+            // Was a coarse admin/hr/manager gate with no further per-record
+            // check — any manager could approve/reject ANY tenant's request,
+            // not just their own team's. scopeCoversOwner() closes that gap.
+            if (!$this->scopeCoversOwner($user, 'requests', 'approve', (int) $existingRequest->user_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to view these requests.'
+                ], 200);
+            }
+
             if ($existingRequest->status != 'PENDING') {
                 return response()->json([
                     'success' => false,
@@ -492,8 +504,10 @@ public function show(Request $request, $id)
             ], 200);
         }
 
-        // Check authorization: User can only view their own request unless they are admin/hr/manager
-        if ($requestDetail->user_id != $user->id && !in_array($user->role, ['admin', 'hr', 'manager'])) {
+        // Check authorization: own request, or a scope that covers this
+        // owner (was "any manager", inconsistent with view_all()'s
+        // team-only listing — now consistently team-scoped).
+        if (!$this->scopeCoversOwner($user, 'requests', 'view', (int) $requestDetail->user_id)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to view this request.'

@@ -58,7 +58,7 @@
         </div>
     </div>
    
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <div class="row">
             <div class="col-12">
                 <div class="card invoice-container">
@@ -153,13 +153,53 @@
                                                     <div class="error-message">{{ $message }}</div>
                                                 @enderror
                                                 <div class="info-text">
-                                                    <i class="feather-clock"></i> 
+                                                    <i class="feather-clock"></i>
                                                     Standard working hours per day (Default: 8 hours). Required for hourly calculation.
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group mb-3">
+                                                <label class="form-label">Overtime Rate Divisor</label>
+                                                <select name="ot_rate_divisor_mode" id="ot_rate_divisor_mode"
+                                                    class="form-control @error('ot_rate_divisor_mode') is-invalid @enderror">
+                                                    <option value="calendar_days" {{ old('ot_rate_divisor_mode', 'calendar_days') == 'calendar_days' ? 'selected' : '' }}>
+                                                        Calendar Days in Month (Default)
+                                                    </option>
+                                                    <option value="fixed_working_days" {{ old('ot_rate_divisor_mode') == 'fixed_working_days' ? 'selected' : '' }}>
+                                                        Fixed Working Days
+                                                    </option>
+                                                </select>
+                                                @error('ot_rate_divisor_mode')
+                                                    <div class="error-message">{{ $message }}</div>
+                                                @enderror
+                                                <div class="info-text">
+                                                    <i class="feather-info"></i>
+                                                    Controls how the day-based overtime hourly rate is derived from basic salary. Leave as
+                                                    Calendar Days unless you specifically want a fixed working-days convention.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6" id="ot_fixed_working_days_div" style="display: none;">
+                                            <div class="form-group mb-3">
+                                                <label class="form-label">Fixed Working Days</label>
+                                                <input type="number" step="1" name="ot_fixed_working_days" id="ot_fixed_working_days"
+                                                    class="form-control @error('ot_fixed_working_days') is-invalid @enderror"
+                                                    placeholder="Enter fixed working days" value="{{ old('ot_fixed_working_days', 26) }}" min="1" max="31">
+                                                @error('ot_fixed_working_days')
+                                                    <div class="error-message">{{ $message }}</div>
+                                                @enderror
+                                                <div class="info-text">
+                                                    <i class="feather-calendar"></i>
+                                                    Used as the divisor instead of calendar days (commonly 26).
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {{-- <div class="row">
                                         <div class="col-md-6">
                                             <div class="form-group mb-3">
@@ -514,6 +554,16 @@
             }
         }
 
+        // Toggle the fixed-working-days field based on the OT rate divisor mode
+        function toggleOtFixedWorkingDaysField() {
+            var mode = $('#ot_rate_divisor_mode').val();
+            if (mode === 'fixed_working_days') {
+                $('#ot_fixed_working_days_div').slideDown();
+            } else {
+                $('#ot_fixed_working_days_div').slideUp();
+            }
+        }
+
         // Add form submit validation
         document.getElementById('payrollMasterForm').addEventListener('submit', function(e) {
             let earningsTotal = 0;
@@ -573,10 +623,15 @@
         $(document).ready(function() {
             // Toggle working hours field on page load (if hour_based is preselected)
             toggleWorkingHoursField();
-            
+            toggleOtFixedWorkingDaysField();
+
             // On calculation type change
             $('#payroll_calculation_type').on('change', function() {
                 toggleWorkingHoursField();
+            });
+
+            $('#ot_rate_divisor_mode').on('change', function() {
+                toggleOtFixedWorkingDaysField();
             });
             
             // Validate hourly rate if hour_based is selected

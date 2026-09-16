@@ -23,9 +23,13 @@ use App\Models\Holiday;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 
 class UserController extends Controller
 {
+    use AuthorizesByScope;
+
     public function index()
     {
         try {
@@ -160,20 +164,18 @@ class UserController extends Controller
     {
         try {
             $authUser = Auth::user();
-            if (!in_array($authUser->role, ['manager', 'admin', 'hr'])) {
+            $teamScope = app(RbacService::class)->scopeFor($authUser, 'team', 'view');
+            if ($teamScope === null || $teamScope === 'own') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Only managers and Hr can view this page.'
                 ], 200);
             }
             $currentDate = date('Y-m-d');
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
 
-            // Check if user is admin or HR
-            $isAdminOrHr = in_array($authUser->role, ['admin', 'hr']);
-
-            // Get team members based on role
-            if ($isAdminOrHr) {
+            // Get team members based on scope
+            if ($teamScope === 'company') {
                 // Admin/HR: Get all active users
                 $teamMembers = User::where('status', 1)
                     ->whereNotIn('role', ['admin'])
@@ -323,8 +325,9 @@ class UserController extends Controller
         try {
             $authUser = Auth::user();
 
-            // Authorization check
-            if ($authUser->id != $id && !in_array($authUser->role, ['admin', 'hr', 'manager'])) {
+            // Authorization check (was "any manager", inconsistent with
+            // team()'s team-only listing — now consistently team-scoped).
+            if (!$this->scopeCoversOwner($authUser, 'team', 'view', (int) $id)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Only managers and Hr can view this page.'

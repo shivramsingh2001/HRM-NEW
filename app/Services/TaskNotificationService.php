@@ -53,25 +53,39 @@ class TaskNotificationService
     }
 
     /**
-     * Send notification when task status is updated (by assignee OR assigner)
+     * Send notification when task status is updated (by assignee OR assigner).
+     *
+     * $receiver is optional and should be passed explicitly whenever the
+     * caller already knows who this notification concerns — e.g. a group
+     * task approval looping over each member. Without it, this falls back to
+     * an arbitrary TaskAssign row for the task, which is only correct for a
+     * genuinely 1:1 individual task (a group task has multiple rows, so
+     * guessing "the" row is wrong).
      */
-    public function notifyTaskStatusUpdate($task, $actionBy, $oldStatus, $newStatus, $remarks = null)
+    public function notifyTaskStatusUpdate($task, $actionBy, $oldStatus, $newStatus, $remarks = null, $receiver = null)
     {
         try {
-            $assign = TaskAssign::where('task_id', $task->id)->first();
-            if (!$assign) return false;
+            $action = $newStatus === 'approved' ? 'approved' : ($newStatus === 'rejected' ? 'rejected' : 'updated');
 
-            // Determine who should receive the notification
-            $receiver = null;
-            
-            if ($actionBy->id == $assign->assigned_to) {
-                // If assignee updated, notify assigner
-                $receiver = User::find($assign->assigned_by);
-                $action = 'updated';
+            if ($receiver) {
+                $action = $receiver->id == $actionBy->id ? 'updated' : $action;
             } else {
-                // If assigner approved/rejected, notify assignee
-                $receiver = User::find($assign->assigned_to);
-                $action = $newStatus === 'approved' ? 'approved' : 'rejected';
+                $assign = TaskAssign::where('task_id', $task->id)
+                    ->where(function ($q) use ($actionBy) {
+                        $q->where('assigned_to', $actionBy->id)->orWhere('assigned_by', $actionBy->id);
+                    })
+                    ->first();
+                if (!$assign) return false;
+
+                if ($actionBy->id == $assign->assigned_to) {
+                    // If assignee updated, notify assigner
+                    $receiver = User::find($assign->assigned_by);
+                    $action = 'updated';
+                } else {
+                    // If assigner approved/rejected, notify assignee
+                    $receiver = User::find($assign->assigned_to);
+                    $action = $newStatus === 'approved' ? 'approved' : 'rejected';
+                }
             }
 
             if (!$receiver) return false;
@@ -89,17 +103,15 @@ class TaskNotificationService
             ];
 
             // Set title and body based on who performed the action
-            if ($actionBy->id == $assign->assigned_to) {
+            if ($action === 'updated') {
                 $title = '🔄 Task Status Updated';
                 $body = $actionBy->name . ' updated task "' . $task->title . '" to ' . $newStatus;
+            } elseif ($action === 'approved') {
+                $title = '✅ Task Approved';
+                $body = 'Your task "' . $task->title . '" has been approved.';
             } else {
-                if ($newStatus === 'approved') {
-                    $title = '✅ Task Approved';
-                    $body = 'Your task "' . $task->title . '" has been approved.';
-                } else {
-                    $title = '❌ Task Rejected';
-                    $body = 'Your task "' . $task->title . '" has been rejected.';
-                }
+                $title = '❌ Task Rejected';
+                $body = 'Your task "' . $task->title . '" has been rejected.';
             }
 
             if ($remarks) {

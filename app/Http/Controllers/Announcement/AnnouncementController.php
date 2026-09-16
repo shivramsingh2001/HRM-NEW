@@ -5,16 +5,26 @@ namespace App\Http\Controllers\Announcement;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use App\Models\AnnouncementAcknowledgment;
 use App\Models\User;
+use App\Services\AnnouncementNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use App\Services\RbacService;
 use Exception;
 
 class AnnouncementController extends Controller
 {
+    protected $notificationService;
+
+    public function __construct(AnnouncementNotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * Display a listing of announcements.
      */
@@ -55,7 +65,7 @@ class AnnouncementController extends Controller
             $authUser = Auth::user();
          
             // Build query with user join to get creator information
-            $query = Announcement::where('announcements.status', '1')->join('users', 'announcements.user_id', '=', 'users.id')
+            $query = Announcement::notExpired()->join('users', 'announcements.user_id', '=', 'users.id')
                 ->select(
                     'announcements.*',
                     'users.id as user_id',
@@ -63,12 +73,16 @@ class AnnouncementController extends Controller
                     'users.email as user_email',
                     'users.employee_id as user_employee_id'
                 )
-                
+
                 ->orderBy('announcements.created_at', 'desc');
 
-            // Apply status filter if provided
-            if ($request->has('status') && $request->status !== '') {
+            $canManage = app(RbacService::class)->can($authUser, 'announcements', 'edit');
+
+            if ($canManage && $request->has('status') && $request->status !== '') {
+                // Only admin/hr may override the default active-only filter.
                 $query->where('announcements.status', $request->status);
+            } else {
+                $query->where('announcements.status', 1);
             }
 
             $announcements = $query->paginate(15);
@@ -103,6 +117,7 @@ class AnnouncementController extends Controller
             'file' => 'nullable|file|mimes:pdf,doc,docx,txt|max:5120',
             'acknowledge' => 'nullable|in:0,1',
             'description' => 'nullable|string',
+            'expire_date' => 'nullable|date|after_or_equal:today',
         ], [
             'title.required' => 'Please enter an announcement title',
             'image.required' => 'Please select an image',
@@ -165,10 +180,13 @@ class AnnouncementController extends Controller
                 'file' => $filePath,
                 'status' => 1, // Default to active
                 'acknowledge' => $request->has('acknowledge') ? 1 : 0,
-                'description' => $request->description
+                'description' => $request->description,
+                'expire_date' => $request->expire_date,
             ]);
 
             DB::commit();
+
+            $this->notificationService->notifyAnnouncementCreated($announcement);
 
             return response()->json([
                 'success' => true,
@@ -194,10 +212,9 @@ class AnnouncementController extends Controller
     {
         try {
             $announcement = Announcement::with('user')->findOrFail($id);
-            
+
             // Check if user has acknowledged
-            $isAcknowledged = DB::table('announcement_acknowledgments')
-                ->where('announcement_id', $announcement->id)
+            $isAcknowledged = AnnouncementAcknowledgment::where('announcement_id', $announcement->id)
                 ->where('user_id', Auth::id())
                 ->exists();
             
@@ -232,6 +249,7 @@ class AnnouncementController extends Controller
             'acknowledge' => 'nullable|in:0,1',
             'description' => 'nullable|string',
             'status' => 'required|in:0,1',
+            'expire_date' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -291,6 +309,7 @@ class AnnouncementController extends Controller
             $announcement->description = $request->description;
             $announcement->acknowledge = $request->has('acknowledge') ? 1 : 0;
             $announcement->status = $request->status;
+            $announcement->expire_date = $request->expire_date;
             $announcement->save();
 
             DB::commit();
@@ -333,9 +352,7 @@ class AnnouncementController extends Controller
             }
             
             // Delete acknowledgments
-            DB::table('announcement_acknowledgments')
-                ->where('announcement_id', $announcement->id)
-                ->delete();
+            AnnouncementAcknowledgment::where('announcement_id', $announcement->id)->delete();
             
             // Delete announcement
             $announcement->delete();
@@ -391,22 +408,11 @@ class AnnouncementController extends Controller
     {
         try {
             $userId = Auth::id();
-            
-            // Check if already acknowledged
-            $exists = DB::table('announcement_acknowledgments')
-                ->where('announcement_id', $id)
-                ->where('user_id', $userId)
-                ->exists();
-            
-            if (!$exists) {
-                DB::table('announcement_acknowledgments')->insert([
-                    'announcement_id' => $id,
-                    'user_id' => $userId,
-                    'acknowledged_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-            }
+
+            AnnouncementAcknowledgment::firstOrCreate(
+                ['announcement_id' => $id, 'user_id' => $userId],
+                ['acknowledged_at' => now()]
+            );
 
             return response()->json([
                 'success' => true,
@@ -415,7 +421,7 @@ class AnnouncementController extends Controller
 
         } catch (Exception $e) {
             Log::error('Announcement acknowledge error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to acknowledge announcement'
@@ -429,8 +435,7 @@ class AnnouncementController extends Controller
     public function acknowledgments($id)
     {
         try {
-            $acknowledgments = DB::table('announcement_acknowledgments')
-                ->join('users', 'announcement_acknowledgments.user_id', '=', 'users.id')
+            $acknowledgments = AnnouncementAcknowledgment::join('users', 'announcement_acknowledgments.user_id', '=', 'users.id')
                 ->where('announcement_acknowledgments.announcement_id', $id)
                 ->select(
                     'users.id',

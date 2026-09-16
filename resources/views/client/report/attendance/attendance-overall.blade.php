@@ -15,7 +15,7 @@
         }
 
         .overall-header {
-            padding: 20px 24px;
+            padding: 14px 17px;
             border-bottom: 1px solid #eef2f6;
             background: #fafbfc;
         }
@@ -31,18 +31,18 @@
         .overall-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            font-size: 10px;
             min-width: 1200px;
         }
 
         .overall-table th {
             background: #f8fafc;
             font-weight: 600;
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 0.3px;
             color: #475569;
-            padding: 10px 8px;
+            padding: 7px 6px;
             border: 1px solid #e2e8f0;
             text-align: center;
             white-space: nowrap;
@@ -105,12 +105,12 @@
         }
 
         .overall-table td {
-            padding: 6px 8px;
+            padding: 4px 6px;
             border: 1px solid #eef2f6;
             text-align: center;
             vertical-align: middle;
             white-space: nowrap;
-            font-size: 12px;
+            font-size: 10px;
         }
 
         .overall-table tbody tr:hover td {
@@ -126,27 +126,27 @@
 
         /* Cell styling */
         .cell-present {
-            color: #065f46;
+            color: #1e3a8a;
             font-weight: 600;
-            background: #d1fae5 !important;
+            background: #e3edfe !important;
         }
 
         .cell-absent {
-            color: #991b1b;
+            color: #475569;
             font-weight: 600;
-            background: #fee2e2 !important;
+            background: #e2e8f0 !important;
         }
 
         .cell-leave {
-            color: #92400e;
+            color: #1e3a8a;
             font-weight: 600;
-            background: #fef3c7 !important;
+            background: #bfd3f7 !important;
         }
 
         .cell-weekoff {
-            color: #5b21b6;
+            color: #16295e;
             font-weight: 600;
-            background: #ede9fe !important;
+            background: #e3edfe !important;
         }
 
         .cell-holiday {
@@ -156,15 +156,15 @@
         }
 
         .cell-halfday {
-            color: #0e7490;
+            color: #2563eb;
             font-weight: 600;
-            background: #cffafe !important;
+            background: #e3edfe !important;
         }
 
         .summary-cell {
             font-weight: 700;
-            color: #4f46e5;
-            background: #eef2ff !important;
+            color: #1e3a8a;
+            background: #e3edfe !important;
         }
 
         /* Filter Section */
@@ -172,8 +172,8 @@
             background: white;
             border-radius: 16px;
             border: 1px solid #eef2f6;
-            padding: 20px 24px;
-            margin-bottom: 28px;
+            padding: 14px 17px;
+            margin-bottom: 20px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
@@ -198,8 +198,8 @@
         .filter-input {
             width: 100%;
             height: 40px;
-            padding: 8px 14px;
-            font-size: 13px;
+            padding: 6px 10px;
+            font-size: 10.5px;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
             background: #f8fafc;
@@ -209,7 +209,7 @@
 
         .filter-select:focus,
         .filter-input:focus {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             outline: none;
             background: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -218,11 +218,11 @@
         .apply-btn {
             height: 40px;
             padding: 0 20px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 10.5px;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -233,7 +233,7 @@
         }
 
         .apply-btn:hover {
-            background: #4338ca;
+            background: #16295e;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
@@ -245,7 +245,7 @@
             color: #64748b;
             border: 1.5px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 10.5px;
             font-weight: 500;
             display: flex;
             align-items: center;
@@ -268,50 +268,50 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 16px;
-            margin-bottom: 24px;
+            margin-bottom: 17px;
         }
 
         .stat-card {
             background: white;
             border-radius: 12px;
-            padding: 16px 20px;
+            padding: 11px 14px;
             border: 1px solid #eef2f6;
             text-align: center;
         }
 
         .stat-number {
-            font-size: 24px;
+            font-size: 17px;
             font-weight: 700;
             color: #0f172a;
         }
 
         .stat-label {
-            font-size: 12px;
+            font-size: 10px;
             color: #64748b;
             font-weight: 500;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .stat-card.present .stat-number {
-            color: #10b981;
+            color: #1e3a8a;
         }
         .stat-card.absent .stat-number {
-            color: #ef4444;
+            color: #475569;
         }
         .stat-card.leave .stat-number {
-            color: #f59e0b;
+            color: #2563eb;
         }
         .stat-card.halfday .stat-number {
-            color: #06b6d4;
+            color: #2563eb;
         }
         .stat-card.weekoff .stat-number {
-            color: #8b5cf6;
+            color: #2563eb;
         }
         .stat-card.holiday .stat-number {
             color: #3b82f6;
         }
         .stat-card.total .stat-number {
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         /* Legend */
@@ -326,7 +326,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 12px;
+            font-size: 10px;
             color: #475569;
         }
 
@@ -338,22 +338,22 @@
         }
 
         .legend-dot.present {
-            background: #d1fae5;
+            background: #e3edfe;
         }
         .legend-dot.absent {
-            background: #fee2e2;
+            background: #e2e8f0;
         }
         .legend-dot.leave {
-            background: #fef3c7;
+            background: #bfd3f7;
         }
         .legend-dot.weekoff {
-            background: #ede9fe;
+            background: #e3edfe;
         }
         .legend-dot.holiday {
             background: #dbeafe;
         }
         .legend-dot.halfday {
-            background: #cffafe;
+            background: #e3edfe;
         }
 
         .weekend-header {
@@ -365,12 +365,12 @@
         }
 
         .empty-state {
-            padding: 40px 20px;
+            padding: 28px 14px;
             text-align: center;
         }
 
         .empty-state i {
-            font-size: 48px;
+            font-size: 32px;
             color: #cbd5e1;
         }
 
@@ -378,7 +378,7 @@
         .card-footer {
             background: white;
             border-top: 1px solid #eef2f6;
-            padding: 14px 24px;
+            padding: 10px 17px;
         }
 
         .pagination {
@@ -394,8 +394,8 @@
             border: 1px solid #e2e8f0;
             border-radius: 8px !important;
             color: #475569;
-            font-size: 13px;
-            padding: 8px 14px;
+            font-size: 10.5px;
+            padding: 6px 10px;
             transition: all 0.2s;
             background: white;
             font-weight: 500;
@@ -410,8 +410,8 @@
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: #1e3a8a;
+            border-color: #1e3a8a;
             color: white;
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
@@ -459,7 +459,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Filter Section -->
         <div class="filter-wrapper">
             <form action="{{ route('report.attendance.overall.index') }}" method="GET" id="filterForm">
@@ -541,7 +541,7 @@
             <div class="overall-header d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="mb-0">
-                        <i class="feather-calendar me-2" style="color: #4f46e5;"></i>
+                        <i class="feather-calendar me-2" style="color: #1e3a8a;"></i>
                         Overall Attendance Report - {{ $selectedDate->format('F Y') }}
                     </h6>
                     <small class="text-muted">Total Days: {{ $daysInMonth }}</small>

@@ -2,102 +2,16 @@
 
 @section('style')
 <style>
-    /* ==================== STATS CARDS ==================== */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    .stats-card {
-        background: white;
-        border-radius: 12px;
-        padding: 16px 18px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        border: 1px solid #eef2f6;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        cursor: default;
-    }
-
-    .stats-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.1);
-        border-color: #d1d5db;
-    }
-
-    .stats-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .stats-card:hover::before {
-        opacity: 1;
-    }
-
-    .stats-card.total-card::before { background: linear-gradient(90deg, #4f46e5, #818cf8); }
-    .stats-card.present-card::before { background: linear-gradient(90deg, #10b981, #34d399); }
-    .stats-card.halfday-card::before { background: linear-gradient(90deg, #0e7490, #22d3ee); }
-    .stats-card.checkedin-card::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-    .stats-card.weekoff-card::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-    .stats-card.absent-card::before { background: linear-gradient(90deg, #ef4444, #f87171); }
-    .stats-card.leave-card::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-    .stats-card.holiday-card::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
-
-    .stats-icon-wrapper {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        transition: all 0.3s ease;
-    }
-
-    .stats-card:hover .stats-icon-wrapper {
-        transform: scale(1.05);
-    }
-
-    .total-card .stats-icon-wrapper { background: linear-gradient(135deg, rgba(79,70,229,0.12), rgba(79,70,229,0.05)); }
-    .total-card .stats-icon-wrapper i { color: #4f46e5; font-size: 22px; }
-    .present-card .stats-icon-wrapper { background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.05)); }
-    .present-card .stats-icon-wrapper i { color: #10b981; font-size: 22px; }
-    .halfday-card .stats-icon-wrapper { background: linear-gradient(135deg, rgba(14,116,144,0.12), rgba(14,116,144,0.05)); }
-    .halfday-card .stats-icon-wrapper i { color: #0e7490; font-size: 22px; }
-    .checkedin-card .stats-icon-wrapper { background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05)); }
-    .checkedin-card .stats-icon-wrapper i { color: #f59e0b; font-size: 22px; }
-    .weekoff-card .stats-icon-wrapper { background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(59,130,246,0.05)); }
-    .weekoff-card .stats-icon-wrapper i { color: #3b82f6; font-size: 22px; }
-    .absent-card .stats-icon-wrapper { background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.05)); }
-    .absent-card .stats-icon-wrapper i { color: #ef4444; font-size: 22px; }
-    .leave-card .stats-icon-wrapper { background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05)); }
-    .leave-card .stats-icon-wrapper i { color: #f59e0b; font-size: 22px; }
-    .holiday-card .stats-icon-wrapper { background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(139,92,246,0.05)); }
-    .holiday-card .stats-icon-wrapper i { color: #8b5cf6; font-size: 22px; }
-
-    .stats-content { flex: 1; min-width: 0; }
-    .stats-amount-main { font-size: 24px; font-weight: 700; color: #0f172a; line-height: 1.2; margin-bottom: 2px; }
-    .stats-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
+       are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
     /* ==================== FILTER SECTION ==================== */
     .filter-wrapper {
         background: white;
         border-radius: 12px;
         border: 1px solid #eef2f6;
-        padding: 16px 20px;
-        margin-bottom: 24px;
+        padding: 11px 14px;
+        margin-bottom: 17px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
@@ -105,7 +19,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         flex-wrap: wrap;
         gap: 10px;
     }
@@ -114,16 +28,16 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
+        font-size: 11px;
         font-weight: 600;
         color: #0f172a;
     }
 
     .filter-title i {
-        color: #4f46e5;
-        font-size: 16px;
-        background: #eef2ff;
-        padding: 5px;
+        color: #1e3a8a;
+        font-size: 12px;
+        background: #e3edfe;
+        padding: 4px;
         border-radius: 8px;
     }
 
@@ -144,8 +58,8 @@
 
     .filter-item input, .filter-item select {
         height: 38px;
-        padding: 6px 12px;
-        font-size: 13px;
+        padding: 4px 8px;
+        font-size: 10.5px;
         border: 1.5px solid #e2e8f0;
         border-radius: 8px;
         background: #f8fafc;
@@ -162,7 +76,7 @@
     }
 
     .filter-item input:focus, .filter-item select:focus {
-        border-color: #4f46e5;
+        border-color: #1e3a8a;
         outline: none;
         background: white;
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
@@ -175,7 +89,7 @@
         color: #64748b;
         border: 1.5px solid #e2e8f0;
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 10.5px;
         font-weight: 500;
         display: flex;
         align-items: center;
@@ -193,7 +107,7 @@
     }
 
     .reset-btn i {
-        font-size: 14px;
+        font-size: 11px;
     }
 
     /* ==================== CARD ==================== */
@@ -212,7 +126,7 @@
     .card-header {
         background: white;
         border-bottom: 1px solid #f1f5f9;
-        padding: 14px 20px;
+        padding: 10px 14px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -221,25 +135,25 @@
     }
 
     .card-title {
-        font-size: 15px;
+        font-size: 12px;
         font-weight: 600;
         color: #0f172a;
         margin: 0;
     }
 
     .card-body { padding: 0; }
-    .card-footer { background: white; border-top: 1px solid #f1f5f9; padding: 12px 20px; }
+    .card-footer { background: white; border-top: 1px solid #f1f5f9; padding: 8px 14px; }
 
     /* ==================== TABLE ==================== */
     .table { margin-bottom: 0; }
     .table thead th {
         background: #f8fafc;
         font-weight: 600;
-        font-size: 10px;
+        font-size: 9px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         color: #475569;
-        padding: 10px 12px;
+        padding: 7px 8px;
         white-space: nowrap;
         border-bottom: 2px solid #e2e8f0;
         position: sticky;
@@ -249,8 +163,8 @@
 
     .table tbody td {
         vertical-align: middle;
-        font-size: 12px;
-        padding: 10px 12px;
+        font-size: 10px;
+        padding: 7px 8px;
         border-bottom: 1px solid #f1f5f9;
         color: #1e293b;
     }
@@ -280,13 +194,13 @@
         width: 34px;
         height: 34px;
         border-radius: 8px;
-        background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+        background: linear-gradient(135deg, #e3edfe, #e3edfe);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #4f46e5;
+        color: #1e3a8a;
         font-weight: 600;
-        font-size: 12px;
+        font-size: 10px;
         text-transform: uppercase;
         flex-shrink: 0;
         transition: all 0.3s;
@@ -300,14 +214,14 @@
     .employee-name-text { 
         font-weight: 600; 
         color: #0f172a; 
-        font-size: 13px; 
+        font-size: 10.5px; 
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
     .employee-email-text { 
-        font-size: 11px; 
+        font-size: 9.5px; 
         color: #64748b; 
         white-space: nowrap;
         overflow: hidden;
@@ -316,9 +230,9 @@
 
     /* ==================== BADGES ==================== */
     .badge {
-        padding: 4px 10px;
+        padding: 3px 7px;
         font-weight: 600;
-        font-size: 10px;
+        font-size: 9px;
         border-radius: 16px;
         display: inline-flex;
         align-items: center;
@@ -328,12 +242,12 @@
         transition: all 0.2s;
     }
 
-    .badge-present { background: #d1fae5 !important; color: #065f46; border-color: #a7f3d0; }
-    .badge-halfday { background: #cffafe !important; color: #0e7490; border-color: #67e8f9; }
-    .badge-checked_in_only { background: #fef3c7 !important; color: #92400e; border-color: #fde68a; }
-    .badge-absent { background: #fee2e2 !important; color: #991b1b; border-color: #fecaca; }
-    .badge-on_leave { background: #fef3c7 !important; color: #92400e; border-color: #fde68a; }
-    .badge-holiday { background: #ede9fe !important; color: #5b21b6; border-color: #ddd6fe; }
+    .badge-present { background: #e3edfe !important; color: #1e3a8a; border-color: #93c5fd; }
+    .badge-halfday { background: #e3edfe !important; color: #2563eb; border-color: #93c5fd; }
+    .badge-checked_in_only { background: #bfd3f7 !important; color: #1e3a8a; border-color: #60a5fa; }
+    .badge-absent { background: #e2e8f0 !important; color: #475569; border-color: #cbd5e1; }
+    .badge-on_leave { background: #bfd3f7 !important; color: #1e3a8a; border-color: #60a5fa; }
+    .badge-holiday { background: #e3edfe !important; color: #16295e; border-color: #93c5fd; }
     .badge-week_off { background: #dbeafe !important; color: #1e40af; border-color: #bfdbfe; }
 
     /* ==================== STATUS DOTS ==================== */
@@ -345,12 +259,12 @@
         flex-shrink: 0;
     }
 
-    .status-dot.present { background: #10b981; }
-    .status-dot.halfday { background: #0e7490; }
-    .status-dot.checked_in_only { background: #f59e0b; }
-    .status-dot.absent { background: #ef4444; }
-    .status-dot.on_leave { background: #f59e0b; }
-    .status-dot.holiday { background: #8b5cf6; }
+    .status-dot.present { background: #1e3a8a; }
+    .status-dot.halfday { background: #2563eb; }
+    .status-dot.checked_in_only { background: #2563eb; }
+    .status-dot.absent { background: #475569; }
+    .status-dot.on_leave { background: #2563eb; }
+    .status-dot.holiday { background: #2563eb; }
     .status-dot.week_off { background: #3b82f6; }
 
     /* ==================== ACTION BUTTONS ==================== */
@@ -364,18 +278,18 @@
         justify-content: center;
         transition: all 0.2s;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 11px;
         text-decoration: none;
     }
 
     .action-btn.view-btn {
-        background: #eef2ff;
-        color: #4f46e5;
-        border-color: #c7d2fe;
+        background: #e3edfe;
+        color: #1e3a8a;
+        border-color: #93c5fd;
     }
 
     .action-btn.view-btn:hover {
-        background: #4f46e5;
+        background: #1e3a8a;
         color: white;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
@@ -383,30 +297,30 @@
 
     /* ==================== BADGE INFO ==================== */
     .badge-info-custom {
-        background: #eef2ff !important;
-        color: #4f46e5 !important;
+        background: #e3edfe !important;
+        color: #1e3a8a !important;
         font-weight: 600 !important;
         padding: 4px 12px !important;
         border-radius: 16px !important;
-        border: 1px solid #c7d2fe !important;
-        font-size: 11px !important;
+        border: 1px solid #93c5fd !important;
+        font-size: 9.5px !important;
     }
 
     .badge-success-custom {
-        background: #d1fae5 !important;
-        color: #065f46 !important;
+        background: #e3edfe !important;
+        color: #1e3a8a !important;
         font-weight: 600 !important;
         padding: 4px 12px !important;
         border-radius: 16px !important;
-        border: 1px solid #a7f3d0 !important;
-        font-size: 11px !important;
+        border: 1px solid #93c5fd !important;
+        font-size: 9.5px !important;
     }
 
     /* ==================== EMPTY STATE ==================== */
-    .empty-state { padding: 40px 20px; text-align: center; }
-    .empty-state i { font-size: 56px; color: #d1d5db; margin-bottom: 12px; opacity: 0.5; }
-    .empty-state h4 { color: #0f172a; font-size: 18px; font-weight: 600; margin-bottom: 6px; }
-    .empty-state p { color: #64748b; font-size: 13px; margin-bottom: 0; }
+    .empty-state { padding: 28px 14px; text-align: center; }
+    .empty-state i { font-size: 40px; color: #d1d5db; margin-bottom: 8px; opacity: 0.5; }
+    .empty-state h4 { color: #0f172a; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .empty-state p { color: #64748b; font-size: 10.5px; margin-bottom: 0; }
 
     /* ==================== RESPONSIVE ==================== */
     @media (max-width: 1400px) {
@@ -422,23 +336,18 @@
 
     @media (max-width: 768px) {
         .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .filter-wrapper { padding: 16px; }
+        .filter-wrapper { padding: 11px; }
         .filter-row { flex-direction: column; }
         .filter-item { width: 100%; }
         .filter-header { flex-direction: column; align-items: flex-start; gap: 8px; }
         .reset-btn { width: 100%; justify-content: center; }
         .table-responsive { max-height: 500px; }
-        .table th, .table td { padding: 8px 10px; font-size: 11px; white-space: nowrap; }
+        .table th, .table td { padding: 6px 7px; font-size: 9.5px; white-space: nowrap; }
         .employee-info { min-width: 120px; }
     }
 
     @media (max-width: 480px) {
         .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-        .stats-card { padding: 12px 14px; gap: 10px; }
-        .stats-icon-wrapper { width: 36px; height: 36px; }
-        .stats-icon-wrapper i { font-size: 18px !important; }
-        .stats-amount-main { font-size: 18px; }
-        .stats-label { font-size: 9px; }
     }
 </style>
 @endsection
@@ -465,7 +374,7 @@
     </div>
 </div>
 
-<div class="main-content" style="padding: 30px !important;">
+<div class="main-content" style="padding: 20px !important;">
     <!-- Statistics Cards - All Statuses -->
     <div class="stats-grid">
         <div class="stats-card total-card">
@@ -560,7 +469,7 @@
             <div class="card stretch stretch-full">
                 <div class="card-header">
                     <h5 class="card-title">
-                        <i class="feather-users me-2" style="color: #4f46e5;"></i>
+                        <i class="feather-users me-2" style="color: #1e3a8a;"></i>
                         Employees - {{ $branch->name }}
                         <span class="badge badge-info-custom ms-2">
                             {{ $dateObj->format('d M Y') }}
@@ -680,7 +589,7 @@
                                         </td>
                                         <td>
                                             @if($dailyRecord['total_hours'])
-                                                <span style="font-weight: 600; color: #4f46e5;">
+                                                <span style="font-weight: 600; color: #1e3a8a;">
                                                     {{ number_format((float)$dailyRecord['total_hours'], 2) }} hrs
                                                 </span>
                                             @else
@@ -721,7 +630,7 @@
                                     <i class="feather-calendar me-1"></i>
                                     {{ $dateObj->format('d M Y') }}
                                     @if($dateObj->format('Y-m-d') == now()->format('Y-m-d'))
-                                        <span class="badge badge-success-custom" style="font-size: 9px; padding: 2px 8px; margin-left: 4px;">
+                                        <span class="badge badge-success-custom" style="font-size: 8.5px; padding: 2px 6px; margin-left: 3px;">
                                             <i class="feather-clock me-1"></i> Today
                                         </span>
                                     @endif

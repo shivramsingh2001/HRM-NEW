@@ -17,9 +17,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Services\RbacService;
+use App\Traits\AuthorizesByScope;
 
 class PerformanceController extends Controller
 {
+    use AuthorizesByScope;
+
+
     /**
      * My Performance Dashboard (Employee self-view)
      */
@@ -115,10 +120,8 @@ class PerformanceController extends Controller
         $prevReportingMonth = $prevMonth . '-01';
 
         // Authorization
-        if (!in_array(auth()->user()->role, ['admin', 'hr', 'manager'])) {
-            if (auth()->id() != $employee->id) {
-                abort(403, 'Unauthorized access');
-            }
+        if (!$this->scopeCoversOwner(auth()->user(), 'performance', 'view', $employee->id)) {
+            abort(403, 'Unauthorized access');
         }
 
         // Get KPI scores
@@ -336,8 +339,9 @@ class PerformanceController extends Controller
     {
         $user = auth()->user();
 
-        // Employees cannot access team report
-        if ($user->role == 'employee') {
+        // Employees cannot access team report (requires at least team-level
+        // performance:view — the "own" scope employees hold doesn't qualify)
+        if (!app(RbacService::class)->can($user, 'performance', 'view', 'team')) {
             abort(403, 'You are not authorized to view team reports.');
         }
 
@@ -538,7 +542,7 @@ class PerformanceController extends Controller
         $reportingMonth = $month . '-01';
 
         // Check authorization
-        if (!in_array(auth()->user()->role, ['admin', 'hr', 'manager'])) {
+        if (!app(RbacService::class)->can(auth()->user(), 'performance', 'approve')) {
             abort(403, 'Unauthorized access');
         }
 

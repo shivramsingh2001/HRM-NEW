@@ -18,6 +18,7 @@
 </head>
 
 <body>
+    @includeWhen(session()->has('impersonation'), 'client.layout.impersonation-banner')
     @include('client.layout.sidebar')
     <!--! ================================================================ !-->
     <!--! [Start] Header !-->
@@ -33,7 +34,9 @@
         <div class="nxl-content without-header nxl-full-content">
             <div class="main-content d-flex">
                 <div class="content-area" data-scrollbar-target="#psScrollbarInit">
-                    @yield('content-area')
+                    <div class="content-area-inner">
+                        @yield('content-area')
+                    </div>
                     @include('client.layout.footer')
                 </div>
             </div>

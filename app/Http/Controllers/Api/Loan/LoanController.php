@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use App\Services\RbacService;
+use App\Models\UserJobDetail;
 
 class LoanController extends Controller
 {
@@ -38,7 +40,10 @@ class LoanController extends Controller
         try {
             $query = Loan::query();
             $user = auth()->user();
-            $isAdminOrManager = in_array($user->role, ['admin', 'hr', 'manager', 'employee']);
+            // Was "in_array(role, [admin,hr,manager,employee])" — every
+            // valid role, so this was always true and every user (including
+            // plain employees) saw every tenant's loans unfiltered.
+            $loanScope = app(RbacService::class)->scopeFor($user, 'loans', 'view');
 
             // Filter by tenant
             if ($user && $user->tenant_id) {
@@ -50,13 +55,19 @@ class LoanController extends Controller
                 $query->where('status', $request->status);
             }
 
-            // Filter by user (employees see only their loans)
-            if (!$isAdminOrManager) {
+            // Filter by scope
+            if ($loanScope === 'own') {
                 $query->where('user_id', $user->id);
+            } elseif ($loanScope === 'team') {
+                $teamIds = UserJobDetail::where('reporting_head', $user->id)->pluck('user_id')->toArray();
+                $teamIds[] = $user->id;
+                $query->whereIn('user_id', $teamIds);
+            } elseif ($loanScope === null) {
+                $query->whereRaw('1 = 0');
             }
 
-            // Admin/manager can filter by specific user
-            if ($request->has('user_id') && $request->user_id && $isAdminOrManager) {
+            // Company/team scope can filter by specific user
+            if ($request->has('user_id') && $request->user_id && $loanScope !== 'own') {
                 $query->where('user_id', $request->user_id);
             }
 
@@ -70,7 +81,7 @@ class LoanController extends Controller
             })->toArray();
 
             // Calculate statistics
-            $statistics = $this->getLoanStatistics($isAdminOrManager, $user, $request);
+            $statistics = $this->getLoanStatistics($loanScope, $user, $request);
 
             return response()->json([
                 'success' => true,
@@ -107,17 +118,22 @@ class LoanController extends Controller
     /**
      * Get loan statistics based on user role
      */
-    private function getLoanStatistics($isAdminOrManager, $user, $request)
+    private function getLoanStatistics($loanScope, $user, $request)
     {
         $query = Loan::query();
 
-        // Apply user filter for non-admin
-        if (!$isAdminOrManager) {
+        if ($loanScope === 'own') {
             $query->where('user_id', $user->id);
+        } elseif ($loanScope === 'team') {
+            $teamIds = UserJobDetail::where('reporting_head', $user->id)->pluck('user_id')->toArray();
+            $teamIds[] = $user->id;
+            $query->whereIn('user_id', $teamIds);
+        } elseif ($loanScope === null) {
+            $query->whereRaw('1 = 0');
         }
 
         // Apply same filters as main query for stats
-        if ($request->has('user_id') && $request->user_id && $isAdminOrManager) {
+        if ($request->has('user_id') && $request->user_id && $loanScope !== 'own') {
             $query->where('user_id', $request->user_id);
         }
 
@@ -177,8 +193,8 @@ class LoanController extends Controller
     {
         try {
             $user = auth()->user();
-            $isAdminOrManager = in_array($user->role, ['admin', 'hr', 'manager', 'employee']);
-            $statistics = $this->getLoanStatistics($isAdminOrManager, $user, $request);
+            $loanScope = app(RbacService::class)->scopeFor($user, 'loans', 'view');
+            $statistics = $this->getLoanStatistics($loanScope, $user, $request);
 
             return response()->json([
                 'success' => true,

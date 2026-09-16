@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\LoginAttemptService;
+use App\Services\AuthAuditService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +15,12 @@ use Illuminate\Support\Facades\DB;// <-- ADD THIS LINE
 
 class AuthController extends Controller
 {
+    public function __construct(
+        protected LoginAttemptService $loginAttempts,
+        protected AuthAuditService $audit
+    ) {
+    }
+
     public function index(Request $request)
     {
         return view('client.auth.login');
@@ -20,13 +28,13 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        
+
         try {
             $request->validate([
                 'employee_id' => 'required|string',
                 'password' => 'required|string',
             ]);
-    
+
             // Get tenant_id from session
             $tenantId = session('tenant_id');
 
@@ -35,31 +43,58 @@ class AuthController extends Controller
                     ->withErrors(['error' => 'Company not identified. Please use company subdomain.'])
                     ->withInput();
             }
-    
+
+            // Platform-level gate: a tenant suspended / pending-deletion from the
+            // Super Admin Panel cannot log any user in.
+            $tenantRow = \App\Models\Tenant::find($tenantId);
+            if ($tenantRow && !in_array($tenantRow->status, ['active', 'trial'], true)) {
+                return back()
+                    ->withErrors(['error' => 'This workspace is currently unavailable. Please contact support.'])
+                    ->withInput();
+            }
+
+            // Consecutive-failure lockout — scoped per tenant+employee_id
+            // since employee_id alone isn't unique across tenants.
+            $lockoutKey = 'web:' . $tenantId . ':' . $request->employee_id;
+            if ($this->loginAttempts->isLockedOut($lockoutKey)) {
+                return back()
+                    ->withErrors(['error' => $this->loginAttempts->lockoutMessage($lockoutKey)])
+                    ->withInput();
+            }
+
             // Check if user exists first (optional but good for debugging)
             $user = User::withoutGlobalScope('tenant')
             ->where('employee_id', $request->employee_id)
             ->where('tenant_id', $tenantId)
             ->first();
-            
+
             if (!$user) {
+                $this->loginAttempts->recordFailure($lockoutKey);
+                $this->audit->logLoginFailed($tenantId, $request->employee_id);
+
                 return back()
                     ->withErrors(['error' => 'Employee ID does not exist in this company.'])
                     ->withInput();
             }
-   
+
             if (!Hash::check($request->password, $user->password)) {
+                $this->loginAttempts->recordFailure($lockoutKey);
+                $this->audit->logLoginFailed($tenantId, $request->employee_id);
+
                 return back()
                     ->withErrors(['error' => 'Password not matched.'])
                     ->withInput();
             }
-  
+
             if ($user->status != 1) {
                 return back()
                     ->withErrors(['error' => 'Your account is inactive. Please contact administrator.'])
                     ->withInput();
             }
-  
+
+            $this->loginAttempts->clear($lockoutKey);
+            $this->audit->logLoginSuccess($user->id, $user->tenant_id);
+
             // All checks passed, log the user in manually
             Auth::login($user, $request->boolean('remember'));
             

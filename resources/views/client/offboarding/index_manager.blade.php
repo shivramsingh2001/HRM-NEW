@@ -626,7 +626,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
 
         <!-- Statistics Cards -->
         {{-- <div class="stats-grid">

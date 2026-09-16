@@ -21,3 +21,11 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Local database files -- never version data
+/database/database.sqlite
+*.sqlite
+
+# User-uploaded content -- already present in earlier git history (kept as-is);
+# excluded going forward so new uploads don't keep growing the repo.
+/public/uploads

@@ -2,31 +2,31 @@
 
 @section('style')
 <style>
-    /* ==================== CARD STYLES ==================== */
+    /* ==================== CARD STYLES — all-blue theme, compact spacing ==================== */
     .announcement-card {
         background: white;
-        border-radius: 16px;
-        border: 1px solid #edf2f7;
-        transition: all 0.3s ease;
+        border-radius: 12px;
+        border: 1px solid #eaeef5;
+        transition: all 0.2s ease;
         height: 100%;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
 
     .announcement-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
-        border-color: #cbd5e1;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 18px -6px rgba(30, 50, 110, .14);
+        border-color: #dfe5f0;
     }
 
     .announcement-image-wrapper {
         position: relative;
         width: 100%;
-        height: 200px;
+        height: 140px;
         overflow: hidden;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
     }
 
     .announcement-image {
@@ -42,40 +42,55 @@
 
     .announcement-badge {
         position: absolute;
-        top: 15px;
-        right: 15px;
-        padding: 6px 12px;
+        top: 8px;
+        right: 8px;
+        padding: 3px 9px;
         border-radius: 30px;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.3px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        font-size: 9.5px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         z-index: 2;
     }
 
     .badge-active {
-        background: #10b981;
+        background: #3b82f6;
         color: white;
     }
 
     .badge-inactive {
-        background: #ef4444;
+        background: #1e3a8a;
         color: white;
     }
 
+    .expire-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        padding: 3px 9px;
+        border-radius: 30px;
+        font-size: 9.5px;
+        font-weight: 700;
+        background: rgba(255, 255, 255, .92);
+        color: #1e3a8a;
+        z-index: 2;
+    }
+
+    .expire-badge.expired { background: #1e3a8a; color: #fff; }
+
     .announcement-content {
-        padding: 20px;
+        padding: 12px 14px;
         flex: 1;
         display: flex;
         flex-direction: column;
     }
 
     .announcement-title {
-        font-size: 18px;
+        font-size: 13px;
         font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 12px;
-        line-height: 1.4;
+        color: #1a2236;
+        margin-bottom: 6px;
+        line-height: 1.35;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -85,47 +100,54 @@
     .announcement-meta {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin-bottom: 15px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #f1f5f9;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #eaeef5;
     }
 
     .user-avatar {
-        width: 40px;
-        height: 40px;
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        background: linear-gradient(135deg, #1e3a8a, #2563eb);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-weight: 600;
-        font-size: 14px;
+        font-weight: 700;
+        font-size: 10.5px;
         flex-shrink: 0;
     }
 
     .user-info {
         flex: 1;
+        min-width: 0;
     }
 
     .user-name {
         font-weight: 600;
-        color: #1e293b;
-        font-size: 14px;
-        margin-bottom: 2px;
+        color: #1a2236;
+        font-size: 11px;
+        margin-bottom: 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .user-email {
-        font-size: 11px;
-        color: #64748b;
+        font-size: 9.5px;
+        color: #6b7385;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .announcement-description {
         color: #475569;
-        font-size: 13px;
-        line-height: 1.6;
-        margin-bottom: 20px;
+        font-size: 11px;
+        line-height: 1.5;
+        margin-bottom: 10px;
         flex: 1;
         display: -webkit-box;
         -webkit-line-clamp: 3;
@@ -137,51 +159,51 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding-top: 15px;
-        border-top: 1px solid #f1f5f9;
+        padding-top: 8px;
+        border-top: 1px solid #eaeef5;
         margin-top: auto;
     }
 
     .file-attachment {
         display: flex;
         align-items: center;
-        gap: 6px;
-        background: #f8fafc;
-        padding: 6px 12px;
+        gap: 4px;
+        background: #f4f6fb;
+        padding: 3px 9px;
         border-radius: 30px;
-        font-size: 11px;
+        font-size: 9.5px;
         color: #475569;
         transition: all 0.2s;
         text-decoration: none;
     }
 
     .file-attachment:hover {
-        background: #eef2ff;
-        color: #4f46e5;
+        background: #e3edfe;
+        color: #1e3a8a;
     }
 
     .file-attachment i {
-        font-size: 14px;
+        font-size: 12px;
     }
 
     .acknowledge-badge {
         display: flex;
         align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        font-weight: 500;
-        padding: 4px 10px;
+        gap: 3px;
+        font-size: 9.5px;
+        font-weight: 600;
+        padding: 3px 8px;
         border-radius: 30px;
     }
 
     .acknowledge-badge.required {
         background: #dbeafe;
-        color: #1e40af;
+        color: #1e3a8a;
     }
 
     .acknowledge-badge.not-required {
-        background: #f1f5f9;
-        color: #475569;
+        background: #eef1f7;
+        color: #6b7385;
     }
 
     .action-dropdown {
@@ -189,271 +211,273 @@
     }
 
     .action-btn {
-        width: 36px;
-        height: 36px;
+        width: 26px;
+        height: 26px;
         border-radius: 50%;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: #f4f6fb;
+        border: 1px solid #eaeef5;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #64748b;
+        color: #6b7385;
         transition: all 0.2s;
         cursor: pointer;
     }
 
     .action-btn:hover {
-        background: #4f46e5;
+        background: #1e3a8a;
         color: white;
-        border-color: #4f46e5;
+        border-color: #1e3a8a;
     }
 
     .dropdown-menu {
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        padding: 8px;
-        min-width: 180px;
+        border: 1px solid #eaeef5;
+        border-radius: 10px;
+        box-shadow: 0 8px 20px -5px rgba(20, 30, 60, .12);
+        padding: 6px;
+        min-width: 160px;
     }
 
     .dropdown-item {
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 13px;
-        color: #1e293b;
+        padding: 6px 12px;
+        border-radius: 7px;
+        font-size: 11.5px;
+        color: #1a2236;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         transition: all 0.2s;
     }
 
     .dropdown-item:hover {
-        background: #f1f5f9;
+        background: #f4f6fb;
     }
 
     .dropdown-item i {
-        font-size: 16px;
-        color: #64748b;
+        font-size: 14px;
+        color: #6b7385;
     }
 
     .dropdown-item:hover i {
-        color: #4f46e5;
+        color: #1e3a8a;
     }
 
     .dropdown-divider {
-        margin: 8px 0;
-        border-color: #e2e8f0;
+        margin: 6px 0;
+        border-color: #eaeef5;
     }
 
     /* ==================== FILTER SECTION ==================== */
     .filter-wrapper {
         background: white;
-        border-radius: 16px;
-        border: 1px solid #edf2f7;
-        padding: 20px;
-        margin-bottom: 30px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        border-radius: 12px;
+        border: 1px solid #eaeef5;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
 
     .filter-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
 
     .filter-title {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 15px;
+        gap: 6px;
+        font-size: 12.5px;
         font-weight: 600;
-        color: #1e293b;
+        color: #1a2236;
     }
 
     .filter-title i {
-        color: #4f46e5;
-        font-size: 18px;
+        color: #1e3a8a;
+        font-size: 15px;
     }
 
     .filter-select {
-        width: 200px;
-        height: 40px;
-        padding: 8px 16px;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        font-size: 13px;
-        color: #1e293b;
-        background: #f8fafc;
+        width: 180px;
+        height: 32px;
+        padding: 4px 12px;
+        border: 1px solid #dfe5f0;
+        border-radius: 8px;
+        font-size: 11.5px;
+        color: #1a2236;
+        background: #f4f6fb;
         cursor: pointer;
         transition: all 0.2s;
     }
 
     .filter-select:hover {
         background: white;
-        border-color: #4f46e5;
+        border-color: #1e3a8a;
     }
 
     .filter-select:focus {
         outline: none;
-        border-color: #4f46e5;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        border-color: #1e3a8a;
+        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
     }
 
     .reset-btn {
-        height: 40px;
-        padding: 0 20px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        color: #64748b;
-        font-size: 13px;
-        font-weight: 500;
+        height: 32px;
+        padding: 0 14px;
+        background: #f4f6fb;
+        border: 1px solid #dfe5f0;
+        border-radius: 8px;
+        color: #6b7385;
+        font-size: 11.5px;
+        font-weight: 600;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
         text-decoration: none;
         transition: all 0.2s;
     }
 
     .reset-btn:hover {
         background: white;
-        border-color: #4f46e5;
-        color: #4f46e5;
+        border-color: #1e3a8a;
+        color: #1e3a8a;
     }
 
     /* ==================== STATS CARDS ==================== */
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: .75rem;
+        margin-bottom: 1rem;
     }
 
     .stats-card {
         background: white;
-        border: 1px solid #edf2f7;
-        border-radius: 16px;
-        padding: 20px;
+        border: 1px solid #eaeef5;
+        border-radius: 10px;
+        padding: 12px 14px;
         display: flex;
         align-items: center;
         transition: all 0.2s;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
 
     .stats-card:hover {
-        box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
-        border-color: #cbd5e1;
-        transform: translateY(-2px);
+        box-shadow: 0 4px 12px -4px rgba(30, 50, 110, .12);
+        border-color: #dfe5f0;
+        transform: translateY(-1px);
     }
 
     .stats-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-right: 16px;
+        margin-right: 10px;
+        background: #e3edfe;
     }
 
     .stats-icon i {
-        font-size: 26px;
+        font-size: 15px;
+        color: #1e3a8a;
     }
 
     .stats-info h3 {
-        font-size: 26px;
+        font-size: 17px;
         font-weight: 700;
-        margin: 0 0 4px 0;
-        color: #1e293b;
+        margin: 0 0 2px 0;
+        color: #1a2236;
         line-height: 1.2;
     }
 
     .stats-info p {
-        font-size: 13px;
-        color: #64748b;
+        font-size: 11px;
+        color: #6b7385;
         margin: 0;
     }
 
     /* ==================== CARD GRID ==================== */
     .cards-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: .85rem;
+        margin-bottom: 1rem;
     }
 
     /* ==================== PAGINATION ==================== */
     .pagination {
         margin: 0;
-        gap: 6px;
+        gap: 4px;
         justify-content: center;
     }
 
     .page-link {
         border: 1px solid #e2e8f0;
         color: #475569;
-        font-size: 13px;
-        padding: 8px 14px;
-        border-radius: 10px !important;
+        font-size: 11px;
+        padding: 5px 11px;
+        border-radius: 8px !important;
         transition: all 0.2s;
         background: white;
     }
 
     .page-link:hover {
-        background: #f8fafc;
+        background: #f4f6fb;
         border-color: #94a3b8;
-        color: #1e293b;
+        color: #1a2236;
         transform: translateY(-1px);
     }
 
     .page-item.active .page-link {
-        background: #4f46e5;
-        border-color: #4f46e5;
+        background: #1e3a8a;
+        border-color: #1e3a8a;
     }
 
     .page-item.disabled .page-link {
-        background: #f8fafc;
+        background: #f4f6fb;
         color: #94a3b8;
     }
 
     .pagination-info {
-        color: #64748b;
-        font-size: 13px;
+        color: #6b7385;
+        font-size: 11px;
     }
 
     /* ==================== EMPTY STATE ==================== */
     .empty-state {
-        padding: 60px 24px;
+        padding: 36px 20px;
         text-align: center;
-        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-        border-radius: 24px;
+        background: linear-gradient(145deg, #ffffff 0%, #f4f6fb 100%);
+        border-radius: 14px;
         /* margin: 24px; */
     }
 
     .empty-state i {
-        font-size: 80px;
-        color: #cbd5e1;
-        margin-bottom: 20px;
+        font-size: 48px;
+        color: #93c5fd;
+        margin-bottom: 12px;
     }
 
     .empty-state h4 {
-        color: #334155;
-        font-size: 20px;
+        color: #1a2236;
+        font-size: 14px;
         font-weight: 600;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
     }
 
     .empty-state p {
-        color: #64748b;
-        font-size: 14px;
-        margin-bottom: 24px;
+        color: #6b7385;
+        font-size: 11.5px;
+        margin-bottom: 14px;
     }
 
     .empty-state .btn {
-        padding: 10px 24px;
-        border-radius: 12px;
-        font-size: 14px;
+        padding: 6px 16px;
+        border-radius: 8px;
+        font-size: 11.5px;
         font-weight: 500;
     }
 
@@ -462,15 +486,23 @@
         .cards-grid {
             grid-template-columns: 1fr;
         }
-        
+
         .filter-select {
             width: 100%;
         }
-        
+
         .stats-grid {
             grid-template-columns: 1fr;
         }
     }
+
+    /* ==================== COMPACT MODAL (Edit) — core chrome
+       (max-width/header/body/card/row/label/btn) is centralized in
+       client.layout.head; only this page's own extras stay here. ==================== */
+    .compact-modal .modal-header .fs-14 { font-size: 13px !important; }
+    .compact-modal .form-group { margin-bottom: 0; }
+    .compact-modal .form-control,
+    .compact-modal .form-check-label { font-size: 11.5px; }
 </style>
 @endsection
 
@@ -560,6 +592,13 @@ $role = $user->role;
                             <i class="feather-{{ $announcement->status == 1 ? 'check-circle' : 'x-circle' }} me-1"></i>
                             {{ $announcement->status == 1 ? 'Active' : 'Inactive' }}
                         </span>
+
+                        @if($announcement->expire_date)
+                            @php $isExpired = \Carbon\Carbon::parse($announcement->expire_date)->lt(now()->startOfDay()); @endphp
+                            <span class="expire-badge {{ $isExpired ? 'expired' : '' }}">
+                                {{ $isExpired ? 'Expired' : 'Expires' }} {{ \Carbon\Carbon::parse($announcement->expire_date)->format('d M Y') }}
+                            </span>
+                        @endif
                     </div>
                     
                     <div class="announcement-content">
@@ -610,7 +649,8 @@ $role = $user->role;
                                            data-image="{{ $announcement->image }}"
                                            data-file="{{ $announcement->file }}"
                                            data-acknowledge="{{ $announcement->acknowledge }}"
-                                           data-status="{{ $announcement->status }}">
+                                           data-status="{{ $announcement->status }}"
+                                           data-expire-date="{{ $announcement->expire_date ? \Carbon\Carbon::parse($announcement->expire_date)->format('Y-m-d') : '' }}">
                                             <i class="feather-edit-3"></i>
                                             <span>Edit</span>
                                         </a>
@@ -648,7 +688,119 @@ $role = $user->role;
 @endsection
 
 @section('create-modal')
-  
+    <!-- Edit Announcement Modal -->
+    <div class="modal fade-scale" id="editAnnouncementModal" tabindex="-1" aria-labelledby="editAnnouncementModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="d-flex flex-column mb-0">
+                        <span class="fs-14 fw-bold mb-1">Edit Announcement</span>
+                    </h2>
+                    <a href="#" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
+                        <i class="feather-x text-danger"></i>
+                    </a>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="card m-0">
+                        <div class="card-body">
+                            <form id="editAnnouncementForm" enctype="multipart/form-data">
+                                @csrf
+                                @method('PUT')
+                                <div id="editFormError" class="alert alert-danger d-none"></div>
+
+                                <input type="hidden" name="id" id="edit_id">
+
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_title">Title *</label>
+                                            <input type="text" class="form-control" name="title" required
+                                                id="edit_title" placeholder="Enter announcement title">
+                                            <small class="text-danger error-text edit_title_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_image">Image (Max: 2MB)</label>
+                                            <input type="file" class="form-control" name="image"
+                                                id="edit_image" accept="image/*">
+                                            <small class="text-danger error-text edit_image_error"></small>
+                                            <div id="editImagePreviewContainer" class="mt-2">
+                                                <img id="editImagePreview" class="image-preview" src="#" alt="Preview" style="display: none; width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
+                                            </div>
+                                            <div id="currentImage" class="small text-muted mt-1"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_file">Attachment (Max: 5MB)</label>
+                                            <input type="file" class="form-control" name="file"
+                                                id="edit_file" accept=".pdf,.doc,.docx,.txt">
+                                            <small class="text-danger error-text edit_file_error"></small>
+                                            <div id="currentFile" class="small text-muted mt-1"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_description">Description</label>
+                                            <textarea class="form-control" name="description" id="edit_description" rows="2"
+                                                placeholder="Enter announcement description..."></textarea>
+                                            <small class="text-danger error-text edit_description_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="acknowledge"
+                                                id="edit_acknowledge" value="1">
+                                            <label class="form-check-label" for="edit_acknowledge">
+                                                Require acknowledgment from employees
+                                            </label>
+                                            <small class="text-danger error-text edit_acknowledge_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_expire_date">Expires On (optional)</label>
+                                            <input type="date" class="form-control" name="expire_date" id="edit_expire_date">
+                                            <small class="text-danger error-text edit_expire_date_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_status">Status *</label>
+                                            <select class="form-control" name="status" id="edit_status" required>
+                                                <option value="1">Active</option>
+                                                <option value="0">Inactive</option>
+                                            </select>
+                                            <small class="text-danger error-text edit_status_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="feather-save me-2"></i>Update
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <a href="#" class="btn btn-modal-cancel float-end"
+                                            data-bs-dismiss="modal">
+                                            <i class="feather-x me-2"></i>Cancel
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script-area')
@@ -687,13 +839,15 @@ $role = $user->role;
                 const file = $(this).data('file');
                 const acknowledge = $(this).data('acknowledge');
                 const status = $(this).data('status');
+                const expireDate = $(this).data('expire-date');
 
                 // Populate the edit form
                 $('#edit_id').val(id);
                 $('#edit_title').val(title);
                 $('#edit_description').val(description);
                 $('#edit_status').val(status);
-                
+                $('#edit_expire_date').val(expireDate || '');
+
                 // Set acknowledge checkbox
                 if (acknowledge == 1) {
                     $('#edit_acknowledge').prop('checked', true);

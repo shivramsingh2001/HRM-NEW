@@ -17,18 +17,20 @@ use App\Models\Designation;
 use App\Models\ProjectAssign;
 use App\Models\Expense;
 use App\Models\ExpenseType;
-use App\Models\UserShift;
 use App\Models\UserWeekoffs;
 use App\Models\Shift;
 use App\Models\UserBasicDetail;
 use App\Models\UserBankDetail;
 use App\Models\UserExpenseBalance;
 use App\Models\UserJobDetail;
+use App\Models\MonthlyPayroll;
+use App\Models\LoanRepayment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\UserLocation;
+use App\Services\RbacService;
 
 class DashboardController extends Controller
 {
@@ -99,6 +101,7 @@ class DashboardController extends Controller
                 'users.email as user_email'
             )
             ->where('announcements.status', 1)
+            ->notExpired()
             ->orderBy('announcements.created_at', 'desc')
             ->limit(5)
             ->get();
@@ -167,6 +170,17 @@ class DashboardController extends Controller
 
         // Least Tasks Assigned Employees (Top 3)
         $leastTasksEmployees = $this->getLeastTasksEmployees();
+
+        // Top 5 performers (attendance regularity) for the selected/current month
+        $selectedPerformanceMonth = request('performance_month') ?: Carbon::now()->format('Y-m');
+        $topPerformers = $this->getTopPerformers($selectedPerformanceMonth);
+        $performanceMonthOptions = $this->getPerformanceMonthOptions();
+
+        // Company overview trend (last 6 months): expense, payroll, headcount, attendance rate, tasks completed
+        $companyOverviewTrend = $this->getCompanyOverviewTrend(6);
+
+        // Holiday dates for the attendance calendar (flat "Y-m-d" => name map)
+        $calendarHolidays = $this->getCalendarHolidays();
 
         // Working days this month
         $workingDays = $this->getWorkingDaysThisMonth();
@@ -299,6 +313,11 @@ class DashboardController extends Controller
             'most_regularization_requests' => $mostRegularizationRequests,
             'monthly_regularization_stats' => $monthlyRegularizationStats,
             'todays_regularization_requests' => $todaysRegularizationRequests,
+            'top_performers' => $topPerformers,
+            'performance_month_options' => $performanceMonthOptions,
+            'selected_performance_month' => $selectedPerformanceMonth,
+            'company_overview_trend' => $companyOverviewTrend,
+            'calendar_holidays' => $calendarHolidays,
         ]);
 
         return view('client.dashboard.admin', $data);
@@ -567,12 +586,10 @@ class DashboardController extends Controller
             ->whereDate('date', $today)
             ->first();
 
-        // Today's shift
-        $todayShift = UserShift::leftJoin('shifts', 'user_shifts.shift_id', '=', 'shifts.id')
-            ->where('user_shifts.user_id', $user->id)
-            ->whereDate('user_shifts.date', $today)
-            ->select('shifts.*')
-            ->first();
+        // Today's shift — honours the tenant's custom-shifts toggle (fixed
+        // company shift when off, per-date assignment when on).
+        $todayShift = app(\App\Services\Attendance\TenantShiftResolver::class)
+            ->forUserDate((int) $user->id, (int) $user->tenant_id, $today->format('Y-m-d'));
 
         // ============ LEAVE BALANCE ============
         $leaveBalance = LeaveBalance::where('user_id', $user->id)
@@ -627,6 +644,7 @@ class DashboardController extends Controller
                 'users.email as user_email'
             )
             ->where('announcements.status', 1)
+            ->notExpired()
             ->orderBy('announcements.created_at', 'desc')
             ->limit(3)
             ->get();
@@ -1199,8 +1217,8 @@ class DashboardController extends Controller
                 'user_job_details.reporting_head'
             );
 
-        // Role-based access
-        if (!in_array($authUser->role, ['admin', 'hr'])) {
+        // Permission-based access
+        if (app(RbacService::class)->scopeFor($authUser, 'expenses', 'view') !== 'company') {
             $expenseQuery->where(function ($q) use ($authUser, $userId) {
                 $q->where('expenses.user_id', $userId)
                     ->orWhere('user_job_details.reporting_head', $authUser->id);
@@ -1303,7 +1321,7 @@ class DashboardController extends Controller
         $employeesQuery = User::where('status', 1)
             ->with(['jobDetails']);
 
-        if (!in_array($authUser->role, ['admin', 'hr'])) {
+        if (app(RbacService::class)->scopeFor($authUser, 'expenses', 'view') !== 'company') {
             $employeesQuery->where(function ($q) use ($authUser, $userId) {
                 $q->whereHas('jobDetails', function ($query) use ($authUser) {
                     $query->where('reporting_head', $authUser->id);
@@ -1411,6 +1429,129 @@ class DashboardController extends Controller
             ->get();
     }
 
+    /**
+     * Top 5 performers for a given month, ranked by attendance regularity.
+     * $month expects 'Y-m' (e.g. '2026-09'); defaults to the current month.
+     */
+    private function getTopPerformers($month = null)
+    {
+        $monthDate = $month ? Carbon::createFromFormat('Y-m', $month)->startOfMonth() : Carbon::now();
+        $workingDays = max(1, $this->getWorkingDaysThisMonth($monthDate));
+
+        $employees = User::leftJoin('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
+            ->leftJoin('attendances', function ($join) use ($monthDate) {
+                $join->on('users.id', '=', 'attendances.user_id')
+                    ->whereMonth('attendances.date', $monthDate->month)
+                    ->whereYear('attendances.date', $monthDate->year)
+                    ->whereNotNull('attendances.clock_in');
+            })
+            ->select(
+                'users.id',
+                'users.name',
+                'users.employee_id',
+                'user_basic_details.profile_image',
+                DB::raw('COUNT(DISTINCT attendances.id) as present_days')
+            )
+            ->where('users.status', 1)
+            ->where('users.role', '!=', 'admin')
+            ->groupBy('users.id', 'users.name', 'users.employee_id', 'user_basic_details.profile_image')
+            ->orderBy('present_days', 'desc')
+            ->limit(5)
+            ->get();
+
+        return $employees->map(function ($employee) use ($workingDays) {
+            $employee->performance_percentage = min(100, round(($employee->present_days / $workingDays) * 100));
+            return $employee;
+        });
+    }
+
+    /**
+     * Last 6 months (including current) for the performance month filter dropdown.
+     */
+    private function getPerformanceMonthOptions()
+    {
+        return collect(range(0, 5))->map(function ($i) {
+            $date = Carbon::now()->subMonths($i);
+            return ['value' => $date->format('Y-m'), 'label' => $date->format('M Y')];
+        });
+    }
+
+    /**
+     * Company overview trend for the last $months months: monthly expense,
+     * monthly payroll cost, cumulative headcount, attendance rate %, and
+     * tasks completed. Used by the "Company Overview Trend" chart.
+     */
+    private function getCompanyOverviewTrend($months = 6)
+    {
+        $monthDates = collect(range($months - 1, 0))->map(function ($i) {
+            return Carbon::now()->subMonths($i)->startOfMonth();
+        })->values();
+
+        $monthKeys = $monthDates->map(fn ($m) => $m->format('Y-m'));
+        $labels = $monthDates->map(fn ($m) => $m->format('M Y'));
+
+        $rangeStart = $monthDates->first()->copy()->startOfMonth();
+        $rangeEnd = $monthDates->last()->copy()->endOfMonth();
+
+        $expenseByMonth = Expense::whereBetween('date', [$rangeStart->format('Y-m-d'), $rangeEnd->format('Y-m-d')])
+            ->whereIn('status', ['approved', 'complete'])
+            ->selectRaw("DATE_FORMAT(date, '%Y-%m') as ym, SUM(amount) as total")
+            ->groupBy('ym')
+            ->pluck('total', 'ym');
+
+        $payrollByMonth = MonthlyPayroll::whereIn('payroll_month', $monthKeys->all())
+            ->selectRaw('payroll_month, SUM(net_payable) as total')
+            ->groupBy('payroll_month')
+            ->pluck('total', 'payroll_month');
+
+        // Loan repayments / other money-related transactions collected that month
+        $loanByMonth = LoanRepayment::whereIn('salary_month', $monthKeys->all())
+            ->selectRaw('salary_month, SUM(paid_amount) as total')
+            ->groupBy('salary_month')
+            ->pluck('total', 'salary_month');
+
+        $expense = [];
+        $payroll = [];
+        $loanOther = [];
+
+        foreach ($monthDates as $monthDate) {
+            $key = $monthDate->format('Y-m');
+
+            $expense[] = round((float) ($expenseByMonth[$key] ?? 0), 2);
+            $payroll[] = round((float) ($payrollByMonth[$key] ?? 0), 2);
+            $loanOther[] = round((float) ($loanByMonth[$key] ?? 0), 2);
+        }
+
+        return [
+            'labels' => $labels->all(),
+            'expense' => $expense,
+            'payroll' => $payroll,
+            'loan_other' => $loanOther,
+        ];
+    }
+
+    /**
+     * Flat "Y-m-d" => holiday name map, used to highlight holiday dates
+     * in the attendance calendar regardless of which month is displayed.
+     */
+    private function getCalendarHolidays()
+    {
+        $holidays = Holiday::where('status', 1)->get(['name', 'start_date', 'end_date']);
+        $map = [];
+
+        foreach ($holidays as $holiday) {
+            $current = Carbon::parse($holiday->start_date);
+            $end = Carbon::parse($holiday->end_date ?? $holiday->start_date);
+
+            while ($current->lte($end)) {
+                $map[$current->format('Y-m-d')] = $holiday->name;
+                $current->addDay();
+            }
+        }
+
+        return $map;
+    }
+
     private function getLeastTasksEmployees()
     {
         return User::leftJoin('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
@@ -1444,11 +1585,11 @@ class DashboardController extends Controller
             ->get();
     }
 
-    private function getWorkingDaysThisMonth()
+    private function getWorkingDaysThisMonth($monthDate = null)
     {
-        $today = Carbon::today();
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
+        $monthDate = $monthDate ? $monthDate->copy() : Carbon::now();
+        $startOfMonth = $monthDate->copy()->startOfMonth();
+        $endOfMonth = $monthDate->copy()->endOfMonth();
 
         $holidays = Holiday::whereBetween('start_date', [$startOfMonth, $endOfMonth])
             ->where('status', 1)

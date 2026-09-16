@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\RbacService;
 
 class LeaveController extends Controller
 {
@@ -22,7 +23,7 @@ class LeaveController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = env('APP_URL');
+            $baseUrl = config('app.url');
             $currentYear = date('Y');
 
             // Base query for leaves
@@ -59,23 +60,22 @@ class LeaveController extends Controller
                 ")
                 );
 
-            // Role-based filtering
-            switch ($authUser->role) {
-                case 'admin':
-                case 'hr':
-                    // Admin/HR: See all leaves
+            // Permission-based filtering (was a fixed role switch that
+            // silently locked out any custom role holding a real
+            // leave:view grant).
+            $leaveScope = app(RbacService::class)->scopeFor($authUser, 'leave', 'view');
+            switch ($leaveScope) {
+                case 'company':
                     break;
 
-                case 'manager':
-                    // Manager: See team members' leaves + their own leaves
+                case 'team':
                     $query->where(function ($q) use ($authUser) {
                         $q->where('user_job_details.reporting_head', $authUser->id)
                             ->orWhere('leaves.user_id', $authUser->id);
                     });
                     break;
 
-                case 'employee':
-                    // Employee: See only their own leaves
+                case 'own':
                     $query->where('leaves.user_id', $authUser->id);
                     break;
 
@@ -117,18 +117,18 @@ class LeaveController extends Controller
             // Get all user IDs from leaves
             $userIds = $leaves->pluck('user_id')->unique()->toArray();
 
-            // If no leaves found but we need to show balances, get all users based on role
-            if (empty($userIds) && in_array($authUser->role, ['admin', 'hr'])) {
+            // If no leaves found but we need to show balances, get all users based on scope
+            if (empty($userIds) && $leaveScope === 'company') {
                 $users = User::where('status', 1)->pluck('id')->toArray();
                 $userIds = $users;
-            } elseif (empty($userIds) && $authUser->role === 'manager') {
+            } elseif (empty($userIds) && $leaveScope === 'team') {
                 // Get manager's team + self
                 $teamIds = UserJobDetail::where('reporting_head', $authUser->id)
                     ->pluck('user_id')
                     ->toArray();
                 $teamIds[] = $authUser->id;
                 $userIds = $teamIds;
-            } elseif (empty($userIds) && $authUser->role === 'employee') {
+            } elseif (empty($userIds) && $leaveScope === 'own') {
                 $userIds = [$authUser->id];
             }
 

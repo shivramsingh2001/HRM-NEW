@@ -5,37 +5,37 @@
     <style>
         /* ==================== ALERT CARDS ==================== */
         .alert-card {
-            padding: 20px 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
             display: flex;
             align-items: flex-start;
-            gap: 16px;
+            gap: 10px;
             border: none;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
 
         .alert-card.warning {
-            background: linear-gradient(135deg, #fffbeb, #fef3c7);
-            border-left: 4px solid #f59e0b;
+            background: linear-gradient(135deg, #eef3fd, #bfd3f7);
+            border-left: 3px solid #1e3a8a;
         }
 
         .alert-card.info {
-            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-            border-left: 4px solid #10b981;
+            background: linear-gradient(135deg, #f7faff, #e3edfe);
+            border-left: 3px solid #2563eb;
         }
 
         .alert-card i {
-            font-size: 24px;
+            font-size: 16px;
             flex-shrink: 0;
         }
 
         .alert-card.warning i {
-            color: #f59e0b;
+            color: #1e3a8a;
         }
 
         .alert-card.info i {
-            color: #10b981;
+            color: #2563eb;
         }
 
         .alert-content {
@@ -43,64 +43,64 @@
         }
 
         .alert-title {
-            font-size: 15px;
+            font-size: 12px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             color: #1e293b;
         }
 
         .alert-text {
-            font-size: 13px;
+            font-size: 11px;
             color: #475569;
-            line-height: 1.6;
+            line-height: 1.5;
             margin-bottom: 0;
         }
 
         .alert-list {
-            margin: 10px 0 0 0;
-            padding-left: 20px;
-            font-size: 13px;
+            margin: 6px 0 0 0;
+            padding-left: 16px;
+            font-size: 11px;
             color: #475569;
         }
 
         .alert-list li {
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         /* ==================== MONTH SELECTOR ==================== */
         .month-selector {
-            background: linear-gradient(145deg, #4f46e5, #7c3aed);
-            padding: 36px 30px;
-            border-radius: 16px;
+            background: linear-gradient(145deg, #1e3a8a, #1e3a8a);
+            padding: 18px 16px;
+            border-radius: 10px;
             text-align: center;
-            margin-bottom: 32px;
-            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3);
+            margin-bottom: 16px;
+            box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.3);
         }
 
         .month-title {
-            font-size: 26px;
+            font-size: 18px;
             font-weight: 700;
             color: white;
-            margin-bottom: 8px;
-            letter-spacing: -0.3px;
+            margin-bottom: 4px;
+            letter-spacing: -0.2px;
         }
 
         .month-subtitle {
-            font-size: 14px;
+            font-size: 11.5px;
             color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 24px;
+            margin-bottom: 12px;
             font-weight: 400;
         }
 
         .month-selector select {
-            height: 50px;
-            border-radius: 12px;
+            height: 36px;
+            border-radius: 8px;
             border: 2px solid rgba(255, 255, 255, 0.2);
             background: white;
-            font-size: 15px;
+            font-size: 12.5px;
             font-weight: 500;
             color: #1e293b;
-            padding: 0 16px;
+            padding: 0 12px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -119,56 +119,56 @@
         /* ==================== EMPLOYEE SELECTION CARD ==================== */
         .employee-selection-card {
             border: 1px solid #e2e8f0;
-            border-radius: 14px;
+            border-radius: 10px;
             transition: all 0.2s;
             background: white;
-            margin-top: 20px;
+            margin-top: 10px;
         }
 
         .employee-selection-header {
             background: #f8fafc;
-            padding: 16px 20px;
+            padding: 8px 10px;
             border-bottom: 1px solid #e2e8f0;
-            border-radius: 14px 14px 0 0;
+            border-radius: 10px 10px 0 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
 
         .employee-selection-header h6 {
-            font-size: 14px;
+            font-size: 11.5px;
             font-weight: 600;
             color: #1e293b;
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .employee-selection-header h6 i {
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .employee-count-badge {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
-            padding: 4px 10px;
+            padding: 2px 8px;
             border-radius: 30px;
-            font-size: 12px;
+            font-size: 10.5px;
             font-weight: 500;
         }
 
         .employee-list-container {
-            max-height: 300px;
+            max-height: 260px;
             overflow-y: auto;
-            padding: 15px;
+            padding: 8px;
         }
 
         .employee-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px 12px;
+            padding: 6px 8px;
             border-bottom: 1px solid #f1f5f9;
             transition: background 0.2s;
         }
@@ -184,46 +184,46 @@
         .employee-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
 
         .employee-avatar {
-            width: 36px;
-            height: 36px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 11px;
         }
 
         .employee-details h6 {
-            font-size: 14px;
+            font-size: 11.5px;
             font-weight: 600;
             color: #1e293b;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .employee-details p {
-            font-size: 11px;
+            font-size: 10px;
             color: #64748b;
             margin: 0;
         }
 
         .employee-checkbox {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             cursor: pointer;
         }
 
         .select-all-row {
-            padding: 12px 15px;
+            padding: 8px 10px;
             background: #f1f5f9;
-            border-radius: 8px;
-            margin: 10px 15px 0;
+            border-radius: 6px;
+            margin: 6px 8px 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -232,90 +232,90 @@
         /* ==================== SUMMARY CARD ==================== */
         .summary-card {
             background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-            border-radius: 14px;
-            padding: 20px;
-            margin-top: 20px;
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 10px;
             border: 1px solid #e2e8f0;
         }
 
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
         }
 
         .summary-item {
             background: white;
-            padding: 16px;
-            border-radius: 12px;
+            padding: 10px;
+            border-radius: 8px;
             text-align: center;
             border: 1px solid #e2e8f0;
         }
 
         .summary-label {
-            font-size: 12px;
+            font-size: 10.5px;
             color: #64748b;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             text-transform: uppercase;
             letter-spacing: 0.3px;
         }
 
         .summary-value {
-            font-size: 20px;
+            font-size: 15px;
             font-weight: 700;
             color: #1e293b;
         }
 
         .summary-subtext {
-            font-size: 11px;
+            font-size: 10px;
             color: #94a3b8;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         /* ==================== CALCULATION PARAMETERS ==================== */
         .params-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            margin-top: 16px;
+            gap: 10px;
+            margin-top: 10px;
         }
 
         .param-item {
             background: #f8fafc;
-            padding: 16px;
-            border-radius: 12px;
+            padding: 10px;
+            border-radius: 8px;
             border: 1px solid #e2e8f0;
         }
 
         .param-label {
-            font-size: 12px;
+            font-size: 10.5px;
             color: #64748b;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .param-label i {
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .param-value {
-            font-size: 16px;
+            font-size: 13px;
             font-weight: 600;
             color: #1e293b;
         }
 
         .param-note {
-            font-size: 11px;
+            font-size: 10px;
             color: #94a3b8;
-            margin-top: 6px;
+            margin-top: 3px;
         }
 
         /* ==================== OPTION CARDS ==================== */
         .option-card {
             border: 1px solid #e2e8f0;
-            border-radius: 14px;
+            border-radius: 10px;
             transition: all 0.2s;
             height: 100%;
             background: white;
@@ -323,49 +323,49 @@
         }
 
         .option-card:hover {
-            border-color: #4f46e5;
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.08);
+            border-color: #1e3a8a;
+            box-shadow: 0 8px 20px rgba(30, 58, 138, 0.08);
             transform: translateY(-2px);
         }
 
         .option-card .card-body {
-            padding: 24px;
+            padding: 14px;
         }
 
         .option-title {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 15px;
+            gap: 8px;
+            font-size: 12.5px;
             font-weight: 600;
             color: #1e293b;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
             border-bottom: 2px solid #f1f5f9;
         }
 
         .option-title i {
-            color: #4f46e5;
-            font-size: 18px;
+            color: #1e3a8a;
+            font-size: 15px;
         }
 
         .radio-group {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
         }
 
         .form-check {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             padding: 0;
             margin: 0;
         }
 
         .form-check-input {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             margin: 0;
             border: 2px solid #cbd5e1;
             border-radius: 50%;
@@ -374,13 +374,13 @@
         }
 
         .form-check-input:checked {
-            border-color: #4f46e5;
-            background-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: #1e3a8a;
+            background-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
         }
 
         .form-check-label {
-            font-size: 13px;
+            font-size: 11.5px;
             color: #334155;
             cursor: pointer;
             user-select: none;
@@ -389,7 +389,7 @@
         .checkbox-group {
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 10px;
         }
 
         .form-check-input[type="checkbox"] {
@@ -397,32 +397,32 @@
         }
 
         .form-check-input[type="checkbox"]:checked {
-            background-color: #4f46e5;
-            border-color: #4f46e5;
+            background-color: #1e3a8a;
+            border-color: #1e3a8a;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
         }
 
         /* ==================== PREVIEW SECTION ==================== */
         .preview-card {
-            background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+            background: linear-gradient(135deg, #e3edfe, #e0f2fe);
             border: none;
-            border-radius: 14px;
-            padding: 20px 24px;
-            margin-top: 28px;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-top: 14px;
             display: flex;
             align-items: center;
-            gap: 16px;
-            border-left: 4px solid #4f46e5;
+            gap: 10px;
+            border-left: 3px solid #1e3a8a;
         }
 
         .preview-card i {
-            font-size: 24px;
-            color: #4f46e5;
+            font-size: 16px;
+            color: #1e3a8a;
             flex-shrink: 0;
         }
 
         .preview-text {
-            font-size: 14px;
+            font-size: 11.5px;
             color: #1e293b;
             font-weight: 500;
             line-height: 1.5;
@@ -430,74 +430,75 @@
         }
 
         .preview-text strong {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-weight: 600;
         }
 
         /* ==================== FORM ELEMENTS ==================== */
         .card {
             border: none;
-            border-radius: 16px;
+            border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
         }
 
         .card-header {
             background: linear-gradient(135deg, #f8fafc, #f1f5f9);
             border-bottom: 1px solid #e2e8f0;
-            padding: 18px 24px;
-            border-radius: 16px 16px 0 0 !important;
+            padding: 10px 14px;
+            border-radius: 10px 10px 0 0 !important;
         }
 
         .card-header h5 {
-            font-size: 16px;
+            font-size: 13.5px;
             font-weight: 600;
             color: #1e293b;
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .card-header h5 i {
-            color: #4f46e5;
-            font-size: 18px;
+            color: #1e3a8a;
+            font-size: 15px;
         }
 
         .card-body {
-            padding: 28px 24px;
+            padding: 14px;
         }
 
         .card-footer {
             background: #f8fafc;
             border-top: 1px solid #e2e8f0;
-            padding: 18px 24px;
-            border-radius: 0 0 16px 16px !important;
+            padding: 12px 14px;
+            border-radius: 0 0 10px 10px !important;
             display: flex;
-            gap: 12px;
+            align-items: center;
+            gap: 10px;
         }
 
         /* ==================== BUTTONS ==================== */
         .btn {
-            padding: 10px 20px;
-            font-size: 13px;
+            padding: 6px 14px;
+            font-size: 11.5px;
             font-weight: 500;
-            border-radius: 10px;
+            border-radius: 8px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             transition: all 0.2s;
         }
 
         .btn-primary {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
         }
 
         .btn-primary:hover {
-            background: #4338ca;
+            background: #16295e;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
         }
 
         .btn-outline-secondary {
@@ -513,13 +514,63 @@
         }
 
         .btn-info {
-            background: #0ea5e9;
+            background: #2563eb;
             color: white;
             border: none;
         }
 
         .btn-info:hover {
-            background: #0284c7;
+            background: #1e3a8a;
+        }
+
+        /* ==================== PROCESS PAYROLL BUTTON — enhanced, stands out
+           against the compact button scale used everywhere else on this
+           page (larger, bolder, gradient + glow, animated hover/press). ==================== */
+        #submitBtn {
+            padding: 11px 28px;
+            font-size: 13.5px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2563eb, #1e3a8a);
+            box-shadow: 0 4px 14px rgba(30, 58, 138, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #submitBtn i {
+            font-size: 14px;
+        }
+
+        #submitBtn:hover {
+            background: linear-gradient(135deg, #1e3a8a, #16295e);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(30, 58, 138, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        #submitBtn:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 10px rgba(30, 58, 138, 0.35);
+        }
+
+        #submitBtn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #submitBtn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        #submitBtn:hover::after {
+            transform: translateX(100%);
         }
 
         /* ==================== LOADING ==================== */
@@ -537,10 +588,10 @@
         }
 
         .loading-spinner {
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             border: 3px solid #f1f5f9;
-            border-top-color: #4f46e5;
+            border-top-color: #1e3a8a;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -554,23 +605,23 @@
         /* ==================== RESPONSIVE ==================== */
         @media (max-width: 768px) {
             .month-selector {
-                padding: 24px 16px;
+                padding: 14px 12px;
             }
 
             .month-title {
-                font-size: 22px;
+                font-size: 16px;
             }
 
             .card-body {
-                padding: 20px 16px;
+                padding: 10px 12px;
             }
 
             .alert-card {
-                padding: 16px 20px;
+                padding: 8px 10px;
             }
 
             .preview-card {
-                padding: 16px 20px;
+                padding: 8px 10px;
             }
 
             .summary-grid {
@@ -628,7 +679,7 @@
         <div class="loading-spinner"></div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 12px !important;">
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
@@ -731,33 +782,33 @@
                                 </div>
                             </div>
 
-                            <!--<div class="col-md-6">-->
-                            <!--    <div class="option-card">-->
-                            <!--        <div class="card-body">-->
-                            <!--            <h6 class="option-title">-->
-                            <!--                <i class="feather-settings"></i>-->
-                            <!--                Calculation Options-->
-                            <!--            </h6>-->
-                            <!--            <div class="checkbox-group">-->
-                            <!--                <div class="form-check">-->
-                            <!--                    <input type="checkbox" name="include_overtime" id="include_overtime"-->
-                            <!--                        class="form-check-input" value="1">-->
-                            <!--                    <label class="form-check-label" for="include_overtime">-->
-                            <!--                        Include overtime calculations-->
-                            <!--                    </label>-->
-                            <!--                </div>-->
-                            <!--                 <div class="form-check">-->
-                            <!--                    <input type="checkbox" name="include_loan_deductions"-->
-                            <!--                        id="include_loan_deductions" class="form-check-input" value="1"-->
-                            <!--                        checked>-->
-                            <!--                    <label class="form-check-label" for="include_loan_deductions">-->
-                            <!--                        Include loan deductions-->
-                            <!--                    </label>-->
-                            <!--                </div> -->
-                            <!--            </div>-->
-                            <!--        </div>-->
-                            <!--    </div>-->
-                            <!--</div>-->
+                            <div class="col-md-6">
+                                <div class="option-card">
+                                    <div class="card-body">
+                                        <h6 class="option-title">
+                                            <i class="feather-settings"></i>
+                                            Calculation Options
+                                        </h6>
+                                        <div class="checkbox-group">
+                                            <div class="form-check">
+                                                <input type="checkbox" name="include_overtime" id="include_overtime"
+                                                    class="form-check-input" value="1">
+                                                <label class="form-check-label" for="include_overtime">
+                                                    Include overtime calculations
+                                                </label>
+                                            </div>
+                                             <div class="form-check">
+                                                <input type="checkbox" name="include_loan_deductions"
+                                                    id="include_loan_deductions" class="form-check-input" value="1"
+                                                    checked>
+                                                <label class="form-check-label" for="include_loan_deductions">
+                                                    Include loan deductions (EMI + lump sum; auto-capped to available salary)
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Employee Selection Container (Hidden by default) -->
@@ -809,7 +860,7 @@
                         <!-- Calculation Summary Section -->
                         <div id="calculationSummary" class="mx-4 mb-4" style="display: none;">
                             <div class="summary-card">
-                                <h6 class="mb-3" style="font-size: 14px; font-weight: 600;">
+                                <h6 class="mb-2" style="font-size: 12px; font-weight: 600;">
                                     <i class="feather-bar-chart-2 me-2"></i>
                                     Payroll Calculation Summary
                                 </h6>
@@ -927,7 +978,7 @@
                 console.error('Error parsing employees data', e);
             }
 
-            // let workingDaysCache = {};
+            let workingDaysCache = {};
 
             // Show/hide employee selection based on radio
             $('input[name="employee_selection"]').change(function() {
@@ -1070,6 +1121,7 @@
                             $('#summaryEstimatedDeductions').text('₹ ' + formatNumber(response
                                 .total_deductions));
                             $('#summaryEstimatedNet').text('₹ ' + formatNumber(response.total_net));
+                            restoreRealEstimateLabels();
 
                             if (response.working_days) {
                                 $('#paramWorkingDays').text(response.working_days + ' days');
@@ -1091,7 +1143,11 @@
                 });
             }
 
-            // Basic estimation fallback
+            // Basic estimation fallback -- a rough placeholder (flat assumed
+            // averages, not this tenant's real salary data), only shown when
+            // the real calculate-estimates call fails. Clearly labeled as an
+            // approximation so it's never mistaken for a real calculated
+            // figure -- previously rendered identically to the real numbers.
             function basicEstimation(employeeCount) {
                 let avgGross = 25000; // Average gross salary assumption
                 let avgDeductions = 3000; // Average deductions assumption
@@ -1100,9 +1156,26 @@
                 let totalDeductions = employeeCount * avgDeductions;
                 let totalNet = totalGross - totalDeductions;
 
-                $('#summaryEstimatedGross').text('₹ ' + formatNumber(totalGross));
-                $('#summaryEstimatedDeductions').text('₹ ' + formatNumber(totalDeductions));
-                $('#summaryEstimatedNet').text('₹ ' + formatNumber(totalNet));
+                $('#summaryEstimatedGross').text('≈ ₹ ' + formatNumber(totalGross));
+                $('#summaryEstimatedDeductions').text('≈ ₹ ' + formatNumber(totalDeductions));
+                $('#summaryEstimatedNet').text('≈ ₹ ' + formatNumber(totalNet));
+
+                $('#summaryEstimatedGross').closest('.summary-item').find('.summary-subtext')
+                    .text('rough approximation -- live calculation unavailable').addClass('text-warning');
+                $('#summaryEstimatedDeductions').closest('.summary-item').find('.summary-subtext')
+                    .text('rough approximation -- live calculation unavailable').addClass('text-warning');
+                $('#summaryEstimatedNet').closest('.summary-item').find('.summary-subtext')
+                    .text('rough approximation -- live calculation unavailable').addClass('text-warning');
+            }
+
+            // Restore the normal subtext once a real calculate-estimates response lands.
+            function restoreRealEstimateLabels() {
+                $('#summaryEstimatedGross').closest('.summary-item').find('.summary-subtext')
+                    .text('based on current payroll').removeClass('text-warning');
+                $('#summaryEstimatedDeductions').closest('.summary-item').find('.summary-subtext')
+                    .text('including loans & taxes').removeClass('text-warning');
+                $('#summaryEstimatedNet').closest('.summary-item').find('.summary-subtext')
+                    .text('after all deductions').removeClass('text-warning');
             }
 
             // Reset estimates to zero

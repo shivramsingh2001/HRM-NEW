@@ -22,6 +22,7 @@ class LoanCategory extends Model
         'max_tenure_months',
         'requires_approval',
         'status',
+        'sort_order',
     ];
 
     protected $casts = [
@@ -30,6 +31,7 @@ class LoanCategory extends Model
         'max_tenure_months' => 'integer',
         'requires_approval' => 'boolean',
         'status' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     // Relationships

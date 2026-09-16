@@ -9,6 +9,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\RbacService;
 
 class TaskController extends Controller
 {
@@ -16,8 +17,14 @@ class TaskController extends Controller
     {
         try {
             $authUser = Auth::user();
-            // Check if user has valid role
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager', 'employee'])) {
+            // Permission-based gate (was a fixed role allowlist that
+            // silently locked out any custom role holding a real
+            // tasks:view grant). The role-specific visibility switch below
+            // is intentionally left as-is: it implements finer team-based
+            // filtering for 'manager' than the tasks module's company-wide
+            // view scope, which is a distinct, already-verified grant used
+            // elsewhere for task creation/assignment tiering.
+            if (!app(RbacService::class)->can($authUser, 'tasks', 'view')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Invalid role.'
@@ -68,6 +75,27 @@ class TaskController extends Controller
                     $query->whereHas('assignments', function ($q) use ($authUser) {
                         $q->where('assigned_to', $authUser->id);
                     });
+                    break;
+
+                default:
+                    // A custom role (not admin/hr/manager/employee) that
+                    // still passed the gate above — fall back to its actual
+                    // tasks:view scope instead of leaving the query
+                    // unfiltered.
+                    $customScope = app(RbacService::class)->scopeFor($authUser, 'tasks', 'view');
+                    if ($customScope === 'team') {
+                        $query->whereHas('assignments', function ($q) use ($authUser) {
+                            $q->whereIn('assigned_to', function ($innerQ) use ($authUser) {
+                                $innerQ->select('user_id')
+                                    ->from('user_job_details')
+                                    ->where('reporting_head', $authUser->id);
+                            })->orWhere('assigned_to', $authUser->id);
+                        });
+                    } elseif ($customScope !== 'company') {
+                        $query->whereHas('assignments', function ($q) use ($authUser) {
+                            $q->where('assigned_to', $authUser->id);
+                        });
+                    }
                     break;
             }
 

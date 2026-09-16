@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use App\Services\RbacService;
 use Exception;
 
 class AttendanceController extends Controller
@@ -21,8 +22,11 @@ class AttendanceController extends Controller
                 return response()->json(['success' => false, 'message' => 'Tenant not found'], 400);
             }
 
-            // Check role access
-            if (!in_array($authUser->role, ['admin', 'hr', 'manager', 'employee'], true)) {
+            // Permission-based access: the old role-string allowlist blocked
+            // any custom role (e.g. a seeded Finance/Recruiter role) even
+            // though they might hold a real attendance:view grant.
+            $attendanceScope = app(RbacService::class)->scopeFor($authUser, 'attendance', 'view');
+            if ($attendanceScope === null) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
             }
 
@@ -38,8 +42,8 @@ class AttendanceController extends Controller
 
             $includeTracks = filter_var($request->input('include_tracks', true), FILTER_VALIDATE_BOOLEAN);
 
-            // Build role-based user filter (parameterised)
-            [$userFilterSql, $userFilterBindings] = $this->buildUserFilter($authUser, $request->input('user_id'));
+            // Build scope-based user filter (parameterised)
+            [$userFilterSql, $userFilterBindings] = $this->buildUserFilter($authUser, $request->input('user_id'), $attendanceScope);
 
             // Get attendance data
             $attendances = $this->getAttendanceData($tenantId, $startDate, $endDate, $userFilterSql, $userFilterBindings);
@@ -85,7 +89,7 @@ class AttendanceController extends Controller
     /**
      * Build a role-based user filter as [sqlFragment, bindings].
      */
-    private function buildUserFilter($authUser, $requestUserId): array
+    private function buildUserFilter($authUser, $requestUserId, string $scope): array
     {
         $requestUserId = (is_scalar($requestUserId) && ctype_digit((string) $requestUserId) && (int) $requestUserId > 0)
             ? (int) $requestUserId
@@ -93,18 +97,18 @@ class AttendanceController extends Controller
 
         $me = (int) $authUser->id;
 
-        if ($authUser->role === 'employee') {
+        if ($scope === 'own') {
             return [' AND u.id = ? ', [$me]];
         }
 
-        if ($authUser->role === 'manager') {
+        if ($scope === 'team') {
             if ($requestUserId) {
                 return [' AND u.id = ? AND (jd.reporting_head = ? OR u.id = ?) ', [$requestUserId, $me, $me]];
             }
             return [' AND (jd.reporting_head = ? OR u.id = ?) ', [$me, $me]];
         }
 
-        // Admin / HR
+        // company
         if ($requestUserId) {
             return [' AND u.id = ? ', [$requestUserId]];
         }

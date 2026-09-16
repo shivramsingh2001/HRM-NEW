@@ -4,134 +4,8 @@
 
 @section('style')
     <style>
-        /* ==================== STATS CARDS ==================== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        /* Stats Card Base Styles */
-        .stats-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px 16px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.3s ease;
-            border: 1px solid #edf2f7;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Card-specific gradient borders */
-        .total-card::before {
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
-        }
-
-        .active-card::before {
-            background: linear-gradient(90deg, #10b981, #34d399);
-        }
-
-        .inactive-card::before {
-            background: linear-gradient(90deg, #6b7280, #9ca3af);
-        }
-
-        .total-loans-card::before {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-        }
-
-        /* Stats Card Pseudo-element for top border */
-        .stats-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-        }
-
-        /* Icon Wrapper */
-        .stats-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-        }
-
-        .stats-card:hover .stats-icon-wrapper {
-            transform: scale(1.05);
-        }
-
-        /* Card-specific icon backgrounds */
-        .total-card .stats-icon-wrapper {
-            background: rgba(79, 70, 229, 0.1);
-        }
-
-        .total-card .stats-icon-wrapper i {
-            color: #4f46e5;
-            font-size: 24px;
-        }
-
-        .active-card .stats-icon-wrapper {
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .active-card .stats-icon-wrapper i {
-            color: #10b981;
-            font-size: 24px;
-        }
-
-        .inactive-card .stats-icon-wrapper {
-            background: rgba(107, 114, 128, 0.1);
-        }
-
-        .inactive-card .stats-icon-wrapper i {
-            color: #6b7280;
-            font-size: 24px;
-        }
-
-        .total-loans-card .stats-icon-wrapper {
-            background: rgba(245, 158, 11, 0.1);
-        }
-
-        .total-loans-card .stats-icon-wrapper i {
-            color: #f59e0b;
-            font-size: 24px;
-        }
-
-        /* Content Styles */
-        .stats-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .stats-amount-main {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e293b;
-            line-height: 1.3;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .stats-label {
-            font-size: 10px;
-            font-weight: 500;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-bottom: 6px;
-        }
+        /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
+           are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
         .stats-count {
             display: flex;
@@ -386,6 +260,15 @@
                 justify-content: center;
             }
         }
+
+        /* ==================== COMPACT MODAL (Add / Edit Category) — core chrome
+           (max-width/header/body/card/row/label/btn) is centralized in
+           theme-custom.css; only this page's own font-density extras stay
+           here, matching the announcement page's pattern. ==================== */
+        .compact-modal .modal-header .fs-18 { font-size: 13px !important; }
+        .compact-modal .form-group { margin-bottom: 0; }
+        .compact-modal .form-control,
+        .compact-modal .form-check-label { font-size: 11.5px; }
     </style>
 @endsection
 
@@ -436,7 +319,7 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 30px !important;">
+    <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
         <div class="stats-grid">
             <div class="stats-card total-card">
@@ -610,7 +493,7 @@
     <!-- Add Category Modal -->
     <div class="modal fade-scale" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModal"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -637,6 +520,15 @@
                                         </div>
                                     </div>
 
+                                    <div class="col-md-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="code">Category Code</label>
+                                            <input type="text" class="form-control" name="code" id="code"
+                                                placeholder="Optional, e.g. PERS">
+                                            <small class="text-danger error-text code_error"></small>
+                                        </div>
+                                    </div>
+
                                     <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="max_amount">Maximum Amount</label>
@@ -656,7 +548,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="max_tenure_months">Maximum Tenure
                                                 (Months)</label>
@@ -666,6 +558,14 @@
                                         </div>
                                     </div>
 
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="sort_order">Sort Order</label>
+                                            <input type="number" class="form-control" name="sort_order"
+                                                id="sort_order" min="0" placeholder="0">
+                                            <small class="text-danger error-text sort_order_error"></small>
+                                        </div>
+                                    </div>
 
                                     <div class="col-md-6 mb-3">
                                         <div class="form-group">
@@ -695,7 +595,7 @@
                                         <button class="btn btn-primary" type="submit">Save Category</button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-danger text-warning float-end"
+                                        <a href="#" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             Cancel
                                         </a>
@@ -712,7 +612,7 @@
     <!-- Edit Category Modal -->
     <div class="modal fade-scale" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModal"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -769,13 +669,22 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_max_tenure_months">Maximum Tenure
                                                 (Months)</label>
                                             <input type="number" class="form-control" name="max_tenure_months"
                                                 id="edit_max_tenure_months">
                                             <small class="text-danger error-text edit_max_tenure_months_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_sort_order">Sort Order</label>
+                                            <input type="number" class="form-control" name="sort_order"
+                                                id="edit_sort_order" min="0">
+                                            <small class="text-danger error-text edit_sort_order_error"></small>
                                         </div>
                                     </div>
 
@@ -807,7 +716,7 @@
                                         <button class="btn btn-primary" type="submit">Update Category</button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-danger text-warning float-end"
+                                        <a href="#" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             Cancel
                                         </a>
@@ -823,7 +732,7 @@
 
     <!-- EMI Calculator Modal -->
     <div class="modal fade-scale" id="emiCalculatorModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
