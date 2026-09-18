@@ -8,7 +8,6 @@ use App\Models\LeaveBalance;
 use App\Models\LeaveTransaction;
 use App\Models\LeaveType;
 use App\Models\User;
-use App\Models\UserJobDetail;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -70,7 +69,9 @@ class LeaveController extends Controller
 
                 case 'team':
                     $query->where(function ($q) use ($authUser) {
-                        $q->where('user_job_details.reporting_head', $authUser->id)
+                        $q->whereIn('users.id', function ($sub) use ($authUser) {
+                            $sub->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                        })
                             ->orWhere('leaves.user_id', $authUser->id);
                     });
                     break;
@@ -122,10 +123,8 @@ class LeaveController extends Controller
                 $users = User::where('status', 1)->pluck('id')->toArray();
                 $userIds = $users;
             } elseif (empty($userIds) && $leaveScope === 'team') {
-                // Get manager's team + self
-                $teamIds = UserJobDetail::where('reporting_head', $authUser->id)
-                    ->pluck('user_id')
-                    ->toArray();
+                // Get manager's team (any reporting head) + self
+                $teamIds = User::managedBy($authUser->id)->pluck('id')->toArray();
                 $teamIds[] = $authUser->id;
                 $userIds = $teamIds;
             } elseif (empty($userIds) && $leaveScope === 'own') {

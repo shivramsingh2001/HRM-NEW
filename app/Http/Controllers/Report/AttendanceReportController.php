@@ -3025,7 +3025,7 @@ class AttendanceReportController extends Controller
             $dateStr = $dateObj->format('Y-m-d');
     
             // Fetch all active branches with tenant filter
-            $branches = DB::table('branches')
+            $branches = DB::table('attendance_locations')
                 ->where('tenant_id', $tenantId)
                 ->where('status', 1)
                 ->select('id', 'name', 'description')
@@ -3199,7 +3199,7 @@ class AttendanceReportController extends Controller
             }
     
             // Get branch details
-            $branch = DB::table('branches')
+            $branch = DB::table('attendance_locations')
                 ->where('tenant_id', $tenantId)
                 ->where('id', $branchId)
                 ->where('status', 1)
@@ -3505,7 +3505,7 @@ class AttendanceReportController extends Controller
             }
     
             // Get branch details
-            $branch = DB::table('branches')
+            $branch = DB::table('attendance_locations')
                 ->where('tenant_id', $tenantId)
                 ->where('id', $branchId)
                 ->where('status', 1)

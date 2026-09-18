@@ -3,7 +3,6 @@
 namespace App\Traits;
 
 use App\Models\User;
-use App\Models\UserJobDetail;
 use App\Services\RbacService;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -54,10 +53,11 @@ trait AuthorizesByScope
             return $query->where($ownerColumn, $user->id);
         }
 
-        // scope === 'team': the user's own record plus everyone whose
-        // reporting_head is this user.
-        $teamUserIds = UserJobDetail::where('reporting_head', $user->id)
-            ->pluck('user_id')
+        // scope === 'team': the user's own record plus everyone who
+        // reports to this user via ANY of their reporting heads
+        // (multi reporting-head support — see User::scopeManagedBy()).
+        $teamUserIds = User::managedBy($user->id)
+            ->pluck('id')
             ->push($user->id);
 
         return $query->whereIn($teamOwnerColumn ?? $ownerColumn, $teamUserIds);
@@ -87,8 +87,6 @@ trait AuthorizesByScope
             return true;
         }
 
-        return UserJobDetail::where('user_id', $ownerUserId)
-            ->where('reporting_head', $user->id)
-            ->exists();
+        return User::managedBy($user->id)->where('id', $ownerUserId)->exists();
     }
 }

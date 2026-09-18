@@ -19,7 +19,6 @@ use App\Models\Country;
 use App\Models\State;
 use App\Models\City;
 use App\Models\Language;
-use App\Models\Branch;
 use DateTime;
 use Exception;
 use Illuminate\Http\Request;
@@ -165,9 +164,7 @@ class TeamController extends Controller
         // Permission-based filtering
         $teamScope = app(RbacService::class)->scopeFor($authUser, 'team', 'view');
         if ($teamScope === 'team') {
-            $query->whereHas('jobDetails', function ($q) use ($authUser) {
-                $q->where('reporting_head', $authUser->id);
-            });
+            $query->managedBy($authUser->id);
         } elseif ($teamScope !== 'company') {
             return collect([]);
         }
@@ -1363,9 +1360,7 @@ class TeamController extends Controller
             ->where('role', "!=", 'admin');
 
         if (app(RbacService::class)->scopeFor($authUser, 'team', 'view') === 'team') {
-            $query->whereHas('jobDetails', function ($q) use ($authUser) {
-                $q->where('reporting_head', $authUser->id);
-            });
+            $query->managedBy($authUser->id);
         }
 
         return $query->orderBy('name')->get();

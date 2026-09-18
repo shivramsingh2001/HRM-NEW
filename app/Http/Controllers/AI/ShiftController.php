@@ -145,9 +145,7 @@ class ShiftController extends Controller
             $managerUsers->push($manager);
         }
 
-        $teamMembers = User::whereHas('jobDetails', function ($query) use ($managerId) {
-            $query->where('reporting_head', $managerId);
-        })
+        $teamMembers = User::managedBy($managerId)
             ->where('status', 1)
             ->with(['jobDetails.designationRel', 'jobDetails.departmentRel'])
             ->get();

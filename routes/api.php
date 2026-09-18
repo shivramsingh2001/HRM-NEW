@@ -168,8 +168,10 @@ Route::middleware('tenant')->group(function () {
         Route::get('/request/type', [RequestController::class, 'type']);
         Route::get('/request/view', [RequestController::class, 'view']);
         Route::post('/request/store', [RequestController::class, 'store']);
-        Route::get('/manager/request/view', [RequestController::class, 'view_all']);
-        Route::post('/manager/request/update-status', [RequestController::class, 'updateStatus']);
+        Route::post('/request/update/{id}', [RequestController::class, 'update']);
+        Route::post('/request/cancel/{id}', [RequestController::class, 'cancel']);
+        Route::get('/manager/request/view', [RequestController::class, 'view_all'])->middleware('permission:requests,view');
+        Route::post('/manager/request/update-status', [RequestController::class, 'updateStatus'])->middleware('permission:requests,approve');
         Route::get('/request/detail/{id}', [RequestController::class, 'show']);
         
         Route::prefix('overtime')->group(function () {

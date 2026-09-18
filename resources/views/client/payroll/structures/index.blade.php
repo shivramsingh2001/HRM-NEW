@@ -9,32 +9,31 @@
         border-radius: 8px; border: 1px solid; transition: all .15s;
     }
     .btn-icon-edit { border-color: #dfe5f0; background: #f4f6fb; color: #475569; }
-    .btn-icon-edit:hover { background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; }
-    .btn-icon-delete { border-color: #fbdada; background: #fef2f2; color: #ef4444; margin-left: 6px; }
-    .btn-icon-delete:hover { background: #fde3e3; border-color: #ef4444; color: #dc2626; }
+    .btn-icon-edit:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+    .btn-icon-delete { border-color: #fbdada; background: var(--danger-light); color: var(--danger); margin-left: 6px; }
+    .btn-icon-delete:hover { background: #fde3e3; border-color: var(--danger); color: #dc2626; }
     .btn-icon-edit i, .btn-icon-delete i { font-size: 14px; }
 
-    /* ==================== STRUCTURE DRAWER (Add / Edit, side drawer) ==================== */
-    .structure-drawer { width: 720px; max-width: 94vw; }
-    .structure-drawer .offcanvas-header { padding: 8px 14px; border-bottom: 1px solid #eaeef5; }
-    .structure-drawer .offcanvas-header h5 { font-size: 13px; font-weight: 700; margin: 0; color: #1a2236; }
-    .structure-drawer .offcanvas-body { padding: 10px 14px; }
-    .structure-drawer .form-section { background: #fbfcfe; border: 1px solid #eaeef5; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-    .structure-drawer .form-section h6 { font-size: 10px; font-weight: 700; color: #1a2236; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px; }
-    .structure-drawer label { font-size: 10.5px; font-weight: 600; margin-bottom: 2px; }
-    .structure-drawer .form-control { font-size: 10.5px; padding: 4px 8px; height: auto; }
-    .structure-drawer .row > [class*="col-"] { margin-bottom: 4px !important; }
-    .structure-drawer .component-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f4f6fb; }
-    .structure-drawer .component-row:last-child { border-bottom: none; }
-    .structure-drawer .component-row .comp-name { flex: 1; font-size: 11.5px; font-weight: 600; }
-    .structure-drawer .component-row .comp-meta { font-size: 8.5px; color: #9aa1b1; }
-    .structure-drawer .component-row .method-field { width: 95px; }
-    .structure-drawer .component-row .method-field select { font-size: 10px; padding: 3px 6px; height: auto; }
-    .structure-drawer .component-row .override-field { width: 120px; }
-    .structure-drawer .component-row .override-field input { font-size: 10.5px; padding: 3px 8px; height: auto; }
-    .structure-drawer .btn { padding: 4px 12px; font-size: 11px; border-radius: 7px; }
-    .structure-drawer .btn-modal-cancel { background: #f4f6fb; border-color: #dfe5f0; color: #475569; }
-    .structure-drawer .btn-modal-cancel:hover { background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; }
+    /* ==================== STRUCTURE DRAWER (Add / Edit) ====================
+       Width/header/body chrome comes from the shared .ui-drawer class
+       (theme-custom.css) via the x-ui.drawer component — only the form's
+       own field styling stays page-local. */
+    #structureDrawer .form-section { background: #fbfcfe; border: 1px solid #eaeef5; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+    #structureDrawer .form-section h6 { font-size: 10px; font-weight: 700; color: #1a2236; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px; }
+    #structureDrawer label { font-size: 10.5px; font-weight: 600; margin-bottom: 2px; }
+    #structureDrawer .form-control { font-size: 10.5px; padding: 4px 8px; height: auto; }
+    #structureDrawer .row > [class*="col-"] { flex: 0 0 100%; max-width: 100%; margin-bottom: 4px !important; }
+    #structureDrawer .component-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f4f6fb; }
+    #structureDrawer .component-row:last-child { border-bottom: none; }
+    #structureDrawer .component-row .comp-name { flex: 1 1 100%; font-size: 11.5px; font-weight: 600; }
+    #structureDrawer .component-row .comp-meta { font-size: 8.5px; color: #9aa1b1; }
+    #structureDrawer .component-row .method-field { width: 95px; }
+    #structureDrawer .component-row .method-field select { font-size: 10px; padding: 3px 6px; height: auto; }
+    #structureDrawer .component-row .override-field { width: 120px; }
+    #structureDrawer .component-row .override-field input { font-size: 10.5px; padding: 3px 8px; height: auto; }
+    #structureDrawer .btn { padding: 4px 12px; font-size: 11px; border-radius: 7px; }
+    #structureDrawer .btn-modal-cancel { background: #f4f6fb; border-color: #dfe5f0; color: #475569; }
+    #structureDrawer .btn-modal-cancel:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
 </style>
 @endsection
 
@@ -96,15 +95,13 @@
                                     </td>
                                     <td>{{ $structure->components_count }} component{{ $structure->components_count == 1 ? '' : 's' }}</td>
                                     <td>
-                                        <span class="badge {{ $structure->status ? 'bg-success' : 'bg-danger' }}">
-                                            {{ $structure->status ? 'Active' : 'Inactive' }}
-                                        </span>
+                                        <x-ui.status-badge :status="$structure->status ? 'active' : 'inactive'" />
                                     </td>
                                     <td class="text-end">
-                                        <a href="#" class="btn-icon-edit edit-structure" data-id="{{ $structure->id }}" title="Edit">
+                                        <a href="#" class="btn-icon-edit edit-structure" data-id="{{ $structure->id }}" title="Edit" data-bs-toggle="tooltip">
                                             <i class="feather feather-edit-3"></i>
                                         </a>
-                                        <a href="#" class="btn-icon-delete delete-structure" data-id="{{ $structure->id }}" title="Delete">
+                                        <a href="#" class="btn-icon-delete delete-structure" data-id="{{ $structure->id }}" title="Delete" data-bs-toggle="tooltip">
                                             <i class="feather feather-trash-2"></i>
                                         </a>
                                     </td>
@@ -125,12 +122,7 @@
 @endsection
 
 @section('create-modal')
-    <div class="offcanvas offcanvas-end structure-drawer" tabindex="-1" id="structureDrawer" aria-labelledby="structureDrawerLabel">
-        <div class="offcanvas-header">
-            <h5 id="structureDrawerLabel">Add Payroll Structure</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body">
+    <x-ui.drawer id="structureDrawer" title="Add Payroll Structure" width="480px">
             @if ($components->isEmpty())
                 <div class="alert alert-warning">
                     No payroll components exist yet. <a href="{{ route('payroll-components.index') }}">Create one first</a>.
@@ -225,8 +217,7 @@
                     </div>
                 </form>
             @endif
-        </div>
-    </div>
+    </x-ui.drawer>
 @endsection
 
 @section('script-area')

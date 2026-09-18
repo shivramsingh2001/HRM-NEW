@@ -6,6 +6,23 @@ tenant from the legacy flat payroll engine onto the dynamic component-catalog en
 **production, where 10+ companies already have real, already-generated payroll history** that
 this documentation set has no direct access to.
 
+**2026-09-18 update — legacy engine screens removed from this codebase.** Per the user's request
+("I want only dynamic payroll, not both"), `PayrollMasterController`/`UserPayrollController` and
+their routes/views/nav links are deleted; see `docs/modules.md`'s Payroll section for the full
+list of code changes. **This makes the cutover sequence below a hard prerequisite for any
+still-legacy production tenant, not just a recommendation** — once this code ships, a tenant with
+`payroll_dynamic_ui_enabled=0` has no UI left to create/edit a payroll master or assign an
+employee's salary. Run the full sequence for every remaining production tenant, with a DB backup,
+before deploying this change to production. `payroll_masters`/`user_payrolls` themselves are kept
+in the DB as read-only history — this update does not touch or drop them.
+
+All local dev tenants have been cut over except one: **tenant 10 ("Pankh") failed its engine-diff
+parity check** (one employee's already-paid historical payslip doesn't reconcile — see
+`docs/modules.md`'s Payroll section for the specifics) and was deliberately left on the legacy
+engine rather than forced through. Expect the same kind of real, tenant-specific reconciliation
+question to come up for at least some of the 10+ production tenants — budget time for it, and
+resolve each one on its own merits rather than overriding `--tolerance` to make the tool pass.
+
 ## What actually changes on cutover, and what never does
 
 Cutover is controlled by one column: `tenants.payroll_dynamic_ui_enabled`. Once it's `1` for a

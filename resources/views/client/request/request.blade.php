@@ -61,13 +61,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: var(--primary-mid);
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary-mid);
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -121,7 +121,7 @@
         .apply-btn {
             height: 36px;
             padding: 0 16px;
-            background: #4f46e5;
+            background: var(--primary-mid);
             color: white;
             border: none;
             border-radius: 8px;
@@ -187,7 +187,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: var(--primary-mid);
             font-size: 11px;
         }
 
@@ -203,43 +203,29 @@
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: var(--primary-light);
+            border-color: var(--primary-mid);
+            color: var(--primary-mid);
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
-        /* ==================== TABLE STYLES ==================== */
+        /* ==================== TABLE STYLES ====================
+           Padding/font size are intentionally NOT overridden here — the
+           table inherits the sitewide compact convention from
+           theme-custom.css (11.5px font, tight padding). */
         .table {
             margin-bottom: 0;
-        }
-
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 12px 16px;
-            white-space: nowrap;
-        }
-
-        .table td {
-            vertical-align: middle;
-            font-size: 13px;
-            padding: 12px 16px;
-            border-bottom: 1px solid #f1f5f9;
         }
 
         .table tbody tr:hover {
             background-color: #f8fafc;
         }
 
-        /* ==================== BADGES ==================== */
+        /* ==================== BADGES ====================
+           Status badges use the ui.status-badge component (theme-custom.css)
+           instead of local bg-* overrides. */
         .badge {
             padding: 4px 10px;
             font-weight: 500;
@@ -250,29 +236,9 @@
             gap: 4px;
         }
 
-        .badge.bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
-        }
-
-        .badge.bg-warning {
-            background: #fef3c7 !important;
-            color: #92400e;
-        }
-
-        .badge.bg-danger {
-            background: #fee2e2 !important;
-            color: #991b1b;
-        }
-
         .badge.bg-info {
-            background: #e0f2fe !important;
-            color: #0369a1;
-        }
-
-        .badge.bg-purple {
-            background: #e0e7ff !important;
-            color: #4f46e5;
+            background: var(--primary-light) !important;
+            color: var(--primary-mid);
         }
 
         /* ==================== REQUEST TYPE BADGES ==================== */
@@ -287,13 +253,13 @@
         }
 
         .type-wfh {
-            background: #e0f2fe;
-            color: #0369a1;
+            background: var(--primary-light);
+            color: var(--primary-mid);
         }
 
         .type-travel {
-            background: #fef3c7;
-            color: #92400e;
+            background: #dbeafe;
+            color: #1e3a8a;
         }
 
         /* ==================== DATE RANGE STYLING ==================== */
@@ -334,7 +300,7 @@
 
         .duration-badge i {
             font-size: 10px;
-            color: #4f46e5;
+            color: var(--primary-mid);
         }
 
         /* ==================== REASON CELL ==================== */
@@ -369,8 +335,8 @@
         }
 
         .action-btn.view:hover {
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary-mid);
+            border-color: var(--primary-mid);
         }
 
         .action-btn.edit:hover {
@@ -783,18 +749,7 @@
                                             <td>{{ \Carbon\Carbon::parse($request->applied_date)->format('d M Y') }}</td>
                                             {{-- <td>{{ $request->reportingHead->name ?? 'N/A' }}</td> --}}
                                             <td>
-                                                @php
-                                                    $statusClass =
-                                                        [
-                                                            'PENDING' => 'bg-warning',
-                                                            'APPROVED' => 'bg-success',
-                                                            'REJECTED' => 'bg-danger',
-                                                            'CANCELLED' => 'bg-secondary',
-                                                        ][$request->status] ?? 'bg-secondary';
-                                                @endphp
-                                                <span class="badge {{ $statusClass }}">
-                                                    {{ ucfirst(strtolower($request->status)) }}
-                                                </span>
+                                                <x-ui.status-badge :status="$request->status" />
                                             </td>
                                             <td class="text-center">
                                                 <div class="d-flex justify-content-center gap-1">
@@ -817,7 +772,7 @@
                                                     <!-- Cancel Button (only for pending/approved requests) -->
                                                     @if (in_array($request->status, ['PENDING', 'APPROVED']))
                                                         <a href="#" class="action-btn delete cancel-request"
-                                                            data-id="{{ $request->id }}" title="Delete Request">
+                                                            data-id="{{ $request->id }}" title="Cancel Request">
                                                             <i class="feather-x-circle"></i>
                                                         </a>
                                                     @else
@@ -938,7 +893,7 @@
                                         <button class="btn btn-primary" type="submit">Submit Request</button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-danger text-warning float-end"
+                                        <a href="#" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             Cancel
                                         </a>
@@ -1031,7 +986,7 @@
                                         <button class="btn btn-primary" type="submit">Update Request</button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-danger text-warning float-end"
+                                        <a href="#" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
                                             Cancel
                                         </a>
@@ -1046,21 +1001,33 @@
     </div>
 
     <!-- Cancel Request Modal -->
-    <div class="modal fade" id="cancelRequestModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal fade-scale" id="cancelRequestModal" tabindex="-1" aria-labelledby="cancelRequestModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete Request</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h2 class="d-flex flex-column mb-0">
+                        <span class="fs-18 fw-bold mb-1">Cancel Request</span>
+                    </h2>
+                    <a href="#" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
+                        <i class="feather-x text-danger"></i>
+                    </a>
                 </div>
-                <div class="modal-body text-center">
-                    <i class="feather-alert-triangle text-warning" style="font-size: 48px;"></i>
-                    <p class="mt-3">Are you sure you want to delete this request?</p>
-                    <p class="text-muted small">This action cannot be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-warning" id="confirmCancel">Yes, Delete</button>
+                <div class="modal-body p-0">
+                    <div class="card m-0">
+                        <div class="card-body text-center">
+                            <i class="feather-alert-triangle text-danger" style="font-size: 40px;"></i>
+                            <p class="mt-3 mb-1">Are you sure you want to cancel this request?</p>
+                            <p class="text-muted" style="font-size: 11.5px;">The request will be marked as cancelled and kept in your history.</p>
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-danger w-100" id="confirmCancel">Yes, Cancel</button>
+                                </div>
+                                <div class="col-6">
+                                    <a href="#" class="btn btn-modal-cancel float-end w-100" data-bs-dismiss="modal">Keep It</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

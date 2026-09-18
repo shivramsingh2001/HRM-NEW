@@ -31,6 +31,8 @@ class ProjectController extends Controller
                 'projects.deadline_date',
                 'projects.description',
                 'projects.status',
+                'projects.priority',
+                'projects.progress_percentage',
                 'users.name as project_head',
                 'users.id as project_head_id'
             ])
@@ -70,10 +72,14 @@ class ProjectController extends Controller
             }
 
             // Add task counts if tasks table exists
+            // progress_percentage itself comes from the real projects column
+            // (base select above) — kept in sync by TaskProgressObserver, the
+            // single source of truth. These are just supplementary counts for
+            // the response payload, using the same completed/approved
+            // definition as everywhere else.
             if (Schema::hasTable('tasks')) {
                 $query->selectRaw('(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id) as total_tasks');
-                $query->selectRaw('(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND status = "completed") as completed_tasks');
-                $query->selectRaw('ROUND((SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND status = "completed") * 100.0 / NULLIF((SELECT COUNT(*) FROM tasks WHERE project_id = projects.id), 0), 2) as progress_percentage');
+                $query->selectRaw('(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND status IN ("completed","approved")) as completed_tasks');
             }
 
             // Apply ordering

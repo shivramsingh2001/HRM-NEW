@@ -8,19 +8,39 @@ use App\Traits\TenantTrait;
 class Project extends Model
 {
     use TenantTrait;
-    protected $guarded = [];
 
-    public function headUser()
+    protected $fillable = [
+        'tenant_id',
+        'project_code',
+        'name',
+        'description',
+        'start_date',
+        'deadline_date',
+        'project_head',
+        'status',
+        'priority',
+        'budget',
+        'progress_percentage',
+        'progress_manual_override',
+    ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'deadline_date' => 'date',
+        'progress_percentage' => 'integer',
+        'progress_manual_override' => 'boolean',
+        'budget' => 'decimal:2',
+    ];
+
+    /** Project manager — kept as `project_head` at the DB/column level (see UserJobDetail's office_branch/branch_id precedent for why labels change but columns don't). */
+    public function head()
     {
         return $this->belongsTo(User::class, 'project_head');
     }
+
     public function assigns()
     {
-        return $this->hasMany(ProjectAssign::class);
-    }
-        public function head()
-    {
-        return $this->belongsTo(User::class, 'project_head');
+        return $this->hasMany(ProjectAssign::class, 'project_id');
     }
 
     /**
@@ -131,14 +151,6 @@ class Project extends Model
     }
 
     /**
-     * Get all project assignments (users assigned to project)
-     */
-    public function assignments()
-    {
-        return $this->hasMany(ProjectAssign::class, 'project_id');
-    }
-
-    /**
      * Get all team members assigned to this project
      */
     public function teamMembers()
@@ -170,12 +182,38 @@ class Project extends Model
                     ->withTimestamps();
     }
 
+    /** Human-authored structured progress reports (completed/pending/issues/next actions). */
+    public function updates()
+    {
+        return $this->hasMany(ProjectUpdate::class, 'project_id')->latest();
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(ProjectComment::class, 'project_id')->latest();
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(ProjectAttachment::class, 'project_id')->latest();
+    }
+
+    public function milestones()
+    {
+        return $this->hasMany(ProjectMilestone::class, 'project_id')->orderBy('sort_order')->orderBy('due_date');
+    }
+
+    public function risks()
+    {
+        return $this->hasMany(ProjectRisk::class, 'project_id')->orderByRaw("FIELD(status,'open','mitigated','resolved','closed')")->latest();
+    }
+
     /**
      * Check if a user is assigned to this project
      */
     public function hasUser($userId)
     {
-        return $this->assignments()
+        return $this->assigns()
                     ->where('user_id', $userId)
                     ->exists();
     }
@@ -185,7 +223,7 @@ class Project extends Model
      */
     public function isUserHead($userId)
     {
-        return $this->assignments()
+        return $this->assigns()
                     ->where('user_id', $userId)
                     ->where('is_head', '1')
                     ->exists();
@@ -220,17 +258,15 @@ class Project extends Model
     }
 
     /**
-     * Get project progress percentage (based on completed tasks)
+     * Project progress percentage. Passthrough to the stored column, kept in
+     * sync by TaskProgressObserver (or manually set when
+     * progress_manual_override is true) — this used to be a second,
+     * independently-recomputed implementation of the same formula; now
+     * there is exactly one source of truth.
      */
-    public function getProgressPercentageAttribute()
+    public function getProgressPercentageAttribute($value)
     {
-        $totalTasks = $this->tasks()->count();
-        if ($totalTasks == 0) {
-            return 0;
-        }
-        
-        $completedTasks = $this->completedTasks()->count();
-        return round(($completedTasks / $totalTasks) * 100, 2);
+        return (int) $value;
     }
 
     /**
@@ -238,7 +274,7 @@ class Project extends Model
      */
     public function scopeWhereUserIsHead($query, $userId)
     {
-        return $query->whereHas('assignments', function ($q) use ($userId) {
+        return $query->whereHas('assigns', function ($q) use ($userId) {
             $q->where('user_id', $userId)
               ->where('is_head', '1');
         });
@@ -249,7 +285,7 @@ class Project extends Model
      */
     public function scopeWhereUserIsMember($query, $userId)
     {
-        return $query->whereHas('assignments', function ($q) use ($userId) {
+        return $query->whereHas('assigns', function ($q) use ($userId) {
             $q->where('user_id', $userId);
         });
     }
@@ -268,6 +304,11 @@ class Project extends Model
     public function scopeCompleted($query)
     {
         return $query->where('status', 'completed');
+    }
+
+    public function scopeByPriority($query, $priority)
+    {
+        return $query->where('priority', $priority);
     }
 
     /**
@@ -302,7 +343,7 @@ class Project extends Model
             'completed' => 'success',
             'cancelled' => 'danger'
         ];
-        
+
         return $colors[$this->status] ?? 'secondary';
     }
 

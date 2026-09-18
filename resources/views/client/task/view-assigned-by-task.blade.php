@@ -16,6 +16,10 @@
         .ui-drawer .form-hint { font-size: 10px; color: #6b7385; margin-top: 3px; display: block; }
         .ui-drawer .error-text { font-size: 10px; color: #dc3545; display: block; margin-top: 2px; }
         .ui-drawer #recordButton { font-size: 11px; padding: 5px 12px; }
+        /* At 480px, col-md-6 pairs (Bootstrap's md breakpoint is viewport-,
+           not container-width, so they don't auto-stack in a narrow drawer)
+           need to stack to one column to stay usable. */
+        #addTaskDrawer .row > [class*="col-"] { flex: 0 0 100%; max-width: 100%; }
 
         /* ==================== EMPLOYEE AVATAR ==================== */
         .employee-avatar {
@@ -1327,7 +1331,7 @@
 
 @section('create-modal')
     <!-- Add Task Drawer -->
-    <x-ui.drawer id="addTaskDrawer" title="Create Task">
+    <x-ui.drawer id="addTaskDrawer" title="Create Task" width="480px">
             <form id="addTaskForm" enctype="multipart/form-data">
                 @csrf
                 <div id="addTaskError" class="alert alert-danger d-none"></div>

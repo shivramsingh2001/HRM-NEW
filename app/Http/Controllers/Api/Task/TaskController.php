@@ -51,9 +51,7 @@ class TaskController extends Controller
 
                 case 'manager':
                     $query->where(function ($q) use ($authUser) {
-                        $q->whereHas('jobDetails', function ($subQ) use ($authUser) {
-                            $subQ->where('reporting_head', $authUser->id);
-                        })
+                        $q->managedBy($authUser->id)
                             ->orWhere('users.id', $authUser->id);
                     });
                     break;

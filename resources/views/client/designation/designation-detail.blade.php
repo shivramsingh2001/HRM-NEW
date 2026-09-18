@@ -1,12 +1,13 @@
 @extends('client.layout.master')
 
 @section('style')
- <style>
+    <style>
+        /* ==================== DESIGNATION DETAIL — all-blue theme (mirrors department detail + client/announcement) ==================== */
         .employee-avatar {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: #4f46e5;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
             display: flex;
             align-items: center;
@@ -15,22 +16,66 @@
             font-size: 14px;
             flex-shrink: 0;
         }
+
+        .desig-detail-badge {
+            padding: 3px 10px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+
+        .badge-active {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .badge-inactive {
+            background: #1e3a8a;
+            color: #fff;
+        }
+
+        .personal-info .input-group-text {
+            background: #e3edfe;
+            color: #1e3a8a;
+            border-color: #dfe5f0;
+        }
+
+        .personal-info .form-control[readonly] {
+            background: #f8fafc;
+            border-color: #dfe5f0;
+            color: #1a2236;
+        }
+
+        .customers-nav-tabs .nav-link.active {
+            color: #1e3a8a;
+            border-color: #dfe5f0 #dfe5f0 #fff;
+        }
+
+        .customers-nav-tabs .nav-link {
+            color: #6b7385;
+        }
+
+        #membersTable .badge.bg-success { background-color: #3b82f6 !important; }
+        #membersTable .badge.bg-danger { background-color: #1e3a8a !important; }
     </style>
 @endsection
-@php
-    $user = Auth::user();
-    $role = $user->role;
-@endphp
+
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
+    <div class="content-area-header sticky-top">
+        <div class="page-header-left d-flex align-items-center gap-2">
             <div class="page-header-title">
                 <h5 class="m-b-10">Designation Management</h5>
             </div>
-            <ul class="breadcrumb">
+            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
                 <li class="breadcrumb-item"><a href="{{ route('designation.index') }}">Designations</a></li>
-                <li class="breadcrumb-item active">Details</li>
+                <li class="breadcrumb-item">Details</li>
             </ul>
+        </div>
+        <div class="page-header-right ms-auto">
+            <span class="desig-detail-badge {{ $designation->status ? 'badge-active' : 'badge-inactive' }}">
+                {{ $designation->status ? 'Active' : 'Inactive' }}
+            </span>
         </div>
     </div>
 
@@ -42,8 +87,8 @@
                         <ul class="nav nav-tabs flex-wrap w-100 text-center customers-nav-tabs" id="myTab"
                             role="tablist">
                             <li class="nav-item flex-fill border-top" role="presentation">
-                                <a href="#" class="nav-link active" data-bs-toggle="tab" data-bs-target="#profileTab"
-                                    role="tab">Designation Information</a>
+                                <a href="javascript:void(0);" class="nav-link active" data-bs-toggle="tab"
+                                    data-bs-target="#profileTab" role="tab">Designation Information</a>
                             </li>
                         </ul>
                     </div>
@@ -53,16 +98,10 @@
                                 <div class="mb-4 d-flex align-items-center justify-content-between">
                                     <h5 class="fw-bold mb-0 me-4">
                                         <span class="d-block mb-2">Designation Information:</span>
-                                        <span class="fs-12 fw-normal text-muted text-truncate-1-line">* marked
-                                            fields must be filled ! </span>
+                                        <span class="fs-12 fw-normal text-muted text-truncate-1-line">Read-only
+                                            overview — use the edit icon on the Designation card to update these
+                                            details.</span>
                                     </h5>
-                                    @if (in_array($role, ['admin', 'manager']))
-                                        <h5 class="fw-bold mb-0">
-                                            <a href="javascript:void(0);" class="btn btn-warning" data-bs-toggle="modal"
-                                                data-bs-target="#changedesignationDetails">Change
-                                                Designation Details</a>
-                                        </h5>
-                                    @endif
                                 </div>
 
                                 <div class="row mb-4 align-items-center">
@@ -90,109 +129,107 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="card-body personal-info">
-                                    <div class="mb-4 d-flex align-items-center justify-content-between">
-                                        <h5 class="fw-bold mb-0 me-4">
-                                            <span class="d-block mb-2">Department Members:</span>
-                                            <span class="fs-12 fw-normal text-muted text-truncate-1-line">
-                                                Total Members: {{ $users->count() }}
-                                            </span>
-                                        </h5>
-                                    </div>
-
-                               
+                            </div>
+                            <div class="card-body personal-info">
+                                <div class="mb-4 d-flex align-items-center justify-content-between">
+                                    <h5 class="fw-bold mb-0 me-4">
+                                        <span class="d-block mb-2">Designation Members:</span>
+                                        <span class="fs-12 fw-normal text-muted text-truncate-1-line">
+                                            Total Members: {{ $users->count() }}
+                                        </span>
+                                    </h5>
                                 </div>
-                                     <div class="row mb-4 align-items-center">
-                                        <div class="col-12">
-                                            <div class="table-responsive">
-                                                <table class="table table-hover">
-                                                    <thead>
+
+                                <div class="row mb-4 align-items-center">
+                                    <div class="col-12">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover" id="membersTable">
+                                                <thead>
+                                                    <tr>
+                                                        <!--<th class="text-center">S. No.</th>-->
+                                                        <th class="text-start">Employee</th>
+                                                        <th class="text-center">Designation</th>
+                                                        <th class="text-center">Employee ID</th>
+                                                        <th class="text-center">Joining Date</th>
+                                                        <th class="text-center">Status</th>
+                                                        <!--<th class="text-end">Action</th>-->
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse($users as $index => $employee)
                                                         <tr>
-                                                            <!--<th class="text-center">S. No.</th>-->
-                                                            <th class="text-start">Employee</th>
-                                                            <th class="text-center">Designation</th>
-                                                            <th class="text-center">Employee ID</th>
-                                                            <th class="text-center">Joining Date</th>
-                                                            <th class="text-center">Status</th>
-                                                            <!--<th class="text-end">Action</th>-->
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @forelse($users as $index => $employee)
-                                                            <tr>
-                                                                <!--<td class="text-center">{{ $index + 1 }}</td>-->
-                                                                <td>
-                                                                    <div class="d-flex align-items-center gap-2">
-                                                                        <div class="avatar-image"
-                                                                            style="width: 32px; height: 32px;">
-                                                                            <div class="employee-avatar">
-                                                                                {{ strtoupper(substr($employee->name, 0, 2)) }}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span
-                                                                                class="d-block fw-medium">{{ $employee->name }}
-                                                                                <small>(
-                                                                                    {{ $employee->employee_id }})</small></span>
-                                                                            <span
-                                                                                class="fs-11 text-muted">{{ $employee->email }}</span>
+                                                            <!--<td class="text-center">{{ $index + 1 }}</td>-->
+                                                            <td>
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <div class="avatar-image"
+                                                                        style="width: 32px; height: 32px;">
+                                                                        <div class="employee-avatar">
+                                                                            {{ strtoupper(substr($employee->name, 0, 2)) }}
                                                                         </div>
                                                                     </div>
-                                                                </td>
+                                                                    <div>
+                                                                        <span
+                                                                            class="d-block fw-medium">{{ $employee->name }}
+                                                                            <small>(
+                                                                                {{ $employee->employee_id }})</small></span>
+                                                                        <span
+                                                                            class="fs-11 text-muted">{{ $employee->email }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
 
-                                                                <td class="text-center">
-                                                                    {{ $employee->jobDetails->designation->name ?? ($employee->jobDetails->Designation->name ?? 'N/A') }}
-                                                                </td>
-                                                                <td class="text-center">
-                                                                    {{ $employee->employee_id ?? ($employee->jobDetails->employee_id ?? 'N/A') }}
-                                                                </td>
-                                                                <td class="text-center">
-                                                                    @if ($employee->jobDetails && $employee->jobDetails->joining_date)
-                                                                        <span
-                                                                            class="fw-medium">{{ \Carbon\Carbon::parse($employee->jobDetails->joining_date)->format('d M Y') }}</span>
-                                                                        <span
-                                                                            class="fs-11 text-muted d-block">{{ \Carbon\Carbon::parse($employee->jobDetails->joining_date)->diffForHumans() }}</span>
-                                                                    @else
-                                                                        N/A
-                                                                    @endif
-                                                                </td>
-                                                                <td class="text-center">
-                                                                    @if ($employee->status == 1)
-                                                                        <span class="badge bg-success">Active</span>
-                                                                    @else
-                                                                        <span class="badge bg-danger">Inactive</span>
-                                                                    @endif
-                                                                </td>
-                                                                <!--<td class="text-end">-->
-                                                                <!--    <div class="dropdown">-->
-                                                                <!--        <a href="javascript:void(0);" class="avatar-text avatar-md ms-auto" data-bs-toggle="dropdown">-->
-                                                                <!--            <i class="feather-more-vertical"></i>-->
-                                                                <!--        </a>-->
-                                                                <!--        <div class="dropdown-menu dropdown-menu-end">-->
-                                                                <!--            <a href="{{ route('employee.show', encrypt($employee->id)) }}" class="dropdown-item">-->
-                                                                <!--                <i class="feather-eye me-2"></i> View Details-->
-                                                                <!--            </a>-->
-                                                                <!--            <a href="javascript:void(0);" class="dropdown-item" onclick="sendMessage({{ $employee->id }})">-->
-                                                                <!--                <i class="feather-message me-2"></i> Send Message-->
-                                                                <!--            </a>-->
-                                                                <!--        </div>-->
-                                                                <!--    </div>-->
-                                                                <!--</td>-->
-                                                            </tr>
-                                                        @empty
-                                                            <tr>
-                                                                <td colspan="6" class="text-center text-muted py-4">
-                                                                    <i class="feather-users fs-1 d-block mb-2"></i>
-                                                                    No members found in this department.
-                                                                </td>
-                                                            </tr>
-                                                        @endforelse
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                            <td class="text-center">
+                                                                {{ $employee->jobDetails->designation->name ?? ($employee->jobDetails->Designation->name ?? 'N/A') }}
+                                                            </td>
+                                                            <td class="text-center">
+                                                                {{ $employee->employee_id ?? ($employee->jobDetails->employee_id ?? 'N/A') }}
+                                                            </td>
+                                                            <td class="text-center">
+                                                                @if ($employee->jobDetails && $employee->jobDetails->joining_date)
+                                                                    <span
+                                                                        class="fw-medium">{{ \Carbon\Carbon::parse($employee->jobDetails->joining_date)->format('d M Y') }}</span>
+                                                                    <span
+                                                                        class="fs-11 text-muted d-block">{{ \Carbon\Carbon::parse($employee->jobDetails->joining_date)->diffForHumans() }}</span>
+                                                                @else
+                                                                    N/A
+                                                                @endif
+                                                            </td>
+                                                            <td class="text-center">
+                                                                @if ($employee->status == 1)
+                                                                    <span class="badge bg-success">Active</span>
+                                                                @else
+                                                                    <span class="badge bg-danger">Inactive</span>
+                                                                @endif
+                                                            </td>
+                                                            <!--<td class="text-end">-->
+                                                            <!--    <div class="dropdown">-->
+                                                            <!--        <a href="javascript:void(0);" class="avatar-text avatar-md ms-auto" data-bs-toggle="dropdown">-->
+                                                            <!--            <i class="feather-more-vertical"></i>-->
+                                                            <!--        </a>-->
+                                                            <!--        <div class="dropdown-menu dropdown-menu-end">-->
+                                                            <!--            <a href="{{ route('employee.show', encrypt($employee->id)) }}" class="dropdown-item">-->
+                                                            <!--                <i class="feather-eye me-2"></i> View Details-->
+                                                            <!--            </a>-->
+                                                            <!--            <a href="javascript:void(0);" class="dropdown-item" onclick="sendMessage({{ $employee->id }})">-->
+                                                            <!--                <i class="feather-message me-2"></i> Send Message-->
+                                                            <!--            </a>-->
+                                                            <!--        </div>-->
+                                                            <!--    </div>-->
+                                                            <!--</td>-->
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="6" class="text-center text-muted py-4">
+                                                                <i class="feather-users fs-1 d-block mb-2"></i>
+                                                                No members found in this designation.
+                                                            </td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
-
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -200,165 +237,4 @@
             </div>
         </div>
     </div>
-@endsection
-
-@section('create-modal')
-    <!-- Update Designation Modal -->
-    <div class="modal fade" id="changedesignationDetails" tabindex="-1" aria-labelledby="changedesignationDetailsLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="d-flex flex-column mb-0">
-                        <span class="fs-18 fw-bold mb-1">Update Designation Details</span>
-                        <small class="d-block fs-11 fw-normal text-muted">Update Designation information</small>
-                    </h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div class="card m-0">
-                        <div class="card-body">
-                            <form id="updatedesignationForm"
-                                action="{{ route('designation.update', ['id' => encrypt($designation->id)]) }}"
-                                method="POST">
-                                @csrf
-
-                                <div id="updateFormError" class="alert alert-danger d-none"></div>
-                                <div class="row">
-                                    <div class="col-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_name">Designation Name *</label>
-                                            <input type="text" class="form-control" name="name" id="edit_name"
-                                                value="{{ $designation->name }}" placeholder="Enter Designation name">
-                                            <small class="text-danger error-text name_error"></small>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_status">Status *</label>
-                                            <select class="form-control" name="status" id="edit_status" required>
-                                                <option value="1"
-                                                    {{ $designation->status == '1' ? 'selected' : '' }}>
-                                                    Active
-                                                </option>
-                                                <option value="0"
-                                                    {{ $designation->status == '0' ? 'selected' : '' }}>
-                                                    Inactive
-                                                </option>
-                                            </select>
-                                            <small class="text-danger error-text status_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_description">Description</label>
-                                            <textarea class="form-control" name="description" id="edit_description" rows="3"
-                                                placeholder="Enter Designation description...">{{ $designation->description }}</textarea>
-                                            <small class="text-danger error-text description_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="d-flex justify-content-end gap-2">
-                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                                                Cancel
-                                            </button>
-                                            <button type="submit" class="btn btn-primary">
-                                                Update Designation
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-@endsection
-
-@section('script-area')
-    <script>
-        $(document).ready(function() {
-            // Update form submission
-            $('#updatedesignationForm').on('submit', function(e) {
-                e.preventDefault();
-                console.log('Update form submitted');
-
-                // Get form data
-                var formData = $(this).serialize();
-                console.log('Form data:', formData);
-
-                // Reset errors
-                $('.error-text').text('');
-                $('#updateFormError').addClass('d-none').text('');
-
-                // Show loading
-                var submitBtn = $(this).find('button[type="submit"]');
-                var originalText = submitBtn.text();
-                submitBtn.prop('disabled', true).text('Updating...');
-
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: "POST",
-                    data: formData,
-                    dataType: 'json',
-                    success: function(response) {
-                        console.log('Update success:', response);
-                        submitBtn.prop('disabled', false).text(originalText);
-
-                        if (response.success) {
-                            // Show success message
-                            alert('Designation updated successfully!');
-
-                            // Close modal
-                            $('#changedesignationDetails').modal('hide');
-
-                            // Reload page to show updated data
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('Update error:', error);
-                        console.log('Status:', status);
-                        console.log('XHR response:', xhr.responseText);
-
-                        submitBtn.prop('disabled', false).text(originalText);
-
-                        if (xhr.status === 422) {
-                            // Validation errors
-                            console.log('Validation errors:', xhr.responseJSON.errors);
-                            let errors = xhr.responseJSON.errors;
-                            $.each(errors, function(key, value) {
-                                $('.' + key + '_error').text(value[0]);
-                            });
-                        } else if (xhr.status === 500) {
-                            // Server error
-                            $('#updateFormError')
-                                .removeClass('d-none')
-                                .text('Server error. Please try again later.');
-                        } else {
-                            // Other errors
-                            let errorMsg = xhr.responseJSON?.message ||
-                                'Something went wrong. Please try again.';
-                            console.log('Error message:', errorMsg);
-
-                            $('#updateFormError')
-                                .removeClass('d-none')
-                                .text(errorMsg);
-                        }
-                    }
-                });
-            });
-
-            // Clear errors when modal is closed
-            $('#changedesignationDetails').on('hidden.bs.modal', function() {
-                $('.error-text').text('');
-                $('#updateFormError').addClass('d-none').text('');
-            });
-        });
-    </script>
 @endsection

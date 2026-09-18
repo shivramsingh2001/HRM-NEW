@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\UserJobDetail;
 use App\Notifications\LocationStatusNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -90,14 +89,9 @@ class LocationAlertService
         
         $recipients = collect();
 
-        // 1. Get Reporting Head (if exists and active)
-        $reportingHead = $this->getReportingHead($user->id);
-        if ($reportingHead && $reportingHead->status == 1) {
-            $recipients->push($reportingHead);
-            
-        } else {
-            
-        }
+        // 1. Get Reporting Heads (active only)
+        $activeReportingHeads = $this->getReportingHeads($user->id)->where('status', 1);
+        $recipients = $recipients->merge($activeReportingHeads);
 
         // 2. Get HR users from the SAME TENANT
         $hrUsers = User::where('tenant_id', $user->tenant_id)
@@ -269,24 +263,11 @@ private function sendFcmNotification($user, $title, $body, $data = [])
 }
 
     /**
-     * Get reporting head for an employee
+     * Get all reporting heads for an employee (multi reporting-head support).
      */
-    private function getReportingHead($employeeId)
+    private function getReportingHeads($employeeId)
     {
-        $jobDetail = UserJobDetail::where('user_id', $employeeId)->first();
-        
-        if (!$jobDetail || !$jobDetail->reporting_head) {
-            
-            return null;
-        }
-
-        $reportingHead = User::find($jobDetail->reporting_head);
-        
-        if ($reportingHead) {
-            
-        }
-
-        return $reportingHead;
+        return User::find($employeeId)?->reportingHeads ?? collect();
     }
 
     /**

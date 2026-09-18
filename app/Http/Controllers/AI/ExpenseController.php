@@ -70,7 +70,9 @@ class ExpenseController extends Controller
 
                 case 'team':
                     $query->where(function ($q) use ($authUser) {
-                        $q->where('user_job_details.reporting_head', $authUser->id) // Team members
+                        $q->whereIn('users.id', function ($sub) use ($authUser) { // Team members (any reporting head)
+                            $sub->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                        })
                             ->orWhere('expenses.user_id', $authUser->id); // Own expenses
                     });
                     break;

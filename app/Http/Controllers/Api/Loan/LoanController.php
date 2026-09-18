@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Services\RbacService;
-use App\Models\UserJobDetail;
+use App\Models\User;
 
 class LoanController extends Controller
 {
@@ -59,7 +59,7 @@ class LoanController extends Controller
             if ($loanScope === 'own') {
                 $query->where('user_id', $user->id);
             } elseif ($loanScope === 'team') {
-                $teamIds = UserJobDetail::where('reporting_head', $user->id)->pluck('user_id')->toArray();
+                $teamIds = User::managedBy($user->id)->pluck('id')->toArray();
                 $teamIds[] = $user->id;
                 $query->whereIn('user_id', $teamIds);
             } elseif ($loanScope === null) {
@@ -125,7 +125,7 @@ class LoanController extends Controller
         if ($loanScope === 'own') {
             $query->where('user_id', $user->id);
         } elseif ($loanScope === 'team') {
-            $teamIds = UserJobDetail::where('reporting_head', $user->id)->pluck('user_id')->toArray();
+            $teamIds = User::managedBy($user->id)->pluck('id')->toArray();
             $teamIds[] = $user->id;
             $query->whereIn('user_id', $teamIds);
         } elseif ($loanScope === null) {

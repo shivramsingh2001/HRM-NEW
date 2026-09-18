@@ -329,7 +329,9 @@ class ExpenseController extends Controller
             ->leftJoin('user_basic_details', 'user_basic_details.user_id', '=', 'users.id')
             ->leftJoin('expense_types', 'expenses.expense_type', '=', 'expense_types.id')
             ->leftJoin('projects', 'expenses.project_id', '=', 'projects.id')
-            ->where('user_job_details.reporting_head', $authUser->id)
+            ->whereIn('users.id', function ($q) use ($authUser) {
+                $q->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+            })
             ->select(
                 'expenses.id',
                 'expenses.expense_number',
@@ -364,8 +366,7 @@ class ExpenseController extends Controller
             ->get();
 
         // Get team members list
-        $teamMembers = User::join('user_job_details', 'user_job_details.user_id', '=', 'users.id')
-            ->where('user_job_details.reporting_head', $authUser->id)
+        $teamMembers = User::managedBy($authUser->id)
             ->select('users.id', 'users.name', 'users.email', 'users.employee_id')
             ->get();
 

@@ -48,9 +48,7 @@ class ManagerPerformanceReviewController extends Controller
 
         // If manager, only show team members
         if ($user->role == 'manager') {
-            $query->whereHas('jobDetails', function ($q) use ($user) {
-                $q->where('reporting_head', $user->id);
-            });
+            $query->managedBy($user->id);
         }
 
         // Filter by department
@@ -371,9 +369,7 @@ class ManagerPerformanceReviewController extends Controller
         $reportingMonth = $month . '-01';
 
         if ($user->role == 'manager') {
-            $teamIds = User::whereHas('jobDetails', function ($q) use ($user) {
-                $q->where('reporting_head', $user->id);
-            })->pluck('id');
+            $teamIds = User::managedBy($user->id)->pluck('id');
 
             $pendingCount = ManagerPerformanceReview::whereIn('user_id', $teamIds)
                 ->where('review_month', $reportingMonth)

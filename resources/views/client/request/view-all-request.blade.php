@@ -19,8 +19,8 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary-mid);
+            box-shadow: var(--shadow-focus);
         }
 
         /* Consistent initials style - same color for all */
@@ -28,7 +28,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #4f46e5;
+            background: var(--primary-mid);
             /* Single consistent color */
             color: white;
             border-radius: 50%;
@@ -71,12 +71,12 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary-mid);
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #4f46e5 !important;
+            color: var(--primary-mid) !important;
             opacity: 0.8;
         }
 
@@ -154,13 +154,13 @@
     }
 
     .filter-title i {
-        color: #4f46e5;
+        color: var(--primary-mid);
         font-size: 16px;
     }
 
     .filter-title span {
-        background: #eef2ff;
-        color: #4f46e5;
+        background: var(--primary-light);
+        color: var(--primary-mid);
         font-size: 11px;
         font-weight: 600;
         padding: 2px 8px;
@@ -201,7 +201,7 @@
     .apply-btn {
         height: 36px;
         padding: 0 16px;
-        background: #4f46e5;
+        background: var(--primary-mid);
         color: white;
         border: none;
         border-radius: 8px;
@@ -267,7 +267,7 @@
     }
 
     .filter-tag i {
-        color: #4f46e5;
+        color: var(--primary-mid);
         font-size: 11px;
     }
 
@@ -283,39 +283,25 @@
     }
 
     .filter-tag.clear-all {
-        background: #eef2ff;
-        border-color: #4f46e5;
-        color: #4f46e5;
+        background: var(--primary-light);
+        border-color: var(--primary-mid);
+        color: var(--primary-mid);
         font-weight: 600;
         text-decoration: none;
         padding: 3px 10px;
     }
 
-    /* ==================== TABLE STYLES ==================== */
+    /* ==================== TABLE STYLES ====================
+       Padding/font size are intentionally NOT overridden here — the table
+       inherits the sitewide compact convention from theme-custom.css. */
     .table {
         margin-bottom: 0;
     }
 
-    .table th {
-        background-color: #f8fafc;
-        font-weight: 600;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        color: #475569;
-        border-bottom-width: 1px;
-        padding: 12px 16px;
-        white-space: nowrap;
-    }
-
-    .table td {
-        vertical-align: middle;
-        font-size: 13px;
-        padding: 12px 16px;
-        border-bottom: 1px solid #f1f5f9;
-    }
-
-    /* ==================== BADGES ==================== */
+    /* ==================== BADGES ====================
+       Status badges use the ui.status-badge component (theme-custom.css)
+       instead of local bg-* overrides — only the header count pills below
+       still use raw Bootstrap badge classes. */
     .badge {
         padding: 4px 10px;
         font-weight: 500;
@@ -326,9 +312,9 @@
         gap: 4px;
     }
 
-    .badge.bg-success {
-        background: #d1fae5 !important;
-        color: #065f46;
+    .badge.bg-info {
+        background: var(--primary-light) !important;
+        color: var(--primary-mid);
     }
 
     .badge.bg-warning {
@@ -336,45 +322,25 @@
         color: #92400e;
     }
 
-    .badge.bg-danger {
-        background: #fee2e2 !important;
-        color: #991b1b;
-    }
-
-    .badge.bg-info {
-        background: #e0f2fe !important;
-        color: #0369a1;
-    }
-
-    .badge.bg-secondary {
-        background: #f1f5f9 !important;
-        color: #475569;
-    }
-
-    .badge.bg-purple {
-        background: #e0e7ff !important;
-        color: #4f46e5;
-    }
-
     /* ==================== REQUEST TYPE BADGES ==================== */
     .request-type-badge {
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        padding: 4px 10px;
+        padding: 2px 10px;
         border-radius: 20px;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 500;
     }
 
     .type-wfh {
-        background: #e0f2fe;
-        color: #0369a1;
+          background: #dbeafe;
+        color: #1e3a8a;
     }
 
     .type-travel {
-        background: #fef3c7;
-        color: #92400e;
+        background: #dbeafe;
+        color: #1e3a8a;
     }
 
     /* ==================== EMPLOYEE INFO ==================== */
@@ -388,8 +354,8 @@
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background: #e0e7ff;
-        color: #4f46e5;
+        background: var(--primary-light);
+        color: var(--primary-mid);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -414,14 +380,14 @@
 
     /* ==================== DATE RANGE ==================== */
     .date-range {
-        display: flex;
+        display: inline;
         flex-direction: column;
         gap: 2px;
     }
 
     .date-range .start-date {
-        font-weight: 600;
-        color: #1e293b;
+       font-size: 11px;
+        color: #64748b;
     }
 
     .date-range .end-date {
@@ -469,8 +435,8 @@
     }
 
     .action-btn.view:hover {
-        color: #4f46e5;
-        border-color: #4f46e5;
+        color: var(--primary-mid);
+        border-color: var(--primary-mid);
     }
 
     .action-btn.approve {
@@ -529,22 +495,6 @@
         margin-bottom: 20px;
     }
 
-    /* ==================== MODAL STYLES ==================== */
-    .modal-comments {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        resize: vertical;
-        min-height: 100px;
-    }
-
-    .modal-comments:focus {
-        outline: none;
-        border-color: #4f46e5;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-    }
-
     /* ==================== RESPONSIVE ==================== */
     @media (max-width: 992px) {
         .filter-row {
@@ -594,9 +544,9 @@
                 @if(auth()->user()->role == 'admin')
                     All Travel & WFH Requests
                 @elseif(auth()->user()->role == 'hr')
-                    HR - ravel & WFH Requests
+                    HR - Travel & WFH Requests
                 @else
-                    Team ravel & WFH Requests
+                    Team Travel & WFH Requests
                 @endif
             </h5>
         </div>
@@ -926,7 +876,7 @@
                                     <th>Request Type</th>
                                     <th>Date Range</th>
                                     <th>Duration</th>
-                                    <th>Reason</th>
+                                    {{-- <th>Reason</th> --}}
                                     <th>Applied On</th>
                                     <th>Status</th>
                                     <th class="text-center">Actions</th>
@@ -942,14 +892,14 @@
                                                     {{ strtoupper(substr($request->user->name, 0, 2)) }}
                                                 </div>
                                                 <div class="employee-details">
-                                                    <div class="employee-name">{{ $request->user->name }}</div>
-                                                    <div class="employee-id">{{ $request->user->employee_id }}</div>
+                                                    <div class="employee-name">{{ $request->user->name }} <small class="text-secondary fs-10">( {{ $request->user->employee_id }} )</small></div>
+                                                    <div class="employee-id">{{ $request->user->email }}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="request-type-badge {{ $request->requestType->type_name == 'WFH' ? 'type-wfh' : 'type-travel' }}">
-                                                <i class="feather-{{ $request->requestType->type_name == 'WFH' ? 'home' : 'map-pin' }}"></i>
+                                            <span class="fs-10 request-type-badge {{ $request->requestType->type_name == 'WFH' ? 'type-wfh' : 'type-travel' }}">
+                                                <i class="fs-10 feather-{{ $request->requestType->type_name == 'WFH' ? 'home' : 'map-pin' }}"></i>
                                                 {{ $request->requestType->type_name }}
                                             </span>
                                         </td>
@@ -968,24 +918,14 @@
                                                 {{ $request->duration_in_days }} {{ Str::plural('day', $request->duration_in_days) }}
                                             </span>
                                         </td>
-                                        <td>
+                                        {{-- <td>
                                             <div class="reason-cell" title="{{ $request->reason }}">
-                                                {{ Str::limit($request->reason ?? 'No reason provided', 30) }}
+                                                {{ Str::limit($request->reason ?? 'No reason provided', 20) }}
                                             </div>
-                                        </td>
+                                        </td> --}}
                                         <td>{{ \Carbon\Carbon::parse($request->applied_date)->format('d M Y') }}</td>
                                         <td>
-                                            @php
-                                                $statusClass = [
-                                                    'PENDING' => 'bg-warning',
-                                                    'APPROVED' => 'bg-success',
-                                                    'REJECTED' => 'bg-danger',
-                                                    'CANCELLED' => 'bg-secondary',
-                                                ][$request->status] ?? 'bg-secondary';
-                                            @endphp
-                                            <span class="badge {{ $statusClass }}">
-                                                {{ ucfirst(strtolower($request->status)) }}
-                                            </span>
+                                            <x-ui.status-badge :status="$request->status" />
                                         </td>
                                         <td class="text-center">
                                             <div class="d-flex justify-content-center gap-1">
@@ -1040,66 +980,47 @@
 @endsection
 @section('create-modal')
 <!-- Approve Modal -->
-<div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Approve Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="feather-check-circle text-success" style="font-size: 48px;"></i>
-                </div>
-                <p class="text-center mb-3">
-                    Are you sure you want to approve the request from <strong id="approveEmployeeName"></strong>?
-                </p>
-                <div class="form-group">
-                    <label for="approveComments">Comments (Optional)</label>
-                    <textarea class="modal-comments" id="approveComments" 
-                              placeholder="Add any comments or remarks..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="confirmApprove">
-                    <i class="feather-check me-1"></i> Yes, Approve
-                </button>
-            </div>
-        </div>
+<x-ui.modal id="approveModal" title="Approve Request" bodyOnly>
+    <x-slot:footer>
+        <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="confirmApprove">
+            <i class="feather-check me-1"></i> Yes, Approve
+        </button>
+    </x-slot:footer>
+    <div class="text-center mb-3">
+        <i class="feather-check-circle text-success" style="font-size: 36px;"></i>
     </div>
-</div>
+    <p class="text-center mb-3">
+        Approve the request from <strong id="approveEmployeeName"></strong>?
+    </p>
+    <div class="form-group">
+        <label class="fw-semibold" for="approveComments">Comments (Optional)</label>
+        <textarea class="form-control" id="approveComments" rows="3"
+                  placeholder="Add any comments or remarks..."></textarea>
+    </div>
+</x-ui.modal>
 
 <!-- Reject Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Reject Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="feather-alert-triangle text-danger" style="font-size: 48px;"></i>
-                </div>
-                <p class="text-center mb-3">
-                    Are you sure you want to reject the request from <strong id="rejectEmployeeName"></strong>?
-                </p>
-                <div class="form-group">
-                    <label for="rejectComments">Reason for Rejection <span class="text-danger">*</span></label>
-                    <textarea class="modal-comments" id="rejectComments" 
-                              placeholder="Please provide a reason for rejection..." required></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmReject">
-                    <i class="feather-x me-1"></i> Yes, Reject
-                </button>
-            </div>
-        </div>
+<x-ui.modal id="rejectModal" title="Reject Request" bodyOnly>
+    <x-slot:footer>
+        <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmReject">
+            <i class="feather-x me-1"></i> Yes, Reject
+        </button>
+    </x-slot:footer>
+    <div class="text-center mb-3">
+        <i class="feather-alert-triangle text-danger" style="font-size: 36px;"></i>
     </div>
-</div>
+    <p class="text-center mb-3">
+        Reject the request from <strong id="rejectEmployeeName"></strong>?
+    </p>
+    <div class="form-group">
+        <label class="fw-semibold" for="rejectComments">Reason for Rejection <span class="text-danger">*</span></label>
+        <textarea class="form-control" id="rejectComments" rows="3"
+                  placeholder="Please provide a reason for rejection..." required></textarea>
+        <small class="text-danger error-text comments_error"></small>
+    </div>
+</x-ui.modal>
 @endsection
 @section('script-area')
 <script>
@@ -1171,16 +1092,18 @@
             let employeeName = $(this).data('employee');
             $('#rejectEmployeeName').text(employeeName);
             $('#rejectComments').val('');
+            $('.comments_error').text('');
             $('#rejectModal').modal('show');
         });
 
         $('#confirmReject').on('click', function() {
             if (!rejectId) return;
 
+            $('.comments_error').text('');
             let comments = $('#rejectComments').val().trim();
-            
+
             if (!comments) {
-                toastr.error('Please provide a reason for rejection');
+                $('.comments_error').text('Please provide a reason for rejection.');
                 return;
             }
 
@@ -1204,6 +1127,10 @@
                     }
                 },
                 error: function(xhr) {
+                    if (xhr.status === 422 && xhr.responseJSON?.errors?.comments) {
+                        $('.comments_error').text(xhr.responseJSON.errors.comments[0]);
+                        return;
+                    }
                     let message = 'Something went wrong.';
                     if (xhr.responseJSON?.message) {
                         message = xhr.responseJSON.message;
@@ -1221,6 +1148,7 @@
             approveId = null;
             rejectId = null;
             $('#approveComments, #rejectComments').val('');
+            $('.comments_error').text('');
         });
     });
 

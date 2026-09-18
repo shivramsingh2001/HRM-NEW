@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\Log;
 /**
  * Keeps projects.progress_percentage in sync with its tasks' completion
  * state, so project list/detail pages don't need to recompute this from
- * live COUNT queries on every render (see Project::getProgressPercentageAttribute,
- * which remains as a fallback for any project this observer hasn't touched).
+ * live COUNT queries on every render. This is the single source of truth
+ * for task-derived progress (Project::getProgressPercentageAttribute is now
+ * a plain passthrough to the stored column, not a second implementation).
+ * Skipped entirely when a PM has manually overridden progress via a Project
+ * Update — see the progress_manual_override guard below.
  */
 class TaskProgressObserver
 {
@@ -43,16 +46,34 @@ class TaskProgressObserver
                 return;
             }
 
-            $total = $project->tasks()->count();
-            $completed = $project->tasks()->whereIn('status', ['completed', 'approved'])->count();
-            $percentage = $total === 0 ? 0 : (int) round(($completed / $total) * 100);
-
-            if ($project->progress_percentage !== $percentage) {
-                $project->progress_percentage = $percentage;
-                $project->saveQuietly();
+            // A PM has manually reported a progress percentage via a Project
+            // Update — preserve it instead of overwriting with the
+            // task-derived figure. Cleared via ProjectController::resetProgress().
+            if ($project->progress_manual_override) {
+                return;
             }
+
+            $this->applyTaskDerivedProgress($project);
         } catch (\Throwable $e) {
             Log::error('TaskProgressObserver recalculation failed for project ' . $projectId . ': ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Force a task-derived recalculation regardless of progress_manual_override
+     * — used by ProjectController::resetProgress() right after it clears the
+     * flag, so the UI reflects the reset immediately instead of waiting for
+     * the next task change.
+     */
+    public function applyTaskDerivedProgress(Project $project): void
+    {
+        $total = $project->tasks()->count();
+        $completed = $project->tasks()->whereIn('status', ['completed', 'approved'])->count();
+        $percentage = $total === 0 ? 0 : (int) round(($completed / $total) * 100);
+
+        if ($project->progress_percentage !== $percentage) {
+            $project->progress_percentage = $percentage;
+            $project->saveQuietly();
         }
     }
 }

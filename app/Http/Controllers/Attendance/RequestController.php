@@ -10,6 +10,8 @@ use App\Models\RequestHistory;
 use App\Models\User;
 use Illuminate\Http\Request as HttpRequest;
 use App\Services\RequestNotificationService;
+use App\Services\AuditLogger;
+use App\Traits\AuthorizesByScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -18,12 +20,15 @@ use Illuminate\Support\Str;
 class RequestController extends Controller
 {
     use \App\Http\Controllers\Concerns\SanitizesCsv;
+    use AuthorizesByScope;
 
      protected $notificationService;
+     protected $auditLogger;
 
-    public function __construct(RequestNotificationService $notificationService)
+    public function __construct(RequestNotificationService $notificationService, AuditLogger $auditLogger)
     {
         $this->notificationService = $notificationService;
+        $this->auditLogger = $auditLogger;
     }
     /**
      * Display a listing of the user's requests.
@@ -134,17 +139,7 @@ class RequestController extends Controller
             DB::beginTransaction();
 
             // Check for overlapping requests
-            $overlapping = Request::where('user_id', $user->id)
-                ->whereIn('status', ['PENDING', 'APPROVED'])
-                ->where(function ($query) use ($validated) {
-                    $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
-                        ->orWhereBetween('end_date', [$validated['start_date'], $validated['end_date']])
-                        ->orWhere(function ($q) use ($validated) {
-                            $q->where('start_date', '<=', $validated['start_date'])
-                                ->where('end_date', '>=', $validated['end_date']);
-                        });
-                })
-                ->exists();
+            $overlapping = Request::overlapping($user->id, $validated['start_date'], $validated['end_date'])->exists();
 
             if ($overlapping) {
                 DB::rollBack();
@@ -176,8 +171,8 @@ class RequestController extends Controller
                     }
                     
                     $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                    $path = public_path('uploads/request/attachments');
-    
+                    $path = public_path('uploads/requests/attachments');
+
                     $file->move($path, $filename);
                     $filePath = 'uploads/requests/attachments/' . $filename;
                     
@@ -206,6 +201,8 @@ class RequestController extends Controller
                 'action' => 'CREATED',
                 'new_values' => json_encode($newRequest->toArray())
             ]);
+
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.created', 'Request', $newRequest->id, [], $newRequest->toArray());
 
             DB::commit();
              // Send notifications
@@ -266,18 +263,7 @@ class RequestController extends Controller
             DB::beginTransaction();
 
             // Check for overlapping requests (excluding current)
-            $overlapping = Request::where('user_id', Auth::id())
-                ->where('id', '!=', $id)
-                ->whereIn('status', ['PENDING', 'APPROVED'])
-                ->where(function ($query) use ($validated) {
-                    $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
-                        ->orWhereBetween('end_date', [$validated['start_date'], $validated['end_date']])
-                        ->orWhere(function ($q) use ($validated) {
-                            $q->where('start_date', '<=', $validated['start_date'])
-                                ->where('end_date', '>=', $validated['end_date']);
-                        });
-                })
-                ->exists();
+            $overlapping = Request::overlapping(Auth::id(), $validated['start_date'], $validated['end_date'], $id)->exists();
 
             if ($overlapping) {
                 DB::rollBack();
@@ -306,10 +292,10 @@ class RequestController extends Controller
                 }
                     
                 $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $path = public_path('uploads/request-attachments');
+                $path = public_path('uploads/requests/attachments');
 
                 $file->move($path, $filename);
-                $filePath = 'uploads/request-attachments/' . $filename;
+                $filePath = 'uploads/requests/attachments/' . $filename;
                 RequestAttachment::create([
                     'request_id' => $existingRequest->id,
                     'file_name' => $file->getClientOriginalName(),
@@ -329,6 +315,8 @@ class RequestController extends Controller
                 'old_values' => json_encode($oldValues),
                 'new_values' => json_encode($existingRequest->toArray())
             ]);
+
+            $this->auditLogger->record('tenant_user', Auth::id(), (int) Auth::user()->tenant_id, 'requests.updated', 'Request', $existingRequest->id, $oldValues, $existingRequest->toArray());
 
             DB::commit();
 
@@ -357,6 +345,7 @@ class RequestController extends Controller
     {
         try {
             $existingRequest = Request::findOrFail($id);
+            $user = Auth::user();
 
             // Check if user owns this request
             if ($existingRequest->user_id != Auth::id()) {
@@ -366,36 +355,47 @@ class RequestController extends Controller
                 ], 403);
             }
 
-         
-            if (!in_array($existingRequest->status, ['PENDING'])) {
+            if (!$existingRequest->canBeCancelled()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'This request cannot be Delete.'
+                    'message' => 'This request cannot be cancelled.'
                 ], 400);
             }
 
             DB::beginTransaction();
 
-            $requestData = $existingRequest->toArray();
-            $attachmentCount = $existingRequest->attachments->count();
-    
-            foreach ($existingRequest->attachments as $attachment) {
-                $filePath = public_path($attachment->file_path);
-                if (file_exists($filePath)) {
-                    unlink($filePath); // Delete the file
-                }
-            }
-            $existingRequest->delete();
+            $oldStatus = $existingRequest->status;
+            $wasApproved = $oldStatus === 'APPROVED';
+
+            $existingRequest->update(['status' => 'CANCELLED']);
+
+            RequestHistory::create([
+                'request_id' => $existingRequest->id,
+                'action_by' => $user->id,
+                'action' => 'CANCELLED',
+                'old_values' => json_encode(['status' => $oldStatus]),
+                'new_values' => json_encode(['status' => 'CANCELLED'])
+            ]);
+
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.cancelled', 'Request', $existingRequest->id, ['status' => $oldStatus], ['status' => 'CANCELLED']);
+
             DB::commit();
+
+            try {
+                $this->notificationService->notifyRequestCancelled($existingRequest, $wasApproved);
+            } catch (\Exception $e) {
+                \Log::error('Failed to send request cancellation notification: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Request Deleted successfully.'
+                'message' => 'Request cancelled successfully.'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to Delete request: ' . $e->getMessage()
+                'message' => 'Failed to cancel request: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -407,9 +407,10 @@ class RequestController extends Controller
     {
         try {
             $attachment = RequestAttachment::with('request')->findOrFail($attachmentId);
+            $user = Auth::user();
 
             // Check if user owns the request
-            if ($attachment->request->employee_id != Auth::id()) {
+            if ($attachment->request->user_id != Auth::id()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access.'
@@ -424,8 +425,14 @@ class RequestController extends Controller
                 ], 400);
             }
 
-            Storage::disk('public')->delete($attachment->file_path);
+            $filePath = public_path($attachment->file_path);
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+            $attachmentId = $attachment->id;
             $attachment->delete();
+
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.attachment_deleted', 'RequestAttachment', $attachmentId, [], []);
 
             return response()->json([
                 'success' => true,
@@ -440,6 +447,26 @@ class RequestController extends Controller
     }
 
     /**
+     * Force-download an attachment (rather than relying on its raw public URL).
+     */
+    public function downloadAttachment($attachmentId)
+    {
+        $attachment = RequestAttachment::with('request')->findOrFail($attachmentId);
+        $user = Auth::user();
+
+        if (!$this->scopeCoversOwner($user, 'requests', 'view', (int) $attachment->request->user_id)) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        $filePath = public_path($attachment->file_path);
+        if (!file_exists($filePath)) {
+            abort(404, 'File not found.');
+        }
+
+        return response()->download($filePath, $attachment->file_name);
+    }
+
+    /**
      * Get request statistics for dashboard.
      */
     public function getStats()
@@ -448,11 +475,11 @@ class RequestController extends Controller
             $user = Auth::user();
 
             $stats = [
-                'total' => Request::where('employee_id', $user->id)->count(),
-                'pending' => Request::where('employee_id', $user->id)->where('status', 'PENDING')->count(),
-                'approved' => Request::where('employee_id', $user->id)->where('status', 'APPROVED')->count(),
-                'rejected' => Request::where('employee_id', $user->id)->where('status', 'REJECTED')->count(),
-                'cancelled' => Request::where('employee_id', $user->id)->where('status', 'CANCELLED')->count(),
+                'total' => Request::where('user_id', $user->id)->count(),
+                'pending' => Request::where('user_id', $user->id)->where('status', 'PENDING')->count(),
+                'approved' => Request::where('user_id', $user->id)->where('status', 'APPROVED')->count(),
+                'rejected' => Request::where('user_id', $user->id)->where('status', 'REJECTED')->count(),
+                'cancelled' => Request::where('user_id', $user->id)->where('status', 'CANCELLED')->count(),
             ];
 
             return response()->json([
@@ -550,22 +577,7 @@ class RequestController extends Controller
 
             // Build query based on user role
             $query = Request::with(['requestType', 'user', 'reportingHead']);
-
-            // Role-based filtering
-            if ($user->role == 'admin' || $user->role == 'hr') {
-                // Admin and HR can see all requests
-                // No additional filter
-            } else {
-                // Manager - see only their team members' requests
-                // Get all users where this manager is reporting head
-               $teamUserIds = User::join('user_job_details', 'users.id', '=', 'user_job_details.user_id')
-                ->where('user_job_details.reporting_head', $user->id)
-                ->pluck('users.id')
-                ->toArray();
-                // Include manager's own requests if needed
-                $teamUserIds[] = $user->id;
-                $query->whereIn('user_id', $teamUserIds);
-            }
+            $query = $this->applyScope($query, 'requests.user_id', $user, 'requests', 'view');
 
             // Apply filters
             if ($request->filled('status')) {
@@ -672,16 +684,8 @@ class RequestController extends Controller
             ])->findOrFail($id);
 
             // Check if user has permission to view this request
-            if ($user->role == 'admin' || $user->role == 'hr') {
-                // Admin/HR can view all requests
-            } else {
-                // Manager can only view their team's requests
-                $teamUserIds = User::whereHas('jobDetails', fn ($q) => $q->where('reporting_head', $user->id))->pluck('id')->toArray();
-                $teamUserIds[] = $user->id;
-
-                if (!in_array($request->user_id, $teamUserIds)) {
-                    abort(403, 'Unauthorized access.');
-                }
+            if (!$this->scopeCoversOwner($user, 'requests', 'view', (int) $request->user_id)) {
+                abort(403, 'Unauthorized access.');
             }
 
             return view('client.request.manager-request-detail', compact('request'));
@@ -701,16 +705,11 @@ class RequestController extends Controller
             $user = Auth::user();
 
             // Check if user has permission to approve
-            if ($user->role == 'admin' || $user->role == 'hr') {
-                // Admin/HR can approve any request
-            } else {
-                // Manager can only approve requests from their own reportees
-                if (optional($existingRequest->user->jobDetails)->reporting_head != $user->id) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You are not authorized to approve this request.'
-                    ], 403);
-                }
+            if (!$this->scopeCoversOwner($user, 'requests', 'approve', (int) $existingRequest->user_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to approve this request.'
+                ], 403);
             }
 
             // Check if request can be approved
@@ -742,6 +741,8 @@ class RequestController extends Controller
                 'old_values' => json_encode(['status' => $oldStatus]),
                 'new_values' => json_encode(['status' => 'APPROVED'])
             ]);
+
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.approved', 'Request', $existingRequest->id, ['status' => $oldStatus], ['status' => 'APPROVED']);
 
             DB::commit();
 
@@ -780,16 +781,11 @@ class RequestController extends Controller
             $user = Auth::user();
 
             // Check if user has permission to reject
-            if ($user->role == 'admin' || $user->role == 'hr') {
-                // Admin/HR can reject any request
-            } else {
-                // Manager can only reject requests from their own reportees
-                if (optional($existingRequest->user->jobDetails)->reporting_head != $user->id) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You are not authorized to reject this request.'
-                    ], 403);
-                }
+            if (!$this->scopeCoversOwner($user, 'requests', 'approve', (int) $existingRequest->user_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to reject this request.'
+                ], 403);
             }
 
             // Check if request can be rejected
@@ -822,10 +818,15 @@ class RequestController extends Controller
                 'new_values' => json_encode(['status' => 'REJECTED'])
             ]);
 
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.rejected', 'Request', $existingRequest->id, ['status' => $oldStatus], ['status' => 'REJECTED']);
+
             DB::commit();
 
-            // TODO: Send notification to employee
-            // $this->sendNotification($existingRequest->user, 'request_rejected', $existingRequest);
+            try {
+                $this->notificationService->notifyRequestRejected($existingRequest, $validated['comments']);
+            } catch (\Exception $e) {
+                \Log::error('Failed to send request rejected notification: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'success' => true,
@@ -866,12 +867,9 @@ class RequestController extends Controller
             foreach ($validated['request_ids'] as $requestId) {
                 $existingRequest = Request::find($requestId);
 
-                // Check permissions
-                if ($user->role != 'admin' && $user->role != 'hr') {
-                    if (optional($existingRequest->user->jobDetails)->reporting_head != $user->id) {
-                        $failCount++;
-                        continue;
-                    }
+                if (!$existingRequest || !$this->scopeCoversOwner($user, 'requests', 'approve', (int) $existingRequest->user_id)) {
+                    $failCount++;
+                    continue;
                 }
 
                 // Check if pending
@@ -895,6 +893,14 @@ class RequestController extends Controller
                     'old_values' => json_encode(['status' => $oldStatus]),
                     'new_values' => json_encode(['status' => 'APPROVED'])
                 ]);
+
+                $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.approved', 'Request', $existingRequest->id, ['status' => $oldStatus], ['status' => 'APPROVED']);
+
+                try {
+                    $this->notificationService->notifyRequestApproved($existingRequest, $validated['comments'] ?? null);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send bulk-approve notification: ' . $e->getMessage());
+                }
 
                 $successCount++;
             }
@@ -928,15 +934,7 @@ class RequestController extends Controller
 
             // Build query based on user role
             $query = Request::with(['requestType', 'user', 'reportingHead']);
-
-            if ($user->role == 'admin' || $user->role == 'hr') {
-                // Admin and HR can see all requests
-            } else {
-                // Manager - see only their team members
-                $teamUserIds = User::whereHas('jobDetails', fn ($q) => $q->where('reporting_head', $user->id))->pluck('id')->toArray();
-                $teamUserIds[] = $user->id;
-                $query->whereIn('user_id', $teamUserIds);
-            }
+            $query = $this->applyScope($query, 'requests.user_id', $user, 'requests', 'view');
 
             // Apply filters
             if ($request->filled('status')) {
@@ -1021,15 +1019,7 @@ class RequestController extends Controller
 
             // Build query based on user role
             $query = Request::query();
-
-            if ($user->role == 'admin' || $user->role == 'hr') {
-                // Admin and HR - all requests
-            } else {
-                // Manager - only team requests
-                $teamUserIds = User::whereHas('jobDetails', fn ($q) => $q->where('reporting_head', $user->id))->pluck('id')->toArray();
-                $teamUserIds[] = $user->id;
-                $query->whereIn('user_id', $teamUserIds);
-            }
+            $query = $this->applyScope($query, 'user_id', $user, 'requests', 'view');
 
             $stats = [
                 'total' => (clone $query)->count(),

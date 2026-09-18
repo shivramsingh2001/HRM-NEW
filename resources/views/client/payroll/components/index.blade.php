@@ -3,15 +3,15 @@
 @section('style')
 <style>
     .component-type-badge { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; padding: 3px 8px; border-radius: 999px; }
-    .type-earning { background: rgba(16, 185, 129, .12); color: #10b981; }
-    .type-deduction { background: rgba(239, 68, 68, .12); color: #ef4444; }
-    .type-employer_contribution { background: rgba(59, 130, 246, .12); color: #1e3a8a; }
-    .type-reimbursement { background: rgba(139, 92, 246, .12); color: #8b5cf6; }
+    .type-earning { background: var(--success-light); color: var(--success); }
+    .type-deduction { background: var(--danger-light); color: var(--danger); }
+    .type-employer_contribution { background: var(--primary-light); color: var(--primary); }
+    .type-reimbursement { background: var(--purple-light); color: var(--purple); }
     .method-pill { font-size: 9px; color: #6b7385; }
 
     /* active/edit column polish */
     .form-check.form-switch .form-check-input.toggle-status { width: 2.2em; height: 1.2em; cursor: pointer; }
-    .form-check.form-switch .form-check-input.toggle-status:checked { background-color: #10b981; border-color: #10b981; }
+    .form-check.form-switch .form-check-input.toggle-status:checked { background-color: var(--success); border-color: var(--success); }
     .form-check.form-switch .form-check-input.toggle-status:focus { box-shadow: 0 0 0 .2rem rgba(16, 185, 129, .18); }
     .btn-icon-edit {
         width: 30px; height: 30px; padding: 0;
@@ -19,29 +19,28 @@
         border-radius: 8px; border: 1px solid #dfe5f0; background: #f4f6fb; color: #475569;
         transition: all .15s;
     }
-    .btn-icon-edit:hover { background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; }
+    .btn-icon-edit:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
     .btn-icon-edit i { font-size: 14px; }
 
-    /* ==================== COMPONENT MODAL (Add / Edit) ==================== */
-    .component-modal .modal-content { border-radius: 10px; }
-    .component-modal .modal-header { padding: 7px 12px; }
-    .component-modal .modal-header h2 { margin: 0; }
-    .component-modal .modal-header .fs-18 { font-size: 12.5px !important; }
-    .component-modal .modal-body { padding: 0; max-height: 78vh; overflow-y: auto; }
-    .component-modal .card { border: none; }
-    .component-modal .card-body { padding: 10px 12px; }
-    .component-modal .btn {
+    /* ==================== COMPONENT DRAWERS (Add / Edit) ====================
+       Width/header/body chrome comes from the shared .ui-drawer class
+       (theme-custom.css) via the x-ui.drawer component — only the form's
+       own field styling stays page-local. */
+    #addComponentModal .card, #editComponentModal .card { border: none; }
+    #addComponentModal .card-body, #editComponentModal .card-body { padding: 0; }
+    #addComponentModal .btn, #editComponentModal .btn {
         padding: 4px 10px; font-size: 11px; border-radius: 7px; border: 1px solid transparent;
     }
-    .component-modal .btn-modal-cancel { background: #f4f6fb; border-color: #dfe5f0; color: #475569; }
-    .component-modal .btn-modal-cancel:hover { background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; }
-    .component-modal .form-section { background: #fbfcfe; border: 1px solid #eaeef5; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-    .component-modal .form-section h6 { font-size: 10px; font-weight: 700; color: #1a2236; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 7px; }
-    .component-modal .form-section label { font-size: 10px; font-weight: 600; margin-bottom: 2px; }
-    .component-modal .row > [class*="col-"] { margin-bottom: 6px !important; }
-    .component-modal .form-control, .component-modal .form-check-label { font-size: 10.5px; }
-    .component-modal .form-control { padding: 3px 8px; height: auto; }
-    .component-modal small { font-size: 9px; }
+    #addComponentModal .btn-modal-cancel, #editComponentModal .btn-modal-cancel { background: #f4f6fb; border-color: #dfe5f0; color: #475569; }
+    #addComponentModal .btn-modal-cancel:hover, #editComponentModal .btn-modal-cancel:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+    #addComponentModal .form-section, #editComponentModal .form-section { background: #fbfcfe; border: 1px solid #eaeef5; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+    #addComponentModal .form-section h6, #editComponentModal .form-section h6 { font-size: 10px; font-weight: 700; color: #1a2236; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 7px; }
+    #addComponentModal .form-section label, #editComponentModal .form-section label { font-size: 10px; font-weight: 600; margin-bottom: 2px; }
+    #addComponentModal .row > [class*="col-"], #editComponentModal .row > [class*="col-"] { flex: 0 0 100%; max-width: 100%; margin-bottom: 6px !important; }
+    #addComponentModal .form-control, #editComponentModal .form-control,
+    #addComponentModal .form-check-label, #editComponentModal .form-check-label { font-size: 10.5px; }
+    #addComponentModal .form-control, #editComponentModal .form-control { padding: 3px 8px; height: auto; }
+    #addComponentModal small, #editComponentModal small { font-size: 9px; }
 </style>
 @endsection
 
@@ -64,7 +63,7 @@
         <div class="page-header-right ms-auto">
             <div class="hstack gap-2">
                 @if (in_array($role, ['admin', 'hr']))
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#addComponentModal">
+                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="offcanvas" data-bs-target="#addComponentModal">
                         <i class="feather-plus me-1"></i>Add Component
                     </a>
                 @endif
@@ -136,7 +135,7 @@
                                     </td>
                                     <td class="text-end">
                                         <a href="#" class="btn-icon-edit edit-component"
-                                            data-bs-toggle="modal" data-bs-target="#editComponentModal"
+                                            data-bs-toggle="offcanvas" data-bs-target="#editComponentModal"
                                             data-id="{{ $component->id }}"
                                             data-name="{{ $component->name }}"
                                             data-code="{{ $component->code }}"
@@ -194,19 +193,8 @@
         $ceilingRules = ['cap_base_before_percentage' => 'Cap base, then apply % (PF-style)', 'ceiling_exclude' => 'Not applicable at all above ceiling (ESI-style)'];
     @endphp
 
-    {{-- ==================== Add Component Modal ==================== --}}
-    <div class="modal fade-scale" id="addComponentModal" tabindex="-1" aria-labelledby="addComponentModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md component-modal" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="d-flex flex-column mb-0">
-                        <span class="fs-18 fw-bold mb-1">Add Payroll Component</span>
-                    </h2>
-                    <a href="#" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
-                        <i class="feather-x text-danger"></i>
-                    </a>
-                </div>
-                <div class="modal-body">
+    {{-- ==================== Add Component Drawer ==================== --}}
+    <x-ui.drawer id="addComponentModal" title="Add Payroll Component" width="480px">
                     <div class="card m-0">
                         <div class="card-body">
                             <form action="{{ route('payroll-components.store') }}" method="POST" id="addComponentForm">
@@ -350,7 +338,7 @@
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-modal-cancel float-end" data-bs-dismiss="modal">
+                                        <a href="#" class="btn btn-modal-cancel float-end" data-bs-dismiss="offcanvas">
                                             <i class="feather-x me-2"></i>Cancel
                                         </a>
                                     </div>
@@ -358,24 +346,10 @@
                             </form>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    </x-ui.drawer>
 
-    {{-- ==================== Edit Component Modal ==================== --}}
-    <div class="modal fade-scale" id="editComponentModal" tabindex="-1" aria-labelledby="editComponentModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md component-modal" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="d-flex flex-column mb-0">
-                        <span class="fs-18 fw-bold mb-1">Edit Payroll Component</span>
-                    </h2>
-                    <a href="#" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
-                        <i class="feather-x text-danger"></i>
-                    </a>
-                </div>
-                <div class="modal-body">
+    {{-- ==================== Edit Component Drawer ==================== --}}
+    <x-ui.drawer id="editComponentModal" title="Edit Payroll Component" width="480px">
                     <div class="card m-0">
                         <div class="card-body">
                             <div id="edit_system_default_notice" class="alert alert-info d-none" style="font-size:11.5px;">
@@ -523,7 +497,7 @@
                                         </button>
                                     </div>
                                     <div class="col-6">
-                                        <a href="#" class="btn btn-modal-cancel float-end" data-bs-dismiss="modal">
+                                        <a href="#" class="btn btn-modal-cancel float-end" data-bs-dismiss="offcanvas">
                                             <i class="feather-x me-2"></i>Cancel
                                         </a>
                                     </div>
@@ -531,10 +505,7 @@
                             </form>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    </x-ui.drawer>
 @endsection
 
 @section('script-area')
@@ -615,7 +586,7 @@
                     data: $(this).serialize(),
                     success: function(response) {
                         if (response.success) {
-                            $('#addComponentModal').modal('hide');
+                            bootstrap.Offcanvas.getInstance(document.getElementById('addComponentModal'))?.hide();
                             toastr.success(response.message);
                             setTimeout(() => location.reload(), 1000);
                         }
@@ -686,7 +657,7 @@
                     data: $(this).serialize(),
                     success: function(response) {
                         if (response.success) {
-                            $('#editComponentModal').modal('hide');
+                            bootstrap.Offcanvas.getInstance(document.getElementById('editComponentModal'))?.hide();
                             toastr.success(response.message);
                             setTimeout(() => location.reload(), 1000);
                         }
@@ -705,13 +676,13 @@
                 });
             });
 
-            $('#addComponentModal').on('hidden.bs.modal', function() {
+            $('#addComponentModal').on('hidden.bs.offcanvas', function() {
                 $('#addComponentForm')[0].reset();
                 $('.error-text').text('');
                 $('#addComponentFormError').addClass('d-none').text('');
             });
 
-            $('#editComponentModal').on('hidden.bs.modal', function() {
+            $('#editComponentModal').on('hidden.bs.offcanvas', function() {
                 $('.error-text').text('');
                 $('#editComponentFormError').addClass('d-none').text('');
             });

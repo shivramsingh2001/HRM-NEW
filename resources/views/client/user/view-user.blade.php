@@ -19,8 +19,8 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-focus);
         }
 
         /* Consistent initials style - same color for all */
@@ -28,7 +28,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #4f46e5;
+            background: var(--primary);
             /* Single consistent color */
             color: white;
             border-radius: 50%;
@@ -71,12 +71,12 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary);
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #4f46e5 !important;
+            color: var(--primary) !important;
             opacity: 0.8;
         }
 
@@ -105,7 +105,7 @@
         }
 
         .toggle-switch.active {
-            background: #10b981;
+            background: var(--primary);
         }
 
         .toggle-switch .toggle-circle {
@@ -130,7 +130,7 @@
         }
 
         .status-label.active {
-            color: #10b981;
+            color: var(--primary);
         }
 
         .status-label.inactive {
@@ -139,7 +139,7 @@
 
         /* Add to your style section */
         .status-label.registered {
-            color: #10b981;
+            color: var(--primary);
         }
 
         .status-label.not-registered {
@@ -147,12 +147,12 @@
         }
 
         .toggle-switch.face-toggle.active {
-            background: #4f46e5;
+            background: var(--primary);
             /* Different color for face register toggle */
         }
 
         .toggle-switch.location-toggle.active {
-            background: #0ea5e9;
+            background: var(--primary);
         }
 
         /* ==================== ATTENDANCE TYPE SELECT ==================== */
@@ -163,13 +163,13 @@
         }
 
         .attendance-type-select:hover {
-            border-color: #4f46e5;
+            border-color: var(--primary);
             background-color: white !important;
         }
 
         .attendance-type-select:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-focus);
             outline: none;
         }
 
@@ -209,13 +209,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: var(--primary);
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary);
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -295,8 +295,8 @@
 
         .search-wrapper .form-control:focus {
             background: white;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-focus);
             outline: none;
         }
 
@@ -322,8 +322,8 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-focus);
             outline: none;
         }
 
@@ -336,7 +336,7 @@
         .apply-btn {
             height: 36px;
             padding: 0 16px;
-            background: #4f46e5;
+            background: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
@@ -351,7 +351,7 @@
         }
 
         .apply-btn:hover {
-            background: #4338ca;
+            background: var(--primary-dark);
             transform: translateY(-1px);
         }
 
@@ -419,7 +419,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: var(--primary);
             font-size: 11px;
         }
 
@@ -437,16 +437,16 @@
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
         .filter-tag.clear-all:hover {
-            background: #4f46e5;
+            background: var(--primary);
             color: white;
         }
 
@@ -457,8 +457,24 @@
         /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
            in client.layout.head (single blue-only theme) — no local copy. */
 
-        /* .employee-avatar/.employee-info/.employee-details/.employee-name/
-           .employee-email are centralized in client.layout.head — no local copy. */
+        /* .employee-info/.employee-details/.employee-name/.employee-email are
+           centralized in client.layout.head — no local copy. .employee-avatar
+           IS overridden below (matches the Monthly Payroll list's no-image
+           initials style instead of the centralized photo-only version, since
+           this column falls back to initials, not an external avatar image). */
+        .employee-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
 
         /* ==================== TABLE STYLES ==================== */
         .table {
@@ -518,8 +534,8 @@
         }
 
         .badge.bg-primary {
-            background: #e0f2fe !important;
-            color: #0369a1;
+            background: var(--primary-light) !important;
+            color: var(--primary);
         }
 
         .badge.bg-warning {
@@ -528,8 +544,8 @@
         }
 
         .badge.bg-info {
-            background: #e0f2fe !important;
-            color: #0369a1;
+            background: var(--primary-light) !important;
+            color: var(--primary);
         }
 
         /* ==================== ROLE TAGS ==================== */
@@ -545,13 +561,29 @@
         }
 
         .role-tag.admin {
-            background: #818cf8;
+            background: var(--primary);
             color: white;
         }
 
         .role-tag.manager {
-            background: #60a5fa;
+            background: var(--primary);
             color: white;
+        }
+
+        /* "Add Employee" — theme.min.css's .btn-primary sets
+           background-color/border-color with !important (vendor default
+           #3454d1), which beats any plain override regardless of source
+           order or specificity. This page's theme is #1e3a8a, so the
+           override has to fight !important with !important. */
+        .add-employee-btn {
+            background: var(--primary) !important;
+            border-color: var(--primary) !important;
+            font-size: 12px;
+        }
+
+        .add-employee-btn:hover {
+            background: var(--primary-dark) !important;
+            border-color: var(--primary-dark) !important;
         }
 
         /* ==================== ACTION BUTTONS ==================== */
@@ -570,10 +602,10 @@
 
         .action-btn:hover {
             background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary);
+            border-color: var(--primary);
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 4px 8px rgba(30, 58, 138, 0.1);
         }
 
         .action-btn i {
@@ -594,7 +626,7 @@
         }
 
         .dropdown-item:hover i {
-            color: #4f46e5;
+            color: var(--primary);
         }
 
         /* ==================== EMPLOYEE ID BADGE ==================== */
@@ -631,8 +663,8 @@
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: var(--primary);
+            border-color: var(--primary);
         }
 
         /* ==================== EMPTY STATE ==================== */
@@ -720,6 +752,324 @@
                 font-size: 12px;
             }
         }
+
+        /* ==================== ADD/EDIT EMPLOYEE DRAWER — STEP WIZARD ====================
+           Shared by partials.employee-wizard-form, embedded once in
+           #employeeDrawer (see @@section('create-modal')). Ported from the
+           former standalone add-user/update-user pages, retoned onto the
+           app's blue design tokens instead of ad hoc indigo/bootstrap-blue. */
+        .ui-drawer,
+        .ui-drawer .form-control,
+        .ui-drawer .form-select,
+        .ui-drawer label,
+        .ui-drawer p,
+        .ui-drawer span,
+        .ui-drawer .btn {
+            font-size: 12.5px;
+        }
+
+        .ui-drawer .form-label {
+            font-weight: 400;
+        }
+
+        .ui-drawer .form-group {
+            margin-bottom: 10px;
+        }
+
+        .ui-drawer .step-content {
+            display: none;
+        }
+
+        .ui-drawer .step-content.active {
+            display: block;
+        }
+
+        /* Next / Previous / Cancel / Submit — smaller buttons, unified to
+           the app's #1e3a8a blue theme instead of the default
+           secondary-gray/success-green Bootstrap variants. theme.min.css
+           sets .btn-primary/.btn-secondary/.btn-success background-color
+           and border-color with !important (vendor defaults), which beats
+           any plain override here regardless of selector specificity — so
+           every color property below also has to be !important. */
+        .ui-drawer .form-navigation .btn {
+            padding: 6px 14px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .ui-drawer #nextBtn,
+        .ui-drawer #submitBtn {
+            background: var(--primary) !important;
+            border-color: var(--primary) !important;
+            color: #fff !important;
+        }
+
+        .ui-drawer #nextBtn:hover,
+        .ui-drawer #submitBtn:hover {
+            background: var(--primary-dark) !important;
+            border-color: var(--primary-dark) !important;
+        }
+
+        .ui-drawer #prevBtn,
+        .ui-drawer .form-navigation > .btn-light {
+            background: #fff !important;
+            border: 1px solid var(--primary) !important;
+            color: var(--primary) !important;
+        }
+
+        .ui-drawer #prevBtn:hover,
+        .ui-drawer .form-navigation > .btn-light:hover {
+            background: var(--primary-light) !important;
+            color: var(--primary) !important;
+        }
+
+        .ui-drawer #prevBtn:disabled {
+            background: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #94a3b8 !important;
+        }
+
+        .ui-drawer .step-wizard {
+            background: var(--surface-2, #f8fafc);
+            padding: 16px 0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .ui-drawer .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .ui-drawer .step-indicator::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 30px;
+            right: 30px;
+            height: 2px;
+            background: var(--border, #e2e8f0);
+            z-index: 1;
+        }
+
+        .ui-drawer .step-item {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+
+        .ui-drawer .step-number {
+            width: 32px;
+            height: 32px;
+            background: #fff;
+            border: 2px solid #cbd5e0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 6px;
+            font-weight: 600;
+            font-size: 12px;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .ui-drawer .step-item.active .step-number {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .ui-drawer .step-item.completed .step-number {
+            background: var(--success, #059669);
+            border-color: var(--success, #059669);
+            color: #fff;
+        }
+
+        .ui-drawer .step-label {
+            font-size: 10px;
+            font-weight: 500;
+            color: #64748b;
+            letter-spacing: 0.2px;
+        }
+
+        .ui-drawer .step-item.active .step-label {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .ui-drawer .step-item.completed .step-label {
+            color: var(--success, #059669);
+        }
+
+        .ui-drawer .form-section {
+            background: #fff;
+            padding: 4px 2px;
+        }
+
+        .ui-drawer .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .ui-drawer .form-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border, #e2e8f0);
+        }
+
+        .ui-drawer .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ui-drawer .profile-upload {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px;
+            background: var(--surface-2, #f8fafc);
+            border-radius: 8px;
+        }
+
+        .ui-drawer .profile-image-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .ui-drawer .profile-image-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .ui-drawer .profile-image-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 26px;
+            height: 26px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        .ui-drawer .profile-image-overlay i {
+            font-size: 13px;
+        }
+
+        .ui-drawer .profile-help-text {
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .ui-drawer .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .ui-drawer .file-input {
+            padding: 6px;
+            background: #fff;
+            border: 1px solid var(--border, #e2e8f0);
+            border-radius: 6px;
+            width: 100%;
+            font-size: 12px;
+        }
+
+        .ui-drawer .document-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 12px;
+            border: 1px solid var(--border, #e2e8f0);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .ui-drawer .document-row .form-group {
+            flex: 1 1 160px;
+            min-width: 140px;
+            margin-bottom: 0;
+        }
+
+        .ui-drawer #addDocumentRowBtn,
+        .ui-drawer .remove-document-row {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1px solid var(--border, #e2e8f0);
+            background: #fff;
+            color: var(--primary);
+            flex: 0 0 auto;
+        }
+
+        .ui-drawer .remove-document-row {
+            color: #ef4444;
+            align-self: center;
+        }
+
+        .ui-drawer .doc-current-file a {
+            color: var(--primary);
+        }
+
+        .ui-drawer .alert-info {
+            background: var(--primary-light);
+            border: 1px solid #bfd3f7;
+            color: var(--primary);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ui-drawer .form-control.is-invalid {
+            border-color: #ef4444;
+        }
+
+        .ui-drawer .invalid-feedback {
+            color: #ef4444;
+            font-size: 11px;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .ui-drawer .required {
+            color: #ef4444;
+            margin-left: 2px;
+        }
+
+        @media (max-width: 480px) {
+            .ui-drawer .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 @endsection
 
@@ -756,10 +1106,10 @@
                             </a>
                         </div>
                     </div>
-                    <a href="{{ route('employee.create') }}" class="btn btn-sm btn-primary">
+                    <button type="button" class="btn btn-sm btn-primary add-employee-btn" onclick="openAddEmployeeDrawer()">
                         <i class="feather-plus me-2"></i>
                         <span>Add Employee</span>
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="d-md-none d-flex align-items-center">
@@ -788,8 +1138,8 @@
                 </div>
             </div>
             <div class="stats-card">
-                <div class="stats-icon" style="background: rgba(16, 185, 129, 0.1);">
-                    <i class="feather-check-circle" style="color: #10b981;"></i>
+                <div class="stats-icon">
+                    <i class="feather-check-circle"></i>
                 </div>
                 <div class="stats-info">
                     <h3>{{ $activeEmployees }}</h3>
@@ -797,12 +1147,39 @@
                 </div>
             </div>
             <div class="stats-card">
-                <div class="stats-icon" style="background: rgba(239, 68, 68, 0.1);">
-                    <i class="feather-x-circle" style="color: #ef4444;"></i>
+                <div class="stats-icon">
+                    <i class="feather-x-circle"></i>
                 </div>
                 <div class="stats-info">
                     <h3>{{ $inactiveEmployees }}</h3>
                     <p>Inactive Employees</p>
+                </div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="feather-map-pin"></i>
+                </div>
+                <div class="stats-info">
+                    <h3>{{ $fieldEmployees }}</h3>
+                    <p>Field Employees</p>
+                </div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="feather-briefcase"></i>
+                </div>
+                <div class="stats-info">
+                    <h3>{{ $officeEmployees }}</h3>
+                    <p>Office Employees</p>
+                </div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="feather-camera"></i>
+                </div>
+                <div class="stats-info">
+                    <h3>{{ $faceRegisteredEmployees }}</h3>
+                    <p>Face Registered</p>
                 </div>
             </div>
         </div>
@@ -880,13 +1257,13 @@
                         </div>
                     </div>
                     <!-- Search Field -->
-                    <!--<div class="filter-item search">-->
-                    <!--    <div class="search-wrapper">-->
-                    <!--        <i class="feather-search"></i>-->
-                    <!--        <input type="text" class="form-control" name="search"-->
-                    <!--            placeholder="Search by name, email, ID..." value="{{ request('search') }}">-->
-                    <!--    </div>-->
-                    <!--</div>-->
+                    <div class="filter-item search">
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" class="form-control" name="search"
+                                placeholder="Search by name, email, ID..." value="{{ request('search') }}">
+                        </div>
+                    </div>
 
                     <!-- Department Filter -->
                     <div class="filter-item">
@@ -1018,7 +1395,7 @@
                             <span class="badge bg-info">
                                 <i class="feather-list me-1"></i>Total: {{ $totalEmployees }}
                             </span>
-                            <span class="badge bg-success">
+                            <span class="badge bg-primary">
                                 <i class="feather-check me-1"></i>Active: {{ $activeEmployees }}
                             </span>
                             @if (!empty($fieldTrackingEnabled))
@@ -1032,7 +1409,7 @@
                     <div class="card-body p-0">
                         @if (!empty($fieldTrackingEnabled))
                             <div id="ltBulkBar" class="d-none align-items-center gap-2 px-3 py-2"
-                                 style="background:#eef2ff;border-bottom:1px solid #c7d2fe;font-size:13px;">
+                                 style="background:var(--primary-light);border-bottom:1px solid #c7d2fe;font-size:13px;">
                                 <span id="ltBulkCount" class="fw-semibold">0 selected</span>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="bulkLocationTracking(1)">Enable tracking</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkLocationTracking(0)">Disable tracking</button>
@@ -1076,8 +1453,9 @@
                                                         <img src="{{ asset($user->profile_image) }}"
                                                             class="employee-avatar" alt="{{ $user->name }}">
                                                     @else
-                                                        <img src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&size=36&background=4f46e5&color=fff"
-                                                            class="employee-avatar" alt="{{ $user->name }}">
+                                                        <div class="employee-avatar">
+                                                            {{ strtoupper(substr($user->name ?? 'NA', 0, 2)) }}
+                                                        </div>
                                                     @endif
                                                     <div class="employee-details">
                                                         <div class="employee-name">{{ ucfirst($user->name) }} <span
@@ -1100,13 +1478,9 @@
                                                     {{ ucfirst($user->role) }}
                                                 </span>
                                             </td>
-                                            <td>
-                                                <div><i class="feather-phone me-1"
-                                                        style="font-size: 11px;"></i>{{ $user->contact }}</div>
-                                                @if ($user->alternate_phone)
-                                                    <small class="text-muted"><i
-                                                            class="feather-smartphone me-1"></i>{{ $user->alternate_phone }}</small>
-                                                @endif
+                                            <td class="text-nowrap">
+                                                <i class="feather-phone me-1"
+                                                    style="font-size: 11px;"></i>{{ $user->contact }}
                                             </td>
                                             <!-- Replace the status column (around line 280) with this: -->
                                             <td>
@@ -1168,28 +1542,16 @@
                                                 </td>
                                             @endif
                                             <td class="text-center">
-                                                <div class="dropdown">
-                                                    <a href="#" class="action-btn" data-bs-toggle="dropdown"
-                                                        data-bs-offset="0,5">
-                                                        <i class="feather-more-vertical"></i>
+                                                <div class="d-flex justify-content-center gap-1">
+                                                    <a href="{{ route('employee.show', ['id' => encrypt($user->id)]) }}"
+                                                        class="action-btn" title="View" data-bs-toggle="tooltip">
+                                                        <i class="feather-eye"></i>
                                                     </a>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li>
-                                                            <a class="dropdown-item"
-                                                                href="{{ route('employee.show', ['id' => encrypt($user->id)]) }}">
-                                                                <i class="feather-eye"></i>
-                                                                <span>Details</span>
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item"
-                                                                href="{{ route('employee.edit', ['id' => encrypt($user->id)]) }}">
-                                                                <i class="feather-edit-3"></i>
-                                                                <span>Edit</span>
-                                                            </a>
-                                                        </li>
-
-                                                    </ul>
+                                                    <button type="button" class="action-btn" title="Edit"
+                                                        data-bs-toggle="tooltip"
+                                                        onclick="openEditEmployeeDrawer('{{ encrypt($user->id) }}', '{{ $user->employee_id }}')">
+                                                        <i class="feather-edit-3"></i>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1232,6 +1594,13 @@
 
 @endsection
 
+@section('create-modal')
+    <!-- Add/Edit Employee Drawer (shared instance, mode toggled via JS) -->
+    <x-ui.drawer id="employeeDrawer" title="Add Employee" width="480px">
+        @include('client.user.partials.employee-wizard-form')
+    </x-ui.drawer>
+@endsection
+
 @section('script-area')
     <script>
         // Configure toastr
@@ -1269,6 +1638,17 @@
             tooltipTriggerList.map(function(tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+
+            // Deep link support (e.g. the sidebar's "Add Employee" link, or the
+            // "Edit Employee" button on the employee detail page):
+            // ?open=add opens the Add drawer, ?edit_id=...&edit_code=... opens
+            // the Edit drawer pre-filled for that employee.
+            const deepLinkParams = new URLSearchParams(window.location.search);
+            if (deepLinkParams.get('open') === 'add' && typeof openAddEmployeeDrawer === 'function') {
+                openAddEmployeeDrawer();
+            } else if (deepLinkParams.get('edit_id') && typeof openEditEmployeeDrawer === 'function') {
+                openEditEmployeeDrawer(deepLinkParams.get('edit_id'), deepLinkParams.get('edit_code'));
+            }
         });
 
         // Direct Status Update Function for Employee Status
@@ -1637,6 +2017,1101 @@
         // Reset filters
         function resetFilters() {
             window.location.href = "{{ route('employee.index') }}";
+        }
+    </script>
+
+    {{-- ==================== ADD/EDIT EMPLOYEE DRAWER (shared wizard) ====================
+         One #employeeForm instance lives in #employeeDrawer for the whole page.
+         wizardMode toggles which existing backend endpoints it talks to:
+           add  -> employee.save.step / employee.complete.store
+           edit -> employee.update.step/{id} / employee.complete.update/{id},
+                   pre-filled via the existing employee.load.data endpoint. --}}
+    <script>
+        let wizardMode = 'add';
+        let currentStep = 1;
+        const totalSteps = 7;
+        let employeeId = '';
+        let editEncryptedId = '';
+
+        const editUpdateStepUrlTemplate = "{{ route('employee.update.step', ['id' => '__ID__']) }}";
+        const editCompleteUpdateUrlTemplate = "{{ route('employee.complete.update', ['id' => '__ID__']) }}";
+        const defaultAvatarUrl = "{{ asset('assets/images/avatar/1.png') }}";
+
+        function getDrawerInstance() {
+            return bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('employeeDrawer'));
+        }
+
+        function openAddEmployeeDrawer() {
+            wizardMode = 'add';
+            resetWizardForm();
+            $('#employeeDrawerLabel').text('Add Employee');
+            $('#statusFieldWrapper').addClass('d-none');
+            $('#passwordRow').removeClass('d-none');
+            $('#submitBtnLabel').text('Submit');
+            getDrawerInstance().show();
+        }
+
+        function openEditEmployeeDrawer(encryptedId, employeeCode) {
+            wizardMode = 'edit';
+            resetWizardForm();
+            editEncryptedId = encryptedId;
+            $('#employeeDrawerLabel').text('Edit Employee');
+            $('#statusFieldWrapper').removeClass('d-none');
+            $('#passwordRow').addClass('d-none');
+            $('#submitBtnLabel').text('Save Changes');
+            getDrawerInstance().show();
+            if (employeeCode) {
+                loadSavedData(employeeCode);
+            }
+        }
+
+        function resetWizardForm() {
+            const formEl = document.getElementById('employeeForm');
+            if (formEl) formEl.reset();
+            $('#employeeForm .is-invalid').removeClass('is-invalid');
+            $('#employeeForm .invalid-feedback').remove();
+            $('#employeeFormError').addClass('d-none').text('');
+            $('#profileImagePreview').attr('src', defaultAvatarUrl);
+            $('#employee_id').val('');
+            employeeId = '';
+            editEncryptedId = '';
+            if ($.fn.select2) {
+                $('select[name="language[]"]').val(null).trigger('change');
+                $('select[name="leave_type_assigned[]"]').val(null).trigger('change');
+                $('select[name="reporting_head[]"]').val(null).trigger('change');
+            }
+            $('#state').html('<option value="">Select State</option>');
+            $('#city').html('<option value="">Select City</option>');
+            populateDocumentRows([]);
+            resetAllFields();
+            $('#monthlyViewBtn').addClass('active');
+            $('#yearlyViewBtn').removeClass('active');
+            $('#monthlyView').show();
+            $('#yearlyView').hide();
+            currentStep = 1;
+            showStep(currentStep);
+        }
+
+        $(document).ready(function() {
+            // Profile image upload
+            $('#profileUploadBtn, #profileImagePreview').on('click', function() {
+                $('#profilePhotoInput').click();
+            });
+
+            $('#profilePhotoInput').on('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        toastr.error('File size must be less than 2MB');
+                        $(this).val('');
+                        return;
+                    }
+
+                    if (!file.type.match('image.*')) {
+                        toastr.error('Only image files are allowed');
+                        $(this).val('');
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#profileImagePreview').attr('src', e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Load states
+            $('#country').on('change', function() {
+                const countryCode = $(this).val();
+                if (countryCode) {
+                    $.ajax({
+                        url: "{{ route('get.states') }}",
+                        type: "GET",
+                        data: {
+                            country_code: countryCode
+                        },
+                        success: function(data) {
+                            $('#state').html('<option value="">Select State</option>');
+                            $.each(data, function(key, state) {
+                                $('#state').append('<option value="' + state.state_code + '">' + state
+                                    .name + '</option>');
+                            });
+                        },
+                        error: function() {
+                            toastr.error('Error loading states');
+                        }
+                    });
+                } else {
+                    $('#state').html('<option value="">Select State</option>');
+                    $('#city').html('<option value="">Select City</option>');
+                }
+            });
+
+            // Load cities
+            $('#state').on('change', function() {
+                const stateCode = $(this).val();
+                if (stateCode) {
+                    $.ajax({
+                        url: "{{ route('get.cities') }}",
+                        type: "GET",
+                        data: {
+                            state_code: stateCode
+                        },
+                        success: function(data) {
+                            $('#city').html('<option value="">Select City</option>');
+                            $.each(data, function(key, city) {
+                                $('#city').append('<option value="' + city.city_code + '">' + city
+                                    .name + '</option>');
+                            });
+                        },
+                        error: function() {
+                            toastr.error('Error loading cities');
+                        }
+                    });
+                } else {
+                    $('#city').html('<option value="">Select City</option>');
+                }
+            });
+
+            // ==================== PAYROLL CALCULATION ====================
+
+            function calculateSalaryBreakdown() {
+                const annualCTC = parseFloat($('#annual_ctc').val()) || 0;
+
+                if (annualCTC <= 0) {
+                    resetAllFields();
+                    return;
+                }
+
+                const selectedOption = $('#payroll_structure_id option:selected');
+                let calc = {};
+                try {
+                    calc = JSON.parse(selectedOption.attr('data-calc') || '{}');
+                } catch (e) {
+                    calc = {};
+                }
+
+                const monthlyCTC = annualCTC / 12;
+
+                const ALLOWANCE_FIELDS = {
+                    hra: 'hra',
+                    conveyance: 'conveyence',
+                    medical_allowance: 'medical',
+                    children_allowance: 'children',
+                    post_allowance: 'post',
+                    leave_travel_allowance: 'lta',
+                    monthly_incentive: 'incentive'
+                };
+
+                let pctSum = 0;
+                let fixedSum = 0;
+                const pctByKey = {};
+                const fixedByKey = {};
+                let hasCustomAllowance = false;
+
+                $.each(ALLOWANCE_FIELDS, function(code, key) {
+                    const entry = calc[code];
+                    if (entry && entry.type === 'percentage' && entry.base === 'basic') {
+                        pctByKey[key] = entry.value;
+                        pctSum += entry.value;
+                        hasCustomAllowance = true;
+                    } else if (entry && entry.type === 'fixed') {
+                        fixedByKey[key] = entry.value;
+                        fixedSum += entry.value;
+                        hasCustomAllowance = true;
+                    }
+                });
+
+                let basic, hra, conveyence, medical, children, post, lta, incentive;
+
+                if (hasCustomAllowance) {
+                    basic = Math.max(0, (monthlyCTC - fixedSum) / (1 + (pctSum / 100)));
+                    hra = fixedByKey.hra !== undefined ? fixedByKey.hra : basic * ((pctByKey.hra || 0) / 100);
+                    conveyence = fixedByKey.conveyence !== undefined ? fixedByKey.conveyence : basic * ((pctByKey
+                        .conveyence || 0) / 100);
+                    medical = fixedByKey.medical !== undefined ? fixedByKey.medical : basic * ((pctByKey.medical ||
+                        0) / 100);
+                    children = fixedByKey.children !== undefined ? fixedByKey.children : basic * ((pctByKey
+                        .children || 0) / 100);
+                    post = fixedByKey.post !== undefined ? fixedByKey.post : basic * ((pctByKey.post || 0) / 100);
+                    lta = fixedByKey.lta !== undefined ? fixedByKey.lta : basic * ((pctByKey.lta || 0) / 100);
+                    incentive = fixedByKey.incentive !== undefined ? fixedByKey.incentive : basic * ((pctByKey
+                        .incentive || 0) / 100);
+                } else {
+                    basic = monthlyCTC * 0.5;
+                    hra = basic * 0.4;
+                    conveyence = 1600;
+                    medical = 1250;
+                    children = 0;
+                    post = 0;
+                    lta = 0;
+                    incentive = 0;
+                }
+
+                const totalAllowances = hra + conveyence + medical + children + post + lta + incentive;
+                const grossSalary = basic + totalAllowances;
+
+                function percentageDeduction(entry, base, defaultPct, defaultCeiling, defaultRule) {
+                    let pct = defaultPct;
+                    let ceilingAmount = defaultCeiling;
+                    let rule = defaultRule;
+
+                    if (entry && entry.type === 'fixed') {
+                        return entry.value;
+                    }
+                    if (entry && entry.type === 'percentage') {
+                        pct = entry.value;
+                        ceilingAmount = entry.ceiling_amount != null ? entry.ceiling_amount : null;
+                        rule = entry.ceiling_rule || null;
+                    }
+                    if (!pct || pct <= 0) {
+                        return 0;
+                    }
+                    if (rule === 'ceiling_exclude' && ceilingAmount && base > ceilingAmount) {
+                        return 0;
+                    }
+                    const effectiveBase = (rule === 'cap_base_before_percentage' && ceilingAmount) ?
+                        Math.min(base, ceilingAmount) : base;
+
+                    return effectiveBase * (pct / 100);
+                }
+
+                const pfDeduction = percentageDeduction(calc.pf_employee, basic, 12, 15000,
+                    'cap_base_before_percentage');
+                const employerPf = percentageDeduction(calc.pf_employer, basic, 12, 15000,
+                    'cap_base_before_percentage');
+                const esiDeduction = percentageDeduction(calc.esi_employee, grossSalary, 1.75, 21000,
+                    'ceiling_exclude');
+                const employerEsi = percentageDeduction(calc.esi_employer, grossSalary, 3.25, 21000,
+                    'ceiling_exclude');
+
+                let professionalTax;
+                if (calc.pt && calc.pt.type === 'fixed') {
+                    professionalTax = calc.pt.value;
+                } else if (calc.pt && calc.pt.type === 'percentage') {
+                    professionalTax = grossSalary * (calc.pt.value / 100);
+                } else {
+                    professionalTax = 200;
+                }
+
+                const totalDeductions = pfDeduction + esiDeduction + professionalTax;
+                const netSalary = grossSalary - totalDeductions;
+                const totalMonthlyCost = grossSalary + employerPf + employerEsi;
+
+                updateDisplayFields({
+                    monthly: {
+                        basic: basic,
+                        hra: hra,
+                        conveyence: conveyence,
+                        medical: medical,
+                        children: children,
+                        post: post,
+                        lta: lta,
+                        incentive: incentive,
+                        totalAllowances: totalAllowances,
+                        gross: grossSalary,
+                        pf: pfDeduction,
+                        esi: esiDeduction,
+                        pt: professionalTax,
+                        totalDeductions: totalDeductions,
+                        net: netSalary,
+                        employerPf: employerPf,
+                        employerEsi: employerEsi,
+                        totalMonthlyCost: totalMonthlyCost
+                    },
+                    yearly: {
+                        basic: basic * 12,
+                        hra: hra * 12,
+                        conveyence: conveyence * 12,
+                        medical: medical * 12,
+                        children: children * 12,
+                        post: post * 12,
+                        lta: lta * 12,
+                        incentive: incentive * 12,
+                        totalAllowances: totalAllowances * 12,
+                        gross: grossSalary * 12,
+                        pf: pfDeduction * 12,
+                        esi: esiDeduction * 12,
+                        pt: professionalTax * 12,
+                        totalDeductions: totalDeductions * 12,
+                        net: netSalary * 12,
+                        employerPf: employerPf * 12,
+                        employerEsi: employerEsi * 12,
+                        totalCTCCost: totalMonthlyCost * 12
+                    }
+                });
+
+                setHiddenFields({
+                    basic: basic,
+                    hra: hra,
+                    conveyence: conveyence,
+                    medical: medical,
+                    children: children,
+                    post: post,
+                    lta: lta,
+                    incentive: incentive,
+                    gross: grossSalary,
+                    pf: pfDeduction,
+                    esi: esiDeduction,
+                    pt: professionalTax,
+                    net: netSalary,
+                    employerPf: employerPf,
+                    employerEsi: employerEsi
+                });
+            }
+            window.calculateSalaryBreakdown = calculateSalaryBreakdown;
+
+            function updateDisplayFields(values) {
+                $('#monthly_basic').text('₹' + formatNumber(values.monthly.basic));
+                $('#monthly_hra').text('₹' + formatNumber(values.monthly.hra));
+                $('#monthly_conveyance').text('₹' + formatNumber(values.monthly.conveyence));
+                $('#monthly_medical').text('₹' + formatNumber(values.monthly.medical));
+                $('#monthly_children').text('₹' + formatNumber(values.monthly.children));
+                $('#monthly_post').text('₹' + formatNumber(values.monthly.post));
+                $('#monthly_lta').text('₹' + formatNumber(values.monthly.lta));
+                $('#monthly_incentive').text('₹' + formatNumber(values.monthly.incentive));
+                $('#monthly_total_allowances').text('₹' + formatNumber(values.monthly.totalAllowances));
+                $('#monthly_gross').text('₹' + formatNumber(values.monthly.gross));
+                $('#monthly_pf').text('₹' + formatNumber(values.monthly.pf));
+                $('#monthly_esi').text('₹' + formatNumber(values.monthly.esi));
+                $('#monthly_pt').text('₹' + formatNumber(values.monthly.pt));
+                $('#monthly_total_deductions').text('₹' + formatNumber(values.monthly.totalDeductions));
+                $('#monthly_net').text('₹' + formatNumber(values.monthly.net));
+                $('#monthly_employer_pf').text('₹' + formatNumber(values.monthly.employerPf));
+                $('#monthly_employer_esi').text('₹' + formatNumber(values.monthly.employerEsi));
+                $('#monthly_total_ctc').text('₹' + formatNumber(values.monthly.totalMonthlyCost));
+
+                $('#yearly_basic').text('₹' + formatNumber(values.yearly.basic));
+                $('#yearly_hra').text('₹' + formatNumber(values.yearly.hra));
+                $('#yearly_conveyance').text('₹' + formatNumber(values.yearly.conveyence));
+                $('#yearly_medical').text('₹' + formatNumber(values.yearly.medical));
+                $('#yearly_children').text('₹' + formatNumber(values.yearly.children));
+                $('#yearly_post').text('₹' + formatNumber(values.yearly.post));
+                $('#yearly_lta').text('₹' + formatNumber(values.yearly.lta));
+                $('#yearly_incentive').text('₹' + formatNumber(values.yearly.incentive));
+                $('#yearly_total_allowances').text('₹' + formatNumber(values.yearly.totalAllowances));
+                $('#yearly_gross').text('₹' + formatNumber(values.yearly.gross));
+                $('#yearly_pf').text('₹' + formatNumber(values.yearly.pf));
+                $('#yearly_esi').text('₹' + formatNumber(values.yearly.esi));
+                $('#yearly_pt').text('₹' + formatNumber(values.yearly.pt));
+                $('#yearly_total_deductions').text('₹' + formatNumber(values.yearly.totalDeductions));
+                $('#yearly_net').text('₹' + formatNumber(values.yearly.net));
+                $('#yearly_employer_pf').text('₹' + formatNumber(values.yearly.employerPf));
+                $('#yearly_employer_esi').text('₹' + formatNumber(values.yearly.employerEsi));
+                $('#yearly_total_ctc').text('₹' + formatNumber(values.yearly.totalCTCCost));
+            }
+
+            function setHiddenFields(values) {
+                $('#basic_salary').val(values.basic.toFixed(2));
+                $('#hra').val(values.hra.toFixed(2));
+                $('#conveyence').val(values.conveyence.toFixed(2));
+                $('#medical_allowance').val(values.medical.toFixed(2));
+                $('#children_allowance').val((values.children || 0).toFixed(2));
+                $('#post_allowance').val((values.post || 0).toFixed(2));
+                $('#leave_travel_allowance').val((values.lta || 0).toFixed(2));
+                $('#monthly_incentive').val((values.incentive || 0).toFixed(2));
+                $('#special_allowance').val('0.00');
+                $('#gross_salary').val(values.gross.toFixed(2));
+                $('#provident_fund').val(values.pf.toFixed(2));
+                $('#esi').val(values.esi.toFixed(2));
+                $('#professional_tax').val(values.pt.toFixed(2));
+                $('#net_salary').val(values.net.toFixed(2));
+                $('#employer_provident_fund').val(values.employerPf.toFixed(2));
+                $('#employer_esi').val(values.employerEsi.toFixed(2));
+                $('#ctc').val((values.gross + values.employerPf + values.employerEsi).toFixed(2));
+                $('input[name="salary"]').val(values.gross.toFixed(2));
+            }
+
+            $('#monthlyViewBtn').on('click', function() {
+                $(this).addClass('active');
+                $('#yearlyViewBtn').removeClass('active');
+                $('#monthlyView').show();
+                $('#yearlyView').hide();
+            });
+
+            $('#yearlyViewBtn').on('click', function() {
+                $(this).addClass('active');
+                $('#monthlyViewBtn').removeClass('active');
+                $('#yearlyView').show();
+                $('#monthlyView').hide();
+            });
+
+            $('#annual_ctc').on('input', function() {
+                calculateSalaryBreakdown();
+            });
+
+            $('#payroll_structure_id').on('change', function() {
+                calculateSalaryBreakdown();
+            });
+
+            // ==================== STEP NAVIGATION ====================
+
+            $('#nextBtn').on('click', function() {
+                if (validateStep(currentStep)) {
+                    saveStep(currentStep, function() {
+                        if (currentStep < totalSteps) {
+                            currentStep++;
+                            showStep(currentStep);
+                            if (currentStep === 6) {
+                                setTimeout(calculateSalaryBreakdown, 100);
+                            }
+                        }
+                    });
+                }
+            });
+
+            $('#prevBtn').on('click', function() {
+                if (currentStep > 1) {
+                    if (validateStep(currentStep)) {
+                        saveStep(currentStep, function() {
+                            currentStep--;
+                            showStep(currentStep);
+                        });
+                    } else {
+                        currentStep--;
+                        showStep(currentStep);
+                    }
+                }
+            });
+
+            $('#employeeForm').on('submit', function(e) {
+                e.preventDefault();
+
+                if (currentStep === totalSteps) {
+                    if (validateStep(currentStep)) {
+                        saveStep(currentStep, function() {
+                            submitForm();
+                        });
+                    }
+                } else {
+                    if (validateStep(currentStep)) {
+                        saveStep(currentStep, function() {
+                            toastr.info('Please complete all steps to submit the form');
+                        });
+                    }
+                }
+            });
+        });
+
+        // ==================== STEP DISPLAY ====================
+
+        function scrollDrawerBodyTo(targetOffsetTop) {
+            const container = $('#employeeDrawer .offcanvas-body');
+            if (!container.length) return;
+            const delta = targetOffsetTop - container.offset().top;
+            container.animate({
+                scrollTop: container.scrollTop() + delta - 20
+            }, 300);
+        }
+
+        function showStep(step) {
+            $('.step-content').removeClass('active');
+            $(`#step${step}`).addClass('active');
+
+            $('.step-item').removeClass('active completed');
+            for (let i = 1; i <= totalSteps; i++) {
+                if (i < step) {
+                    $(`.step-item[data-step="${i}"]`).removeClass('active').addClass('completed');
+                } else if (i === step) {
+                    $(`.step-item[data-step="${i}"]`).addClass('active').removeClass('completed');
+                }
+            }
+
+            $('#prevBtn').prop('disabled', step === 1);
+
+            if (step === totalSteps) {
+                $('#nextBtn').hide();
+                $('#submitBtn').show();
+            } else {
+                $('#nextBtn').show();
+                $('#submitBtn').hide();
+            }
+
+            $('#form_step').val(step);
+
+            const container = $('#employeeDrawer .offcanvas-body');
+            if (container.length) container.animate({
+                scrollTop: 0
+            }, 200);
+        }
+
+        // ==================== VALIDATION ====================
+
+        function validateStep(step) {
+            $(`#step${step} .is-invalid`).removeClass('is-invalid');
+            $(`#step${step} .invalid-feedback`).remove();
+
+            let isValid = true;
+            const currentStepElement = $(`#step${step}`);
+
+            if (step === 1) {
+                const name = currentStepElement.find('input[name="name"]');
+                if (!name.val().trim()) {
+                    showError(name, 'Name is required');
+                    isValid = false;
+                } else if (name.val().trim().length < 2) {
+                    showError(name, 'Name must be at least 2 characters');
+                    isValid = false;
+                }
+
+                const email = currentStepElement.find('input[name="email"]');
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!email.val()) {
+                    showError(email, 'Email is required');
+                    isValid = false;
+                } else if (!emailRegex.test(email.val())) {
+                    showError(email, 'Please enter a valid email address');
+                    isValid = false;
+                }
+
+                const phone = currentStepElement.find('input[name="contact"]');
+                const phoneRegex = /^\d{10}$/;
+                if (!phone.val()) {
+                    showError(phone, 'Phone number is required');
+                    isValid = false;
+                } else if (!phoneRegex.test(phone.val())) {
+                    showError(phone, 'Please enter a valid 10-digit phone number');
+                    isValid = false;
+                }
+
+                if (wizardMode === 'add') {
+                    const password = currentStepElement.find('input[name="password"]');
+                    if (!password.val()) {
+                        showError(password, 'Password is required');
+                        isValid = false;
+                    } else if (password.val().length < 6) {
+                        showError(password, 'Password must be at least 6 characters');
+                        isValid = false;
+                    } else if (password.val().length > 10) {
+                        showError(password, 'Password must not exceed 10 characters');
+                        isValid = false;
+                    }
+
+                    const confirmPass = currentStepElement.find('input[name="password_confirmation"]');
+                    if (password.val() !== confirmPass.val()) {
+                        showError(confirmPass, 'Passwords do not match');
+                        isValid = false;
+                    }
+                }
+            }
+
+            if (step === 2) {
+                const dob = currentStepElement.find('input[name="dob"]');
+                if (dob.val()) {
+                    const selectedDate = new Date(dob.val());
+                    const today = new Date();
+                    if (selectedDate > today) {
+                        showError(dob, 'Date of birth cannot be in the future');
+                        isValid = false;
+                    }
+                }
+            }
+
+            if (step === 3) {
+                const workType = currentStepElement.find('select[name="type"]');
+                if (!workType.val()) {
+                    showError(workType, 'Please select work type');
+                    isValid = false;
+                }
+
+                const branch = currentStepElement.find('select[name="branch"]');
+                if (!branch.val()) {
+                    showError(branch, 'Please select office branch');
+                    isValid = false;
+                }
+            }
+
+            if (step === 4) {
+                const permanentAddress = currentStepElement.find('textarea[name="permanent_address"]');
+                if (!permanentAddress.val().trim()) {
+                    showError(permanentAddress, 'Permanent address is required');
+                    isValid = false;
+                }
+            }
+
+            if (step === 5) {
+                const ifsc = currentStepElement.find('input[name="ifsc"]');
+                if (ifsc.val() && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.val().toUpperCase())) {
+                    showError(ifsc, 'Please enter a valid IFSC code');
+                    isValid = false;
+                }
+
+                const aadhaar = currentStepElement.find('input[name="aadhaar_no"]');
+                if (aadhaar.val() && !/^\d{12}$/.test(aadhaar.val())) {
+                    showError(aadhaar, 'Please enter a valid 12-digit Aadhaar number');
+                    isValid = false;
+                }
+
+                const pan = currentStepElement.find('input[name="pan_no"]');
+                if (pan.val() && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan.val().toUpperCase())) {
+                    showError(pan, 'Please enter a valid PAN number');
+                    isValid = false;
+                }
+            }
+
+            if (step === 6) {
+                const annualCTC = currentStepElement.find('input[name="annual_ctc"]');
+                if (!annualCTC.val()) {
+                    showError(annualCTC, 'Annual CTC is required');
+                    isValid = false;
+                } else if (parseFloat(annualCTC.val()) < 100000) {
+                    showError(annualCTC, 'Annual CTC must be at least ₹1,00,000');
+                    isValid = false;
+                }
+
+                const effectiveDate = currentStepElement.find('input[name="salary_effective_date"]');
+                if (!effectiveDate.val()) {
+                    showError(effectiveDate, 'Effective date is required');
+                    isValid = false;
+                }
+            }
+
+            if (!isValid) {
+                const firstError = $(`#step${step} .is-invalid:first`);
+                if (firstError.length) {
+                    scrollDrawerBodyTo(firstError.offset().top - 130);
+                }
+            }
+
+            return isValid;
+        }
+
+        function showError(element, message) {
+            element.addClass('is-invalid');
+            if (!element.next('.invalid-feedback').length) {
+                element.after(`<div class="invalid-feedback">${message}</div>`);
+            } else {
+                element.next('.invalid-feedback').text(message);
+            }
+        }
+
+        // ==================== AJAX ====================
+
+        function saveStep(step, callback) {
+            const nextBtn = $('#nextBtn');
+            const submitBtn = $('#submitBtn');
+            const originalText = nextBtn.is(':visible') ? nextBtn.html() : submitBtn.html();
+
+            if (nextBtn.is(':visible')) {
+                nextBtn.html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...').prop(
+                    'disabled', true);
+            } else {
+                submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...').prop(
+                    'disabled', true);
+            }
+
+            const formData = new FormData($('#employeeForm')[0]);
+            formData.append('step', step);
+            formData.append('_token', '{{ csrf_token() }}');
+
+            let url;
+            if (wizardMode === 'edit') {
+                url = editUpdateStepUrlTemplate.replace('__ID__', encodeURIComponent(editEncryptedId));
+            } else {
+                url = "{{ route('employee.save.step') }}";
+                if (employeeId) {
+                    formData.append('employee_id', employeeId);
+                }
+            }
+
+            $.ajax({
+                url: url,
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (nextBtn.is(':visible')) {
+                        nextBtn.html(originalText).prop('disabled', false);
+                    } else {
+                        submitBtn.html(originalText).prop('disabled', false);
+                    }
+
+                    if (response.success) {
+                        if (wizardMode === 'add' && response.employee_id) {
+                            employeeId = response.employee_id;
+                            $('#employee_id').val(employeeId);
+                        }
+
+                        toastr.success(response.message || `Step ${step} saved successfully`);
+
+                        if (callback) callback();
+                    }
+                },
+                error: function(xhr) {
+                    if (nextBtn.is(':visible')) {
+                        nextBtn.html(originalText).prop('disabled', false);
+                    } else {
+                        submitBtn.html(originalText).prop('disabled', false);
+                    }
+
+                    if (xhr.status === 422) {
+                        const errors = xhr.responseJSON.errors;
+
+                        $('.is-invalid').removeClass('is-invalid');
+                        $('.invalid-feedback').remove();
+
+                        $.each(errors, function(field, messages) {
+                            const input = $(`#employeeForm [name="${field}"]`);
+                            if (input.length) {
+                                input.addClass('is-invalid');
+                                if (!input.next('.invalid-feedback').length) {
+                                    input.after(`<div class="invalid-feedback">${messages[0]}</div>`);
+                                }
+                            }
+                        });
+
+                        toastr.error('Please fix the errors and try again');
+
+                        const firstError = $('#employeeForm .is-invalid:first');
+                        if (firstError.length) {
+                            scrollDrawerBodyTo(firstError.offset().top - 130);
+                        }
+                    } else {
+                        toastr.error(xhr.responseJSON?.message || 'An error occurred while saving');
+                    }
+                }
+            });
+        }
+
+        function displayErrors(errors, step) {
+            const stepElement = $(`#step${step}`);
+
+            $.each(errors, function(field, messages) {
+                const input = stepElement.find(`[name="${field}"]`);
+                if (input.length) {
+                    showError(input, messages[0]);
+                } else {
+                    const arrayInput = stepElement.find(`[name="${field}[]"]`);
+                    if (arrayInput.length) {
+                        showError(arrayInput, messages[0]);
+                    }
+                }
+            });
+        }
+
+        function loadSavedData(employeeCode) {
+            $.ajax({
+                url: "{{ route('employee.load.data') }}",
+                type: "GET",
+                data: {
+                    employee_id: employeeCode
+                },
+                success: function(response) {
+                    if (response.data) {
+                        populateFormData(response.data);
+
+                        currentStep = 1;
+                        showStep(currentStep);
+                    }
+                },
+                error: function() {
+                    toastr.error('Could not load employee data');
+                }
+            });
+        }
+
+        function populateFormData(data) {
+            if (data.user) {
+                $('#employeeForm input[name="name"]').val(data.user.name);
+                $('#employeeForm input[name="email"]').val(data.user.email);
+                $('#employeeForm input[name="contact"]').val(data.user.contact);
+                $('#employeeForm select[name="role"]').val(data.user.role);
+                $('#employeeForm select[name="status"]').val(String(data.user.status));
+            }
+
+            if (data.basic) {
+                $('#employeeForm input[name="personal_email"]').val(data.basic.personal_email);
+                $('#employeeForm input[name="alternate_phone"]').val(data.basic.alternate_phone);
+                $('#employeeForm select[name="gender"]').val(data.basic.gender);
+                $('#employeeForm input[name="dob"]').val(data.basic.dob);
+                $('#employeeForm input[name="blood_group"]').val(data.basic.blood_group);
+                $('#employeeForm select[name="marital_status"]').val(data.basic.marital_status);
+                $('#employeeForm input[name="father_name"]').val(data.basic.father_name);
+                $('#employeeForm input[name="mother_name"]').val(data.basic.mother_name);
+                $('#employeeForm input[name="aadhaar_no"]').val(data.basic.aadhaar_no);
+                $('#employeeForm input[name="pan_no"]').val(data.basic.pan_no);
+                $('#employeeForm input[name="passport_number"]').val(data.basic.passport_number);
+
+                if (data.basic.language && $.fn.select2) {
+                    try {
+                        const languages = JSON.parse(data.basic.language);
+                        $('#employeeForm select[name="language[]"]').val(languages).trigger('change');
+                    } catch (e) {
+                        /* no saved languages */
+                    }
+                }
+
+                $('#employeeForm textarea[name="about"]').val(data.basic.about);
+
+                if (data.basic.profile_image) {
+                    $('#profileImagePreview').attr('src', '/' + data.basic.profile_image);
+                }
+            }
+
+            if (data.job) {
+                $('#employeeForm select[name="department"]').val(data.job.department);
+                $('#employeeForm select[name="designation"]').val(data.job.designation);
+                $('#employeeForm select[name="reporting_head[]"]')
+                    .val(data.job.reporting_head_ids || [])
+                    .trigger('change');
+                $('#employeeForm select[name="employment_type"]').val(data.job.employment_type);
+                $('#employeeForm select[name="type"]').val(data.job.type);
+                $('#employeeForm select[name="branch"]').val(data.job.office_branch);
+                $('#employeeForm select[name="company_branch"]').val(data.job.branch_id || '');
+                $('#employeeForm input[name="joining_date"]').val(data.job.joining_date);
+
+                if (data.job.leave_assigned && $.fn.select2) {
+                    try {
+                        const leaveTypes = JSON.parse(data.job.leave_assigned);
+                        $('#employeeForm select[name="leave_type_assigned[]"]').val(leaveTypes).trigger(
+                            'change');
+                    } catch (e) {
+                        /* no saved leave types */
+                    }
+                }
+            }
+
+            if (data.location) {
+                $('#employeeForm select[name="country"]').val(data.location.country);
+
+                if (data.location.country) {
+                    $.ajax({
+                        url: "{{ route('get.states') }}",
+                        type: "GET",
+                        data: {
+                            country_code: data.location.country
+                        },
+                        async: false,
+                        success: function(states) {
+                            $('#state').html('<option value="">Select State</option>');
+                            $.each(states, function(key, state) {
+                                $('#state').append('<option value="' + state.state_code + '">' + state
+                                    .name + '</option>');
+                            });
+                            $('#state').val(data.location.state);
+
+                            if (data.location.state) {
+                                $.ajax({
+                                    url: "{{ route('get.cities') }}",
+                                    type: "GET",
+                                    data: {
+                                        state_code: data.location.state
+                                    },
+                                    async: false,
+                                    success: function(cities) {
+                                        $('#city').html('<option value="">Select City</option>');
+                                        $.each(cities, function(key, city) {
+                                            $('#city').append('<option value="' + city
+                                                .city_code + '">' + city.name +
+                                                '</option>');
+                                        });
+                                        $('#city').val(data.location.city);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+
+                $('#employeeForm textarea[name="permanent_address"]').val(data.location.permanent_address);
+                $('#employeeForm textarea[name="current_address"]').val(data.location.address || data
+                    .location.current_address);
+                $('#employeeForm input[name="pin_code"]').val(data.location.pincode || data.location
+                    .pin_code);
+            }
+
+            if (data.bank) {
+                $('#employeeForm input[name="bank_name"]').val(data.bank.bank_name);
+                $('#employeeForm input[name="account_number"]').val(data.bank.account_number);
+                $('#employeeForm input[name="ifsc"]').val(data.bank.ifsc);
+                $('#employeeForm input[name="branch_name"]').val(data.bank.branch_name);
+            }
+
+            if (data.payroll) {
+                $('#employeeForm select[name="payroll_structure_id"]').val(data.payroll.payroll_structure_id);
+                $('#employeeForm input[name="annual_ctc"]').val(data.payroll.ctc);
+                $('#employeeForm input[name="salary_effective_date"]').val(data.payroll.effective_from);
+
+                setTimeout(function() {
+                    if (typeof window.calculateSalaryBreakdown === 'function') {
+                        window.calculateSalaryBreakdown();
+                    }
+                }, 400);
+            } else if (data.job && data.job.salary) {
+                $('#employeeForm input[name="annual_ctc"]').val((parseFloat(data.job.salary) * 12).toFixed(0));
+                setTimeout(function() {
+                    if (typeof window.calculateSalaryBreakdown === 'function') {
+                        window.calculateSalaryBreakdown();
+                    }
+                }, 400);
+            }
+
+            populateDocumentRows(data.documents || []);
+        }
+
+        // ==================== Dynamic Documents (Step 7) ====================
+        let documentRowIndex = 0;
+
+        function addDocumentRow(existingDoc) {
+            const index = documentRowIndex++;
+            const tpl = document.getElementById('documentRowTemplate');
+            const $row = $(tpl.content.cloneNode(true)).find('.document-row');
+
+            $row.find('.doc-id-input').attr('name', `documents[${index}][id]`);
+            $row.find('.doc-type-select').attr('name', `documents[${index}][document_type]`);
+            $row.find('.doc-type-other-input').attr('name', `documents[${index}][document_type_other]`);
+            $row.find('.doc-name-input').attr('name', `documents[${index}][document_name]`);
+            $row.find('.doc-file-input').attr('name', `documents[${index}][file]`);
+
+            if (existingDoc) {
+                $row.find('.doc-id-input').val(existingDoc.id || '');
+                $row.find('.doc-type-select').val(existingDoc.document_type || '');
+                $row.find('.doc-type-other-input').val(existingDoc.document_type_other || '');
+                $row.find('.doc-name-input').val(existingDoc.document_name || '');
+                if (existingDoc.file_path) {
+                    $row.find('.doc-current-file').html(
+                        '<a href="' + existingDoc.file_path + '" target="_blank">' +
+                        (existingDoc.filename || 'View current file') + '</a>'
+                    );
+                }
+            }
+
+            if ($row.find('.doc-type-select').val() === 'other') {
+                $row.find('.doc-type-other-group').removeClass('d-none');
+            }
+
+            $('#documentsContainer').append($row);
+
+            if ($.fn.select2) {
+                $row.find('.doc-type-select').select2({
+                    width: '100%',
+                    dropdownParent: $('#documentsContainer')
+                });
+            }
+        }
+
+        function populateDocumentRows(documents) {
+            $('#documentsContainer').empty();
+            documentRowIndex = 0;
+            (documents || []).forEach(function(doc) {
+                addDocumentRow(doc);
+            });
+            if (!documents || documents.length === 0) {
+                addDocumentRow(null);
+            }
+        }
+
+        $(document).on('click', '#addDocumentRowBtn', function() {
+            addDocumentRow(null);
+        });
+
+        $(document).on('click', '.remove-document-row', function() {
+            $(this).closest('.document-row').remove();
+        });
+
+        $(document).on('change', '.doc-type-select', function() {
+            const $group = $(this).closest('.document-row').find('.doc-type-other-group');
+            $group.toggleClass('d-none', $(this).val() !== 'other');
+        });
+
+        function resetAllFields() {
+            const spanIds = [
+                'monthly_hra', 'monthly_conveyance', 'monthly_medical', 'monthly_children', 'monthly_post',
+                'monthly_lta', 'monthly_incentive', 'monthly_total_allowances', 'monthly_basic',
+                'monthly_gross', 'monthly_pf', 'monthly_esi', 'monthly_pt', 'monthly_total_deductions',
+                'monthly_net', 'monthly_employer_pf', 'monthly_employer_esi', 'monthly_total_ctc',
+                'yearly_hra', 'yearly_conveyance', 'yearly_medical', 'yearly_children', 'yearly_post',
+                'yearly_lta', 'yearly_incentive', 'yearly_total_allowances', 'yearly_basic', 'yearly_gross',
+                'yearly_pf', 'yearly_esi', 'yearly_pt', 'yearly_total_deductions', 'yearly_net',
+                'yearly_employer_pf', 'yearly_employer_esi', 'yearly_total_ctc'
+            ];
+            spanIds.forEach(id => $('#' + id).text('0.00'));
+
+            $('#employeeForm input[type="hidden"][id]').each(function() {
+                const id = $(this).attr('id');
+                if (['current_step', 'form_step', 'employee_id', 'csrf'].indexOf(id) === -1) {
+                    $(this).val('');
+                }
+            });
+        }
+
+        function formatNumber(num) {
+            if (num === 0) return '0.00';
+
+            let numStr = num.toFixed(2);
+            let parts = numStr.split('.');
+            let integerPart = parts[0];
+            let decimalPart = parts[1];
+
+            let lastThree = integerPart.slice(-3);
+            let otherNumbers = integerPart.slice(0, -3);
+
+            if (otherNumbers !== '') {
+                integerPart = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + lastThree;
+            }
+
+            return integerPart + '.' + decimalPart;
+        }
+
+        function submitForm() {
+            const label = wizardMode === 'edit' ? 'Save Changes' : 'Submit';
+            $('#submitBtn').html('<span class="spinner-border spinner-border-sm me-2"></span>Submitting...')
+                .prop('disabled', true);
+
+            const formData = new FormData($('#employeeForm')[0]);
+            formData.append('_token', '{{ csrf_token() }}');
+
+            let url;
+            if (wizardMode === 'edit') {
+                url = editCompleteUpdateUrlTemplate.replace('__ID__', encodeURIComponent(editEncryptedId));
+            } else {
+                url = "{{ route('employee.complete.store') }}";
+            }
+
+            $.ajax({
+                url: url,
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(wizardMode === 'edit' ? 'Employee updated successfully!' :
+                            'Employee created successfully!');
+
+                        const offEl = document.getElementById('employeeDrawer');
+                        const off = bootstrap.Offcanvas.getInstance(offEl);
+                        if (off) off.hide();
+
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 900);
+                    } else {
+                        $('#submitBtn').html(`<i class="feather-check"></i> <span id="submitBtnLabel">${label}</span>`)
+                            .prop('disabled', false);
+                        toastr.error(response.message || 'Error completing registration');
+                    }
+                },
+                error: function(xhr) {
+                    $('#submitBtn').html(`<i class="feather-check"></i> <span id="submitBtnLabel">${label}</span>`)
+                        .prop('disabled', false);
+
+                    if (xhr.status === 422) {
+                        const errors = xhr.responseJSON.errors;
+                        displayErrors(errors, currentStep);
+                        toastr.error('Please fix the errors and try again');
+
+                        const firstError = $('#employeeForm .is-invalid:first');
+                        if (firstError.length) {
+                            scrollDrawerBodyTo(firstError.offset().top - 130);
+                        }
+                    } else {
+                        toastr.error('An error occurred while submitting the form');
+                    }
+                }
+            });
         }
     </script>
 @endsection

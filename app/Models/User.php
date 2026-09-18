@@ -136,14 +136,44 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Tenant::class);
     }
 
-    public function reportingHead()
-    {
-        return $this->belongsTo(User::class, 'reporting_head');
-    }
-
     public function teamMembers()
     {
         return $this->hasMany(UserJobDetail::class, 'reporting_head', 'user_id');
+    }
+
+    /**
+     * Full set of reporting heads (multi-head support). Kept alongside
+     * user_job_details.reporting_head, which remains the denormalized
+     * primary head for backward compatibility. See docs/modules.md.
+     */
+    public function reportingHeads()
+    {
+        return $this->belongsToMany(User::class, 'user_reporting_heads', 'user_id', 'reporting_head_id')
+            ->withPivot('is_primary')
+            ->withTimestamps();
+    }
+
+    public function directReports()
+    {
+        return $this->belongsToMany(User::class, 'user_reporting_heads', 'reporting_head_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(EmployeeDocument::class, 'user_id');
+    }
+
+    /**
+     * Canonical "my team" query: users who report to $headId via ANY of
+     * their reporting heads, not just the primary. Replaces ad hoc
+     * UserJobDetail::where('reporting_head', $headId) call sites.
+     */
+    public function scopeManagedBy($query, $headId)
+    {
+        return $query->whereHas('reportingHeads', function ($q) use ($headId) {
+            $q->where('reporting_head_id', $headId);
+        });
     }
     public function UserPayrolls()
     {

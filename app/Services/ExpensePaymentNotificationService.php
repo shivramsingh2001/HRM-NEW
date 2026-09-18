@@ -6,7 +6,6 @@ namespace App\Services;
 use App\Models\Expense;
 use App\Models\ExpensePayment;
 use App\Models\User;
-use App\Models\UserJobDetail;
 use App\Notifications\ExpensePaymentNotification;
 use Illuminate\Support\Facades\Log;
 
@@ -309,11 +308,10 @@ class ExpensePaymentNotificationService
             $recipients->push($employee);
         }
 
-        // 2. Reporting Head (if exists and not the same as employee)
-        $reportingHead = $this->getReportingHead($expense->user_id);
-        if ($reportingHead && $reportingHead->id != $expense->user_id) {
-            $recipients->push($reportingHead);
-        }
+        // 2. Reporting Heads (excluding the employee themself)
+        $reportingHeads = $this->getReportingHeads($expense->user_id)
+            ->reject(fn ($head) => $head->id == $expense->user_id);
+        $recipients = $recipients->merge($reportingHeads);
 
         // 3. All Admin and HR users
         $adminHRUsers = $this->getAdminAndHRUsers();
@@ -335,16 +333,10 @@ class ExpensePaymentNotificationService
     }
 
     /**
-     * Get reporting head for an employee
+     * Get all reporting heads for an employee (multi reporting-head support).
      */
-    private function getReportingHead($employeeId)
+    private function getReportingHeads($employeeId)
     {
-        $jobDetail = UserJobDetail::where('user_id', $employeeId)->first();
-        
-        if (!$jobDetail || !$jobDetail->reporting_head) {
-            return null;
-        }
-
-        return User::find($jobDetail->reporting_head);
+        return User::find($employeeId)?->reportingHeads ?? collect();
     }
 }

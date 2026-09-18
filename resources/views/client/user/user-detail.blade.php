@@ -45,8 +45,8 @@
 
         .info-box:hover {
             background: #fff;
-            border-color: #4f46e5;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.08);
         }
 
         .info-box h6 {
@@ -119,7 +119,7 @@
         }
 
         .contact-label i {
-            color: #4f46e5;
+            color: var(--primary);
             font-size: 14px;
             width: 18px;
         }
@@ -148,14 +148,14 @@
         }
 
         .nav-tabs .nav-link:hover {
-            color: #4f46e5;
+            color: var(--primary);
             background: transparent;
         }
 
         .nav-tabs .nav-link.active {
-            color: #4f46e5;
+            color: var(--primary);
             background-color: transparent;
-            border-bottom: 2px solid #4f46e5;
+            border-bottom: 2px solid var(--primary);
             margin-bottom: -2px;
         }
 
@@ -178,7 +178,7 @@
         }
 
         .section-title i {
-            color: #4f46e5;
+            color: var(--primary);
             font-size: 16px;
         }
 
@@ -199,8 +199,8 @@
         }
 
         .document-card:hover {
-            border-color: #4f46e5;
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 8px 20px rgba(30, 58, 138, 0.08);
             transform: translateY(-2px);
         }
 
@@ -281,7 +281,7 @@
         }
 
         .payroll-effective-date i {
-            color: #4f46e5;
+            color: var(--primary);
             font-size: 13px;
         }
 
@@ -310,8 +310,8 @@
         }
 
         .salary-breakdown .table-primary {
-            background: #e0f2fe !important;
-            color: #0369a1;
+            background: var(--primary-light) !important;
+            color: var(--primary);
         }
 
         .salary-breakdown .table-success {
@@ -330,8 +330,8 @@
         }
 
         .salary-breakdown .table-info {
-            background: #e0f2fe !important;
-            color: #0369a1;
+            background: var(--primary-light) !important;
+            color: var(--primary);
         }
 
         .salary-breakdown .table-secondary {
@@ -349,19 +349,19 @@
 
         .btn-group .btn-outline-primary:hover {
             background: #f8fafc;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         .btn-group .btn-outline-primary.active {
-            background: #4f46e5;
+            background: var(--primary);
             color: #fff;
-            border-color: #4f46e5;
+            border-color: var(--primary);
         }
 
         .btn-light-brand {
             background: #fff;
-            color: #4f46e5;
+            color: var(--primary);
             border: 1px solid #e2e8f0;
             font-size: 12px;
             padding: 8px 16px;
@@ -370,16 +370,16 @@
 
         .btn-light-brand:hover {
             background: #f8fafc;
-            border-color: #4f46e5;
+            border-color: var(--primary);
         }
 
         
 
         /* ==================== ALERTS ==================== */
         .alert-info {
-            background: #e0f2fe;
+            background: var(--primary-light);
             border: 1px solid #b8daff;
-            color: #0369a1;
+            color: var(--primary);
             padding: 16px;
             border-radius: 10px;
             font-size: 13px;
@@ -448,7 +448,8 @@
                         <i class="feather-arrow-left me-2"></i>
                         <span>Back</span>
                     </a>
-                    <a href="{{ route('employee.edit', encrypt($user->id)) }}" class="btn btn-sm btn-primary">
+                    <a href="{{ route('employee.index', ['edit_id' => encrypt($user->id), 'edit_code' => $user->employee_id]) }}"
+                        class="btn btn-sm btn-primary">
                         <i class="feather-edit me-2"></i>
                         <span>Edit Employee</span>
                     </a>
@@ -754,8 +755,16 @@
                                     <div class="detail-value">{{ $user->jobDetails->department_name ?? 'N/A' }}</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="detail-label">Reporting Head</div>
-                                    <div class="detail-value">{{ $user->jobDetails->reporting_head_name ?? 'N/A' }}</div>
+                                    <div class="detail-label">Reporting Head(s)</div>
+                                    <div class="detail-value">
+                                        @forelse (($user->jobDetails->reporting_heads ?? []) as $head)
+                                            <span class="badge bg-light text-dark border me-1 mb-1">
+                                                {{ $head['name'] }}{{ $head['is_primary'] ? ' (Primary)' : '' }}
+                                            </span>
+                                        @empty
+                                            N/A
+                                        @endforelse
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="detail-label">Employment Type</div>
@@ -1023,6 +1032,9 @@
                                                     </div>
 
                                                     <h6>{{ $document['label'] }}</h6>
+                                                    @if (!empty($document['name']))
+                                                        <small class="text-muted d-block mb-1">{{ $document['name'] }}</small>
+                                                    @endif
 
                                                     <div class="d-flex gap-2 justify-content-center">
                                                         <a href="{{ asset($path) }}" target="_blank"
@@ -1040,10 +1052,8 @@
                                     @endforeach
                                 @else
                                     <div class="col-12">
-                                        <div class="alert alert-info">
-                                            <i class="feather-info me-2"></i>
-                                            No documents uploaded for this employee.
-                                        </div>
+                                        <x-ui.empty-state icon="file" title="No documents"
+                                            subtitle="No documents have been uploaded for this employee yet." />
                                     </div>
                                 @endif
                             </div>

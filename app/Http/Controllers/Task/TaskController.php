@@ -171,7 +171,7 @@ class TaskController extends Controller
             if ($this->permissions->isElevated($authUser)) {
                 $users = $usersQuery->orderBy('users.name')->get();
             } elseif ($this->permissions->isManagerTier($authUser)) {
-                $ids = UserJobDetail::where('reporting_head', $authUser->id)->pluck('user_id')->toArray();
+                $ids = User::managedBy($authUser->id)->pluck('id')->toArray();
                 $ids[] = $authUser->id;
                 $users = $usersQuery->whereIn('users.id', $ids)->orderBy('users.name')->get();
             } else {
@@ -341,10 +341,8 @@ class TaskController extends Controller
             if ($this->permissions->isElevated($authUser)) {
                 $users = User::where('role', '!=', 'admin')->where('status', 1)->get();
             } elseif ($this->permissions->isManagerTier($authUser)) {
-                $users = User::select('users.*')
-                    ->join('user_job_details', 'users.id', '=', 'user_job_details.user_id')
+                $users = User::managedBy($authUser->id)
                     ->where('users.status', 1)
-                    ->where('user_job_details.reporting_head', $authUser->id)
                     ->get();
             } else {
                 $users = collect();

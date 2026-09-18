@@ -10,9 +10,10 @@ use App\Models\UserBankDetail;
 use App\Models\UserBasicDetail;
 use App\Models\UserJobDetail;
 use App\Models\UserLocation;
-use App\Models\UserPayroll;
-use App\Models\Branch;
-use App\Models\PayrollMaster;
+use App\Models\EmployeeDocument;
+use App\Models\AttendanceLocation;
+use App\Models\CompanyBranch;
+use App\Models\PayrollStructure;
 use App\Models\Country;
 use App\Models\Language;
 use App\Models\EmployementType;
@@ -20,9 +21,11 @@ use App\Models\LeaveType;
 use App\Services\Payroll\PayrollStructureAssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -166,6 +169,19 @@ class UserController extends Controller
             $inactiveEmployees = User::where('role', '!=', 'admin')
                 ->where('status', 0)
                 ->count();
+
+            $fieldEmployees = User::where('role', '!=', 'admin')
+                ->whereHas('jobDetails', fn ($q) => $q->where('type', 'field'))
+                ->count();
+
+            $officeEmployees = User::where('role', '!=', 'admin')
+                ->whereHas('jobDetails', fn ($q) => $q->where('type', '!=', 'field')->orWhereNull('type'))
+                ->count();
+
+            $faceRegisteredEmployees = User::where('role', '!=', 'admin')
+                ->whereHas('jobDetails', fn ($q) => $q->where('face_register', 1))
+                ->count();
+
             $allEmployees = User::where('role', '!=', 'admin')
                 ->select('id', 'name', 'email', 'employee_id')
                 ->orderBy('name')
@@ -186,7 +202,18 @@ class UserController extends Controller
                 ? app(\App\Services\FieldTracking\FieldTrackingService::class)->seatsUsed((int) auth()->user()->tenant_id)
                 : 0;
 
-            return view('client.user.view-user', compact('designations', 'users', 'totalEmployees', 'activeEmployees', 'inactiveEmployees', 'departments', 'allEmployees', 'selectedEmployeeData', 'fieldTrackingEnabled', 'fieldTrackingSeats', 'fieldTrackingSeatsUsed'));
+            // Dropdown data for the Add/Edit Employee drawer (embedded on this
+            // page so the wizard never has to navigate away from the list).
+            $reportingHeads = User::where('status', 1)->where('role', '!=', 'employee')->get();
+            $employementTypes = EmployementType::where('status', 1)->get();
+            $languages = Language::where('status', 1)->get();
+            $branches = AttendanceLocation::where('status', 1)->get();
+            $companyBranches = CompanyBranch::where('status', 1)->get();
+            $leave_types = LeaveType::where('status', 1)->get();
+            $payrollStructures = PayrollStructure::where('status', 1)->with('components.component')->orderBy('name')->get();
+            $countries = Country::where('status', 1)->get();
+
+            return view('client.user.view-user', compact('designations', 'users', 'totalEmployees', 'activeEmployees', 'inactiveEmployees', 'fieldEmployees', 'officeEmployees', 'faceRegisteredEmployees', 'departments', 'allEmployees', 'selectedEmployeeData', 'fieldTrackingEnabled', 'fieldTrackingSeats', 'fieldTrackingSeatsUsed', 'reportingHeads', 'employementTypes', 'languages', 'branches', 'companyBranches', 'leave_types', 'payrollStructures', 'countries'));
         } catch (\Exception $e) {
             Log::error('Error fetching employees: ' . $e->getMessage());
 
@@ -328,14 +355,15 @@ class UserController extends Controller
     public function create()
     {
         session()->forget('employee_id');
-        $data['payrollMasters'] = PayrollMaster::where('status', 1)->get();
+        $data['payrollStructures'] = PayrollStructure::where('status', 1)->with('components.component')->orderBy('name')->get();
         $data['departments'] = Department::where('status', 1)->get();
         $data['designations'] = Designation::where('status', 1)->get();
         $data['employement_types'] = EmployementType::where('status', 1)->get();
         $data['employees'] = User::where('status', 1)->where('role', '!=', 'employee')->get();
         $data['countries'] = Country::where('status', 1)->get();
         $data['languages'] = Language::where('status', 1)->get();
-        $data['branches'] = Branch::where('status', 1)->get();
+        $data['branches'] = AttendanceLocation::where('status', 1)->get();
+        $data['companyBranches'] = CompanyBranch::where('status', 1)->get();
         $data['leave_types'] = LeaveType::where('status', 1)->get();
         return view('client.user.add-user', $data);
     }
@@ -447,17 +475,15 @@ class UserController extends Controller
     }
 
     /**
-     * Handle file uploads
+     * Handle file uploads. Documents (experience letter, marksheets, etc.)
+     * are handled separately by saveEmployeeDocuments() since an employee
+     * can now have any number of them — see docs/modules.md.
      */
     private function handleFileUploads($request, $employeeId)
     {
         $filePaths = [];
         $fileFields = [
             'profile_photo',
-            'experience_letter',
-            'tenth_marksheet',
-            'twelfth_marksheet',
-            'highest_qualification_certificate'
         ];
 
         $uploadPath = public_path('uploads/users/' . $employeeId);
@@ -479,6 +505,121 @@ class UserController extends Controller
         }
 
         return $filePaths;
+    }
+
+    /**
+     * Persist the full multiselect reporting-head set for an employee.
+     * The first id is treated as primary; returns the primary id (or null)
+     * so callers can keep user_job_details.reporting_head in sync for the
+     * ~100 existing single-head read call sites. Rejects self-reporting.
+     */
+    private function syncReportingHeads(User $user, array $reportingHeadIds): ?int
+    {
+        $reportingHeadIds = array_values(array_unique(array_filter(
+            $reportingHeadIds,
+            fn ($id) => (int) $id !== (int) $user->id
+        )));
+
+        // sync() writes pivot rows via a raw query, bypassing UserReportingHead's
+        // TenantTrait::creating() hook — tenant_id must be set explicitly here.
+        $syncData = [];
+        foreach ($reportingHeadIds as $index => $headId) {
+            $syncData[(int) $headId] = ['is_primary' => $index === 0, 'tenant_id' => $user->tenant_id];
+        }
+
+        $user->reportingHeads()->sync($syncData);
+
+        return $reportingHeadIds[0] ?? null;
+    }
+
+    /**
+     * Persist the employee's dynamic document list. $rows is the validated
+     * `documents` array (each row: optional id, document_type,
+     * document_type_other, document_name, optional file). Mirrors the
+     * wizard's existing "this step's payload is the full authoritative
+     * state" pattern — any previously-uploaded document not represented by
+     * a row in $rows is removed.
+     */
+    private function saveEmployeeDocuments(User $user, array $rows): void
+    {
+        $uploadPath = public_path('uploads/users/' . $user->employee_id . '/documents');
+        if (!File::exists($uploadPath)) {
+            File::makeDirectory($uploadPath, 0755, true, true);
+        }
+
+        $keptIds = [];
+
+        foreach ($rows as $row) {
+            $file = $row['file'] ?? null;
+            $existingId = $row['id'] ?? null;
+
+            if ($existingId) {
+                $document = EmployeeDocument::where('user_id', $user->id)->find($existingId);
+                if (!$document) {
+                    continue;
+                }
+            } elseif ($file) {
+                $document = new EmployeeDocument(['user_id' => $user->id]);
+            } else {
+                // New row with no file attached — nothing to store.
+                continue;
+            }
+
+            $document->document_type = $row['document_type'];
+            $document->document_type_other = $row['document_type'] === EmployeeDocument::TYPE_OTHER
+                ? ($row['document_type_other'] ?? null)
+                : null;
+            $document->document_name = $row['document_name'] ?? null;
+
+            if ($file) {
+                if ($document->file_path && File::exists(public_path($document->file_path))) {
+                    File::delete(public_path($document->file_path));
+                }
+                $fileName = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
+                $file->move($uploadPath, $fileName);
+                $document->file_path = 'uploads/users/' . $user->employee_id . '/documents/' . $fileName;
+                $document->original_filename = $file->getClientOriginalName();
+                $document->mime_type = $file->getClientMimeType();
+                $document->file_size = $file->getSize();
+            }
+
+            $document->tenant_id = $document->tenant_id ?? $user->tenant_id;
+            $document->uploaded_by = auth()->id();
+            $document->user_id = $user->id;
+            $document->save();
+
+            $keptIds[] = $document->id;
+        }
+
+        EmployeeDocument::where('user_id', $user->id)
+            ->whereNotIn('id', $keptIds)
+            ->get()
+            ->each(function (EmployeeDocument $document) {
+                if ($document->file_path && File::exists(public_path($document->file_path))) {
+                    File::delete(public_path($document->file_path));
+                }
+                $document->delete();
+            });
+    }
+
+    /**
+     * Shared validation rules for the dynamic documents array, used by
+     * every entry point that saves documents (wizard step 7, full update).
+     */
+    private function documentRows(Request $request): array
+    {
+        $validTypes = implode(',', array_keys(EmployeeDocument::$documentTypes));
+
+        $validated = $request->validate([
+            'documents' => 'nullable|array',
+            'documents.*.id' => 'nullable|integer',
+            'documents.*.document_type' => 'required_with:documents|string|in:' . $validTypes,
+            'documents.*.document_type_other' => 'nullable|required_if:documents.*.document_type,other|string|max:100',
+            'documents.*.document_name' => 'nullable|string|max:150',
+            'documents.*.file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
+        ]);
+
+        return $validated['documents'] ?? [];
     }
 
     /**
@@ -563,14 +704,14 @@ class UserController extends Controller
         $rules = [
             'personal_email' => 'nullable|email',
             'alternate_phone' => 'nullable|digits:10',
-            'gender' => 'required|in:m,f,o',
-            'dob' => 'required|date',
+            'gender' => 'nullable|in:m,f,o',
+            'dob' => 'nullable|date',
             'blood_group' => 'nullable|max:10',
             'marital_status' => 'nullable|in:single,married,widow,divorced',
-            'father_name' => 'required|min:3|max:255',
-            'mother_name' => 'required|min:3|max:255',
-            'language' => 'required|array',
-            'language.*' => 'required|string',
+            'father_name' => 'nullable|min:3|max:255',
+            'mother_name' => 'nullable|min:3|max:255',
+            'language' => 'nullable|array',
+            'language.*' => 'nullable|string',
             'nationality' => 'nullable|string',
             'about' => 'nullable|min:5|max:255',
             'aadhaar_no' => 'nullable|digits:12',
@@ -642,10 +783,12 @@ class UserController extends Controller
         $validated = $request->validate([
             'department' => 'nullable|exists:departments,id',
             'designation' => 'nullable|exists:designations,id',
-            'reporting_head' => 'nullable|exists:users,id',
+            'reporting_head' => 'nullable|array',
+            'reporting_head.*' => 'distinct|exists:users,id',
             'employment_type' => 'nullable|in:full-time,part-time,contract',
             'type' => 'required|in:office,field',
             'branch' => 'required',
+            'company_branch' => 'nullable|exists:company_branches,id',
             'joining_date' => 'nullable|date',
             'leave_type_assigned' => 'nullable|array|min:1',
             'leave_type_assigned.*' => 'exists:leave_types,id',
@@ -664,14 +807,18 @@ class UserController extends Controller
             // Convert to JSON
             $leaveAssignedJson = json_encode($leaveTypes);
         }
+
+        $primaryReportingHeadId = $this->syncReportingHeads($user, $validated['reporting_head'] ?? []);
+
         $jobDetails = UserJobDetail::firstOrNew(['user_id' => $user->id]);
         $jobDetails->fill([
             'department' => $validated['department'] ?? null,
             'designation' => $validated['designation'] ?? null,
-            'reporting_head' => $validated['reporting_head'] ?? null,
+            'reporting_head' => $primaryReportingHeadId,
             'employment_type' => $validated['employment_type'] ?? 'full-time',
             'type' => $validated['type'],
             'office_branch' => $validated['branch'],
+            'branch_id' => $validated['company_branch'] ?? null,
             'joining_date' => $validated['joining_date'] ?? null,
             'leave_assigned' => $leaveAssignedJson,
         ]);
@@ -771,8 +918,10 @@ class UserController extends Controller
      */
     private function saveStep6($request, $employeeId)
     {
+        $tenantId = app('current_tenant')->id;
+
         $validated = $request->validate([
-            'payroll_master_id' => 'required|exists:payroll_masters,id',
+            'payroll_structure_id' => ['nullable', 'integer', Rule::exists('payroll_structures', 'id')->where('tenant_id', $tenantId)],
             'annual_ctc' => 'required|numeric|min:100000',
             'salary_effective_date' => 'required|date',
             'basic_salary' => 'required|numeric|min:0',
@@ -795,141 +944,18 @@ class UserController extends Controller
 
         $user = User::where('employee_id', $employeeId)->firstOrFail();
 
-        $tenantId = app('current_tenant')->id;
-        $dynamicEnabled = (bool) DB::table('tenants')->where('id', $tenantId)->value('payroll_dynamic_ui_enabled');
+        $this->assignDynamicStructureFromWizardValues($tenantId, $user, $validated, 'initial', 'Created during employee registration');
 
-        if ($dynamicEnabled) {
-            $this->assignDynamicStructureFromWizardValues($tenantId, $user, $validated, 'initial', 'Created during employee registration');
+        UserJobDetail::where('user_id', $user->id)->update(['salary' => $validated['gross_salary']]);
 
-            return;
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Check if employee already has current payroll
-            $existingCurrentPayroll = UserPayroll::where('user_id', $user->id)
-                ->where('is_current', true)
-                ->first();
-
-            if ($existingCurrentPayroll) {
-                // Update the existing current payroll to not be current
-                $existingCurrentPayroll->update([
-                    'is_current' => false,
-                    'effective_to' => date('Y-m-d', strtotime($validated['salary_effective_date'] . ' -1 day'))
-                ]);
-            }
-
-            // Calculate monthly CTC
-            $monthlyCTC = $validated['annual_ctc'] / 12;
-
-            // Generate payroll code
-            $payrollCode = $this->generatePayrollCode($user->id);
-
-            // Calculate totals
-            $grossSalary = $validated['gross_salary'];
-            $totalDeductions = $validated['provident_fund'] + $validated['esi'] + $validated['professional_tax'];
-            $netSalary = $validated['net_salary'];
-
-            // Calculate total monthly cost to company (CTC)
-            $totalMonthlyCost = $grossSalary + $validated['employer_provident_fund'] + $validated['employer_esi'];
-            $annualCTCTotal = $validated['annual_ctc']; // This should match totalMonthlyCost * 12
-
-            // Insert into user_payrolls table
-            UserPayroll::create([
-                'user_id' => $user->id,
-                'payroll_master_id' => $validated['payroll_master_id'],
-                'payroll_code' => $payrollCode,
-                'effective_from' => $validated['salary_effective_date'],
-                'effective_to' => null, // No end date as it's current
-                'is_current' => true, // Set as current payroll
-                'basic_salary' => $validated['basic_salary'],
-                'hra' => $validated['hra'],
-                'conveyence' => $validated['conveyence'],
-                'medical_allowance' => $validated['medical_allowance'],
-                'children_allowance' => $validated['children_allowance'] ?? 0,
-                'post_allowance' => $validated['post_allowance'] ?? 0,
-                'leave_travel_allowance' => $validated['leave_travel_allowance'] ?? 0,
-                'monthly_incentive' => $validated['monthly_incentive'] ?? 0,
-                'special_allowance' => $validated['special_allowance'] ?? 0,
-                'provident_fund' => $validated['provident_fund'],
-                'employer_provident_fund' => $validated['employer_provident_fund'],
-                'esi' => $validated['esi'],
-                'employer_esi' => $validated['employer_esi'],
-                'professional_tax' => $validated['professional_tax'],
-                'tds' => 0, // Default TDS, can be calculated later
-                'gross_salary' => $grossSalary,
-                'total_deductions' => $totalDeductions,
-                'net_salary' => $netSalary,
-                'ctc' => $annualCTCTotal, // Store annual CTC
-                'notes' => 'Created during employee registration',
-                'status' => 1,
-            ]);
-
-            // Update user_job_details with payroll_master_id and salary
-            UserJobDetail::where('user_id', $user->id)
-                ->update([
-                    'payroll_master_id' => $validated['payroll_master_id'],
-                    'salary' => $grossSalary // Store monthly gross in salary field
-                ]);
-
-            DB::commit();
-
-            Log::info('Payroll saved for employee: ' . $user->employee_id . ' with code: ' . $payrollCode);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Payroll save error: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    /**
-     * Generate unique payroll code
-     */
-    private function generatePayrollCode($userId)
-    {
-        $user = User::find($userId);
-        $empCode = $user->employee_id ?? 'EMP';
-        $year = date('Y');
-        $month = date('m');
-
-        $lastPayroll = UserPayroll::whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if ($lastPayroll) {
-            $lastNumber = intval(substr($lastPayroll->payroll_code, -3));
-            $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
-        } else {
-            $newNumber = '001';
-        }
-
-        return "{$empCode}-{$year}{$month}-{$newNumber}";
+        Log::info('Payroll saved for employee: ' . $user->employee_id);
     }
 
     private function saveStep7($request, $employeeId, $filePaths)
     {
         $user = User::where('employee_id', $employeeId)->firstOrFail();
 
-        $basicDetails = UserBasicDetail::firstOrNew(['user_id' => $user->id]);
-
-        // Update document paths
-        $documentFields = [
-            'experience_letter',
-            'tenth_marksheet',
-            'twelfth_marksheet',
-            'highest_qualification_certificate'
-        ];
-
-        foreach ($documentFields as $field) {
-            if (isset($filePaths[$field])) {
-                $basicDetails->$field = $filePaths[$field];
-            }
-        }
-
-        $basicDetails->user_id = $user->id;
-        $basicDetails->save();
+        $this->saveEmployeeDocuments($user, $this->documentRows($request));
     }
 
     public function show($id)
@@ -944,7 +970,9 @@ class UserController extends Controller
                 'currentPayroll',
                 'location.countryRel',
                 'location.stateRel',
-                'location.cityRel'
+                'location.cityRel',
+                'reportingHeads',
+                'documents' => fn ($query) => $query->latest(),
             ])
                 ->where('id', $id)
                 ->where('role', '!=', 'admin')
@@ -961,10 +989,14 @@ class UserController extends Controller
                     $user->jobDetails->designation_name = $designation ? $designation->name : null;
                 }
 
-                if ($user->jobDetails->reporting_head) {
-                    $reportingHead = User::find($user->jobDetails->reporting_head);
-                    $user->jobDetails->reporting_head_name = $reportingHead ? $reportingHead->name : null;
-                }
+                // Multi reporting-head support: primary first, then the rest.
+                $user->jobDetails->reporting_heads = $user->reportingHeads
+                    ->sortByDesc(fn ($head) => (bool) $head->pivot->is_primary)
+                    ->map(fn ($head) => [
+                        'id' => $head->id,
+                        'name' => $head->name,
+                        'is_primary' => (bool) $head->pivot->is_primary,
+                    ])->values()->all();
             }
 
             $languageNames = [];
@@ -985,26 +1017,15 @@ class UserController extends Controller
                 ];
             }
 
-            if ($user->basicDetails) {
-                $documents = [];
-                $docFields = [
-                    'experience_letter' => 'Experience Letter',
-                    'tenth_marksheet' => '10th Marksheet',
-                    'twelfth_marksheet' => '12th Marksheet',
-                    'highest_qualification_certificate' => 'Highest Qualification Certificate'
-                ];
-
-                foreach ($docFields as $field => $label) {
-                    if ($user->basicDetails->$field) {
-                        $documents[] = [
-                            'label' => $label,
-                            'path' => $user->basicDetails->$field,
-                            'filename' => basename($user->basicDetails->$field)
-                        ];
-                    }
-                }
-                $user->documents = $documents;
-            }
+            $documents = $user->documents->map(fn ($document) => [
+                'id' => $document->id,
+                'label' => $document->document_type_label,
+                'name' => $document->document_name,
+                'path' => $document->file_path,
+                'filename' => $document->original_filename ?: basename($document->file_path),
+                'uploaded_at' => optional($document->created_at)->format('d M Y'),
+            ])->values()->all();
+            $user->documents = $documents;
 
             return view('client.user.user-detail', compact('user', 'languageNames', 'locationNames'));
         } catch (\Exception $e) {
@@ -1028,17 +1049,33 @@ class UserController extends Controller
                 return response()->json(['data' => null]);
             }
 
-            $payroll = UserPayroll::where('user_id', $user->id)
-                ->where('is_current', true)
-                ->first();
+            $structure = $user->currentDynamicPayrollStructure;
+            $payroll = $structure ? app(PayrollStructureAssignmentService::class)->toLegacyShapedArray($structure) : null;
+
+            $reportingHeads = $user->reportingHeads()->orderByDesc('is_primary')->get();
+            $jobData = $user->jobDetails;
+            if ($jobData) {
+                $jobData->reporting_head_ids = $reportingHeads->pluck('id')->all();
+                $jobData->reporting_head_primary_id = optional($reportingHeads->first())->id;
+            }
+
+            $documents = $user->documents()->latest()->get()->map(fn ($document) => [
+                'id' => $document->id,
+                'document_type' => $document->document_type,
+                'document_type_other' => $document->document_type_other,
+                'document_name' => $document->document_name,
+                'file_path' => asset($document->file_path),
+                'filename' => $document->original_filename ?: basename($document->file_path),
+            ])->values();
 
             $data = [
                 'user' => $user,
                 'basic' => $user->basicDetails,
-                'job' => $user->jobDetails,
+                'job' => $jobData,
                 'bank' => $user->bankDetails,
                 'location' => $user->location,
                 'payroll' => $payroll,
+                'documents' => $documents,
                 'last_step' => session('last_step', 1)
             ];
 
@@ -1096,19 +1133,22 @@ class UserController extends Controller
     {
         try {
             $id = decrypt($id);
-            $user = User::with(['basicDetails', 'jobDetails', 'bankDetails', 'location', 'currentPayroll'])
+            $user = User::with(['basicDetails', 'jobDetails', 'bankDetails', 'location'])
                 ->where('id', $id)
                 ->where('role', '!=', 'admin')
                 ->firstOrFail();
 
             $leave_types = LeaveType::where('status', 1)->get();
-           
+
             // ✅ Add this line to decode the assigned leave types
             $selectedLeaveTypes = [];
             if ($user->jobDetails && $user->jobDetails->leave_assigned) {
                 $selectedLeaveTypes = json_decode($user->jobDetails->leave_assigned, true);
             }
-            $currentPayroll = $user->currentPayroll ?? null;
+            $dynamicStructure = $user->currentDynamicPayrollStructure;
+            $currentPayroll = $dynamicStructure
+                ? (object) app(PayrollStructureAssignmentService::class)->toLegacyShapedArray($dynamicStructure)
+                : null;
             $data = [
                 'user' => $user,
                 'currentPayroll' => $currentPayroll,
@@ -1121,9 +1161,10 @@ class UserController extends Controller
                     ->where('status', 1)
                     ->get(),
                 'languages' => Language::where('status', 1)->get(),
-                'payrollMasters' => PayrollMaster::where('status', 1)->get(),
+                'payrollStructures' => PayrollStructure::where('status', 1)->with('components.component')->orderBy('name')->get(),
                 'countries' => Country::where('status', 1)->get(),
-                'branches' => Branch::where('status', 1)->get(),
+                'branches' => AttendanceLocation::where('status', 1)->get(),
+                'companyBranches' => CompanyBranch::where('status', 1)->get(),
             ];
 
             return view('client.user.update-user', $data);
@@ -1153,12 +1194,12 @@ class UserController extends Controller
                 'account_number' => 'nullable|digits_between:9,18',
                 'ifsc' => 'nullable|size:11',
                 'branch_name' => 'nullable|min:3|max:255',
-                'father_name' => 'required|min:3|max:255',
-                'mother_name' => 'required|min:3|max:255',
-                'language' => 'required|array',
-                'language.*' => 'required|string',
-                'dob' => 'required|date',
-                'gender' => 'required|in:m,f,o',
+                'father_name' => 'nullable|min:3|max:255',
+                'mother_name' => 'nullable|min:3|max:255',
+                'language' => 'nullable|array',
+                'language.*' => 'nullable|string',
+                'dob' => 'nullable|date',
+                'gender' => 'nullable|in:m,f,o',
                 'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
                 'blood_group' => 'nullable|max:10',
                 'marital_status' => 'nullable|in:single,married,widow,divorced',
@@ -1171,12 +1212,14 @@ class UserController extends Controller
                 'passport_number' => 'nullable',
                 'designation' => 'nullable|exists:designations,id',
                 'department' => 'nullable|exists:departments,id',
-                'reporting_head' => 'nullable|exists:users,id',
+                'reporting_head' => 'nullable|array',
+                'reporting_head.*' => 'distinct|exists:users,id',
                 'joining_date' => 'nullable|date',
                 'employment_type' => 'nullable',
                 'salary' => 'nullable|numeric',
                 'type' => 'required|in:office,field',
                 'branch' => 'required',
+                'company_branch' => 'nullable|exists:company_branches,id',
                 'country' => 'nullable|string',
                 'state' => 'nullable|string',
                 'city' => 'nullable|string',
@@ -1188,6 +1231,7 @@ class UserController extends Controller
             DB::beginTransaction();
 
             $filePaths = $this->handleFileUploads($request, $user->employee_id);
+            $this->saveEmployeeDocuments($user, $this->documentRows($request));
 
             // Update User
             $user->update([
@@ -1248,15 +1292,17 @@ class UserController extends Controller
             }
 
             // Update or Create Job Details
+            $primaryReportingHeadId = $this->syncReportingHeads($user, $validated['reporting_head'] ?? []);
             $jobData = [
                 'designation' => $validated['designation'] ?? null,
                 'department' => $validated['department'] ?? null,
                 'joining_date' => $validated['joining_date'] ?? null,
-                'reporting_head' => $validated['reporting_head'] ?? null,
+                'reporting_head' => $primaryReportingHeadId,
                 'employment_type' => $validated['employment_type'] ?? null,
                 'salary' => $validated['salary'] ?? null,
                 'type' => $validated['type'] ?? null,
                 'office_branch' => $validated['branch'] ?? null,
+                'branch_id' => $validated['company_branch'] ?? null,
             ];
 
             if ($user->jobDetails) {
@@ -1405,14 +1451,14 @@ class UserController extends Controller
         $rules = [
             'personal_email' => 'nullable|email',
             'alternate_phone' => 'nullable|digits:10',
-            'gender' => 'required|in:m,f,o',
-            'dob' => 'required|date',
+            'gender' => 'nullable|in:m,f,o',
+            'dob' => 'nullable|date',
             'blood_group' => 'nullable|max:10',
             'marital_status' => 'nullable|in:single,married,widow,divorced',
-            'father_name' => 'required|min:3|max:255',
-            'mother_name' => 'required|min:3|max:255',
-            'language' => 'required|array',
-            'language.*' => 'required|string',
+            'father_name' => 'nullable|min:3|max:255',
+            'mother_name' => 'nullable|min:3|max:255',
+            'language' => 'nullable|array',
+            'language.*' => 'nullable|string',
             'nationality' => 'nullable|string',
             'about' => 'nullable|min:5|max:255',
             'aadhaar_no' => 'nullable|digits:12',
@@ -1483,10 +1529,12 @@ class UserController extends Controller
         $validated = $request->validate([
             'department' => 'nullable|exists:departments,id',
             'designation' => 'nullable|exists:designations,id',
-            'reporting_head' => 'nullable|exists:users,id',
+            'reporting_head' => 'nullable|array',
+            'reporting_head.*' => 'distinct|exists:users,id',
             'employment_type' => 'nullable|in:full-time,part-time,contract',
             'type' => 'required|in:office,field',
             'branch' => 'required',
+            'company_branch' => 'nullable|exists:company_branches,id',
             'joining_date' => 'nullable|date',
             'leave_type_assigned' => 'nullable|array|min:1',
             'leave_type_assigned.*' => 'exists:leave_types,id',
@@ -1504,14 +1552,17 @@ class UserController extends Controller
             $leaveAssignedJson = json_encode($leaveTypes);
         }
 
+        $primaryReportingHeadId = $this->syncReportingHeads($user, $validated['reporting_head'] ?? []);
+
         $jobDetails = UserJobDetail::firstOrNew(['user_id' => $user->id]);
         $jobDetails->fill([
             'department' => $validated['department'] ?? null,
             'designation' => $validated['designation'] ?? null,
-            'reporting_head' => $validated['reporting_head'] ?? null,
+            'reporting_head' => $primaryReportingHeadId,
             'employment_type' => $validated['employment_type'] ?? 'full-time',
             'type' => $validated['type'],
             'office_branch' => $validated['branch'],
+            'branch_id' => $validated['company_branch'] ?? null,
             'joining_date' => $validated['joining_date'] ?? null,
             'leave_assigned' => $leaveAssignedJson,
         ]);
@@ -1590,8 +1641,10 @@ class UserController extends Controller
      */
     private function updateStep6($request, $user)
     {
+        $tenantId = app('current_tenant')->id;
+
         $validated = $request->validate([
-            'payroll_master_id' => 'required|exists:payroll_masters,id',
+            'payroll_structure_id' => ['nullable', 'integer', Rule::exists('payroll_structures', 'id')->where('tenant_id', $tenantId)],
             'annual_ctc' => 'required|numeric|min:100000',
             'salary_effective_date' => 'required|date',
             'basic_salary' => 'required|numeric|min:0',
@@ -1612,144 +1665,11 @@ class UserController extends Controller
             'gross_salary' => 'required|numeric|min:0',
         ]);
 
-        $tenantId = app('current_tenant')->id;
-        $dynamicEnabled = (bool) DB::table('tenants')->where('id', $tenantId)->value('payroll_dynamic_ui_enabled');
+        $this->assignDynamicStructureFromWizardValues($tenantId, $user, $validated, 'increment', 'Updated during employee edit');
 
-        if ($dynamicEnabled) {
-            $this->assignDynamicStructureFromWizardValues($tenantId, $user, $validated, 'increment', 'Updated during employee edit');
+        UserJobDetail::where('user_id', $user->id)->update(['salary' => $validated['gross_salary']]);
 
-            return;
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Check if employee already has current payroll
-            $existingCurrentPayroll = UserPayroll::where('user_id', $user->id)
-                ->where('is_current', true)
-                ->first();
-
-            if ($existingCurrentPayroll) {
-                // If the same payroll is being updated, we can update it
-                // Otherwise, mark it as not current and create new one
-                if (
-                    $existingCurrentPayroll->payroll_master_id == $validated['payroll_master_id'] &&
-                    $existingCurrentPayroll->effective_from == $validated['salary_effective_date']
-                ) {
-                    // Update existing payroll
-                    $existingCurrentPayroll->update([
-                        'basic_salary' => $validated['basic_salary'],
-                        'hra' => $validated['hra'],
-                        'conveyence' => $validated['conveyence'],
-                        'medical_allowance' => $validated['medical_allowance'],
-                        'children_allowance' => $validated['children_allowance'] ?? 0,
-                        'post_allowance' => $validated['post_allowance'] ?? 0,
-                        'leave_travel_allowance' => $validated['leave_travel_allowance'] ?? 0,
-                        'monthly_incentive' => $validated['monthly_incentive'] ?? 0,
-                        'special_allowance' => $validated['special_allowance'] ?? 0,
-                        'provident_fund' => $validated['provident_fund'],
-                        'employer_provident_fund' => $validated['employer_provident_fund'],
-                        'esi' => $validated['esi'],
-                        'employer_esi' => $validated['employer_esi'],
-                        'professional_tax' => $validated['professional_tax'],
-                        'gross_salary' => $validated['gross_salary'],
-                        'net_salary' => $validated['net_salary'],
-                        'ctc' => $validated['annual_ctc'],
-                        'updated_at' => now()
-                    ]);
-
-                    $payrollCode = $existingCurrentPayroll->payroll_code;
-                } else {
-                    // Mark old payroll as not current
-                    $existingCurrentPayroll->update([
-                        'is_current' => false,
-                        'effective_to' => date('Y-m-d', strtotime($validated['salary_effective_date'] . ' -1 day'))
-                    ]);
-
-                    // Generate new payroll code
-                    $payrollCode = $this->generatePayrollCode($user->id);
-
-                    // Create new payroll
-                    UserPayroll::create([
-                        'user_id' => $user->id,
-                        'payroll_master_id' => $validated['payroll_master_id'],
-                        'payroll_code' => $payrollCode,
-                        'effective_from' => $validated['salary_effective_date'],
-                        'effective_to' => null,
-                        'is_current' => true,
-                        'basic_salary' => $validated['basic_salary'],
-                        'hra' => $validated['hra'],
-                        'conveyence' => $validated['conveyence'],
-                        'medical_allowance' => $validated['medical_allowance'],
-                        'children_allowance' => $validated['children_allowance'] ?? 0,
-                        'post_allowance' => $validated['post_allowance'] ?? 0,
-                        'leave_travel_allowance' => $validated['leave_travel_allowance'] ?? 0,
-                        'monthly_incentive' => $validated['monthly_incentive'] ?? 0,
-                        'special_allowance' => $validated['special_allowance'] ?? 0,
-                        'provident_fund' => $validated['provident_fund'],
-                        'employer_provident_fund' => $validated['employer_provident_fund'],
-                        'esi' => $validated['esi'],
-                        'employer_esi' => $validated['employer_esi'],
-                        'professional_tax' => $validated['professional_tax'],
-                        'tds' => 0,
-                        'gross_salary' => $validated['gross_salary'],
-                        'total_deductions' => $validated['provident_fund'] + $validated['esi'] + $validated['professional_tax'],
-                        'net_salary' => $validated['net_salary'],
-                        'ctc' => $validated['annual_ctc'],
-                        'notes' => 'Updated during employee edit',
-                        'status' => 1,
-                    ]);
-                }
-            } else {
-                // No current payroll exists, create new one
-                $payrollCode = $this->generatePayrollCode($user->id);
-
-                UserPayroll::create([
-                    'user_id' => $user->id,
-                    'payroll_master_id' => $validated['payroll_master_id'],
-                    'payroll_code' => $payrollCode,
-                    'effective_from' => $validated['salary_effective_date'],
-                    'effective_to' => null,
-                    'is_current' => true,
-                    'basic_salary' => $validated['basic_salary'],
-                    'hra' => $validated['hra'],
-                    'conveyence' => $validated['conveyence'],
-                    'medical_allowance' => $validated['medical_allowance'],
-                    'children_allowance' => $validated['children_allowance'] ?? 0,
-                    'post_allowance' => $validated['post_allowance'] ?? 0,
-                    'leave_travel_allowance' => $validated['leave_travel_allowance'] ?? 0,
-                    'monthly_incentive' => $validated['monthly_incentive'] ?? 0,
-                    'special_allowance' => $validated['special_allowance'] ?? 0,
-                    'provident_fund' => $validated['provident_fund'],
-                    'employer_provident_fund' => $validated['employer_provident_fund'],
-                    'esi' => $validated['esi'],
-                    'employer_esi' => $validated['employer_esi'],
-                    'professional_tax' => $validated['professional_tax'],
-                    'tds' => 0,
-                    'gross_salary' => $validated['gross_salary'],
-                    'total_deductions' => $validated['provident_fund'] + $validated['esi'] + $validated['professional_tax'],
-                    'net_salary' => $validated['net_salary'],
-                    'ctc' => $validated['annual_ctc'],
-                    'notes' => 'Created during employee edit',
-                    'status' => 1,
-                ]);
-            }
-
-            // Update user_job_details with payroll_master_id and salary
-            UserJobDetail::where('user_id', $user->id)
-                ->update([
-                    'payroll_master_id' => $validated['payroll_master_id'],
-                    'salary' => $validated['gross_salary']
-                ]);
-
-            DB::commit();
-
-            Log::info('Payroll updated for employee: ' . $user->employee_id);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Payroll update error: ' . $e->getMessage());
-            throw $e;
-        }
+        Log::info('Payroll updated for employee: ' . $user->employee_id);
     }
 
     /**
@@ -1796,6 +1716,7 @@ class UserController extends Controller
             'revision_reason' => $reason,
             'created_by' => auth()->id(),
             'source' => 'manual',
+            'payroll_structure_id' => $validated['payroll_structure_id'] ?? null,
         ]);
 
         Log::info('Dynamic payroll structure ' . $structure->status . ' for employee: ' . $user->employee_id);
@@ -1806,30 +1727,7 @@ class UserController extends Controller
      */
     private function updateStep7($request, $user, $filePaths)
     {
-        $basicDetails = UserBasicDetail::firstOrNew(['user_id' => $user->id]);
-
-        $documentFields = [
-            'experience_letter',
-            'tenth_marksheet',
-            'twelfth_marksheet',
-            'highest_qualification_certificate'
-        ];
-
-        foreach ($documentFields as $field) {
-            if (isset($filePaths[$field])) {
-                // Delete old file if exists
-                if ($basicDetails->$field) {
-                    $oldFilePath = public_path($basicDetails->$field);
-                    if (File::exists($oldFilePath)) {
-                        File::delete($oldFilePath);
-                    }
-                }
-                $basicDetails->$field = $filePaths[$field];
-            }
-        }
-
-        $basicDetails->user_id = $user->id;
-        $basicDetails->save();
+        $this->saveEmployeeDocuments($user, $this->documentRows($request));
     }
 
     /**

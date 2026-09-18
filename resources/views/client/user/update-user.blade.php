@@ -658,8 +658,8 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Gender <span class="required">*</span></label>
-                                    <select name="gender" class="form-control" required>
+                                    <label class="form-label">Gender</label>
+                                    <select name="gender" class="form-control">
                                         <option value="">Select Gender</option>
                                         <option value="m"
                                             {{ old('gender', $user->basicDetails->gender ?? '') == 'm' ? 'selected' : '' }}>
@@ -677,11 +677,11 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Date of Birth <span class="required">*</span></label>
+                                    <label class="form-label">Date of Birth</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="feather-calendar"></i></span>
                                         <input type="date" class="form-control" name="dob"
-                                            value="{{ old('dob', $user->basicDetails->dob ?? '') }}" required>
+                                            value="{{ old('dob', $user->basicDetails->dob ?? '') }}">
                                     </div>
                                     @error('dob')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -721,18 +721,18 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Father's Name <span class="required">*</span></label>
+                                    <label class="form-label">Father's Name</label>
                                     <input type="text" class="form-control" name="father_name"
-                                        value="{{ old('father_name', $user->basicDetails->father_name ?? '') }}" required>
+                                        value="{{ old('father_name', $user->basicDetails->father_name ?? '') }}">
                                     @error('father_name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Mother's Name <span class="required">*</span></label>
+                                    <label class="form-label">Mother's Name</label>
                                     <input type="text" class="form-control" name="mother_name"
-                                        value="{{ old('mother_name', $user->basicDetails->mother_name ?? '') }}" required>
+                                        value="{{ old('mother_name', $user->basicDetails->mother_name ?? '') }}">
                                     @error('mother_name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -783,8 +783,8 @@
 
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Languages <span class="required">*</span></label>
-                                <select class="form-control select2" name="language[]" multiple required>
+                                <label class="form-label">Languages</label>
+                                <select class="form-control select2" name="language[]" multiple>
                                     @php
                                         $selectedLanguages = [];
                                         if ($user->basicDetails && $user->basicDetails->language) {
@@ -858,18 +858,21 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Reporting Head</label>
-                                    <select name="reporting_head" class="form-control">
-                                        <option value="">Select Reporting Head</option>
+                                    <label class="form-label">Reporting Head(s)</label>
+                                    @php
+                                        $selectedReportingHeadIds = old('reporting_head', $user->reportingHeads->pluck('id')->all());
+                                    @endphp
+                                    <select name="reporting_head[]" class="form-control select2" multiple>
                                         @foreach ($employees as $employee)
                                             @if ($employee->id != $user->id)
                                                 <option value="{{ $employee->id }}"
-                                                    {{ old('reporting_head', $user->jobDetails->reporting_head ?? '') == $employee->id ? 'selected' : '' }}>
+                                                    {{ in_array($employee->id, $selectedReportingHeadIds) ? 'selected' : '' }}>
                                                     {{ $employee->name }}
                                                 </option>
                                             @endif
                                         @endforeach
                                     </select>
+                                    <small class="form-text text-muted">First selected is treated as the primary reporting head.</small>
                                     @error('reporting_head')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -911,19 +914,35 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Office Branch <span class="required">*</span></label>
+                                    <label class="form-label">Attendance Location <span class="required">*</span></label>
                                     <select name="branch" class="form-control" required>
-                                        <option value="">Select Branch</option>
-                                        <option value="0" {{ old('branch', $user->jobDetails->office_branch ?? '') == "0" ? 'selected' : '' }}>All Branch</option>
+                                        <option value="">Select Attendance Location</option>
+                                        <option value="0" {{ old('branch', $user->jobDetails->office_branch ?? '') == "0" ? 'selected' : '' }}>All Locations</option>
                                         @foreach ($branches as $branch)
                                             <option value="{{ $branch->id }}"
                                                 {{ old('branch', $user->jobDetails->office_branch ?? '') == $branch->id ? 'selected' : '' }}>
                                                 {{ $branch->name }}
                                             </option>
                                         @endforeach
-                                        
+
                                     </select>
                                     @error('branch')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Branch</label>
+                                    <select name="company_branch" class="form-control">
+                                        <option value="">-- None --</option>
+                                        @foreach ($companyBranches ?? [] as $companyBranch)
+                                            <option value="{{ $companyBranch->id }}"
+                                                {{ old('company_branch', $user->jobDetails->branch_id ?? '') == $companyBranch->id ? 'selected' : '' }}>
+                                                {{ $companyBranch->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('company_branch')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -1177,37 +1196,24 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Payroll Master <span class="required">*</span></label>
-                                    <select name="payroll_master_id" id="payroll_master_id" class="form-control"
-                                        required>
-                                        <option value="">Select Payroll Structure</option>
+                                    <label class="form-label">Payroll Structure</label>
+                                    <select name="payroll_structure_id" id="payroll_structure_id" class="form-control">
+                                        <option value="">Select Payroll Structure (optional)</option>
                                         @php
-                                            $currentPayrollMasterId = $currentPayroll
-                                                ? $currentPayroll->payroll_master_id
-                                                : $user->jobDetails->payroll_master_id ?? '';
+                                            $currentStructureId = $currentPayroll->payroll_structure_id ?? old('payroll_structure_id');
                                         @endphp
-                                        @foreach ($payrollMasters ?? [] as $master)
-                                            <option value="{{ $master->id }}"
-                                                {{ $currentPayrollMasterId == $master->id ? 'selected' : '' }}
-                                                data-hra="{{ $master->hra }}"
-                                                data-conveyence="{{ $master->conveyence }}"
-                                                data-medical-allowance="{{ $master->medical_allowance }}"
-                                                data-children-allowance="{{ $master->children_allowance }}"
-                                                data-post-allowance="{{ $master->post_allowance }}"
-                                                data-leave-travel-allowance="{{ $master->leave_travel_allowance }}"
-                                                data-monthly-incentive="{{ $master->monthly_incentive }}"
-                                                data-provident-fund="{{ $master->provident_fund }}"
-                                                data-employer-provident-fund="{{ $master->employer_provident_fund }}"
-                                                data-esi="{{ $master->esi }}"
-                                                data-employer-esi="{{ $master->employer_esi }}"
-                                                data-pt="{{ $master->pt }}">
-                                                {{ $master->name }}
+                                        @foreach ($payrollStructures ?? [] as $structure)
+                                            <option value="{{ $structure->id }}"
+                                                {{ $currentStructureId == $structure->id ? 'selected' : '' }}
+                                                data-calc='{{ json_encode($structure->calculatorComponents()) }}'>
+                                                {{ $structure->name }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    <small class="text-muted">Select the payroll structure that defines allowance
-                                        percentages</small>
-                                    @error('payroll_master_id')
+                                    <small class="text-muted">Optional — used only to pre-fill the calculator below
+                                        from that structure's configured components. The figures saved are always
+                                        whatever is shown below.</small>
+                                    @error('payroll_structure_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -1720,145 +1726,128 @@
 
             function calculateSalaryBreakdown() {
                 const annualCTC = parseFloat($('#annual_ctc').val()) || 0;
-                const payrollMasterId = $('#payroll_master_id').val();
 
-                console.log('========== PAYROLL CALCULATION START ==========');
-                console.log('Annual CTC:', annualCTC);
-                console.log('Payroll Master ID:', payrollMasterId);
+                if (annualCTC <= 0) {
+                    resetAllFields();
+                    return;
+                }
 
-                if (annualCTC > 0) {
-                    // Monthly CTC
-                    const monthlyCTC = annualCTC / 12;
-                    console.log('Monthly CTC:', monthlyCTC);
+                const selectedOption = $('#payroll_structure_id option:selected');
+                let calc = {};
+                try {
+                    calc = JSON.parse(selectedOption.attr('data-calc') || '{}');
+                } catch (e) {
+                    calc = {};
+                }
 
-                    let basic, hra, conveyence, medical, children, post, lta, incentive;
-                    let pfPercentage = 0,
-                        employerPfPercentage = 0,
-                        esiPercentage = 0,
-                        employerEsiPercentage = 0,
-                        ptAmount = 0;
+                const monthlyCTC = annualCTC / 12;
 
-                    if (payrollMasterId) {
-                        // Get selected payroll master data
-                        const selectedOption = $('#payroll_master_id option:selected');
+                // Which structure component code feeds which calculator field.
+                const ALLOWANCE_FIELDS = {
+                    hra: 'hra',
+                    conveyance: 'conveyence',
+                    medical_allowance: 'medical',
+                    children_allowance: 'children',
+                    post_allowance: 'post',
+                    leave_travel_allowance: 'lta',
+                    monthly_incentive: 'incentive'
+                };
 
-                        // Get percentages from master
-                        const hraPercentage = parseFloat(selectedOption.data('hra')) || 0;
-                        const conveyencePercentage = parseFloat(selectedOption.data('conveyence')) || 0;
-                        const medicalPercentage = parseFloat(selectedOption.data('medical-allowance')) || 0;
-                        const childrenPercentage = parseFloat(selectedOption.data('children-allowance')) || 0;
-                        const postPercentage = parseFloat(selectedOption.data('post-allowance')) || 0;
-                        const ltaPercentage = parseFloat(selectedOption.data('leave-travel-allowance')) || 0;
-                        const incentivePercentage = parseFloat(selectedOption.data('monthly-incentive')) || 0;
+                let pctSum = 0;
+                let fixedSum = 0;
+                const pctByKey = {};
+                const fixedByKey = {};
+                let hasCustomAllowance = false;
 
-                        // Get deduction percentages
-                        pfPercentage = parseFloat(selectedOption.data('provident-fund'));
-                        employerPfPercentage = parseFloat(selectedOption.data('employer-provident-fund'));
-                        esiPercentage = parseFloat(selectedOption.data('esi'));
-                        employerEsiPercentage = parseFloat(selectedOption.data('employer-esi'));
-                        ptPercentage = parseFloat(selectedOption.data('pt'));
-
-                        // Handle cases where data attributes might be undefined or null
-                        pfPercentage = !isNaN(pfPercentage) ? pfPercentage : 0;
-                        employerPfPercentage = !isNaN(employerPfPercentage) ? employerPfPercentage : 0;
-                        esiPercentage = !isNaN(esiPercentage) ? esiPercentage : 0;
-                        employerEsiPercentage = !isNaN(employerEsiPercentage) ? employerEsiPercentage : 0;
-                        ptAmount = !isNaN(ptAmount) ? ptAmount : 0;
-
-                        // Total allowance percentage
-                        const totalAllowancePercentage = hraPercentage + conveyencePercentage + medicalPercentage +
-                            childrenPercentage + postPercentage + ltaPercentage + incentivePercentage;
-
-                        // Check if all allowances are zero
-                        if (totalAllowancePercentage === 0) {
-                            // If all allowances are 0, then 100% goes to basic salary
-                            basic = monthlyCTC;
-                            hra = 0;
-                            conveyence = 0;
-                            medical = 0;
-                            children = 0;
-                            post = 0;
-                            lta = 0;
-                            incentive = 0;
-                        } else {
-                            // Calculate Basic (where Basic + (Basic * totalAllowancePercentage/100) = monthlyCTC)
-                            basic = monthlyCTC / (1 + (totalAllowancePercentage / 100));
-
-                            // Calculate all allowances as percentage of Basic
-                            hra = basic * (hraPercentage / 100);
-                            conveyence = basic * (conveyencePercentage / 100);
-                            medical = basic * (medicalPercentage / 100);
-                            children = basic * (childrenPercentage / 100);
-                            post = basic * (postPercentage / 100);
-                            lta = basic * (ltaPercentage / 100);
-                            incentive = basic * (incentivePercentage / 100);
-                        }
-                    } else {
-                        // No master selected - use standard calculation
-                        basic = monthlyCTC * 0.5;
-                        hra = basic * 0.4;
-                        conveyence = 1600;
-                        medical = 1250;
-                        children = 0;
-                        post = 0;
-                        lta = 0;
-                        incentive = 0;
-
-                        // Standard deduction percentages when no master is selected
-                        pfPercentage = 12;
-                        employerPfPercentage = 12;
-                        esiPercentage = 1.75;
-                        employerEsiPercentage = 3.25;
-                        ptAmount = 200;
+                $.each(ALLOWANCE_FIELDS, function(code, key) {
+                    const entry = calc[code];
+                    if (entry && entry.type === 'percentage' && entry.base === 'basic') {
+                        pctByKey[key] = entry.value;
+                        pctSum += entry.value;
+                        hasCustomAllowance = true;
+                    } else if (entry && entry.type === 'fixed') {
+                        fixedByKey[key] = entry.value;
+                        fixedSum += entry.value;
+                        hasCustomAllowance = true;
                     }
+                });
 
-                    // Total allowances
-                    const totalAllowances = hra + conveyence + medical + children + post + lta + incentive;
+                let basic, hra, conveyence, medical, children, post, lta, incentive;
 
-                    // Gross salary
-                    const grossSalary = basic + totalAllowances;
+                if (hasCustomAllowance) {
+                    // Solve for Basic where Basic + fixed allowances + (Basic * pctSum/100) = monthlyCTC
+                    basic = Math.max(0, (monthlyCTC - fixedSum) / (1 + (pctSum / 100)));
+                    hra = fixedByKey.hra !== undefined ? fixedByKey.hra : basic * ((pctByKey.hra || 0) / 100);
+                    conveyence = fixedByKey.conveyence !== undefined ? fixedByKey.conveyence : basic * ((pctByKey.conveyence || 0) / 100);
+                    medical = fixedByKey.medical !== undefined ? fixedByKey.medical : basic * ((pctByKey.medical || 0) / 100);
+                    children = fixedByKey.children !== undefined ? fixedByKey.children : basic * ((pctByKey.children || 0) / 100);
+                    post = fixedByKey.post !== undefined ? fixedByKey.post : basic * ((pctByKey.post || 0) / 100);
+                    lta = fixedByKey.lta !== undefined ? fixedByKey.lta : basic * ((pctByKey.lta || 0) / 100);
+                    incentive = fixedByKey.incentive !== undefined ? fixedByKey.incentive : basic * ((pctByKey.incentive || 0) / 100);
+                } else {
+                    // No Payroll Structure selected, or it has no allowance
+                    // components configured yet — standard starting split.
+                    basic = monthlyCTC * 0.5;
+                    hra = basic * 0.4;
+                    conveyence = 1600;
+                    medical = 1250;
+                    children = 0;
+                    post = 0;
+                    lta = 0;
+                    incentive = 0;
+                }
 
-                    // Calculate deductions - only if percentages are > 0
-                    let pfDeduction = 0;
-                    if (pfPercentage > 0) {
-                        pfDeduction = Math.min(basic * (pfPercentage / 100), 1800);
+                const totalAllowances = hra + conveyence + medical + children + post + lta + incentive;
+                const grossSalary = basic + totalAllowances;
+
+                function percentageDeduction(entry, base, defaultPct, defaultCeiling, defaultRule) {
+                    let pct = defaultPct;
+                    let ceilingAmount = defaultCeiling;
+                    let rule = defaultRule;
+
+                    if (entry && entry.type === 'fixed') {
+                        return entry.value;
                     }
-
-                    let esiDeduction = 0;
-                    if (esiPercentage > 0 && grossSalary <= 21000) {
-                        esiDeduction = grossSalary * (esiPercentage / 100);
+                    if (entry && entry.type === 'percentage') {
+                        pct = entry.value;
+                        ceilingAmount = entry.ceiling_amount != null ? entry.ceiling_amount : null;
+                        rule = entry.ceiling_rule || null;
                     }
-
-                    // Professional Tax - only if > 0
-                    let professionalTax = 0;
-                    if (ptPercentage > 0) {
-                        professionalTax = grossSalary * (ptPercentage / 100);
+                    if (!pct || pct <= 0) {
+                        return 0;
                     }
-
-                    // Total deductions
-                    const totalDeductions = pfDeduction + esiDeduction + professionalTax;
-
-                    // Net salary
-                    const netSalary = grossSalary - totalDeductions;
-
-                    // Employer contributions - only if percentages are > 0
-                    let employerPf = 0;
-                    if (employerPfPercentage > 0) {
-                        employerPf = Math.min(basic * (employerPfPercentage / 100), 1800);
+                    if (rule === 'ceiling_exclude' && ceilingAmount && base > ceilingAmount) {
+                        return 0;
                     }
+                    const effectiveBase = (rule === 'cap_base_before_percentage' && ceilingAmount)
+                        ? Math.min(base, ceilingAmount)
+                        : base;
 
-                    let employerEsi = 0;
-                    if (employerEsiPercentage > 0 && grossSalary <= 21000) {
-                        employerEsi = grossSalary * (employerEsiPercentage / 100);
-                    }
+                    return effectiveBase * (pct / 100);
+                }
 
-                    // Total monthly cost to company
-                    const totalMonthlyCost = grossSalary + employerPf + employerEsi;
+                const pfDeduction = percentageDeduction(calc.pf_employee, basic, 12, 15000, 'cap_base_before_percentage');
+                const employerPf = percentageDeduction(calc.pf_employer, basic, 12, 15000, 'cap_base_before_percentage');
+                const esiDeduction = percentageDeduction(calc.esi_employee, grossSalary, 1.75, 21000, 'ceiling_exclude');
+                const employerEsi = percentageDeduction(calc.esi_employer, grossSalary, 3.25, 21000, 'ceiling_exclude');
 
-                    // Update both monthly and yearly views
-                    updateDisplayFields({
-                        // Monthly values
-                        monthly: {
+                let professionalTax;
+                if (calc.pt && calc.pt.type === 'fixed') {
+                    professionalTax = calc.pt.value;
+                } else if (calc.pt && calc.pt.type === 'percentage') {
+                    professionalTax = grossSalary * (calc.pt.value / 100);
+                } else {
+                    professionalTax = 200;
+                }
+
+                const totalDeductions = pfDeduction + esiDeduction + professionalTax;
+                const netSalary = grossSalary - totalDeductions;
+                const totalMonthlyCost = grossSalary + employerPf + employerEsi;
+
+                // Update both monthly and yearly views
+                updateDisplayFields({
+                    // Monthly values
+                    monthly: {
                             basic: basic,
                             hra: hra,
                             conveyence: conveyence,
@@ -1919,9 +1908,6 @@
                         employerPf: employerPf,
                         employerEsi: employerEsi
                     });
-                } else {
-                    resetAllFields();
-                }
             }
 
             function updateDisplayFields(values) {
@@ -2024,7 +2010,7 @@
             }
 
             // Payroll event listeners
-            $('#annual_ctc, #payroll_master_id').on('change keyup', function() {
+            $('#annual_ctc, #payroll_structure_id').on('change keyup', function() {
                 calculateSalaryBreakdown();
             });
 
@@ -2187,36 +2173,8 @@
             }
 
             if (step === 2) {
-                // Validate Step 2
-                const gender = currentStepElement.find('select[name="gender"]');
-                if (!gender.val()) {
-                    showError(gender, 'Please select gender');
-                    isValid = false;
-                }
-
-                const dob = currentStepElement.find('input[name="dob"]');
-                if (!dob.val()) {
-                    showError(dob, 'Date of birth is required');
-                    isValid = false;
-                }
-
-                const fatherName = currentStepElement.find('input[name="father_name"]');
-                if (!fatherName.val().trim()) {
-                    showError(fatherName, 'Father\'s name is required');
-                    isValid = false;
-                }
-
-                const motherName = currentStepElement.find('input[name="mother_name"]');
-                if (!motherName.val().trim()) {
-                    showError(motherName, 'Mother\'s name is required');
-                    isValid = false;
-                }
-
-                const languages = currentStepElement.find('select[name="language[]"]');
-                if (!languages.val() || languages.val().length === 0) {
-                    showError(languages, 'Please select at least one language');
-                    isValid = false;
-                }
+                // Validate Step 2 (Personal Information is optional — only
+                // validate the format of whatever was actually filled in)
 
                 // Add Aadhaar validation
                 const aadhaar = currentStepElement.find('input[name="aadhaar_no"]');
@@ -2266,13 +2224,8 @@
             }
 
             if (step === 6) {
-                // Validate Step 6 (Payroll)
-                const payrollMaster = currentStepElement.find('select[name="payroll_master_id"]');
-                if (!payrollMaster.val()) {
-                    showError(payrollMaster, 'Please select a payroll master');
-                    isValid = false;
-                }
-
+                // Validate Step 6 (Payroll) — Payroll Structure is optional,
+                // only used to pre-fill the calculator.
                 const annualCTC = currentStepElement.find('input[name="annual_ctc"]');
                 if (!annualCTC.val()) {
                     showError(annualCTC, 'Annual CTC is required');

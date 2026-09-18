@@ -323,12 +323,12 @@
 <div class="page-header">
     <div class="page-header-left d-flex align-items-center">
         <div class="page-header-title">
-                <h5 class="m-b-10">Branch Reports</h5>
+                <h5 class="m-b-10">Attendance Location Reports</h5>
             </div>
         <ul class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
             <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-            <li class="breadcrumb-item active">Branch Wise Attendance</li>
+            <li class="breadcrumb-item active">Attendance Location Wise Attendance</li>
         </ul>
     </div>
 </div>

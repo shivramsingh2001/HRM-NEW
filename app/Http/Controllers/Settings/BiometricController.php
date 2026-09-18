@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessBiometricPunch;
 use App\Models\ApiClient;
-use App\Models\Branch;
+use App\Models\AttendanceLocation;
 use App\Models\BiometricDevice;
 use App\Models\BiometricEnrollment;
 use App\Models\BiometricPunch;
@@ -35,7 +35,7 @@ class BiometricController extends Controller
 
         return view('client.settings.biometric.index', [
             'devices' => $devices,
-            'branches' => Branch::where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']),
+            'branches' => AttendanceLocation::where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']),
             'timezones' => self::TZS,
         ]);
     }

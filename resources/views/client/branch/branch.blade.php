@@ -1,281 +1,137 @@
-{{-- resources/views/client/branch/index.blade.php --}}
+{{-- resources/views/client/branch/branch.blade.php
+     Company Branch — organizational profile (name/address/contact/manager).
+     Separate from client/attendance-location/attendance-location.blade.php
+     (attendance geofencing). Mirrors client/department/department.blade.php. --}}
 @extends('client.layout.master')
 
 @section('style')
 <style>
-    /* Map Container Styles */
-    #map {
-        height: 300px;
-        width: 100%;
-        border-radius: 8px;
-        border: 1px solid #dee2e6;
-        margin-bottom: 15px;
+    /* ==================== BRANCH CARDS — all-blue theme, 4-per-row, compact spacing (mirrors client/department/department.blade.php) ==================== */
+    .branch-card {
+        border: 1px solid #eaeef5;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+        transition: all .2s ease;
     }
 
-    .location-status {
-        font-size: 12px;
-        margin-top: 5px;
+    .branch-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px -6px rgba(30, 50, 110, .14);
+        border-color: #dfe5f0;
     }
 
-    .location-status i {
-        font-size: 14px;
+    .branch-card .side-stick { background-color: #1e3a8a; }
+
+    .br-title {
+        font-size: 11.5px !important;
+        font-weight: 700;
+        color: #1a2236;
+        max-width: 72%;
     }
 
-    .location-status.text-success i {
-        color: #28a745;
+    .br-address {
+        font-size: 9px;
+        color: #6b7385;
+        margin-bottom: 0;
     }
 
-    .location-status.text-warning i {
-        color: #ffc107;
-    }
-
-    .location-status.text-danger i {
-        color: #dc3545;
-    }
-
-    /* Coordinates Input Group */
-    .coordinate-input-group {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .coordinate-input-group .form-control {
-        flex: 1;
-    }
-
-    .coordinate-input-group .btn {
+    .br-badge {
+        padding: 2px 7px;
+        border-radius: 30px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: .2px;
         white-space: nowrap;
     }
 
-    /* Modal Styles */
-    .modal-header {
-        background: #f8f9fa;
-        border-bottom: 1px solid #e9ecef;
+    .badge-active { background: #3b82f6; color: #fff; }
+    .badge-inactive { background: #1e3a8a; color: #fff; }
+
+    .br-info-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f4f6fb;
+        border-radius: 8px;
+        padding: 5px 8px;
     }
 
-    .modal-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #495057;
-    }
-
-    .modal-title i {
-        color: #4b7bec;
-        margin-right: 8px;
-    }
-
-    /* Form Styles */
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .form-label {
-        font-weight: 500;
-        color: #495057;
-        margin-bottom: 0.5rem;
-    }
-
-    .form-label i {
-        color: #6c757d;
-        margin-right: 5px;
-        font-size: 14px;
-    }
-
-    .form-label .required {
-        color: #dc3545;
-        margin-left: 3px;
-    }
-
-    .form-control, .form-select {
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        padding: 0.5rem 0.75rem;
-        font-size: 14px;
-        transition: all 0.2s;
-    }
-
-    .form-control:focus, .form-select:focus {
-        border-color: #4b7bec;
-        box-shadow: 0 0 0 0.2rem rgba(75, 123, 236, 0.1);
-        outline: none;
-    }
-
-    .form-control.is-invalid, .form-select.is-invalid {
-        border-color: #dc3545;
-    }
-
-    .invalid-feedback {
-        color: #dc3545;
-        font-size: 12px;
-        margin-top: 4px;
-    }
-
-   
-
-    /* Table Styles */
-    .table th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-        font-size: 13px;
+    .br-info-label {
+        font-size: 8px;
+        color: #6b7385;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
-        border-bottom-width: 1px;
+        letter-spacing: .03em;
     }
 
-    .table td {
-        vertical-align: middle;
-        font-size: 14px;
+    .br-info-value {
+        font-size: 9.5px;
+        font-weight: 600;
+        color: #1a2236;
     }
 
-    .badge {
-        padding: 6px 10px;
-        font-weight: 500;
-        font-size: 11px;
-        border-radius: 20px;
+    .br-info-value i { color: #1e3a8a; }
+
+    .br-description {
+        color: #475569;
+        font-size: 9.5px;
+        line-height: 1.4;
     }
 
-    .badge.bg-success {
-        background-color: #28a745 !important;
+    .br-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        padding-top: 6px;
+        margin-top: 4px;
+        border-top: 1px solid #eaeef5;
     }
 
-    .badge.bg-danger {
-        background-color: #dc3545 !important;
-    }
-
-    .badge.bg-warning {
-        background-color: #ffc107 !important;
-        color: #212529;
-    }
-
-    .badge i {
-        font-size: 11px;
-        margin-right: 4px;
-    }
-
-    /* Action Buttons */
     .action-btn {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        display: inline-flex;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #f4f6fb;
+        border: 1px solid #eaeef5;
+        display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        transition: all 0.2s;
-        color: #6c757d;
+        color: #6b7385;
+        font-size: 10px;
+        transition: all .2s;
+        cursor: pointer;
+        text-decoration: none;
+        flex-shrink: 0;
     }
 
-    .action-btn:hover {
-        background: #e9ecef;
-        color: #4b7bec;
+    .action-btn:hover { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
+    .action-btn.danger:hover { background: #dc2626; border-color: #dc2626; }
+
+    /* ==================== EMPTY STATE ==================== */
+    .empty-state {
+        padding: 36px 20px;
+        text-align: center;
+        background: linear-gradient(145deg, #ffffff 0%, #f4f6fb 100%);
+        border-radius: 14px;
     }
 
-    .dropdown-menu {
-        border: 1px solid #e9ecef;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        padding: 8px 0;
-    }
+    .empty-state i { font-size: 48px; color: #93c5fd; margin-bottom: 12px; }
+    .empty-state h4 { color: #1a2236; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .empty-state p { color: #6b7385; font-size: 11.5px; margin-bottom: 0; }
 
-    .dropdown-item {
-        padding: 8px 16px;
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-    }
-
-    .dropdown-item i {
-        margin-right: 10px;
-        font-size: 14px;
-        color: #6c757d;
-    }
-
-    .dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-
-    .dropdown-item.text-danger i {
-        color: #dc3545;
-    }
-
-    /* Stats Cards */
-    .stats-card {
-        background: white;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        padding: 20px;
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-        transition: all 0.2s;
-    }
-
-    .card.stat-card-compact {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            transition: all 0.2s ease;
-            height: 100%;
-            margin-bottom: 0;
-        }
-
-        .card.stat-card-compact:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-        }
-
-        .card.stat-card-compact .card-body {
-            padding: 0.75rem 1rem;
-        }
-
-        .stat-content-compact {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .stat-icon-compact {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-
-        .stat-text-compact {
-            text-align: right;
-        }
-
-        .stat-title-compact {
-            font-size: 11px;
-            color: #6b7280;
-            font-weight: 500;
-            margin-bottom: 2px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-value-compact {
-            font-size: 18px;
-            font-weight: 700;
-            color: #111827;
-            line-height: 1;
-        }
-
-    /* Custom colors for compact cards */
-        .card-total .stat-icon-compact { background-color: #e0f2fe; color: #0369a1; }
-        .card-total .stat-value-compact { color: #0369a1; }
-
-        .card-pending .stat-icon-compact { background-color: #f3f4f6; color: #374151; }
-        .card-pending .stat-value-compact { color: #374151; }
-
-        .card-in_progress .stat-icon-compact { background-color: #dbeafe; color: #1e40af; }
-        .card-in_progress .stat-value-compact { color: #1e40af; }
-
+    /* ==================== COMPACT MODAL — core chrome centralized in
+       public/assets/css/theme-custom.css; only this page's own extras here. ==================== */
+    .compact-modal .modal-header .fs-18 { font-size: 13px !important; }
+    .compact-modal .form-group { margin-bottom: 0; }
+    .compact-modal .form-control,
+    .compact-modal .form-check-label { font-size: 11.5px; }
 </style>
 @endsection
+
+@php
+    $user = Auth::user();
+    $role = $user->role;
+@endphp
 
 @section('content-area')
     <div class="content-area-header sticky-top">
@@ -290,188 +146,102 @@
         </div>
         <div class="page-header-right ms-auto">
             <div class="hstack gap-2">
+                @if(in_array($role,['admin','hr']))
                 <div class="dropdown d-none d-sm-flex">
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                    <a href="javascript:void(0)" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
                         data-bs-target="#addBranchModal">
                         <i class="feather-plus me-2"></i>Add Branch
                     </a>
                 </div>
+                @endif
             </div>
         </div>
     </div>
-  <div class="main-content" style="padding: 20px !important;">
-    
-        <!-- Stats Cards -->
-        <div class="row mb-3">
-            <div class="col-xxl col-lg col-md-3 col-sm-6">
-                <div class="card stat-card-compact card-total">
-                    <div class="card-body">
-                        <div class="stat-content-compact">
-                            <div class="stat-icon-compact">
-                                <i class="feather-list"></i>
-                            </div>
-                            <div class="stat-text-compact">
-                                <div class="stat-title-compact">Total</div>
-                                <div class="stat-value-compact">{{ $branches->total() ?? 0 }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xxl col-lg col-md-3 col-sm-6">
-                <div class="card stat-card-compact card-pending">
-                    <div class="card-body">
-                        <div class="stat-content-compact">
-                            <div class="stat-icon-compact">
-                                <i class="feather-clock"></i>
-                            </div>
-                            <div class="stat-text-compact">
-                                <div class="stat-title-compact">Active</div>
-                                <div class="stat-value-compact">{{ $branches->where('status', 1)->count() ?? 0 }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xxl col-lg col-md-3 col-sm-6">
-                <div class="card stat-card-compact card-in_progress">
-                    <div class="card-body">
-                        <div class="stat-content-compact">
-                            <div class="stat-icon-compact">
-                                <i class="feather-activity"></i>
-                            </div>
-                            <div class="stat-text-compact">
-                                <div class="stat-title-compact">Inactive</div>
-                                <div class="stat-value-compact">{{ $branches->where('status', 0)->count() ?? 0 }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-           
-        </div>
+    <div class="content-area-body pb-0 h-100">
+        <div class="row note-has-grid" id="note-full-container">
+            @forelse ($branches as $branch)
+                <div class="col-xxl-3 col-xl-3 col-lg-3 col-md-6 col-sm-6 single-note-item">
+                    <div class="card branch-card card-body mb-2 stretch stretch-full position-relative border-0">
 
-        <!-- Branches Table -->
-        <div class="row note-has-grid py-2">
-            <div class="col-lg-12">
-                <div class="card stretch stretch-full">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Branches List</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-info">
-                                <i class="feather-list me-1"></i>Total: {{ $branches->total() }}
+                        <span class="side-stick"></span>
+
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h5 class="br-title note-title text-truncate mb-0">
+                                {{ $branch->name }}
+                            </h5>
+                            <span class="br-badge {{ $branch->status ? 'badge-active' : 'badge-inactive' }}">
+                                {{ $branch->status ? 'Active' : 'Inactive' }}
                             </span>
                         </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover" id="branchList">
-                                <thead>
-                                    <tr class="text-center">
-                                        <th width="50">#</th>
-                                        <th>Name</th>
-                                        <th>Description</th>
-                                        <th>Latitude</th>
-                                        <th>Longitude</th>
-                                        <!--<th>Location Status</th>-->
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($branches as $branch)
-                                        <tr class="text-center">
-                                            <td class="text-center">{{ $loop->iteration + ($branches->currentPage() - 1) * $branches->perPage() }}</td>
-                                            <td>
-                                                <strong>{{ $branch->name }}</strong>
-                                            </td>
-                                            <td>{{ Str::limit($branch->description, 30) ?? '-' }}</td>
-                                            <td>
-                                                @if($branch->latitude)
-                                                    <span class="badge bg-light text-dark">{{ number_format($branch->latitude, 6) }}</span>
-                                                @else
-                                                    <span class="badge bg-warning">Not Set</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($branch->longitude)
-                                                    <span class="badge bg-light text-dark">{{ number_format($branch->longitude, 6) }}</span>
-                                                @else
-                                                    <span class="badge bg-warning">Not Set</span>
-                                                @endif
-                                            </td>
-                                            <!--<td>-->
-                                            <!--    @if($branch->latitude && $branch->longitude)-->
-                                            <!--        <span class="badge bg-success">-->
-                                            <!--            <i class="feather-map-pin me-1"></i>Located-->
-                                            <!--        </span>-->
-                                            <!--    @else-->
-                                            <!--        <span class="badge bg-warning">-->
-                                            <!--            <i class="feather-alert-circle me-1"></i>No Location-->
-                                            <!--        </span>-->
-                                            <!--    @endif-->
-                                            <!--</td>-->
-                                            <td>
-                                                @if ($branch->status == 1)
-                                                    <span class="badge bg-success">
-                                                        <i class="feather-check me-1"></i>Active
-                                                    </span>
-                                                @else
-                                                    <span class="badge bg-danger">
-                                                        <i class="feather-x me-1"></i>Inactive
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="dropdown">
-                                                    <a href="#" class="action-btn" data-bs-toggle="dropdown" data-bs-offset="0,10">
-                                                        <i class="feather-more-vertical"></i>
-                                                    </a>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li>
-                                                            <a class="dropdown-item edit-branch" href="#" 
-                                                               data-id="{{ $branch->id }}"
-                                                               data-name="{{ $branch->name }}"
-                                                               data-description="{{ $branch->description }}"
-                                                               data-latitude="{{ $branch->latitude }}"
-                                                               data-longitude="{{ $branch->longitude }}"
-                                                               data-status="{{ $branch->status }}">
-                                                                <i class="feather-edit-3"></i>
-                                                                <span>Edit Branch</span>
-                                                            </a>
-                                                        </li>
-                                                        
-                                                    </ul>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="7" class="text-center py-5">
-                                                <i class="feather-home" style="font-size: 48px; color: #dee2e6;"></i>
-                                                <p class="mt-3 text-muted">No branches found</p>
-                                               
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    @if ($branches->hasPages())
-                        <div class="card-footer">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-muted small">
-                                    Showing {{ $branches->firstItem() }} to {{ $branches->lastItem() }} of {{ $branches->total() }} entries
-                                </div>
-                                <div>
-                                    {{ $branches->appends(request()->query())->links() }}
-                                </div>
+
+                        <p class="br-address mb-1">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            {{ collect([$branch->city, $branch->state, $branch->country])->filter()->implode(', ') ?: 'No address on file' }}
+                        </p>
+
+                        <div class="br-info-row mb-1">
+                            <div>
+                                <small class="br-info-label d-block">Branch Manager</small>
+                                <span class="br-info-value">
+                                    <i class="bi bi-person-badge me-1"></i>
+                                    {{ $branch->branchHead->name ?? 'NA' }}
+                                </span>
+                            </div>
+                            <div class="text-end">
+                                <small class="br-info-label d-block">Employees</small>
+                                <span class="br-info-value">
+                                    <i class="bi bi-people-fill me-1"></i>
+                                    {{ $branch->employees_count ?? 0 }}
+                                </span>
                             </div>
                         </div>
-                    @endif
+
+                        <div class="note-content flex-grow-1">
+                            <p class="br-description text-truncate-3-line mb-0">
+                                {{ $branch->description ?? 'No description available.' }}
+                            </p>
+                        </div>
+
+                        <div class="br-card-footer">
+                            <a href="{{ route('branch.detail', ['id' => encrypt($branch->id)]) }}"
+                                class="action-btn" title="View Details">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            @if(in_array($role,['admin','hr']))
+                            <a href="javascript:void(0)" class="action-btn edit-branch" title="Edit Branch"
+                                data-update-url="{{ route('branch.update', ['id' => encrypt($branch->id)]) }}"
+                                data-name="{{ $branch->name }}"
+                                data-description="{{ $branch->description }}"
+                                data-address="{{ $branch->address }}"
+                                data-city="{{ $branch->city }}"
+                                data-state="{{ $branch->state }}"
+                                data-country="{{ $branch->country }}"
+                                data-postal-code="{{ $branch->postal_code }}"
+                                data-phone="{{ $branch->phone }}"
+                                data-email="{{ $branch->email }}"
+                                data-branch-head="{{ $branch->branch_head }}"
+                                data-status="{{ $branch->status }}">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a href="javascript:void(0)" class="action-btn danger delete-branch" title="Delete Branch"
+                                data-delete-url="{{ route('branch.delete', ['id' => encrypt($branch->id)]) }}"
+                                data-name="{{ $branch->name }}">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            @endif
+                        </div>
+
+                    </div>
                 </div>
-            </div>
+            @empty
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="bi bi-building"></i>
+                        <h4>No Branches Found</h4>
+                        <p>Get started by adding your first branch</p>
+                    </div>
+                </div>
+            @endforelse
         </div>
     </div>
 @endsection
@@ -479,132 +249,121 @@
 @section('create-modal')
     <!-- Add Branch Modal -->
     <div class="modal fade-scale" id="addBranchModal" tabindex="-1" aria-labelledby="addBranchModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-md compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="feather-home"></i>
-                        Add New Branch
-                    </h5>
-                    <a href="#" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
+                    <h2 class="d-flex flex-column mb-0">
+                        <span class="fs-18 fw-bold mb-1">Add Branch</span>
+                    </h2>
+                    <a href="javascript:void(0)" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
                         <i class="feather-x text-danger"></i>
                     </a>
                 </div>
                 <div class="modal-body p-0">
                     <div class="card m-0">
                         <div class="card-body">
-                            <div id="addFormError" class="alert alert-danger d-none"></div>
-                            
-                            <form action="{{ route('branch.store') }}" method="POST" id="addBranchForm">
-                                @csrf
+                            <form action="#" id="addBranchForm">
+                                <div id="formError" class="alert alert-danger d-none"></div>
                                 <div class="row">
-                                    <!-- Name Field -->
-                                    <div class="col-md-6">
+                                    <div class="col-md-8 mb-3">
                                         <div class="form-group">
-                                            <label class="form-label" for="add_name">
-                                                <i class="feather-home"></i>
-                                                Branch Name <span class="required">*</span>
-                                            </label>
-                                            <input type="text" class="form-control" name="name" id="add_name" 
-                                                   placeholder="Enter branch name" required>
+                                            <label class="fw-semibold" for="name">Branch Name *</label>
+                                            <input type="text" class="form-control" name="name" required
+                                                id="name" placeholder="Enter branch name">
                                             <small class="text-danger error-text name_error"></small>
                                         </div>
                                     </div>
-
-                                    <!-- Status Field -->
-                                    <div class="col-md-6">
+                                    <div class="col-md-4 mb-3">
                                         <div class="form-group">
-                                            <label class="form-label" for="add_status">
-                                                <i class="feather-toggle-right"></i>
-                                                Status <span class="required">*</span>
-                                            </label>
-                                            <select class="form-control" name="status" id="add_status" required>
+                                            <label class="fw-semibold" for="status">Status *</label>
+                                            <select class="form-control" name="status" id="status" required>
                                                 <option value="1" selected>Active</option>
                                                 <option value="0">Inactive</option>
                                             </select>
                                             <small class="text-danger error-text status_error"></small>
                                         </div>
                                     </div>
-
-                                    <!-- Description Field -->
-                                    <div class="col-12">
+                                    <div class="col-12 mb-3">
                                         <div class="form-group">
-                                            <label class="form-label" for="add_description">
-                                                <i class="feather-file-text"></i>
-                                                Description
-                                            </label>
-                                            <textarea class="form-control" name="description" id="add_description" 
-                                                      rows="3" placeholder="Enter branch description..."></textarea>
+                                            <label class="fw-semibold" for="branch_head">Branch Manager</label>
+                                            <select class="form-control" name="branch_head" id="branch_head">
+                                                <option value="">-- None --</option>
+                                                @foreach ($users as $u)
+                                                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <small class="text-danger error-text branch_head_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="address">Address</label>
+                                            <textarea class="form-control" name="address" id="address" rows="2"
+                                                placeholder="Street address..."></textarea>
+                                            <small class="text-danger error-text address_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="city">City</label>
+                                            <input type="text" class="form-control" name="city" id="city">
+                                            <small class="text-danger error-text city_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="state">State</label>
+                                            <input type="text" class="form-control" name="state" id="state">
+                                            <small class="text-danger error-text state_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="country">Country</label>
+                                            <input type="text" class="form-control" name="country" id="country">
+                                            <small class="text-danger error-text country_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="postal_code">Postal Code</label>
+                                            <input type="text" class="form-control" name="postal_code" id="postal_code">
+                                            <small class="text-danger error-text postal_code_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="phone">Phone</label>
+                                            <input type="text" class="form-control" name="phone" id="phone">
+                                            <small class="text-danger error-text phone_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="email">Email</label>
+                                            <input type="email" class="form-control" name="email" id="email">
+                                            <small class="text-danger error-text email_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="description">Description</label>
+                                            <textarea class="form-control" name="description" id="description" rows="2"
+                                                placeholder="Enter branch description..."></textarea>
                                             <small class="text-danger error-text description_error"></small>
                                         </div>
                                     </div>
 
-                                    <!-- Map Section -->
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label">
-                                            <i class="feather-map-pin"></i>
-                                            Location Selection
-                                        </label>
-                                        <div id="addMap" style="height: 200px; width: 100%; border-radius: 8px; border: 1px solid #dee2e6;"></div>
-                                        
-                                        <!-- Location Status -->
-                                        <div id="addLocationStatus" class="location-status text-warning mt-2">
-                                            <i class="feather-alert-circle"></i>
-                                            <span>Click on map to set branch location</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Latitude Field -->
-                                    <div class="col-md-6 mb-3">
-                                        <div class="form-group">
-                                            <label class="form-label" for="add_latitude">
-                                                <i class="feather-globe"></i>
-                                                Latitude
-                                            </label>
-                                            <div class="coordinate-input-group">
-                                                <input type="number" step="any" class="form-control" 
-                                                       name="latitude" id="add_latitude" 
-                                                       placeholder="Click on map or enter manually" readonly>
-                                                <button type="button" class="btn btn-outline-secondary" id="addDetectLocation">
-                                                    <i class="feather-navigation"></i> Detect
-                                                </button>
-                                            </div>
-                                            <small class="text-danger error-text latitude_error"></small>
-                                        </div>
-                                    </div>
-
-                                    <!-- Longitude Field -->
-                                    <div class="col-md-6 mb-3">
-                                        <div class="form-group">
-                                            <label class="form-label" for="add_longitude">
-                                                <i class="feather-globe"></i>
-                                                Longitude
-                                            </label>
-                                            <input type="number" step="any" class="form-control" 
-                                                   name="longitude" id="add_longitude" 
-                                                   placeholder="Click on map or enter manually" readonly>
-                                            <small class="text-danger error-text longitude_error"></small>
-                                        </div>
-                                    </div>
-
-                                    <!-- Manual Entry Checkbox -->
-                                    <div class="col-12 mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="addManualEntry">
-                                            <label class="form-check-label" for="addManualEntry">
-                                                Enter coordinates manually
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row mt-2">
                                     <div class="col-6">
                                         <button class="btn btn-primary" type="submit">
-                                            <i class="feather-save me-2"></i>Save Branch
+                                            <i class="feather-save me-2"></i>Save
                                         </button>
                                     </div>
-                                  
+                                    <div class="col-6">
+                                        <a href="javascript:void(0)" class="btn btn-modal-cancel float-end" data-bs-dismiss="modal">
+                                            <i class="feather-x me-2"></i>Cancel
+                                        </a>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -616,132 +375,117 @@
 
     <!-- Edit Branch Modal -->
     <div class="modal fade-scale" id="editBranchModal" tabindex="-1" aria-labelledby="editBranchModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-md compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="feather-edit-3"></i>
-                        Edit Branch
-                    </h5>
-                    <a href="#" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
+                    <h2 class="d-flex flex-column mb-0">
+                        <span class="fs-18 fw-bold mb-1">Edit Branch</span>
+                    </h2>
+                    <a href="javascript:void(0)" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
                         <i class="feather-x text-danger"></i>
                     </a>
                 </div>
                 <div class="modal-body p-0">
                     <div class="card m-0">
                         <div class="card-body">
-                            <div id="editFormError" class="alert alert-danger d-none"></div>
-                            
-                            <form id="editBranchForm">
-                                @csrf
-                                <input type="hidden" name="id" id="edit_id">
-                                
+                            <form action="#" id="editBranchForm">
+                                <div id="editFormError" class="alert alert-danger d-none"></div>
                                 <div class="row">
-                                    <!-- Name Field -->
-                                    <div class="col-md-6">
+                                    <div class="col-md-8 mb-3">
                                         <div class="form-group">
-                                            <label class="form-label" for="edit_name">
-                                                <i class="feather-home"></i>
-                                                Branch Name <span class="required">*</span>
-                                            </label>
-                                            <input type="text" class="form-control" name="name" id="edit_name" 
-                                                   placeholder="Enter branch name" required>
-                                            <small class="text-danger error-text edit_name_error"></small>
+                                            <label class="fw-semibold" for="edit_name">Branch Name *</label>
+                                            <input type="text" class="form-control" name="name" required id="edit_name">
+                                            <small class="text-danger error-text name_error"></small>
                                         </div>
                                     </div>
-
-                                    <!-- Status Field -->
-                                    <div class="col-md-6">
+                                    <div class="col-md-4 mb-3">
                                         <div class="form-group">
-                                            <label class="form-label" for="edit_status">
-                                                <i class="feather-toggle-right"></i>
-                                                Status <span class="required">*</span>
-                                            </label>
+                                            <label class="fw-semibold" for="edit_status">Status *</label>
                                             <select class="form-control" name="status" id="edit_status" required>
                                                 <option value="1">Active</option>
                                                 <option value="0">Inactive</option>
                                             </select>
-                                            <small class="text-danger error-text edit_status_error"></small>
+                                            <small class="text-danger error-text status_error"></small>
                                         </div>
                                     </div>
-
-                                    <!-- Description Field -->
-                                    <div class="col-12">
-                                        <div class="form-group">
-                                            <label class="form-label" for="edit_description">
-                                                <i class="feather-file-text"></i>
-                                                Description
-                                            </label>
-                                            <textarea class="form-control" name="description" id="edit_description" 
-                                                      rows="3" placeholder="Enter branch description..."></textarea>
-                                            <small class="text-danger error-text edit_description_error"></small>
-                                        </div>
-                                    </div>
-
-                                    <!-- Map Section -->
                                     <div class="col-12 mb-3">
-                                        <label class="form-label">
-                                            <i class="feather-map-pin"></i>
-                                            Location Selection
-                                        </label>
-                                        <div id="editMap" style="height: 200px; width: 100%; border-radius: 8px; border: 1px solid #dee2e6;"></div>
-                                        
-                                        <!-- Location Status -->
-                                        <div id="editLocationStatus" class="location-status text-info mt-2">
-                                            <i class="feather-info"></i>
-                                            <span>Click on map to update branch location</span>
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_branch_head">Branch Manager</label>
+                                            <select class="form-control" name="branch_head" id="edit_branch_head">
+                                                <option value="">-- None --</option>
+                                                @foreach ($users as $u)
+                                                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <small class="text-danger error-text branch_head_error"></small>
                                         </div>
                                     </div>
-
-                                    <!-- Latitude Field -->
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_address">Address</label>
+                                            <textarea class="form-control" name="address" id="edit_address" rows="2"></textarea>
+                                            <small class="text-danger error-text address_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_city">City</label>
+                                            <input type="text" class="form-control" name="city" id="edit_city">
+                                            <small class="text-danger error-text city_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_state">State</label>
+                                            <input type="text" class="form-control" name="state" id="edit_state">
+                                            <small class="text-danger error-text state_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_country">Country</label>
+                                            <input type="text" class="form-control" name="country" id="edit_country">
+                                            <small class="text-danger error-text country_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_postal_code">Postal Code</label>
+                                            <input type="text" class="form-control" name="postal_code" id="edit_postal_code">
+                                            <small class="text-danger error-text postal_code_error"></small>
+                                        </div>
+                                    </div>
                                     <div class="col-md-6 mb-3">
                                         <div class="form-group">
-                                            <label class="form-label" for="edit_latitude">
-                                                <i class="feather-globe"></i>
-                                                Latitude
-                                            </label>
-                                            <div class="coordinate-input-group">
-                                                <input type="number" step="any" class="form-control" 
-                                                       name="latitude" id="edit_latitude" 
-                                                       placeholder="Click on map or enter manually" readonly>
-                                                <button type="button" class="btn btn-outline-secondary" id="editDetectLocation">
-                                                    <i class="feather-navigation"></i> Detect
-                                                </button>
-                                            </div>
-                                            <small class="text-danger error-text edit_latitude_error"></small>
+                                            <label class="fw-semibold" for="edit_phone">Phone</label>
+                                            <input type="text" class="form-control" name="phone" id="edit_phone">
+                                            <small class="text-danger error-text phone_error"></small>
                                         </div>
                                     </div>
-
-                                    <!-- Longitude Field -->
                                     <div class="col-md-6 mb-3">
                                         <div class="form-group">
-                                            <label class="form-label" for="edit_longitude">
-                                                <i class="feather-globe"></i>
-                                                Longitude
-                                            </label>
-                                            <input type="number" step="any" class="form-control" 
-                                                   name="longitude" id="edit_longitude" 
-                                                   placeholder="Click on map or enter manually" readonly>
-                                            <small class="text-danger error-text edit_longitude_error"></small>
+                                            <label class="fw-semibold" for="edit_email">Email</label>
+                                            <input type="email" class="form-control" name="email" id="edit_email">
+                                            <small class="text-danger error-text email_error"></small>
                                         </div>
                                     </div>
-
-                                    <!-- Manual Entry Checkbox -->
                                     <div class="col-12 mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="editManualEntry">
-                                            <label class="form-check-label" for="editManualEntry">
-                                                Edit coordinates manually
-                                            </label>
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_description">Description</label>
+                                            <textarea class="form-control" name="description" id="edit_description" rows="2"></textarea>
+                                            <small class="text-danger error-text description_error"></small>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div class="row mt-4">
                                     <div class="col-6">
                                         <button class="btn btn-primary" type="submit">
-                                            <i class="feather-save me-2"></i>Update Branch
+                                            <i class="feather-save me-2"></i>Update
                                         </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <a href="javascript:void(0)" class="btn btn-modal-cancel float-end" data-bs-dismiss="modal">
+                                            <i class="feather-x me-2"></i>Cancel
+                                        </a>
                                     </div>
                                 </div>
                             </form>
@@ -752,377 +496,147 @@
         </div>
     </div>
 
-   
+    <!-- Delete Confirmation Modal -->
+    <x-ui.modal id="deleteBranchModal" title="Delete Branch">
+        <div id="deleteFormError" class="alert alert-danger d-none"></div>
+        <p class="fs-12 mb-3">Are you sure you want to delete <strong id="deleteBranchName"></strong>? This cannot be undone.</p>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-danger btn-sm" id="confirmDeleteBranch">
+                <i class="feather-trash-2 me-2"></i>Delete
+            </button>
+            <button type="button" class="btn btn-modal-cancel btn-sm" data-bs-dismiss="modal">Cancel</button>
+        </div>
+    </x-ui.modal>
 @endsection
 
 @section('script-area')
-    <!-- Leaflet CSS and JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script>
         $(document).ready(function() {
-            // ==================== ADD BRANCH MAP ====================
-            let addMap, addMarker, addManualMode = false;
-            
-            // Initialize Add Map
-            function initAddMap() {
-                if (!addMap) {
-                    addMap = L.map('addMap').setView([28.6139, 77.2090], 13);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap contributors'
-                    }).addTo(addMap);
 
-                    // Click on map to set marker
-                    addMap.on('click', function(e) {
-                        if (!addManualMode) {
-                            const lat = e.latlng.lat;
-                            const lng = e.latlng.lng;
-                            setAddMarker(lat, lng);
-                        }
-                    });
-                }
-            }
-
-            // Set marker on add map
-            function setAddMarker(lat, lng) {
-                if (addMarker) {
-                    addMap.removeLayer(addMarker);
-                }
-                addMarker = L.marker([lat, lng], {
-                    draggable: true
-                }).addTo(addMap);
-                
-                addMarker.on('dragend', function(e) {
-                    const pos = e.target.getLatLng();
-                    updateAddCoordinates(pos.lat, pos.lng);
-                });
-
-                updateAddCoordinates(lat, lng);
-                addMap.setView([lat, lng], 15);
-            }
-
-            // Update add coordinates
-            function updateAddCoordinates(lat, lng) {
-                $('#add_latitude').val(lat.toFixed(6));
-                $('#add_longitude').val(lng.toFixed(6));
-                $('#addLocationStatus')
-                    .removeClass('text-warning text-danger text-success')
-                    .addClass('text-success')
-                    .html('<i class="feather-check-circle"></i><span>Location set successfully</span>');
-            }
-
-            // Detect current location for add
-            $('#addDetectLocation').on('click', function() {
-                if (navigator.geolocation) {
-                    $('#addLocationStatus')
-                        .removeClass('text-warning text-danger text-success')
-                        .addClass('text-info')
-                        .html('<i class="feather-loader spin"></i><span>Detecting your location...</span>');
-                    
-                    navigator.geolocation.getCurrentPosition(
-                        function(position) {
-                            setAddMarker(position.coords.latitude, position.coords.longitude);
-                        },
-                        function(error) {
-                            $('#addLocationStatus')
-                                .removeClass('text-warning text-info text-success')
-                                .addClass('text-danger')
-                                .html('<i class="feather-alert-circle"></i><span>Unable to detect location</span>');
-                        }
-                    );
-                } else {
-                    alert('Geolocation is not supported by your browser');
-                }
-            });
-
-            // Manual entry toggle for add
-            $('#addManualEntry').on('change', function() {
-                addManualMode = $(this).is(':checked');
-                if (addManualMode) {
-                    $('#add_latitude').prop('readonly', false);
-                    $('#add_longitude').prop('readonly', false);
-                    $('#addDetectLocation').prop('disabled', true);
-                    $('#addLocationStatus')
-                        .removeClass('text-success text-warning text-danger')
-                        .addClass('text-info')
-                        .html('<i class="feather-edit"></i><span>Manual entry mode - Enter coordinates</span>');
-                } else {
-                    $('#add_latitude').prop('readonly', true).val('');
-                    $('#add_longitude').prop('readonly', true).val('');
-                    $('#addDetectLocation').prop('disabled', false);
-                    if (addMarker) {
-                        addMap.removeLayer(addMarker);
-                        addMarker = null;
-                    }
-                    $('#addLocationStatus')
-                        .removeClass('text-success text-info text-danger')
-                        .addClass('text-warning')
-                        .html('<i class="feather-alert-circle"></i><span>Click on map to set branch location</span>');
-                }
-            });
-
-            // ==================== EDIT BRANCH MAP ====================
-            let editMap, editMarker, editManualMode = false;
-            let currentEditId = null;
-
-            // Initialize Edit Map
-            function initEditMap() {
-                if (!editMap) {
-                    editMap = L.map('editMap').setView([28.6139, 77.2090], 13);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap contributors'
-                    }).addTo(editMap);
-
-                    // Click on map to set marker
-                    editMap.on('click', function(e) {
-                        if (!editManualMode) {
-                            const lat = e.latlng.lat;
-                            const lng = e.latlng.lng;
-                            setEditMarker(lat, lng);
-                        }
-                    });
-                }
-            }
-
-            // Set marker on edit map
-            function setEditMarker(lat, lng) {
-                if (editMarker) {
-                    editMap.removeLayer(editMarker);
-                }
-                editMarker = L.marker([lat, lng], {
-                    draggable: true
-                }).addTo(editMap);
-                
-                editMarker.on('dragend', function(e) {
-                    const pos = e.target.getLatLng();
-                    updateEditCoordinates(pos.lat, pos.lng);
-                });
-
-                updateEditCoordinates(lat, lng);
-                editMap.setView([lat, lng], 15);
-            }
-
-            // Update edit coordinates
-            function updateEditCoordinates(lat, lng) {
-                $('#edit_latitude').val(lat.toFixed(6));
-                $('#edit_longitude').val(lng.toFixed(6));
-                $('#editLocationStatus')
-                    .removeClass('text-warning text-danger text-success')
-                    .addClass('text-success')
-                    .html('<i class="feather-check-circle"></i><span>Location updated successfully</span>');
-            }
-
-            // Detect current location for edit
-            $('#editDetectLocation').on('click', function() {
-                if (navigator.geolocation) {
-                    $('#editLocationStatus')
-                        .removeClass('text-warning text-danger text-success')
-                        .addClass('text-info')
-                        .html('<i class="feather-loader spin"></i><span>Detecting your location...</span>');
-                    
-                    navigator.geolocation.getCurrentPosition(
-                        function(position) {
-                            setEditMarker(position.coords.latitude, position.coords.longitude);
-                        },
-                        function(error) {
-                            $('#editLocationStatus')
-                                .removeClass('text-warning text-info text-success')
-                                .addClass('text-danger')
-                                .html('<i class="feather-alert-circle"></i><span>Unable to detect location</span>');
-                        }
-                    );
-                } else {
-                    alert('Geolocation is not supported by your browser');
-                }
-            });
-
-            // Manual entry toggle for edit
-            $('#editManualEntry').on('change', function() {
-                editManualMode = $(this).is(':checked');
-                if (editManualMode) {
-                    $('#edit_latitude').prop('readonly', false);
-                    $('#edit_longitude').prop('readonly', false);
-                    $('#editDetectLocation').prop('disabled', true);
-                    $('#editLocationStatus')
-                        .removeClass('text-success text-warning text-danger')
-                        .addClass('text-info')
-                        .html('<i class="feather-edit"></i><span>Manual entry mode - Edit coordinates</span>');
-                } else {
-                    $('#edit_latitude').prop('readonly', true);
-                    $('#edit_longitude').prop('readonly', true);
-                    $('#editDetectLocation').prop('disabled', false);
-                    if (editMarker) {
-                        const latLng = editMarker.getLatLng();
-                        $('#edit_latitude').val(latLng.lat.toFixed(6));
-                        $('#edit_longitude').val(latLng.lng.toFixed(6));
-                    }
-                    $('#editLocationStatus')
-                        .removeClass('text-success text-info text-danger')
-                        .addClass('text-info')
-                        .html('<i class="feather-info"></i><span>Click on map to update branch location</span>');
-                }
-            });
-
-            // ==================== FORM SUBMISSIONS ====================
-
-            // Add Branch Form Submission
             $('#addBranchForm').on('submit', function(e) {
                 e.preventDefault();
-                
-                // Reset errors
                 $('.error-text').text('');
-                $('#addFormError').addClass('d-none').text('');
+                $('#formError').addClass('d-none').text('');
+
+                $.ajax({
+                    url: "{{ route('branch.store') }}",
+                    type: "POST",
+                    data: $(this).serialize(),
+                    headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addBranchModal').modal('hide');
+                            toastr.success(response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            let errors = xhr.responseJSON.errors;
+                            $.each(errors, function(key, value) { $('.' + key + '_error').text(value[0]); });
+                            toastr.error('Please fix the validation errors');
+                        } else {
+                            $('#formError').removeClass('d-none').text(xhr.responseJSON?.message || 'Something went wrong.');
+                            toastr.error(xhr.responseJSON?.message || 'Something went wrong');
+                        }
+                    }
+                });
+            });
+
+            $(document).on('click', '.edit-branch', function(e) {
+                e.preventDefault();
+                const el = $(this);
+                $('#editBranchForm').attr('action', el.data('update-url'));
+                $('#edit_name').val(el.data('name'));
+                $('#edit_description').val(el.data('description'));
+                $('#edit_address').val(el.data('address'));
+                $('#edit_city').val(el.data('city'));
+                $('#edit_state').val(el.data('state'));
+                $('#edit_country').val(el.data('country'));
+                $('#edit_postal_code').val(el.data('postal-code'));
+                $('#edit_phone').val(el.data('phone'));
+                $('#edit_email').val(el.data('email'));
+                $('#edit_branch_head').val(el.data('branch-head') || '');
+                $('#edit_status').val(el.data('status'));
+
+                $('.error-text').text('');
+                $('#editFormError').addClass('d-none').text('');
+                $('#editBranchModal').modal('show');
+            });
+
+            $('#editBranchForm').on('submit', function(e) {
+                e.preventDefault();
+                $('.error-text').text('');
+                $('#editFormError').addClass('d-none').text('');
 
                 $.ajax({
                     url: $(this).attr('action'),
                     type: "POST",
                     data: $(this).serialize(),
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            $('#addBranchModal').modal('hide');
-                            location.reload();
-                        }
-                    },
-                    error: function(xhr) {
-                        if (xhr.status === 422) {
-                            let errors = xhr.responseJSON.errors;
-                            $.each(errors, function(key, value) {
-                                $('.' + key + '_error').text(value[0]);
-                            });
-                        } else {
-                            $('#addFormError')
-                                .removeClass('d-none')
-                                .text(xhr.responseJSON?.message || 'Something went wrong.');
-                        }
-                    }
-                });
-            });
-
-            // Edit Branch - Open Modal with Data
-            $(document).on('click', '.edit-branch', function(e) {
-                e.preventDefault();
-                
-                // Get data
-                const id = $(this).data('id');
-                const name = $(this).data('name');
-                const description = $(this).data('description');
-                const latitude = $(this).data('latitude');
-                const longitude = $(this).data('longitude');
-                const status = $(this).data('status');
-
-                // Set form values
-                $('#edit_id').val(id);
-                $('#edit_name').val(name);
-                $('#edit_description').val(description);
-                $('#edit_status').val(status);
-                
-                // Set coordinates
-                if (latitude && longitude) {
-                    $('#edit_latitude').val(latitude);
-                    $('#edit_longitude').val(longitude);
-                }
-
-                // Initialize map if not already done
-                setTimeout(() => {
-                    initEditMap();
-                    
-                    // Set marker if coordinates exist
-                    if (latitude && longitude) {
-                        setEditMarker(parseFloat(latitude), parseFloat(longitude));
-                    }
-                }, 500);
-
-                // Clear previous errors
-                $('.error-text').text('');
-                $('#editFormError').addClass('d-none').text('');
-
-                // Show modal
-                $('#editBranchModal').modal('show');
-            });
-
-            // Edit Branch Form Submission
-            $('#editBranchForm').on('submit', function(e) {
-                e.preventDefault();
-                
-                // Reset errors
-                $('.error-text').text('');
-                $('#editFormError').addClass('d-none').text('');
-
-                const id = $('#edit_id').val();
-                
-                $.ajax({
-                    url: "{{ route('branch.update', '') }}/" + id,
-                    type: "PUT",
-                    data: $(this).serialize(),
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    },
+                    headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
                     success: function(response) {
                         if (response.success) {
                             $('#editBranchModal').modal('hide');
-                            location.reload();
+                            toastr.success(response.message);
+                            setTimeout(() => location.reload(), 1000);
                         }
                     },
                     error: function(xhr) {
                         if (xhr.status === 422) {
                             let errors = xhr.responseJSON.errors;
-                            $.each(errors, function(key, value) {
-                                $('.edit_' + key + '_error').text(value[0]);
-                            });
+                            $.each(errors, function(key, value) { $('.' + key + '_error').text(value[0]); });
+                            toastr.error('Please fix the validation errors');
                         } else {
-                            $('#editFormError')
-                                .removeClass('d-none')
-                                .text(xhr.responseJSON?.message || 'Something went wrong.');
+                            $('#editFormError').removeClass('d-none').text(xhr.responseJSON?.message || 'Something went wrong.');
+                            toastr.error(xhr.responseJSON?.message || 'Something went wrong');
                         }
                     }
                 });
             });
 
-            // Delete Branch
+            let deleteBranchUrl = null;
             $(document).on('click', '.delete-branch', function(e) {
                 e.preventDefault();
-                
-                const id = $(this).data('id');
-                const name = $(this).data('name');
-                
-                $('#deleteBranchName').text(name);
-                $('#deleteBranchForm').attr('action', "{{ route('branch.delete', '') }}/" + id);
+                deleteBranchUrl = $(this).data('delete-url');
+                $('#deleteBranchName').text($(this).data('name'));
+                $('#deleteFormError').addClass('d-none').text('');
                 $('#deleteBranchModal').modal('show');
             });
 
-            // Initialize add map when modal opens
-            $('#addBranchModal').on('shown.bs.modal', function() {
-                initAddMap();
-                setTimeout(() => {
-                    addMap.invalidateSize();
-                }, 100);
+            $('#confirmDeleteBranch').on('click', function() {
+                if (!deleteBranchUrl) return;
+                $.ajax({
+                    url: deleteBranchUrl,
+                    type: 'DELETE',
+                    headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                    success: function(response) {
+                        if (response.success) {
+                            $('#deleteBranchModal').modal('hide');
+                            toastr.success(response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    },
+                    error: function(xhr) {
+                        $('#deleteFormError').removeClass('d-none').text(xhr.responseJSON?.message || 'Something went wrong.');
+                        toastr.error(xhr.responseJSON?.message || 'Something went wrong');
+                    }
+                });
             });
 
-            // Clear form when modal is closed
             $('#addBranchModal').on('hidden.bs.modal', function() {
                 $('#addBranchForm')[0].reset();
                 $('.error-text').text('');
-                $('#addFormError').addClass('d-none').text('');
-                if (addMarker) {
-                    addMap.removeLayer(addMarker);
-                    addMarker = null;
-                }
-                $('#addManualEntry').prop('checked', false).trigger('change');
+                $('#formError').addClass('d-none').text('');
             });
 
             $('#editBranchModal').on('hidden.bs.modal', function() {
                 $('.error-text').text('');
                 $('#editFormError').addClass('d-none').text('');
-                if (editMarker) {
-                    editMap.removeLayer(editMarker);
-                    editMarker = null;
-                }
-                $('#editManualEntry').prop('checked', false).trigger('change');
             });
+
+            if (typeof toastr !== 'undefined') {
+                toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 3000 };
+            }
         });
     </script>
 @endsection

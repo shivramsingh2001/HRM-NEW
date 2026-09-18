@@ -2,6 +2,11 @@
 
 @section('style')
     <style>
+        /* Report tabs — matches the .customers-nav-tabs convention used on
+           project/branch/leave-type/etc. detail pages. */
+        .customers-nav-tabs .nav-link.active { color: #1e3a8a; border-color: #dfe5f0 #dfe5f0 #fff; }
+        .customers-nav-tabs .nav-link { color: #6b7385; font-size: 11.5px; }
+
         /* Report Cards Styles - Compact Version */
         .report-cards-grid {
             display: grid;
@@ -346,11 +351,11 @@
      <div class="page-header">
         <div class="page-header-left d-flex align-items-center">
             <div class="page-header-title">
-                <h5 class="m-b-10">Attendance Reports</h5>
+                <h5 class="m-b-10">Report</h5>
             </div>
             <ul class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Attendance Reports</li>
+                <li class="breadcrumb-item active">Report</li>
             </ul>
         </div>
         <div class="page-header-right ms-auto">
@@ -363,123 +368,276 @@
     </div>
 
     <div class="main-content" style="padding: 20px !important;">
-        <!-- Report Cards Grid -->
-        <div class="report-cards-grid">
-            <!-- Overall Attendance Report -->
-            <div class="report-card">
-                <div class="card-icon primary">
-                    <i class="feather-calendar"></i>
-                </div>
-                <h6 class="card-title">Overall Attendance</h6>
-                <p class="card-description">Monthly summaries with day-by-day status, total present, absent, leave & weekoff counts.</p>
-                <div class="card-footer">
-                    <span class="badge badge-primary">Monthly</span>
-                    <a href="{{ route('report.attendance.overall.index') }}" class="btn-generate">
-                        <i class="feather-arrow-right"></i> Generate
-                    </a>
+
+        <!-- Report Category Tabs -->
+        <div class="card mb-3">
+            <div class="card-body p-0">
+                <ul class="nav nav-tabs flex-wrap w-100 text-center customers-nav-tabs" id="reportTab" role="tablist">
+                    <li class="nav-item flex-fill border-top">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#attendanceReportTab">
+                            <i class="feather-calendar me-1"></i> Attendance Report
+                        </a>
+                    </li>
+                    <li class="nav-item flex-fill border-top">
+                        <a class="nav-link" data-bs-toggle="tab" href="#projectReportTab">
+                            <i class="feather-briefcase me-1"></i> Project Report
+                        </a>
+                    </li>
+                    <li class="nav-item flex-fill border-top">
+                        <a class="nav-link" data-bs-toggle="tab" href="#taskReportTab">
+                            <i class="feather-check-square me-1"></i> Task Report
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="tab-content">
+            {{-- ==================== ATTENDANCE REPORT TAB ==================== --}}
+            <div class="tab-pane fade show active" id="attendanceReportTab">
+                <div class="report-cards-grid">
+                    <!-- Overall Attendance Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-calendar"></i>
+                        </div>
+                        <h6 class="card-title">Overall Attendance</h6>
+                        <p class="card-description">Monthly summaries with day-by-day status, total present, absent, leave & weekoff counts.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Monthly</span>
+                            <a href="{{ route('report.attendance.overall.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Daywise Attendance Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-clock"></i>
+                        </div>
+                        <h6 class="card-title">Daywise Attendance</h6>
+                        <p class="card-description">Comprehensive day-by-day punch details including clock-in/out, working hours & location data.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-success">Daily</span>
+                            <a href="{{ route('report.attendance.day.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Working Hours Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-trending-up"></i>
+                        </div>
+                        <h6 class="card-title">Working Hours</h6>
+                        <p class="card-description">Analyze total actual hours worked by employees with detailed daily hour breakdown.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-info">Hours</span>
+                            <a href="{{ route('report.attendance.hourly.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Attendance Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-file-text"></i>
+                        </div>
+                        <h6 class="card-title">Detailed Report</h6>
+                        <p class="card-description">In-depth attendance tracker with complete status, shifts & overtime details.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-warning">Detailed</span>
+                            <a href="{{ route('report.attendance.detail.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Summary Attendance Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-bar-chart-2"></i>
+                        </div>
+                        <h6 class="card-title">Monthly Summary</h6>
+                        <p class="card-description">Complete monthly attendance summary with status, shifts & overtime breakdown.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-purple">Summary</span>
+                            <a href="{{ route('team.attendance-summary') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Overtime Report (Monthly) -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-clock"></i>
+                        </div>
+                        <h6 class="card-title">Overtime Hours</h6>
+                        <p class="card-description">Per-employee requested, approved & rejected overtime hours with an estimated payout cost for the month.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Overtime</span>
+                            <a href="{{ route('report.overtime.monthly.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="report-card coming-soon-card">
+                        <!--<div class="coming-soon-overlay">Coming Soon</div>-->
+                        <div class="card-icon primary">
+                            <i class="feather-clock"></i>
+                        </div>
+                        <h6 class="card-title">Branch Wise Attendance Report</h6>
+                        <p class="card-description">View attendance summary by branch with present, absent, leave, and holiday counts for any selected date.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Branch</span>
+                            <a href="{{route('report.attendance.branch-wise')}}" class="btn-generate" >
+                                <i class="feather-clock"></i> Generate
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Daywise Attendance Report -->
-            <div class="report-card">
-                <div class="card-icon success">
-                    <i class="feather-clock"></i>
-                </div>
-                <h6 class="card-title">Daywise Attendance</h6>
-                <p class="card-description">Comprehensive day-by-day punch details including clock-in/out, working hours & location data.</p>
-                <div class="card-footer">
-                    <span class="badge badge-success">Daily</span>
-                    <a href="{{ route('report.attendance.day.index') }}" class="btn-generate">
-                        <i class="feather-arrow-right"></i> Generate
-                    </a>
+            {{-- ==================== PROJECT REPORT TAB ==================== --}}
+            <div class="tab-pane fade" id="projectReportTab">
+                <div class="report-cards-grid">
+                    <!-- Project Summary Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-briefcase"></i>
+                        </div>
+                        <h6 class="card-title">Project Summary</h6>
+                        <p class="card-description">Every project with manager, status, priority, team size, task breakdown, progress % and budget vs. spent.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Projects</span>
+                            <a href="{{ route('report.project.summary.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Project Progress Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-trending-up"></i>
+                        </div>
+                        <h6 class="card-title">Project Progress</h6>
+                        <p class="card-description">Progress %, task completion breakdown, days remaining/overdue, and the latest posted update per project.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Projects</span>
+                            <a href="{{ route('report.project.progress.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Project Task & Employee Performance Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-users"></i>
+                        </div>
+                        <h6 class="card-title">Project Task &amp; Employee Performance</h6>
+                        <p class="card-description">Per-employee task workload and completion rate, scoped to a project, department, priority or status.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Projects</span>
+                            <a href="{{ route('report.project.task-performance.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Project Timeline / Overdue Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-calendar"></i>
+                        </div>
+                        <h6 class="card-title">Project Timeline / Overdue</h6>
+                        <p class="card-description">Projects ordered by deadline, overdue flags, days remaining/overdue, and each project's next upcoming milestone.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Projects</span>
+                            <a href="{{ route('report.project.timeline.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Working Hours Report -->
-            <div class="report-card">
-                <div class="card-icon info">
-                    <i class="feather-trending-up"></i>
-                </div>
-                <h6 class="card-title">Working Hours</h6>
-                <p class="card-description">Analyze total actual hours worked by employees with detailed daily hour breakdown.</p>
-                <div class="card-footer">
-                    <span class="badge badge-info">Hours</span>
-                    <a href="{{ route('report.attendance.hourly.index') }}" class="btn-generate">
-                        <i class="feather-arrow-right"></i> Generate
-                    </a>
-                </div>
-            </div>
-
-            <!-- Detailed Attendance Report -->
-            <div class="report-card">
-                <div class="card-icon warning">
-                    <i class="feather-file-text"></i>
-                </div>
-                <h6 class="card-title">Detailed Report</h6>
-                <p class="card-description">In-depth attendance tracker with complete status, shifts & overtime details.</p>
-                <div class="card-footer">
-                    <span class="badge badge-warning">Detailed</span>
-                    <a href="{{ route('report.attendance.detail.index') }}" class="btn-generate">
-                        <i class="feather-arrow-right"></i> Generate
-                    </a>
-                </div>
-            </div>
-
-            <!-- Monthly Summary Attendance Report -->
-            <div class="report-card">
-                <div class="card-icon purple">
-                    <i class="feather-bar-chart-2"></i>
-                </div>
-                <h6 class="card-title">Monthly Summary</h6>
-                <p class="card-description">Complete monthly attendance summary with status, shifts & overtime breakdown.</p>
-                <div class="card-footer">
-                    <span class="badge badge-purple">Summary</span>
-                    <a href="{{ route('team.attendance-summary') }}" class="btn-generate">
-                        <i class="feather-arrow-right"></i> Generate
-                    </a>
-                </div>
-            </div>
-
-            <!-- Overtime Report (Monthly) -->
-            <div class="report-card">
-                <div class="card-icon primary">
-                    <i class="feather-clock"></i>
-                </div>
-                <h6 class="card-title">Overtime Hours</h6>
-                <p class="card-description">Per-employee requested, approved & rejected overtime hours with an estimated payout cost for the month.</p>
-                <div class="card-footer">
-                    <span class="badge badge-primary">Overtime</span>
-                    <a href="{{ route('report.overtime.monthly.index') }}" class="btn-generate">
-                        <i class="feather-arrow-right"></i> Generate
-                    </a>
-                </div>
-            </div>
-            <!-- Task & Project Report -->
-            <div class="report-card">
-                <div class="card-icon primary">
-                    <i class="feather-check-square"></i>
-                </div>
-                <h6 class="card-title">Task & Project</h6>
-                <p class="card-description">Completion rate, overdue count, per-employee workload, and active project progress for the month.</p>
-                <div class="card-footer">
-                    <span class="badge badge-primary">Tasks</span>
-                    <a href="{{ route('report.task-project.index') }}" class="btn-generate">
-                        <i class="feather-arrow-right"></i> Generate
-                    </a>
-                </div>
-            </div>
-              <div class="report-card coming-soon-card">
-                <!--<div class="coming-soon-overlay">Coming Soon</div>-->
-                <div class="card-icon primary">
-                    <i class="feather-clock"></i>
-                </div>
-                <h6 class="card-title">Branch Wise Attendance Report</h6>
-                <p class="card-description">View attendance summary by branch with present, absent, leave, and holiday counts for any selected date.</p>
-                <div class="card-footer">
-                    <span class="badge badge-primary">Branch</span>
-                    <a href="{{route('report.attendance.branch-wise')}}" class="btn-generate" >
-                        <i class="feather-clock"></i> Generate
-                    </a>
+            {{-- ==================== TASK REPORT TAB ==================== --}}
+            <div class="tab-pane fade" id="taskReportTab">
+                <div class="report-cards-grid">
+                    <!-- Task & Project Overview Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-check-square"></i>
+                        </div>
+                        <h6 class="card-title">Task & Project Overview</h6>
+                        <p class="card-description">Completion rate, overdue count, per-employee workload, and active project progress for the month.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Tasks</span>
+                            <a href="{{ route('report.task-project.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Day-wise Task Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-calendar"></i>
+                        </div>
+                        <h6 class="card-title">Day-wise Task</h6>
+                        <p class="card-description">Task counts broken down by status for every day in the selected date range.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-success">Daily</span>
+                            <a href="{{ route('report.task.day-wise') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Employee Monthly Task Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-bar-chart-2"></i>
+                        </div>
+                        <h6 class="card-title">Employee Monthly Task</h6>
+                        <p class="card-description">Per-employee task counts by status for the selected month, with company-wide totals.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-info">Monthly</span>
+                            <a href="{{ route('report.task.employee-monthly') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Employee Date-wise Task Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-user-check"></i>
+                        </div>
+                        <h6 class="card-title">Employee Date-wise Task</h6>
+                        <p class="card-description">Per-employee task counts by status for a single selected date.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-warning">Daily</span>
+                            <a href="{{ route('report.task.employee-date-wise') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Monthly Task Detail Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-file-text"></i>
+                        </div>
+                        <h6 class="card-title">Monthly Task Detail</h6>
+                        <p class="card-description">Full task-by-task breakdown for the month, including assignees, updates, and approval history.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-purple">Detailed</span>
+                            <a href="{{ route('report.task.monthly-task-detail') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

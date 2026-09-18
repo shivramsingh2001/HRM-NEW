@@ -2,11 +2,12 @@
 
 @section('style')
     <style>
+        /* ==================== DEPARTMENT DETAIL — all-blue theme (mirrors department list + client/announcement) ==================== */
         .employee-avatar {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: #4f46e5;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
             display: flex;
             align-items: center;
@@ -15,13 +16,51 @@
             font-size: 14px;
             flex-shrink: 0;
         }
+
+        .dept-detail-badge {
+            padding: 3px 10px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+
+        .badge-active {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .badge-inactive {
+            background: #1e3a8a;
+            color: #fff;
+        }
+
+        .personal-info .input-group-text {
+            background: #e3edfe;
+            color: #1e3a8a;
+            border-color: #dfe5f0;
+        }
+
+        .personal-info .form-control[readonly] {
+            background: #f8fafc;
+            border-color: #dfe5f0;
+            color: #1a2236;
+        }
+
+        .customers-nav-tabs .nav-link.active {
+            color: #1e3a8a;
+            border-color: #dfe5f0 #dfe5f0 #fff;
+        }
+
+        .customers-nav-tabs .nav-link {
+            color: #6b7385;
+        }
+
+        #membersTable .badge.bg-success { background-color: #3b82f6 !important; }
+        #membersTable .badge.bg-danger { background-color: #1e3a8a !important; }
     </style>
 @endsection
 
-@php
-    $user = Auth::user();
-    $role = $user->role;
-@endphp
 @section('content-area')
     <div class="content-area-header sticky-top">
         <div class="page-header-left d-flex align-items-center gap-2">
@@ -33,7 +72,11 @@
                 <li class="breadcrumb-item">Department Details</li>
             </ul>
         </div>
-
+        <div class="page-header-right ms-auto">
+            <span class="dept-detail-badge {{ $department->status ? 'badge-active' : 'badge-inactive' }}">
+                {{ $department->status ? 'Active' : 'Inactive' }}
+            </span>
+        </div>
     </div>
 
 
@@ -57,16 +100,10 @@
                                 <div class="mb-4 d-flex align-items-center justify-content-between">
                                     <h5 class="fw-bold mb-0 me-4">
                                         <span class="d-block mb-2">Department Information:</span>
-                                        <span class="fs-12 fw-normal text-muted text-truncate-1-line">* marked
-                                            fields must be filled ! </span>
+                                        <span class="fs-12 fw-normal text-muted text-truncate-1-line">Read-only
+                                            overview — use the edit icon on the Department card to update these
+                                            details.</span>
                                     </h5>
-                                    @if (in_array($role, ['admin', 'hr']))
-                                        <h5 class="fw-bold mb-0 me-4">
-                                            <a href="javascript:void(0);" class="btn btn-warning" data-bs-toggle="modal"
-                                                data-bs-target="#changeDepartmentDetails">Change
-                                                Department Details</a>
-                                        </h5>
-                                    @endif
                                 </div>
 
                                 <div class="row mb-4 align-items-center">
@@ -124,7 +161,7 @@
                             <div class="row mb-4 align-items-center">
                                 <div class="col-12">
                                     <div class="table-responsive">
-                                        <table class="table table-hover">
+                                        <table class="table table-hover" id="membersTable">
                                             <thead>
                                                 <tr>
                                                     <!--<th class="text-center">S. No.</th>-->
@@ -216,176 +253,4 @@
             </div>
         </div>
     </div>
-@endsection
-@section('create-modal')
-    <!-- MODAL - Move inside content-area section -->
-    <div class="modal fade" id="changeDepartmentDetails" tabindex="-1" aria-labelledby="changeDepartmentDetails"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="d-flex flex-column mb-0">
-                        <span class="fs-18 fw-bold mb-1">Update Department Details</span>
-                        <small class="d-block fs-11 fw-normal text-muted">Update department information</small>
-                    </h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div class="card m-0">
-                        <div class="card-body">
-                            <form id="updateDepartmentForm"
-                                action="{{ route('department.update', ['id' => encrypt($department->id)]) }}"
-                                method="POST">
-                                @csrf
-                                <div id="updateFormError" class="alert alert-danger d-none"></div>
-                                <div class="row">
-                                    <div class="col-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_department_name">Department Name
-                                                *</label>
-                                            <input type="text" class="form-control" name="name"
-                                                id="edit_department_name" value="{{ $department->name }}"
-                                                placeholder="Enter Department name">
-                                            <small class="text-danger error-text name_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_department_head">Department Head
-                                                *</label>
-                                            <select class="form-control" name="department_head"
-                                                id="edit_department_head">
-                                                <option value="" disabled>-- Select Department Head --</option>
-                                                @php
-                                                    $users = DB::table('users')->where('status', 1)->get();
-                                                @endphp
-                                                @foreach ($users as $user)
-                                                    <option value="{{ $user->id }}"
-                                                        {{ $department->department_head == $user->id ? 'selected' : '' }}>
-                                                        {{ $user->name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <small class="text-danger error-text department_head_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_status">Status *</label>
-                                            <select class="form-control" name="status" id="edit_status" required>
-                                                <option value="1" {{ $department->status == '1' ? 'selected' : '' }}>
-                                                    Active
-                                                </option>
-                                                <option value="0" {{ $department->status == '0' ? 'selected' : '' }}>
-                                                    Inactive
-                                                </option>
-
-                                            </select>
-                                            <small class="text-danger error-text status_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_department_description">Department
-                                                Description</label>
-                                            <textarea class="form-control" name="description" id="edit_department_description" rows="3"
-                                                placeholder="Enter Department Description...">{{ $department->description }}</textarea>
-                                            <small class="text-danger error-text description_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <button type="submit" class="btn btn-primary">Update</button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button type="button" class="btn btn-danger float-end"
-                                            data-bs-dismiss="modal">Cancel</button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-@endsection
-
-@section('script-area')
-    <script>
-        $(document).ready(function() {
-
-            // Update form submission
-            $('#updateDepartmentForm').on('submit', function(e) {
-                e.preventDefault();
-                console.log('Update form submitted');
-
-                // Get form data
-                var formData = $(this).serialize();
-                console.log('Form data:', formData);
-
-                // Reset errors
-                $('.error-text').text('');
-                $('#updateFormError').addClass('d-none').text('');
-
-                // Show loading
-                var submitBtn = $(this).find('button[type="submit"]');
-                var originalText = submitBtn.text();
-                submitBtn.prop('disabled', true).text('Updating...');
-
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: "POST",
-                    data: formData,
-                    dataType: 'json',
-                    success: function(response) {
-                        console.log('Update success:', response);
-                        submitBtn.prop('disabled', false).text(originalText);
-
-                        if (response.success) {
-                            // Show success message
-                            alert('Department updated successfully!');
-
-                            // Close modal
-                            $('#changeDepartmentDetails').modal('hide');
-
-                            // Reload page to show updated data
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('Update error:', error);
-                        console.log('Status:', status);
-                        console.log('XHR response:', xhr.responseText);
-
-                        submitBtn.prop('disabled', false).text(originalText);
-
-                        if (xhr.status === 422) {
-                            // Validation errors
-                            console.log('Validation errors:', xhr.responseJSON.errors);
-                            let errors = xhr.responseJSON.errors;
-                            $.each(errors, function(key, value) {
-                                $('.' + key + '_error').text(value[0]);
-                            });
-                        } else {
-                            // Server error
-                            let errorMsg = xhr.responseJSON?.message ||
-                                'Something went wrong. Please try again.';
-                            console.log('Server error:', errorMsg);
-
-                            $('#updateFormError')
-                                .removeClass('d-none')
-                                .text(errorMsg);
-                        }
-                    }
-                });
-            });
-
-            // Test modal opening
-            $('[data-bs-target="#changeDepartmentDetails"]').on('click', function() {
-                console.log('Change department button clicked');
-            });
-        });
-    </script>
 @endsection

@@ -395,7 +395,7 @@
     .employee-name {
         font-weight: 600;
         color: #1e293b;
-        font-size: 13px;
+        font-size: 12px;
     }
 
     .employee-email {
@@ -1138,10 +1138,10 @@
                                     <th>Request Type</th>
                                     <th>In Time</th>
                                     <th>Out Time</th>
-                                    <th>Reason</th>
+                                    {{-- <th>Reason</th> --}}
                                     <th>Attachment</th>
                                     <th>Status</th>
-                                    <th>Approved By</th>
+                                    {{-- <th>Approved By</th> --}}
                                     <th>Approval Time</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
@@ -1158,7 +1158,7 @@
                                                 
                                                 <div class="employee-details">
                                                     <div class="employee-name">
-                                                        {{ $regularization->user->name }}
+                                                        {{ $regularization->user->name }} <small class="text-secondary fs-10">( {{ $regularization->user->employee_id }} )</small>
                                                        
                                                     </div>
                                                     <div class="employee-email">{{ $regularization->user->email }}</div>
@@ -1205,11 +1205,11 @@
                                                 <span class="text-muted">—</span>
                                             @endif
                                         </td>
-                                        <td style="max-width: 200px;">
+                                        {{-- <td style="max-width: 200px;">
                                             <div style="white-space: normal; word-wrap: break-word;">
                                                 {{ Str::limit($regularization->reason ?? 'No reason provided', 50) }}
                                             </div>
-                                        </td>
+                                        </td> --}}
                                         <td>
                                             @if (!empty($regularization->file))
                                                 @php
@@ -1244,13 +1244,13 @@
                                                 {{ ucfirst($regularization->status) }}
                                             </span>
                                         </td>
-                                        <td>
+                                        {{-- <td>
                                             @if($regularization->approver)
                                                 <span class="fw-medium">{{ $regularization->approver->name }}</span>
                                             @else
                                                 <span class="text-muted">—</span>
                                             @endif
-                                        </td>
+                                        </td> --}}
                                         <td>
                                             @if($regularization->approved_date)
                                                 {{ \Carbon\Carbon::parse($regularization->approved_date)->format('d M Y, h:i A') }}
@@ -1273,7 +1273,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="12" class="text-center py-5">
+                                        <td colspan="10" class="text-center py-5">
                                             <div class="empty-state">
                                                 <i class="feather-clock"></i>
                                                 <h4>No Regularization Requests Found</h4>

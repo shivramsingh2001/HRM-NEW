@@ -80,6 +80,10 @@
     --sp-6: 24px;
 }
 
+.card {
+    --bs-card-cap-padding-y: 12px;
+}
+
 .card-footer .remove-internal-para p {
     display: none;
 }

@@ -319,8 +319,9 @@ class OvertimeController extends Controller
                 abort(403, 'You do not have permission to view overtime requests.');
             } elseif ($overtimeScope === 'team') {
                 $query->where(function ($q) use ($authUser) {
-                    $q->where('user_job_details.reporting_head', $authUser->id)
-                        ->orWhere('overtime_requests.user_id', $authUser->id);
+                    $q->whereIn('users.id', function ($sub) use ($authUser) {
+                        $sub->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                    })->orWhere('overtime_requests.user_id', $authUser->id);
                 });
             } elseif ($overtimeScope === 'own') {
                 $query->where('overtime_requests.user_id', $authUser->id);
@@ -406,9 +407,7 @@ class OvertimeController extends Controller
 
             if ($overtimeScope === 'team') {
                 $employeesQuery->where(function ($q) use ($authUser) {
-                    $q->whereHas('jobDetails', function ($query) use ($authUser) {
-                        $query->where('reporting_head', $authUser->id);
-                    })->orWhere('id', $authUser->id);
+                    $q->managedBy($authUser->id)->orWhere('id', $authUser->id);
                 });
             } elseif ($overtimeScope !== 'company') {
                 $employeesQuery->where('id', $authUser->id);

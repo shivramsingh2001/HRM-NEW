@@ -542,8 +542,8 @@ class AttendanceRegularizationController extends Controller
 
         // Team scope — only requests where the user's reporting head is the current user
         if ($scope === 'team') {
-            $query->whereHas('user.jobDetails', function($q) use ($authUser) {
-                $q->where('reporting_head', $authUser->id);
+            $query->whereHas('user', function($q) use ($authUser) {
+                $q->managedBy($authUser->id);
             });
         }
         
@@ -580,8 +580,8 @@ class AttendanceRegularizationController extends Controller
         $statsQuery = AttendanceRegularization::where('tenant_id', $authUser->tenant_id);
         
         if ($scope === 'team') {
-            $statsQuery->whereHas('user.jobDetails', function($q) use ($authUser) {
-                $q->where('reporting_head', $authUser->id);
+            $statsQuery->whereHas('user', function($q) use ($authUser) {
+                $q->managedBy($authUser->id);
             });
         }
 

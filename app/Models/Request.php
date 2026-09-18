@@ -97,6 +97,32 @@ class Request extends Model
             ->orWhereBetween('end_date', [$startDate, $endDate]);
     }
 
+    /**
+     * Requests for a user that overlap a date range and are still
+     * PENDING/APPROVED (i.e. would block a new/edited request from being
+     * saved). Shared by web store()/update() and the mobile API so the
+     * overlap rule can't drift between the two surfaces.
+     */
+    public function scopeOverlapping($query, $userId, $startDate, $endDate, $excludeId = null)
+    {
+        $query->where('user_id', $userId)
+            ->whereIn('status', [self::STATUS_PENDING, self::STATUS_APPROVED])
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('start_date', [$startDate, $endDate])
+                    ->orWhereBetween('end_date', [$startDate, $endDate])
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->where('start_date', '<=', $startDate)
+                            ->where('end_date', '>=', $endDate);
+                    });
+            });
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query;
+    }
+
     // Accessors
     public function getDurationInDaysAttribute(): int
     {

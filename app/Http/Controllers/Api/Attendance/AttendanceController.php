@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\Attendance;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
-use App\Models\Branch;
+use App\Models\AttendanceLocation;
 use App\Models\AttendanceTrack;
 use App\Models\AttendanceRegularization;
 use App\Models\Shift;
@@ -542,7 +542,10 @@ class AttendanceController extends Controller
                 // CASE 1: User can mark attendance from ANY branch (office_branch == 0)
                 if ($officeBranch == 0) {
                     // Find the nearest branch to user's location
-                    $allBranches = Branch::where('status', 1)->get();
+                    // Disabled locations aren't valid candidates for "any branch".
+                    $allBranches = AttendanceLocation::where('status', 1)
+                        ->where('geofence_enabled', true)
+                        ->get();
     
                     if ($allBranches->isEmpty()) {
                         $this->createFailureLog($userId, 'check_in', 'no_branches_configured', [
@@ -598,21 +601,30 @@ class AttendanceController extends Controller
                 } 
                 // CASE 2: User has a specific branch assigned
                 else {
-                    $branch = Branch::find($officeBranch);
+                    $branch = AttendanceLocation::find($officeBranch);
     
                     if (!$branch) {
                         $this->createFailureLog($userId, 'check_in', 'branch_not_configured', [
                             'user_id' => $userId,
                             'office_branch' => $officeBranch
                         ], $request);
-    
+
                         return response()->json([
                             'status' => false,
                             'message' => 'Branch not configured. Please contact admin.'
                         ], 200);
                     }
-    
-                    if (!$branch->latitude || !$branch->longitude) {
+
+                    if (!$branch->geofence_enabled) {
+                        // Geofencing explicitly disabled for this location — treat as a pass.
+                        $checkInDistance = null;
+                        $locationVerification = 'verified';
+                        $skipGeofenceDistanceCheck = true;
+                    } else {
+                        $skipGeofenceDistanceCheck = false;
+                    }
+
+                    if (!$skipGeofenceDistanceCheck && (!$branch->latitude || !$branch->longitude)) {
                         $this->createFailureLog($userId, 'check_in', 'branch_coordinates_missing', [
                             'branch_id' => $branch->id,
                             'branch_name' => $branch->name
@@ -620,40 +632,42 @@ class AttendanceController extends Controller
     
                         return response()->json([
                             'status' => false,
-                            'message' => 'Branch location coordinates not configured. Please contact admin.'
+                            'message' => 'Attendance location coordinates not configured. Please contact admin.'
                         ], 200);
                     }
     
-                    $distance = $this->calculateDistance(
-                        $branch->latitude,
-                        $branch->longitude,
-                        $request->lat,
-                        $request->long
-                    );
-    
-                    $checkInDistance = $distance;
-                    $radius = $branch->radius ?? 50;
-    
-                    if ($distance > $radius) {
-                        $this->createFailureLog($userId, 'check_in', 'location_out_of_bounds', [
-                            'distance' => round($distance, 2),
-                            'max_allowed' => $radius,
-                            'branch_lat' => $branch->latitude,
-                            'branch_long' => $branch->longitude,
-                            'branch_name' => $branch->name,
-                            'user_lat' => $request->lat,
-                            'user_long' => $request->long,
-                            'user_address' => $request->address,
-                            'accuracy' => $request->accuracy
-                        ], $request);
-    
-                        return response()->json([
-                            'status' => false,
-                            'message' => "You are " . round($distance) . " meters away from your assigned branch '{$branch->name}'. Maximum allowed distance for clock in is {$radius} meters. Please move closer to the office to clock in.",
-                        ], 200);
+                    if (!$skipGeofenceDistanceCheck) {
+                        $distance = $this->calculateDistance(
+                            $branch->latitude,
+                            $branch->longitude,
+                            $request->lat,
+                            $request->long
+                        );
+
+                        $checkInDistance = $distance;
+                        $radius = $branch->radius ?? 50;
+
+                        if ($distance > $radius) {
+                            $this->createFailureLog($userId, 'check_in', 'location_out_of_bounds', [
+                                'distance' => round($distance, 2),
+                                'max_allowed' => $radius,
+                                'branch_lat' => $branch->latitude,
+                                'branch_long' => $branch->longitude,
+                                'branch_name' => $branch->name,
+                                'user_lat' => $request->lat,
+                                'user_long' => $request->long,
+                                'user_address' => $request->address,
+                                'accuracy' => $request->accuracy
+                            ], $request);
+
+                            return response()->json([
+                                'status' => false,
+                                'message' => "You are " . round($distance) . " meters away from your assigned branch '{$branch->name}'. Maximum allowed distance for clock in is {$radius} meters. Please move closer to the office to clock in.",
+                            ], 200);
+                        }
+
+                        $locationVerification = 'verified';
                     }
-    
-                    $locationVerification = 'verified';
                 }
             } else {
                 $checkInDistance = null;
@@ -979,7 +993,10 @@ class AttendanceController extends Controller
                 // CASE 1: User can mark attendance from ANY branch (office_branch == 0)
                 if ($officeBranch == 0) {
                     // Find the nearest branch to user's location
-                    $allBranches = Branch::where('status', 1)->get();
+                    // Disabled locations aren't valid candidates for "any branch".
+                    $allBranches = AttendanceLocation::where('status', 1)
+                        ->where('geofence_enabled', true)
+                        ->get();
     
                     if ($allBranches->isEmpty()) {
                         $this->createFailureLog($userId, 'check_out', 'no_branches_configured', [
@@ -1035,62 +1052,73 @@ class AttendanceController extends Controller
                 } 
                 // CASE 2: User has a specific branch assigned
                 else {
-                    $branch = Branch::find($officeBranch);
+                    $branch = AttendanceLocation::find($officeBranch);
     
                     if (!$branch) {
                         $this->createFailureLog($userId, 'check_out', 'branch_not_configured', [
                             'user_id' => $userId,
                             'office_branch' => $officeBranch
                         ], $request);
-    
+
                         return response()->json([
                             'status' => false,
                             'message' => 'Branch not configured. Please contact admin.'
                         ], 200);
                     }
-    
-                    if (!$branch->latitude || !$branch->longitude) {
+
+                    if (!$branch->geofence_enabled) {
+                        // Geofencing explicitly disabled for this location — treat as a pass.
+                        $checkOutDistance = null;
+                        $locationVerification = 'verified';
+                        $skipGeofenceDistanceCheck = true;
+                    } else {
+                        $skipGeofenceDistanceCheck = false;
+                    }
+
+                    if (!$skipGeofenceDistanceCheck && (!$branch->latitude || !$branch->longitude)) {
                         $this->createFailureLog($userId, 'check_out', 'branch_coordinates_missing', [
                             'branch_id' => $branch->id,
                             'branch_name' => $branch->name
                         ], $request);
-    
+
                         return response()->json([
                             'status' => false,
-                            'message' => 'Branch location coordinates not configured. Please contact admin.'
+                            'message' => 'Attendance location coordinates not configured. Please contact admin.'
                         ], 200);
                     }
-    
-                    $distance = $this->calculateDistance(
-                        $branch->latitude,
-                        $branch->longitude,
-                        $request->lat,
-                        $request->long
-                    );
-    
-                    $checkOutDistance = $distance;
-                    $radius = $branch->radius ?? 50;
-    
-                    if ($distance > $radius) {
-                        $this->createFailureLog($userId, 'check_out', 'location_out_of_bounds', [
-                            'distance' => round($distance, 2),
-                            'max_allowed' => $radius,
-                            'branch_lat' => $branch->latitude,
-                            'branch_long' => $branch->longitude,
-                            'branch_name' => $branch->name,
-                            'user_lat' => $request->lat,
-                            'user_long' => $request->long,
-                            'user_address' => $request->address,
-                            'accuracy' => $request->accuracy
-                        ], $request);
-    
-                        return response()->json([
-                            'status' => false,
-                            'message' => "You are " . round($distance) . " meters away from your assigned branch '{$branch->name}'. Maximum allowed distance for clock out is {$radius} meters. Please move closer to the office to clock out.",
-                        ], 200);
+
+                    if (!$skipGeofenceDistanceCheck) {
+                        $distance = $this->calculateDistance(
+                            $branch->latitude,
+                            $branch->longitude,
+                            $request->lat,
+                            $request->long
+                        );
+
+                        $checkOutDistance = $distance;
+                        $radius = $branch->radius ?? 50;
+
+                        if ($distance > $radius) {
+                            $this->createFailureLog($userId, 'check_out', 'location_out_of_bounds', [
+                                'distance' => round($distance, 2),
+                                'max_allowed' => $radius,
+                                'branch_lat' => $branch->latitude,
+                                'branch_long' => $branch->longitude,
+                                'branch_name' => $branch->name,
+                                'user_lat' => $request->lat,
+                                'user_long' => $request->long,
+                                'user_address' => $request->address,
+                                'accuracy' => $request->accuracy
+                            ], $request);
+
+                            return response()->json([
+                                'status' => false,
+                                'message' => "You are " . round($distance) . " meters away from your assigned branch '{$branch->name}'. Maximum allowed distance for clock out is {$radius} meters. Please move closer to the office to clock out.",
+                            ], 200);
+                        }
+
+                        $locationVerification = 'verified';
                     }
-    
-                    $locationVerification = 'verified';
                 }
             } else {
                 $checkOutDistance = null;
@@ -1776,10 +1804,9 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
-            $reporteeIds = DB::table('user_job_details as jd')
-                ->join('users as u', 'jd.user_id', '=', 'u.id')
-                ->where('jd.reporting_head', $authUser->id)
-                ->pluck('u.id')
+            $reporteeIds = DB::table('user_reporting_heads')
+                ->where('reporting_head_id', $authUser->id)
+                ->pluck('user_id')
                 ->toArray();
 
             if (empty($reporteeIds)) {
@@ -1889,7 +1916,9 @@ class AttendanceController extends Controller
             $reportees = DB::table('users as u')
                 ->select('u.id', 'u.name', 'u.employee_id', 'jd.designation')
                 ->leftJoin('user_job_details as jd', 'u.id', '=', 'jd.user_id')
-                ->where('jd.reporting_head', $authUser->id)
+                ->whereIn('u.id', function ($q) use ($authUser) {
+                    $q->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                })
                 ->orderBy('u.name')
                 ->get();
 

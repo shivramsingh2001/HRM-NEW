@@ -32,6 +32,15 @@
     });
 </script>
 
+<!-- Global Bootstrap tooltip init — any element with data-bs-toggle="tooltip" gets one for free -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        bootstrap.Tooltip.getOrCreateInstance(el);
+    });
+});
+</script>
+
 <!-- Custom CSS table -->
 {{-- <script>
 document.addEventListener('DOMContentLoaded', function () {

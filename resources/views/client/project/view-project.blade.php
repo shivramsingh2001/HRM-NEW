@@ -2,85 +2,124 @@
 
 @section('style')
 <style>
-    .project-head-badge {
-        background-color: #1e3a8a;
-        color: white;
-        font-size: 0.7rem;
-        padding: 2px 6px;
-        border-radius: 3px;
-        margin-left: 5px;
+    /* ==================== PROJECT CARDS — all-blue theme, 4-per-row, compact spacing (mirrors client/department/department.blade.php) ==================== */
+    .project-card {
+        border: 1px solid #eaeef5;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+        transition: all .2s ease;
     }
 
-    /* ==================== PROJECT MODALS - small font, blue theme ==================== */
-    #addProjectModal .modal-header,
-    #editProjectModal .modal-header {
-        background: #fff !important;
-        border-bottom: 1px solid #edf2f7 !important;
-        padding: 10px 16px !important;
+    .project-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px -6px rgba(30, 50, 110, .14);
+        border-color: #dfe5f0;
     }
-    #addProjectModal .modal-header .fs-18,
-    #editProjectModal .modal-header h5 {
-        font-size: 13px !important;
-        color: #1e293b !important;
+
+    .project-card .side-stick { background-color: #1e3a8a; }
+
+    .prj-title {
+        font-size: 11.5px !important;
         font-weight: 700;
-    }
-    #addProjectModal .form-group label,
-    #editProjectModal .form-group label {
-        font-size: 11px !important;
-    }
-    #addProjectModal .form-control,
-    #editProjectModal .form-control {
-        font-size: 11.5px !important;
-        padding: 6px 10px !important;
-    }
-    #addProjectModal .btn,
-    #editProjectModal .btn {
-        font-size: 11.5px !important;
-        padding: 6px 14px !important;
-    }
-    #addProjectModal .btn-primary,
-    #editProjectModal .btn-primary {
-        background: #1e3a8a !important;
-        border-color: #1e3a8a !important;
-    }
-    #addProjectModal .btn-primary:hover,
-    #editProjectModal .btn-primary:hover {
-        background: #16295e !important;
-        border-color: #16295e !important;
-    }
-    #addProjectModal .btn-modal-cancel,
-    #editProjectModal .btn-modal-cancel {
-        background: #eef3fd !important;
-        border: 1px solid #bfd3f7 !important;
-        color: #1e3a8a !important;
-    }
-    #addProjectModal .btn-modal-cancel:hover,
-    #editProjectModal .btn-modal-cancel:hover {
-        background: #dbeafe !important;
-        color: #1e3a8a !important;
+        color: #1a2236;
+        max-width: 62%;
     }
 
-    /* Toast Container Styles */
-    #toast-container {
-        z-index: 1090;
+    .prj-code { font-size: 9px; color: #6b7385; margin-bottom: 0; }
+
+    .prj-badges { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .prj-badge {
+        padding: 2px 7px;
+        border-radius: 30px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: .2px;
+        white-space: nowrap;
     }
-    
-    .toast {
-        font-size: 0.875rem;
-        backdrop-filter: blur(10px);
-        margin-bottom: 0.5rem;
+
+    .badge-ongoing { background: #3b82f6; color: #fff; }
+    .badge-pending { background: #93c5fd; color: #1e3a8a; }
+    .badge-hold { background: #2563eb; color: #fff; }
+    .badge-completed { background: #1e3a8a; color: #fff; }
+    .badge-cancelled { background: #6b7385; color: #fff; }
+    .badge-priority-low { background: #e3edfe; color: #1e3a8a; }
+    .badge-priority-medium { background: #93c5fd; color: #1e3a8a; }
+    .badge-priority-high { background: #2563eb; color: #fff; }
+    .badge-priority-critical { background: #1e3a8a; color: #fff; }
+
+    .prj-overdue { font-size: 9px; color: #1e3a8a; font-weight: 600; margin-bottom: 4px; }
+
+    .prj-dates { display: flex; justify-content: space-between; font-size: 9px; color: #6b7385; margin-bottom: 6px; }
+
+    .prj-info-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f4f6fb;
+        border-radius: 8px;
+        padding: 5px 8px;
+        margin-bottom: 6px;
     }
-    
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+
+    .prj-info-label { font-size: 8px; color: #6b7385; text-transform: uppercase; letter-spacing: .03em; }
+    .prj-info-value { font-size: 9.5px; font-weight: 600; color: #1a2236; }
+    .prj-info-value i { color: #1e3a8a; }
+
+    .prj-progress-track { height: 6px; border-radius: 4px; background: #e3edfe; overflow: hidden; flex: 1; }
+    .prj-progress-fill { height: 100%; background: #1e3a8a; }
+    .prj-progress-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .prj-progress-row small { font-size: 9px; color: #6b7385; font-weight: 700; }
+
+    .prj-description { color: #475569; font-size: 9.5px; line-height: 1.4; }
+
+    .prj-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        padding-top: 6px;
+        margin-top: 4px;
+        border-top: 1px solid #eaeef5;
     }
+
+    .action-btn {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #f4f6fb;
+        border: 1px solid #eaeef5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7385;
+        font-size: 10px;
+        transition: all .2s;
+        cursor: pointer;
+        text-decoration: none;
+        flex-shrink: 0;
+    }
+
+    .action-btn:hover { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
+
+    /* ==================== EMPTY STATE ==================== */
+    .empty-state {
+        padding: 36px 20px;
+        text-align: center;
+        background: linear-gradient(145deg, #ffffff 0%, #f4f6fb 100%);
+        border-radius: 14px;
+    }
+
+    .empty-state i { font-size: 48px; color: #93c5fd; margin-bottom: 12px; }
+    .empty-state h4 { color: #1a2236; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .empty-state p { color: #6b7385; font-size: 11.5px; margin-bottom: 0; }
+
+    /* ==================== COMPACT MODAL — core chrome centralized in
+       public/assets/css/theme-custom.css; only this page's own extras here. ==================== */
+    .compact-modal .modal-header .fs-18 { font-size: 13px !important; }
+    .compact-modal .form-group { margin-bottom: 0; }
+    .compact-modal .form-control,
+    .compact-modal .form-check-label { font-size: 11.5px; }
 </style>
 @endsection
 
@@ -88,17 +127,11 @@
  $user = Auth::user();
  $role = $user->role;
  @endphp
- 
- 
+
 @section('content-area')
-    <!-- Toast Container -->
-    <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;"></div>
-    
     <div class="content-area-header sticky-top">
         <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <!--<h5 class="m-b-10">Projects</h5>-->
-            </div>
+            <div class="page-header-title"><h5 class="m-b-10">Project Management</h5></div>
             <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
                 <li class="breadcrumb-item">Projects</li>
@@ -106,144 +139,102 @@
         </div>
         <div class="page-header-right ms-auto">
             <div class="hstack gap-2">
+                @if(in_array($role,['admin','hr']))
                 <div class="dropdown d-none d-sm-flex">
-                     @if(in_array($role,['admin','hr']))
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
-                        data-bs-target="#addProjectModal">Add Project</a>
-                    @endif
+                    <a href="javascript:void(0)" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                        data-bs-target="#addProjectModal">
+                        <i class="feather-plus me-2"></i>Add Project
+                    </a>
                 </div>
+                @endif
             </div>
         </div>
     </div>
     <div class="content-area-body pb-0 h-100">
         <div class="row note-has-grid" id="note-full-container">
-            @php
-                $projectData = [];
-            @endphp
-            
-            @foreach ($projects as $project)
+            @forelse ($projects as $project)
                 @php
-                    // Get project head user
-                    $projectHead = $project->headUser;
-                    $projectHeadName = $projectHead->name ?? 'N/A';
-                    
-                    // Count team members (excluding head or including head based on controller logic)
-                    // Backend handles whether head is included in count
-                    $totalMembers = $project->assigns()->where('status', 1)->count();
-                    
-                    // Get project deadline status
+                    $totalMembers = $project->assigns->where('status', 1)->count();
                     $today = date('Y-m-d');
                     $deadline = $project->deadline_date;
-                    $isOverdue = $deadline < $today;
-                    
-                    $currentStatus = $project->status ?? 'pending';
-                    
-                    // Store project data for JavaScript
-                    $projectData[] = [
-                        'id' => $project->id,
-                        'name' => $project->name,
-                        'deadline' => $deadline,
-                        'isOverdue' => $isOverdue,
-                        'status' => $currentStatus,
-                        'formatted_date' => date('d M Y', strtotime($deadline))
-                    ];
+                    $isOverdue = $deadline < $today && !in_array($project->status, ['completed', 'cancelled']);
                 @endphp
-                
-                <div class="col-xxl-4 col-xl-6 col-lg-4 col-sm-6 single-note-item">
-                    <div class="card card-body mb-4 stretch stretch-full position-relative shadow-sm border-0">
-
-                        <!-- Top Right Actions -->
-                        <div class="position-absolute top-0 end-0 d-flex align-items-center gap-2 m-4">
-                            @php
-                                $statusColors = [
-                                    'ongoing' => 'info',
-                                    'pending' => 'warning',
-                                    'hold' => 'secondary',
-                                    'completed' => 'success',
-                                    'cancelled' => 'danger',
-                                ];
-                                $statusLabels = [
-                                    'ongoing' => 'Ongoing',
-                                    'pending' => 'Pending',
-                                    'hold' => 'On Hold',
-                                    'completed' => 'Completed',
-                                    'cancelled' => 'Cancelled',
-                                ];
-                            @endphp
-                            <!-- Status Badge -->
-                            <span class="badge bg-{{ $statusColors[$currentStatus] ?? 'secondary' }}">
-                                {{ $statusLabels[$currentStatus] ?? ucfirst($currentStatus) }}
-                            </span>
-
-                            <!-- View Icon -->
-                            <a href="{{ route('project.view-details', ['id' => encrypt($project->id)]) }}"
-                                class="text-decoration-none">
-                                <i class="bi bi-eye-fill fs-5 text-muted"></i>
-                            </a>
-                        </div>
+                <div class="col-xxl-3 col-xl-3 col-lg-3 col-md-6 col-sm-6 single-note-item">
+                    <div class="card project-card card-body mb-2 stretch stretch-full position-relative border-0">
 
                         <span class="side-stick"></span>
 
-                        <!-- Project Name -->
-                        <h5 class="note-title text-truncate w-75 mb-1">
-                            {{ $project->name }}
-                        </h5>
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h5 class="prj-title note-title text-truncate mb-0">{{ $project->name }}</h5>
+                            <div class="prj-badges">
+                                <span class="prj-badge badge-priority-{{ $project->priority }}">{{ ucfirst($project->priority) }}</span>
+                                <span class="prj-badge badge-{{ $project->status }}">{{ ucfirst($project->status) }}</span>
+                            </div>
+                        </div>
 
-                        <!-- Project Code -->
-                       
-                        <small class="text-muted fs-10 mb-1">
-                            <i class="bi bi-tag me-1 fs-10"></i>
-                            {{ $project->project_code ?? 'N/A' }}
-                        </small>
+                        <p class="prj-code mb-1"><i class="bi bi-tag me-1"></i>{{ $project->project_code ?? 'N/A' }}</p>
 
-                        <!-- Deadline Warning -->
-                        @if($isOverdue && $currentStatus != 'completed' && $currentStatus != 'cancelled')
-                        <small class="text-danger fs-11">
-                            <i class="bi bi-exclamation-triangle fs-11 me-1"></i>
-                            Deadline passed on {{ date('d M Y', strtotime($deadline)) }}
-                        </small>
+                        @if ($isOverdue)
+                            <p class="prj-overdue"><i class="bi bi-exclamation-triangle me-1"></i>Deadline passed {{ date('d M Y', strtotime($deadline)) }}</p>
                         @endif
 
-                        <!-- Date Info -->
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-muted fs-10">
-                                <i class="bi bi-calendar-plus me-1"></i>
-                                {{ date('d M Y', strtotime($project->start_date)) }}
-                            </small>
-                            <small class="text-muted fs-10">
-                                <i class="bi bi-calendar-check me-1"></i>
-                                {{ date('d M Y', strtotime($project->deadline_date)) }}
-                            </small>
+                        <div class="prj-dates">
+                            <span><i class="bi bi-calendar-plus me-1"></i>{{ date('d M Y', strtotime($project->start_date)) }}</span>
+                            <span><i class="bi bi-calendar-check me-1"></i>{{ date('d M Y', strtotime($project->deadline_date)) }}</span>
                         </div>
 
-                        <!-- Project Head & Team -->
-                        <div class="d-flex align-items-center bg-light rounded-3 px-3 py-2 mb-2">
-                            <div class="flex-grow-1">
-                                <small class="text-muted d-block fs-10">Project Head</small>
-                                <span class="fw-semibold fs-11">
-                                    <i class="bi bi-person-badge fs-14 me-1 text-primary"></i>
-                                    {{ $projectHeadName }}
-                                </span>
+                        <div class="prj-progress-row">
+                            <div class="prj-progress-track"><div class="prj-progress-fill" style="width: {{ $project->progress_percentage }}%"></div></div>
+                            <small>{{ $project->progress_percentage }}%</small>
+                        </div>
+
+                        <div class="prj-info-row">
+                            <div>
+                                <small class="prj-info-label d-block">Project Manager</small>
+                                <span class="prj-info-value"><i class="bi bi-person-badge me-1"></i>{{ $project->head->name ?? 'N/A' }}</span>
                             </div>
                             <div class="text-end">
-                                <small class="text-muted d-block fs-10">Team Size</small>
-                                <span class="fw-bold text-dark">
-                                    <i class="bi bi-people-fill text-success me-1"></i>
-                                    {{ $totalMembers }}
-                                </span>
+                                <small class="prj-info-label d-block">Team</small>
+                                <span class="prj-info-value"><i class="bi bi-people-fill me-1"></i>{{ $totalMembers }}</span>
                             </div>
                         </div>
 
-                        <!-- Description -->
                         <div class="note-content flex-grow-1">
-                            <p class="text-muted fs-12 text-truncate-3-line">
-                                {{ $project->description ?? 'No description available.' }}
-                            </p>
+                            <p class="prj-description text-truncate-3-line mb-0">{{ $project->description ?? 'No description available.' }}</p>
+                        </div>
+
+                        <div class="prj-card-footer">
+                            <a href="{{ route('project.view-details', ['id' => encrypt($project->id)]) }}" class="action-btn" title="View Details">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            @if(in_array($role,['admin','hr']) || $project->project_head == $user->id || $project->assigns->contains(fn($a) => $a->user_id == $user->id && $a->status))
+                                <a href="javascript:void(0)" class="action-btn edit-project" title="Edit Project"
+                                    data-update-url="{{ route('project.update', ['id' => encrypt($project->id)]) }}"
+                                    data-name="{{ $project->name }}"
+                                    data-description="{{ $project->description }}"
+                                    data-start-date="{{ \Carbon\Carbon::parse($project->start_date)->toDateString() }}"
+                                    data-deadline-date="{{ \Carbon\Carbon::parse($project->deadline_date)->toDateString() }}"
+                                    data-project-head="{{ $project->project_head }}"
+                                    data-status="{{ $project->status }}"
+                                    data-priority="{{ $project->priority }}"
+                                    data-budget="{{ $project->budget }}"
+                                    data-members='@json($project->assigns->where("status",1)->pluck("user_id")->values())'>
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            @endif
                         </div>
 
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="bi bi-kanban"></i>
+                        <h4>No Projects Found</h4>
+                        <p>Get started by adding your first project</p>
+                    </div>
+                </div>
+            @endforelse
         </div>
     </div>
 @endsection
@@ -251,13 +242,11 @@
 @section('create-modal')
     <!-- Add Project Modal -->
     <div class="modal fade-scale" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-lg compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="d-flex flex-column mb-0">
-                        <span class="fs-18 fw-bold mb-1">Add New Project</span>
-                    </h2>
-                    <a href="#" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
+                    <h2 class="d-flex flex-column mb-0"><span class="fs-18 fw-bold mb-1">Add New Project</span></h2>
+                    <a href="javascript:void(0)" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
                         <i class="feather-x text-danger"></i>
                     </a>
                 </div>
@@ -271,77 +260,192 @@
                                     <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="name">Project Name *</label>
-                                            <input type="text" class="form-control" name="name" required
-                                                id="name" placeholder="Enter Project name">
+                                            <input type="text" class="form-control" name="name" required id="name" placeholder="Enter Project name">
                                             <small class="text-danger error-text name_error"></small>
                                         </div>
                                     </div>
-
                                     <div class="col-md-6 mb-3">
                                         <div class="form-group">
-                                            <label class="fw-semibold" for="project_head">Project Head *</label>
-                                            <select class="form-control select2" name="project_head" id="project_head"
-                                                required>
-                                                <option value="">-- Select Project Head --</option>
-                                                @foreach ($users as $user)
-                                                    <option value="{{ $user->id }}">{{ ucfirst($user->name) }}</option>
+                                            <label class="fw-semibold" for="project_head">Project Manager *</label>
+                                            <select class="form-control select2" name="project_head" id="project_head" required>
+                                                <option value="">-- Select Project Manager --</option>
+                                                @foreach ($users as $u)
+                                                    <option value="{{ $u->id }}">{{ ucfirst($u->name) }}</option>
                                                 @endforeach
                                             </select>
                                             <small class="text-danger error-text project_head_error"></small>
                                         </div>
                                     </div>
-                                    
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="start_date">Start Date *</label>
-                                            <input type="date" class="form-control" name="start_date"
-                                                id="start_date" required>
+                                            <input type="date" class="form-control" name="start_date" id="start_date" required>
                                             <small class="text-danger error-text start_date_error"></small>
                                         </div>
                                     </div>
-                                    
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="deadline_date">Deadline Date *</label>
-                                            <input type="date" class="form-control" name="deadline_date"
-                                                id="deadline_date" required>
+                                            <input type="date" class="form-control" name="deadline_date" id="deadline_date" required>
                                             <small class="text-danger error-text deadline_date_error"></small>
                                         </div>
                                     </div>
-
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="priority">Priority</label>
+                                            <select class="form-control" name="priority" id="priority">
+                                                <option value="low">Low</option>
+                                                <option value="medium" selected>Medium</option>
+                                                <option value="high">High</option>
+                                                <option value="critical">Critical</option>
+                                            </select>
+                                            <small class="text-danger error-text priority_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="budget">Budget</label>
+                                            <input type="number" step="0.01" min="0" class="form-control" name="budget" id="budget" placeholder="Optional">
+                                            <small class="text-danger error-text budget_error"></small>
+                                        </div>
+                                    </div>
                                     <div class="col-12 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="member">Team Members *</label>
-                                            <select class="form-control select2" multiple name="member[]" id="member"
-                                                required>
-                                                <option value="">-- Select Team Members --</option>
-                                                @foreach ($users as $user)
-                                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                            <select class="form-control select2" multiple name="member[]" id="member" required>
+                                                @foreach ($users as $u)
+                                                    <option value="{{ $u->id }}">{{ $u->name }}</option>
                                                 @endforeach
                                             </select>
                                             <div class="form-text">Select at least one team member</div>
                                             <small class="text-danger error-text member_error"></small>
                                         </div>
                                     </div>
-
                                     <div class="col-12 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="description">Description</label>
-                                            <textarea class="form-control" name="description" id="description" rows="3"
-                                                placeholder="Enter project description..."></textarea>
+                                            <textarea class="form-control" name="description" id="description" rows="3" placeholder="Enter project description..."></textarea>
                                             <small class="text-danger error-text description_error"></small>
                                         </div>
                                     </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-primary" type="submit"><i class="feather-save me-2"></i>Save Project</button>
+                                    </div>
+                                    <div class="col-6">
+                                        <a href="javascript:void(0)" class="btn btn-modal-cancel float-end" data-bs-dismiss="modal"><i class="feather-x me-2"></i>Cancel</a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                                    <div class="col-12">
-                                        <div class="d-flex justify-content-end gap-2">
-                                            <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">
-                                                Cancel
-                                            </button>
-                                            <button class="btn btn-primary" type="submit">
-                                                <i class="feather feather-save me-2"></i>Save Project
-                                            </button>
+    <!-- Edit Project Modal -->
+    <div class="modal fade-scale" id="editProjectModal" tabindex="-1" aria-labelledby="editProjectModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg compact-modal" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="d-flex flex-column mb-0"><span class="fs-18 fw-bold mb-1">Edit Project</span></h2>
+                    <a href="javascript:void(0)" class="avatar-text avatar-md bg-soft-danger close-icon" data-bs-dismiss="modal">
+                        <i class="feather-x text-danger"></i>
+                    </a>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="card m-0">
+                        <div class="card-body">
+                            <form action="#" id="editProjectForm">
+                                <div id="editFormError" class="alert alert-danger d-none"></div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_name">Project Name *</label>
+                                            <input type="text" class="form-control" name="name" required id="edit_name">
+                                            <small class="text-danger error-text name_error"></small>
                                         </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_project_head">Project Manager *</label>
+                                            <select class="form-control select2" name="project_head" id="edit_project_head" required>
+                                                @foreach ($users as $u)
+                                                    <option value="{{ $u->id }}">{{ ucfirst($u->name) }}</option>
+                                                @endforeach
+                                            </select>
+                                            <small class="text-danger error-text project_head_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_start_date">Start Date *</label>
+                                            <input type="date" class="form-control" name="start_date" id="edit_start_date" required>
+                                            <small class="text-danger error-text start_date_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_deadline_date">Deadline Date *</label>
+                                            <input type="date" class="form-control" name="deadline_date" id="edit_deadline_date" required>
+                                            <small class="text-danger error-text deadline_date_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_status">Status *</label>
+                                            <select class="form-control" name="status" id="edit_status" required>
+                                                <option value="ongoing">Ongoing</option>
+                                                <option value="pending">Pending</option>
+                                                <option value="hold">On Hold</option>
+                                                <option value="completed">Completed</option>
+                                                <option value="cancelled">Cancelled</option>
+                                            </select>
+                                            <small class="text-danger error-text status_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_priority">Priority</label>
+                                            <select class="form-control" name="priority" id="edit_priority">
+                                                <option value="low">Low</option>
+                                                <option value="medium">Medium</option>
+                                                <option value="high">High</option>
+                                                <option value="critical">Critical</option>
+                                            </select>
+                                            <small class="text-danger error-text priority_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_budget">Budget</label>
+                                            <input type="number" step="0.01" min="0" class="form-control" name="budget" id="edit_budget">
+                                            <small class="text-danger error-text budget_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_member">Team Members *</label>
+                                            <select class="form-control select2" multiple name="member[]" id="edit_member" required>
+                                                @foreach ($users as $u)
+                                                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <small class="text-danger error-text member_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_description">Description</label>
+                                            <textarea class="form-control" name="description" id="edit_description" rows="3"></textarea>
+                                            <small class="text-danger error-text description_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-primary" type="submit"><i class="feather-save me-2"></i>Update Project</button>
+                                    </div>
+                                    <div class="col-6">
+                                        <a href="javascript:void(0)" class="btn btn-modal-cancel float-end" data-bs-dismiss="modal"><i class="feather-x me-2"></i>Cancel</a>
                                     </div>
                                 </div>
                             </form>
@@ -356,124 +460,118 @@
 @section('script-area')
 <script>
     $(document).ready(function() {
-        // Toast notification function that auto-removes after 20 seconds
-        function showToast(message, type = 'info', duration = 20000) {
-            const toastId = 'toast-' + Date.now();
-            const iconMap = {
-                'danger': 'bi-exclamation-triangle-fill',
-                'warning': 'bi-exclamation-circle-fill',
-                'success': 'bi-check-circle-fill',
-                'info': 'bi-info-circle-fill'
-            };
-            
-            const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body text-white">
-                            <i class="bi ${iconMap[type] || 'bi-info-circle-fill'} me-2"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `;
-            
-            $('#toast-container').append(toastHtml);
-            const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement, { delay: duration });
-            toast.show();
-            
-            // Auto remove after 20 seconds
-            setTimeout(() => {
-                if (toastElement) {
-                    $(toastElement).fadeOut(300, function() {
-                        $(this).remove();
-                    });
-                }
-            }, duration);
-        }
-        
-       
-        // Set minimum dates
         const today = new Date().toISOString().split('T')[0];
+
+        function initSelect2(scope) {
+            if ($.fn.select2) {
+                $(scope).find('.select2').select2({ dropdownParent: $(scope) });
+            }
+        }
+        initSelect2('#addProjectModal');
+        initSelect2('#editProjectModal');
+
+        // ==================== ADD ====================
         $('#start_date').attr('max', today);
         $('#deadline_date').attr('min', today);
+        $('#start_date').on('change', function() { $('#deadline_date').attr('min', $(this).val()); });
 
-        // Update deadline min date when start date changes
-        $('#start_date').on('change', function() {
-            $('#deadline_date').attr('min', $(this).val());
-        });
-
-        // Add Project Form Submission
         $('#addProjectForm').on('submit', function(e) {
             e.preventDefault();
-            // Reset errors
             $('.error-text').text('');
             $('#addFormError').addClass('d-none').text('');
 
-            // Get form data
-            const formData = new FormData(this);
-
             $.ajax({
                 url: $(this).attr('action'),
-                type: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                beforeSend: function() {
-                    $('#addProjectForm button[type="submit"]').prop('disabled', true)
-                        .html('<i class="feather feather-loader me-2"></i>Saving...');
-                },
+                type: 'POST',
+                data: $(this).serialize(),
+                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
                 success: function(response) {
-                    $('#addProjectForm button[type="submit"]').prop('disabled', false)
-                        .html('<i class="feather feather-save me-2"></i>Save Project');
-
                     if (response.success) {
-                        // Show success toast
-                        showToast('Project created successfully! ✅', 'success');
-                        
                         $('#addProjectModal').modal('hide');
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
+                        toastr.success(response.message);
+                        setTimeout(() => location.reload(), 1000);
                     }
                 },
                 error: function(xhr) {
-                    $('#addProjectForm button[type="submit"]').prop('disabled', false)
-                        .html('<i class="feather feather-save me-2"></i>Save Project');
-
                     if (xhr.status === 422) {
                         let errors = xhr.responseJSON.errors;
-                        $.each(errors, function(key, value) {
-                            $('.' + key + '_error').text(value[0]);
-                        });
-                        // Show error toast
-                        showToast('Please fix the validation errors! ❌', 'danger');
+                        $.each(errors, function(key, value) { $('.' + key + '_error').text(value[0]); });
+                        toastr.error('Please fix the validation errors');
                     } else {
-                        $('#addFormError')
-                            .removeClass('d-none')
-                            .text(xhr.responseJSON?.message || 'Something went wrong.');
-                        // Show error toast
-                        showToast('Something went wrong! Please try again. ❌', 'danger');
+                        $('#addFormError').removeClass('d-none').text(xhr.responseJSON?.message || 'Something went wrong.');
+                        toastr.error(xhr.responseJSON?.message || 'Something went wrong');
                     }
                 }
             });
         });
 
-        // Clear form when modal is closed
         $('#addProjectModal').on('hidden.bs.modal', function() {
             $('#addProjectForm')[0].reset();
             $('.error-text').text('');
             $('#addFormError').addClass('d-none').text('');
-            // Reset Select2
-            $('.select2').val(null).trigger('change');
-            // Reset min dates
+            $('#addProjectModal .select2').val(null).trigger('change');
             $('#start_date').attr('min', today);
             $('#deadline_date').attr('min', today);
         });
+
+        // ==================== EDIT ====================
+        $(document).on('click', '.edit-project', function(e) {
+            e.preventDefault();
+            const el = $(this);
+            $('#editProjectForm').attr('action', el.data('update-url'));
+            $('#edit_name').val(el.data('name'));
+            $('#edit_description').val(el.data('description'));
+            $('#edit_start_date').val(el.data('start-date'));
+            $('#edit_deadline_date').val(el.data('deadline-date'));
+            $('#edit_status').val(el.data('status'));
+            $('#edit_priority').val(el.data('priority'));
+            $('#edit_budget').val(el.data('budget'));
+            $('#edit_project_head').val(el.data('project-head')).trigger('change');
+            $('#edit_member').val(el.data('members')).trigger('change');
+
+            $('.error-text').text('');
+            $('#editFormError').addClass('d-none').text('');
+            $('#editProjectModal').modal('show');
+        });
+
+        $('#editProjectForm').on('submit', function(e) {
+            e.preventDefault();
+            $('.error-text').text('');
+            $('#editFormError').addClass('d-none').text('');
+
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: $(this).serialize(),
+                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                success: function(response) {
+                    if (response.success) {
+                        $('#editProjectModal').modal('hide');
+                        toastr.success(response.message);
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        $.each(errors, function(key, value) { $('.' + key + '_error').text(value[0]); });
+                        toastr.error('Please fix the validation errors');
+                    } else {
+                        $('#editFormError').removeClass('d-none').text(xhr.responseJSON?.message || 'Something went wrong.');
+                        toastr.error(xhr.responseJSON?.message || (xhr.status === 403 ? 'You do not have permission to edit this project.' : 'Something went wrong'));
+                    }
+                }
+            });
+        });
+
+        $('#editProjectModal').on('hidden.bs.modal', function() {
+            $('.error-text').text('');
+            $('#editFormError').addClass('d-none').text('');
+        });
+
+        if (typeof toastr !== 'undefined') {
+            toastr.options = { closeButton: true, progressBar: true, positionClass: 'toast-top-right', timeOut: 3000 };
+        }
     });
 </script>
 @endsection

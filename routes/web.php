@@ -21,9 +21,8 @@ use App\Http\Controllers\Expense\ExpenseController;
 use App\Http\Controllers\Expense\ExpenseTypeController;
 use App\Http\Controllers\Team\TeamController;
 use App\Http\Controllers\Branch\BranchController;
+use App\Http\Controllers\AttendanceLocation\AttendanceLocationController;
 use App\Http\Controllers\Expense\PaymentController;
-use App\Http\Controllers\Payroll\PayrollMasterController;
-use App\Http\Controllers\Payroll\UserPayrollController;
 use App\Http\Controllers\Payroll\PayrollComponentController;
 use App\Http\Controllers\Payroll\PayrollStructureController;
 use App\Http\Controllers\Payroll\PayrollEmployeeStructureController;
@@ -45,6 +44,7 @@ use App\Http\Controllers\Recruitment\JobOpeningController;
 use App\Http\Controllers\Recruitment\RecruitmentController;
 use App\Http\Controllers\Report\AttendanceReportController;
 use App\Http\Controllers\Report\TaskReportController;
+use App\Http\Controllers\Report\ProjectReportController;
 use App\Http\Controllers\Settings\AttendancePolicyController;
 
 use Illuminate\Support\Facades\Route;
@@ -210,12 +210,34 @@ Route::group(['middleware' => ['tenant']], function () {
 
         //Projects Route
         Route::prefix('projects')->name('project.')->group(function () {
-            Route::get('/', [ProjectController::class, 'index'])->name('index');
-            Route::post('/create', [ProjectController::class, 'store'])->name('create');
-            Route::get('/view-details/{id}', [ProjectController::class, 'show'])->name('view-details');
-            Route::post('/{id}/update', [ProjectController::class, 'update'])->name('update');
-            Route::delete('/{id}', [ProjectController::class, 'destroy'])->name('destroy');
-            Route::get('/{id}/members', [ProjectController::class, 'getMembers'])->name('members');
+            Route::get('/', [ProjectController::class, 'index'])->name('index')->middleware('permission:projects,view');
+            Route::post('/create', [ProjectController::class, 'store'])->name('create')->middleware('permission:projects,create');
+            Route::get('/view-details/{id}', [ProjectController::class, 'show'])->name('view-details')->middleware('permission:projects,view');
+            Route::post('/{id}/update', [ProjectController::class, 'update'])->name('update')->middleware('permission:projects,edit');
+            Route::delete('/{id}', [ProjectController::class, 'destroy'])->name('destroy')->middleware('permission:projects,delete');
+            Route::get('/{id}/members', [ProjectController::class, 'getMembers'])->name('members')->middleware('permission:projects,view');
+
+            // Project Updates (progress/completed/pending/issues/next actions)
+            Route::post('/{id}/updates', [ProjectController::class, 'storeUpdate'])->name('updates.store')->middleware('permission:projects,edit');
+            Route::post('/{id}/progress/reset', [ProjectController::class, 'resetProgress'])->name('progress.reset')->middleware('permission:projects,edit');
+
+            // Comments
+            Route::post('/{id}/comments', [ProjectController::class, 'storeComment'])->name('comments.store')->middleware('permission:projects,edit');
+            Route::delete('/comments/{commentId}', [ProjectController::class, 'destroyComment'])->name('comments.destroy')->middleware('permission:projects,edit');
+
+            // Attachments
+            Route::post('/{id}/attachments', [ProjectController::class, 'storeAttachment'])->name('attachments.store')->middleware('permission:projects,edit');
+            Route::delete('/attachments/{attachmentId}', [ProjectController::class, 'destroyAttachment'])->name('attachments.destroy')->middleware('permission:projects,edit');
+
+            // Milestones
+            Route::post('/{id}/milestones', [ProjectController::class, 'storeMilestone'])->name('milestones.store')->middleware('permission:projects,edit');
+            Route::post('/milestones/{milestoneId}/update', [ProjectController::class, 'updateMilestone'])->name('milestones.update')->middleware('permission:projects,edit');
+            Route::delete('/milestones/{milestoneId}', [ProjectController::class, 'destroyMilestone'])->name('milestones.destroy')->middleware('permission:projects,edit');
+
+            // Risks & Blockers
+            Route::post('/{id}/risks', [ProjectController::class, 'storeRisk'])->name('risks.store')->middleware('permission:projects,edit');
+            Route::post('/risks/{riskId}/update', [ProjectController::class, 'updateRisk'])->name('risks.update')->middleware('permission:projects,edit');
+            Route::delete('/risks/{riskId}', [ProjectController::class, 'destroyRisk'])->name('risks.destroy')->middleware('permission:projects,edit');
         });
 
         //Tasks Route
@@ -296,11 +318,28 @@ Route::group(['middleware' => ['tenant']], function () {
                 ->name('attendance-log');
         });
 
+        // Attendance Locations — geofenced check-in points (renamed from
+        // "branches" 2026_09_20; purely an attendance concept). See the
+        // separate `branch.*` group below for the organizational Branch
+        // module.
+        Route::prefix('attendance-locations')->name('attendance-location.')->middleware('role:admin,hr')->group(function () {
+            Route::get('/', [AttendanceLocationController::class, 'index'])->name('index');
+            Route::post('/store', [AttendanceLocationController::class, 'store'])->name('store');
+            Route::put('/update/{id}', [AttendanceLocationController::class, 'update'])->name('update');
+            Route::delete('/delete/{id}', [AttendanceLocationController::class, 'destroy'])->name('delete');
+        });
+
+        // Branch — organizational profile (name/address/contact/manager).
+        // Read routes are permission-gated (view is available company-wide,
+        // e.g. for manager/employee context); mutating routes are also
+        // restricted to admin/hr.
         Route::prefix('branches')->name('branch.')->group(function () {
-            Route::get('/', [BranchController::class, 'index'])->name('index');
-            Route::post('/store', [BranchController::class, 'store'])->name('store');
-            Route::put('/update/{id}', [BranchController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}', [BranchController::class, 'destroy'])->name('delete');
+            Route::get('/', [BranchController::class, 'index'])->name('index')->middleware('permission:branches,view');
+            Route::get('/detail/{id}', [BranchController::class, 'detail'])->name('detail')->middleware('permission:branches,view');
+            Route::post('/store', [BranchController::class, 'store'])->name('store')->middleware(['role:admin,hr', 'permission:branches,create']);
+            Route::post('/update/{id}', [BranchController::class, 'update'])->name('update')->middleware(['role:admin,hr', 'permission:branches,edit']);
+            Route::delete('/delete/{id}', [BranchController::class, 'destroy'])->name('delete')->middleware(['role:admin,hr', 'permission:branches,delete']);
+            Route::post('/assign-employees/{id}', [BranchController::class, 'assignEmployees'])->name('assign-employees')->middleware(['role:admin,hr', 'permission:branches,manage']);
         });
 
         Route::middleware('shifts.custom')->prefix('shift')->name('shift.')->group(function () {
@@ -328,29 +367,10 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::post('/user-shifts/assign-bulk', [ShiftController::class, 'assignBulkShifts'])->name('user-shifts.assign-bulk');
             });
         });
-        Route::prefix('payroll-masters')->name('payroll-masters.')->middleware('feature:payroll')->group(function () {
-            Route::get('/', [PayrollMasterController::class, 'index'])->name('index')->middleware('permission:payroll,view');
-            Route::get('/create', [PayrollMasterController::class, 'create'])->name('create')->middleware('permission:payroll,create');
-            Route::post('/', [PayrollMasterController::class, 'store'])->name('store')->middleware('permission:payroll,create');
-            Route::get('/{id}/edit', [PayrollMasterController::class, 'edit'])->name('edit')->middleware('permission:payroll,view');
-            Route::put('/{id}', [PayrollMasterController::class, 'update'])->name('update')->middleware('permission:payroll,edit');
-            Route::patch('/status/{id}', [PayrollMasterController::class, 'updateStatus'])->name('status')->middleware('permission:payroll,edit');
-        });
-
         Route::prefix('my-payroll')->name('my-payroll.')->middleware(['feature:payroll', 'permission:payroll,view'])->group(function () {
             Route::get('/salary-slips', [MonthlyPayrollController::class, 'mySalarySlips'])->name('my-salary-slips');
             Route::get('/download/{id}', [MonthlyPayrollController::class, 'downloadSalarySlip'])->name('download-salary-slip');
             Route::get('/view/{id}', [MonthlyPayrollController::class, 'viewSalarySlip'])->name('view-salary-slip');
-        });
-
-        // Employee Payroll Routes
-        Route::prefix('employee-payrolls')->name('employee-payrolls.')->middleware('feature:payroll')->group(function () {
-            Route::get('/', [UserPayrollController::class, 'index'])->name('index')->middleware('permission:payroll,view');
-            Route::get('/create', [UserPayrollController::class, 'create'])->name('create')->middleware('permission:payroll,create');
-            Route::post('/', [UserPayrollController::class, 'store'])->name('store')->middleware('permission:payroll,create');
-            Route::get('/{id}/edit', [UserPayrollController::class, 'edit'])->name('edit')->middleware('permission:payroll,edit');
-            Route::put('/{id}', [UserPayrollController::class, 'update'])->name('update')->middleware('permission:payroll,edit');
-            Route::delete('/{id}', [UserPayrollController::class, 'destroy'])->name('destroy')->middleware('permission:payroll,delete');
         });
 
         // Monthly Payroll Routes
@@ -436,10 +456,7 @@ Route::group(['middleware' => ['tenant']], function () {
 
         Route::prefix('requests')->name('requests.')->group(function () {
             Route::get('/', [RequestController::class, 'index'])->name('index');
-            Route::get('/create', [RequestController::class, 'create'])->name('create');
             Route::post('/', [RequestController::class, 'store'])->name('store');
-            Route::get('/{id}', [RequestController::class, 'show'])->name('show');
-            Route::get('/{id}/edit', [RequestController::class, 'edit'])->name('edit');
             Route::post('/{id}', [RequestController::class, 'update'])->name('update');
             Route::post('/{id}/destroy', [RequestController::class, 'destroy'])->name('destroy');
             Route::delete('/attachments/{attachmentId}', [RequestController::class, 'deleteAttachment'])
@@ -450,13 +467,13 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::get('/export', [RequestController::class, 'export'])->name('export');
         });
 
-        Route::get('/manager/requests', [RequestController::class, 'managerIndex'])->name('manager.requests');
-        Route::get('/manager/requests/{id}', [RequestController::class, 'managerShow'])->name('manager.requests.show');
-        Route::post('/manager/requests/{id}/approve', [RequestController::class, 'approve']);
-        Route::post('/manager/requests/{id}/reject', [RequestController::class, 'reject']);
-        Route::post('/manager/requests/bulk-approve', [RequestController::class, 'bulkApprove']);
-        Route::get('/manager/requests/export', [RequestController::class, 'managerExport']);
-        Route::get('/manager/stats', [RequestController::class, 'managerStats']);
+        Route::get('/manager/requests', [RequestController::class, 'managerIndex'])->name('manager.requests')->middleware('permission:requests,view');
+        Route::get('/manager/requests/{id}', [RequestController::class, 'managerShow'])->name('manager.requests.show')->middleware('permission:requests,view');
+        Route::post('/manager/requests/{id}/approve', [RequestController::class, 'approve'])->middleware('permission:requests,approve');
+        Route::post('/manager/requests/{id}/reject', [RequestController::class, 'reject'])->middleware('permission:requests,approve');
+        Route::post('/manager/requests/bulk-approve', [RequestController::class, 'bulkApprove'])->middleware('permission:requests,approve');
+        Route::get('/manager/requests/export', [RequestController::class, 'managerExport'])->middleware('permission:requests,view');
+        Route::get('/manager/stats', [RequestController::class, 'managerStats'])->middleware('permission:requests,view');
 
         Route::prefix('announcement')->name('announcement.')->group(function () {
             Route::get('/', [AnnouncementController::class, 'index'])->name('index');
@@ -746,6 +763,28 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::get('/overtime/monthly', [AttendanceReportController::class, 'overtimeMonthlyReport'])->name('overtime.monthly.index');
 
             Route::get('/task-project', [TaskReportController::class, 'index'])->name('task-project.index');
+
+            // Task Reports
+            Route::prefix('task')->name('task.')->group(function () {
+                Route::get('/day-wise', [TaskReportController::class, 'dayWiseTaskReport'])->name('day-wise');
+                Route::get('/day-wise/export', [TaskReportController::class, 'exportDayWiseCsv'])->name('day-wise.export');
+                Route::get('/employee-monthly', [TaskReportController::class, 'employeeMonthlyReport'])->name('employee-monthly');
+                Route::get('/employee-monthly/export', [TaskReportController::class, 'exportEmployeeMonthlyCsv'])->name('employee-monthly.export');
+                Route::get('/employee-date-wise', [TaskReportController::class, 'employeeDateWiseReport'])->name('employee-date-wise');
+                Route::get('/employee-date-wise/export', [TaskReportController::class, 'exportEmployeeDateWiseCsv'])->name('employee-date-wise.export');
+                Route::get('/monthly-task-detail', [TaskReportController::class, 'monthlyTaskDetailReport'])->name('monthly-task-detail');
+                Route::get('/monthly-task-detail/export', [TaskReportController::class, 'exportMonthlyDetailCsv'])->name('monthly-task-detail.export');
+            });
+
+            // Project Reports
+            Route::get('/project/summary', [ProjectReportController::class, 'summary'])->name('project.summary.index');
+            Route::get('/project/summary/export', [ProjectReportController::class, 'summaryExport'])->name('project.summary.export');
+            Route::get('/project/progress', [ProjectReportController::class, 'progress'])->name('project.progress.index');
+            Route::get('/project/progress/export', [ProjectReportController::class, 'progressExport'])->name('project.progress.export');
+            Route::get('/project/task-performance', [ProjectReportController::class, 'taskPerformance'])->name('project.task-performance.index');
+            Route::get('/project/task-performance/export', [ProjectReportController::class, 'taskPerformanceExport'])->name('project.task-performance.export');
+            Route::get('/project/timeline', [ProjectReportController::class, 'timeline'])->name('project.timeline.index');
+            Route::get('/project/timeline/export', [ProjectReportController::class, 'timelineExport'])->name('project.timeline.export');
         });
 
     });

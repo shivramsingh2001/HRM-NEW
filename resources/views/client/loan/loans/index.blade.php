@@ -4,42 +4,16 @@
 
 @section('style')
     <style>
-        /* Your existing styles remain the same */
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 500;
+        /* Loan-specific statuses beyond the shared .status-badge mapping in
+           theme-custom.css (pending/approved/active/cancelled already map
+           there — this only adds the two loan-only words it doesn't know). */
+        .status-badge[data-status="closed"] {
+            background: var(--gray-200);
+            color: var(--gray-700);
         }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-approved {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .status-active {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .status-closed {
-            background: #e0e7ff;
-            color: #3730a3;
-        }
-
-        .status-default {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status-cancelled {
-            background: #f3f4f6;
-            color: #374151;
+        .status-badge[data-status="default"] {
+            background: var(--danger-light);
+            color: var(--danger);
         }
 
         .action-btn {
@@ -61,8 +35,8 @@
         }
 
         .action-btn.view:hover {
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary-mid);
+            border-color: var(--primary-mid);
         }
 
         .action-btn.edit:hover {
@@ -97,7 +71,7 @@
         .emi-amount {
             font-size: 20px;
             font-weight: 700;
-            color: #4f46e5;
+            color: var(--primary-mid);
         }
 
         .approval-note {
@@ -313,15 +287,13 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <span class="status-badge status-{{ $loan->status }}">
-                                                    {{ ucfirst($loan->status) }}
-                                                </span>
+                                                <x-ui.status-badge :status="$loan->status" />
                                             </td>
                                             <td>{{ $loan->created_at->format('d M Y') }}</td>
                                             <td class="text-center">
                                                 <div class="d-flex justify-content-center gap-1">
                                                     <button class="action-btn view view-loan" data-id="{{ $loan->id }}"
-                                                        title="View Details">
+                                                        title="View Details" data-bs-toggle="tooltip">
                                                         <i class="feather-eye"></i>
                                                     </button>
                                                     @if ($loan->isPending())
@@ -334,11 +306,11 @@
                                                             data-description="{{ $loan->description }}"
                                                             data-repayment_type="{{ $loan->repayment_type }}"
                                                             data-lumpsum_tenure="{{ $loan->tenure_months }}"
-                                                            title="Edit">
+                                                            title="Edit" data-bs-toggle="tooltip">
                                                             <i class="feather-edit-3"></i>
                                                         </button>
                                                         <button class="action-btn delete cancel-loan"
-                                                            data-id="{{ $loan->id }}" title="Cancel">
+                                                            data-id="{{ $loan->id }}" title="Cancel" data-bs-toggle="tooltip">
                                                             <i class="feather-x-circle"></i>
                                                         </button>
                                                     @endif
@@ -349,7 +321,7 @@
                                                             data-id="{{ $loan->id }}"
                                                             data-number="{{ $loan->loan_number }}"
                                                             data-amount="{{ $loan->lumpsum_amount ?? $loan->amount }}"
-                                                            title="Pay Lump Sum Amount">
+                                                            title="Pay Lump Sum Amount" data-bs-toggle="tooltip">
                                                             <i class="feather-credit-card"></i>
                                                         </button>
                                                     @endif

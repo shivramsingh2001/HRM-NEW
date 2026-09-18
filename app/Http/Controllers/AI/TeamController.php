@@ -6,12 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Language;
 use App\Models\LeaveBalance;
 use App\Models\User;
-use App\Models\UserPayroll;
 use App\Services\Payroll\PayrollStructureAssignmentService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class TeamController extends Controller
 {
@@ -22,13 +20,13 @@ class TeamController extends Controller
             $baseUrl = config('app.url');
             $currentYear = date('Y');
 
-            // Payroll rebuild — Phase 9: once a tenant is on the dynamic
-            // engine, read payroll from PayrollEmployeeStructure instead of
-            // the legacy UserPayroll table, which stops receiving new writes
-            // for that tenant.
-            $dynamicEnabled = app()->bound('current_tenant')
-                && (bool) DB::table('tenants')->where('id', app('current_tenant')->id)->value('payroll_dynamic_ui_enabled');
-            $assignmentService = $dynamicEnabled ? app(PayrollStructureAssignmentService::class) : null;
+            // Payroll rebuild — Phase 9: reads payroll from
+            // PayrollEmployeeStructure, not the legacy UserPayroll table.
+            // Every tenant's user_payrolls rows are mirrored into
+            // payroll_employee_structures by payroll:backfill-component-catalog
+            // regardless of that tenant's cutover flag, so this is accurate
+            // even for a tenant not yet fully cut over to dynamic generation.
+            $assignmentService = app(PayrollStructureAssignmentService::class);
 
             // Base query for users
             $query = User::where('status', 1)
@@ -38,7 +36,7 @@ class TeamController extends Controller
                     'jobDetails.designationRel',
                     'jobDetails.departmentRel',
                     'jobDetails.reportingHead',
-                    'jobDetails.branch',
+                    'jobDetails.attendanceLocation',
                     'location.countryRel',
                     'location.stateRel',
                     'location.cityRel'
@@ -55,10 +53,8 @@ class TeamController extends Controller
                 case 'manager':
                     // Manager: See team members + their own data
                     $query->where(function ($q) use ($authUser) {
-                        // Users reporting to this manager
-                        $q->whereHas('jobDetails', function ($subQ) use ($authUser) {
-                            $subQ->where('reporting_head', $authUser->id);
-                        })
+                        // Users reporting to this manager (any reporting head)
+                        $q->managedBy($authUser->id)
                             // OR the manager themselves
                             ->orWhere('users.id', $authUser->id);
                     });
@@ -96,72 +92,13 @@ class TeamController extends Controller
                     }
                 }
 
-                if ($dynamicEnabled) {
-                    // Dynamic engine: read from PayrollEmployeeStructure,
-                    // shaped like a legacy UserPayroll row so the rest of
-                    // this response stays unchanged either way.
-                    $currentStructure = $member->currentDynamicPayrollStructure;
-                    $currentPayrollData = $currentStructure ? $assignmentService->toLegacyShapedArray($currentStructure) : null;
+                $currentStructure = $member->currentDynamicPayrollStructure;
+                $currentPayrollData = $currentStructure ? $assignmentService->toLegacyShapedArray($currentStructure) : null;
 
-                    $payrollHistory = $member->dynamicPayrollStructures()
-                        ->orderByDesc('effective_from')
-                        ->get()
-                        ->map(fn ($s) => array_merge(['id' => $s->id], $assignmentService->toLegacyShapedArray($s)));
-                } else {
-                    // Get current payroll information
-                    $currentPayroll = UserPayroll::where('user_id', $member->id)
-                        ->where('is_current', 1)
-                        ->where('status', 1)
-                        ->first();
-
-                    $currentPayrollData = $currentPayroll ? [
-                        'payroll_code' => $currentPayroll->payroll_code,
-                        'effective_from' => $currentPayroll->effective_from,
-                        'basic_salary' => (float) $currentPayroll->basic_salary,
-                        'hra' => (float) $currentPayroll->hra,
-                        'conveyence' => (float) $currentPayroll->conveyence,
-                        'medical_allowance' => (float) $currentPayroll->medical_allowance,
-                        'special_allowance' => (float) $currentPayroll->special_allowance,
-                        'monthly_incentive' => (float) $currentPayroll->monthly_incentive,
-                        'provident_fund' => (float) $currentPayroll->provident_fund,
-                        'esi' => (float) $currentPayroll->esi,
-                        'professional_tax' => (float) $currentPayroll->professional_tax,
-                        'tds' => (float) $currentPayroll->tds,
-                        'gross_salary' => (float) $currentPayroll->gross_salary,
-                        'total_deductions' => (float) $currentPayroll->total_deductions,
-                        'net_salary' => (float) $currentPayroll->net_salary,
-                        'ctc' => (float) $currentPayroll->ctc,
-                    ] : null;
-
-                    // Get payroll history
-                    $payrollHistory = UserPayroll::where('user_id', $member->id)
-                        ->where('status', 1)
-                        ->orderBy('effective_from', 'desc')
-                        ->get()
-                        ->map(function ($payroll) {
-                            return [
-                                'id' => $payroll->id,
-                                'payroll_code' => $payroll->payroll_code,
-                                'effective_from' => $payroll->effective_from,
-                                'effective_to' => $payroll->effective_to,
-                                'is_current' => $payroll->is_current,
-                                'basic_salary' => (float) $payroll->basic_salary,
-                                'hra' => (float) $payroll->hra,
-                                'conveyence' => (float) $payroll->conveyence,
-                                'medical_allowance' => (float) $payroll->medical_allowance,
-                                'special_allowance' => (float) $payroll->special_allowance,
-                                'monthly_incentive' => (float) $payroll->monthly_incentive,
-                                'provident_fund' => (float) $payroll->provident_fund,
-                                'esi' => (float) $payroll->esi,
-                                'professional_tax' => (float) $payroll->professional_tax,
-                                'tds' => (float) $payroll->tds,
-                                'gross_salary' => (float) $payroll->gross_salary,
-                                'total_deductions' => (float) $payroll->total_deductions,
-                                'net_salary' => (float) $payroll->net_salary,
-                                'ctc' => (float) $payroll->ctc
-                            ];
-                        });
-                }
+                $payrollHistory = $member->dynamicPayrollStructures()
+                    ->orderByDesc('effective_from')
+                    ->get()
+                    ->map(fn ($s) => array_merge(['id' => $s->id], $assignmentService->toLegacyShapedArray($s)));
 
                
                 $teamData[] = [
@@ -219,11 +156,11 @@ class TeamController extends Controller
                         'employment_type' => $member->jobDetails?->employment_type,
                         'reporting_head' => $member->jobDetails?->reportingHead?->name,
                         'reporting_head_id' => $member->jobDetails?->reporting_head,
-                        'office_branch' => $member->jobDetails?->Branch?->name ?? null,
-                        'office_radius' => $member->jobDetails?->Branch?->radius ?? null,
-                        'office_description' => $member->jobDetails?->Branch?->description ?? null,
-                        'office_latitude' => $member->jobDetails?->Branch?->latitude ?? null,
-                        'office_longitude' => $member->jobDetails?->Branch?->longitude ?? null,
+                        'office_branch' => $member->jobDetails?->attendanceLocation?->name ?? null,
+                        'office_radius' => $member->jobDetails?->attendanceLocation?->radius ?? null,
+                        'office_description' => $member->jobDetails?->attendanceLocation?->description ?? null,
+                        'office_latitude' => $member->jobDetails?->attendanceLocation?->latitude ?? null,
+                        'office_longitude' => $member->jobDetails?->attendanceLocation?->longitude ?? null,
                         'type' => $member->jobDetails?->type,
                     ],
 

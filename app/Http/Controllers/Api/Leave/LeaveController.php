@@ -284,12 +284,14 @@ class LeaveController extends Controller
                 ->leftJoin('user_job_details', 'user_job_details.user_id', '=', 'users.id')
                 ->leftJoin('leave_types', 'leaves.leave_type', '=', 'leave_types.id');
 
-            // Scope-based filtering
+            // Scope-based filtering (any reporting head)
             if ($leaveScope === 'team') {
-                $query->where('user_job_details.reporting_head', $authUser->id);
+                $query->whereIn('users.id', function ($q) use ($authUser) {
+                    $q->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                });
             }
             // company: no filtering - see all leaves
-            
+
             $leaves = $query->select(
                 'leaves.id',
                 'leaves.leave_id',
@@ -492,7 +494,9 @@ class LeaveController extends Controller
                     break;
                     
                 case 'manager':
-                    $query->where('user_job_details.reporting_head', $authUser->id);
+                    $query->whereIn('users.id', function ($q) use ($authUser) {
+                        $q->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                    });
                     break;
                     
                 case 'employee':

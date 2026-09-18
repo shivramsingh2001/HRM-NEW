@@ -5,7 +5,6 @@ namespace App\Services;
 
 use App\Models\Request as RequestStore;
 use App\Models\User;
-use App\Models\UserJobDetail;
 use App\Notifications\RequestNotification;
 use Illuminate\Support\Facades\Log;
 
@@ -204,6 +203,73 @@ class RequestNotificationService
     }
 
     /**
+     * Send notification when an employee cancels their own request.
+     * Recipients: Reporting Head, All HR, All Admin — same audience as
+     * submission, since an already-APPROVED request can now be cancelled
+     * too (managers who already acted on it need to know).
+     */
+    public function notifyRequestCancelled($request, $wasApproved = false)
+    {
+        try {
+            $recipients = $this->getRequestRecipients($request->user_id);
+
+            if (empty($recipients)) {
+                Log::warning('No recipients found for request cancellation', [
+                    'request_id' => $request->id
+                ]);
+                return false;
+            }
+
+            $employee = $request->user;
+            $requestType = $request->requestType->type_name ?? 'Request';
+
+            $startDate = \Carbon\Carbon::parse($request->start_date);
+            $endDate = \Carbon\Carbon::parse($request->end_date);
+            $durationDays = $endDate->diffInDays($startDate) + 1;
+
+            $data = [
+                'request_id' => $request->id,
+                'employee_name' => $employee->name,
+                'employee_id' => $employee->employee_id,
+                'request_type' => $requestType,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'duration_days' => $durationDays,
+                'was_approved' => $wasApproved,
+                'type' => 'request_cancelled'
+            ];
+
+            $title = '🚫 ' . $requestType . ' Request Cancelled';
+            $body = $employee->name . ' cancelled their ' . ($wasApproved ? 'previously approved ' : '') . $requestType . ' request for ' . $durationDays . ' day(s)';
+
+            foreach ($recipients as $recipient) {
+                $this->sendNotification(
+                    $recipient,
+                    $title,
+                    $body,
+                    array_merge($data, ['recipient_role' => $recipient->role])
+                );
+
+                $recipient->notify(new RequestNotification($request, 'CANCELLED'));
+            }
+
+            Log::info('Request cancellation notifications sent', [
+                'request_id' => $request->id,
+                'recipient_count' => count($recipients)
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send request cancellation notifications', [
+                'error' => $e->getMessage(),
+                'request_id' => $request->id
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Core method to send FCM notification
      */
     private function sendNotification($user, $title, $body, $data = [])
@@ -255,11 +321,8 @@ class RequestNotificationService
     {
         $recipients = collect();
 
-        // 1. Get Reporting Head
-        $reportingHead = $this->getReportingHead($employeeId);
-        if ($reportingHead) {
-            $recipients->push($reportingHead);
-        }
+        // 1. Get Reporting Heads
+        $recipients = $recipients->merge($this->getReportingHeads($employeeId));
 
         // 2. Get all HR users
         $hrUsers = $this->getUsersByRole('hr');
@@ -277,17 +340,11 @@ class RequestNotificationService
     }
 
     /**
-     * Get reporting head for an employee
+     * Get all reporting heads for an employee (multi reporting-head support).
      */
-    private function getReportingHead($employeeId)
+    private function getReportingHeads($employeeId)
     {
-        $jobDetail = UserJobDetail::where('user_id', $employeeId)->first();
-        
-        if (!$jobDetail || !$jobDetail->reporting_head) {
-            return null;
-        }
-
-        return User::find($jobDetail->reporting_head);
+        return User::find($employeeId)?->reportingHeads ?? collect();
     }
 
     /**

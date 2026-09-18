@@ -78,6 +78,15 @@ class RequestNotification extends Notification implements ShouldQueue
                     $baseData['remarks'] = $this->remarks;
                 }
                 break;
+            case 'CANCELLED':
+                $baseData['title'] = '🚫 Request Cancelled';
+                $baseData['message'] = $user->name . ' cancelled their ' . $requestType . ' request from ' .
+                    date('d M Y', strtotime($this->request->start_date)) . ' to ' .
+                    date('d M Y', strtotime($this->request->end_date));
+                if ($this->remarks) {
+                    $baseData['remarks'] = $this->remarks;
+                }
+                break;
         }
 
         return $baseData;

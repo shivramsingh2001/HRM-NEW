@@ -65,8 +65,8 @@ class AttendanceRegularizationController extends Controller
                 $query->where(function($q) use ($authUser) {
                     $q->whereIn('ar.user_id', function($subQ) use ($authUser) {
                         $subQ->select('user_id')
-                            ->from('user_job_details')
-                            ->where('reporting_head', $authUser->id);
+                            ->from('user_reporting_heads')
+                            ->where('reporting_head_id', $authUser->id);
                     })
                     ->orWhere('ar.user_id', $authUser->id);
                 });

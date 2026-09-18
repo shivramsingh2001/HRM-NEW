@@ -53,13 +53,13 @@
         }
 
         .filter-control:focus {
-            border-color: #4f46e5;
+            border-color: var(--primary-mid);
             outline: none;
             background: white;
         }
 
         .btn-filter {
-            background: #4f46e5;
+            background: var(--primary-mid);
             color: white;
             border: none;
             padding: 8px 20px;
@@ -136,13 +136,13 @@
         }
 
         .action-btn.edit:hover {
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary-mid);
+            border-color: var(--primary-mid);
         }
 
         .action-btn.delete:hover {
-            color: #ef4444;
-            border-color: #ef4444;
+            color: var(--danger);
+            border-color: var(--danger);
         }
 
         .empty-state {
@@ -317,25 +317,15 @@
                                 </td>
                                 <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d M Y') }}</td>
                                 <td>
-                                    @php
-                                        $statusClass = match($request->status) {
-                                            'pending' => 'badge-pending',
-                                            'approved' => 'badge-approved',
-                                            'rejected' => 'badge-rejected',
-                                            default => 'badge-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $statusClass }}">
-                                        {{ ucfirst($request->status) }}
-                                    </span>
+                                    <x-ui.status-badge :status="$request->status" />
                                 </td>
                                 <td>
                                     @if($request->status == 'pending')
                                         <div class="d-flex gap-1">
-                                            <button class="action-btn edit" onclick="editRequest({{ $request->id }}, '{{ $request->date }}', {{ $request->overtime_hours }}, '{{ addslashes($request->reason) }}')">
+                                            <button class="action-btn edit" onclick="editRequest({{ $request->id }}, '{{ $request->date }}', {{ $request->overtime_hours }}, '{{ addslashes($request->reason) }}')" title="Edit" data-bs-toggle="tooltip">
                                                 <i class="feather-edit-2"></i>
                                             </button>
-                                            <button class="action-btn delete" onclick="cancelRequest({{ $request->id }})">
+                                            <button class="action-btn delete" onclick="cancelRequest({{ $request->id }})" title="Cancel" data-bs-toggle="tooltip">
                                                 <i class="feather-x"></i>
                                             </button>
                                         </div>

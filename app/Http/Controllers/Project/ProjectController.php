@@ -4,22 +4,42 @@ namespace App\Http\Controllers\Project;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\ProjectAttachment;
+use App\Models\ProjectComment;
+use App\Models\ProjectMilestone;
+use App\Models\ProjectRisk;
+use App\Models\ProjectUpdate;
 use App\Models\User;
 use App\Models\ProjectAssign;
+use App\Observers\TaskProgressObserver;
+use App\Services\AuditLogger;
+use App\Services\ProjectNotificationService;
+use App\Services\RbacService;
 use App\Services\TaskPermissionService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ProjectController extends Controller
 {
     protected $permissions;
+    protected $rbac;
+    protected $auditLogger;
+    protected $notifications;
 
-    public function __construct(TaskPermissionService $permissions)
-    {
+    public function __construct(
+        TaskPermissionService $permissions,
+        RbacService $rbac,
+        AuditLogger $auditLogger,
+        ProjectNotificationService $notifications
+    ) {
         $this->permissions = $permissions;
+        $this->rbac = $rbac;
+        $this->auditLogger = $auditLogger;
+        $this->notifications = $notifications;
     }
 
     public function index(Request $request)
@@ -31,7 +51,7 @@ class ProjectController extends Controller
         $user = auth()->user();
 
         // Base query for projects
-        $projectsQuery = Project::with(['headUser', 'assigns']);
+        $projectsQuery = Project::with(['head', 'assigns']);
 
         // Apply role-based filtering
         if ($this->permissions->isElevated($user)) {
@@ -53,13 +73,10 @@ class ProjectController extends Controller
 
         // Calculate statistics
         $data['total_projects'] = $allProjects->count();
-        // "active" = not yet completed/cancelled (ongoing, pending, or on hold).
-        // Previously filtered on 'status' == 'active', which isn't a valid value
-        // in the projects.status enum (ongoing/pending/hold/completed/cancelled),
-        // so this stat was always 0.
         $data['active_projects'] = $allProjects->whereIn('status', ['ongoing', 'pending', 'hold'])->count();
         $data['ongoing_projects'] = $allProjects->where('status', 'ongoing')->count();
         $data['completed_projects'] = $allProjects->where('status', 'completed')->count();
+        $data['overdue_projects'] = $allProjects->filter(fn ($p) => $p->deadline_date && \Carbon\Carbon::today()->gt($p->deadline_date) && in_array($p->status, ['ongoing', 'pending', 'hold']))->count();
 
         // Calculate assignments and heads
         $data['total_assignments'] = $allProjects->sum(function ($project) {
@@ -70,6 +87,10 @@ class ProjectController extends Controller
         // Apply any additional filters from request
         if ($request->has('status') && $request->status != '') {
             $projectsQuery = $projectsQuery->where('status', $request->status);
+        }
+
+        if ($request->has('priority') && $request->priority != '') {
+            $projectsQuery = $projectsQuery->where('priority', $request->priority);
         }
 
         if ($request->has('search') && $request->search != '') {
@@ -85,6 +106,13 @@ class ProjectController extends Controller
     public function store(Request $request)
     {
         try {
+            if (!$this->rbac->can(auth()->user(), 'projects', 'create')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to create projects.',
+                ], 403);
+            }
+
             // Validate request
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
@@ -92,6 +120,8 @@ class ProjectController extends Controller
                 'start_date' => 'required|date|before:deadline_date',
                 'deadline_date' => 'required|date|after_or_equal:start_date',
                 'project_head' => 'required|exists:users,id',
+                'priority' => 'nullable|in:low,medium,high,critical',
+                'budget' => 'nullable|numeric|min:0',
                 'member' => 'required|array|min:1',
                 'member.*' => 'exists:users,id',
             ], [
@@ -126,6 +156,8 @@ class ProjectController extends Controller
                 // accepted '1' as that enum's 1-based positional index (=
                 // 'ongoing' today, purely by coincidence of column order).
                 'status' => 'ongoing',
+                'priority' => $request->priority ?? 'medium',
+                'budget' => $request->budget,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -142,7 +174,6 @@ class ProjectController extends Controller
             $members = array_unique($members);
 
             // 3. Insert project members in batch with project_head flag
-            $members = array_unique($members);
             foreach ($members as $userId) {
                 $isHead = ($userId == $request->project_head) ? '1' : '0';
 
@@ -153,6 +184,8 @@ class ProjectController extends Controller
                 ]);
             }
             DB::commit();
+
+            $this->notifications->notifyProjectCreated($project->fresh());
 
             return response()->json([
                 'success' => true,
@@ -199,7 +232,27 @@ class ProjectController extends Controller
     {
         $id = decrypt($id);
         $data['users'] = DB::table('users')->where('status', 1)->get();
-        $data['project'] = Project::with(['headUser', 'assigns', 'assigns.users', 'assigns.users.basicDetails', 'assigns.users.jobDetails', 'assigns.users.jobDetails.Designation', 'assigns.users.jobDetails.Department'])->where('id', $id)->first();
+
+        $project = Project::with([
+            'head', 'assigns', 'assigns.users', 'assigns.users.basicDetails', 'assigns.users.jobDetails',
+            'assigns.users.jobDetails.Designation', 'assigns.users.jobDetails.Department',
+            'milestones', 'risks', 'comments.author', 'attachments.uploadedBy',
+        ])->findOrFail($id);
+
+        $project->load(['updates' => function ($q) {
+            $q->with('author')->limit(10);
+        }]);
+
+        $data['project'] = $project;
+        $data['taskStats'] = $project->task_stats;
+
+        $spent = (float) $project->approvedExpenses()->sum('amount');
+        $data['budget'] = [
+            'budget' => $project->budget,
+            'spent' => $spent,
+            'remaining' => $project->budget !== null ? (float) $project->budget - $spent : null,
+        ];
+
         return view('client.project.project-detail', $data);
     }
 
@@ -209,11 +262,7 @@ class ProjectController extends Controller
      */
     public function getMembers($id)
     {
-        try {
-            $projectId = decrypt($id);
-        } catch (\Exception $e) {
-            $projectId = $id;
-        }
+        $projectId = $this->resolveId($id);
 
         $project = Project::find($projectId);
         if (!$project) {
@@ -248,39 +297,28 @@ class ProjectController extends Controller
      */
     public function destroy($id)
     {
+        $projectId = $this->resolveId($id);
+
+        $project = Project::find($projectId);
+        if (!$project) {
+            return response()->json(['success' => false, 'message' => 'Project not found.'], 404);
+        }
+
+        if ($error = $this->authorizeProjectAccess($project, 'delete')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        if ($project->status === 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'A completed project cannot be deleted.',
+            ], 422);
+        }
+
         try {
-            $authUser = auth()->user();
-
-            try {
-                $projectId = decrypt($id);
-            } catch (\Exception $e) {
-                $projectId = $id;
-            }
-
-            $project = Project::find($projectId);
-            if (!$project) {
-                return response()->json(['success' => false, 'message' => 'Project not found.'], 404);
-            }
-
-            $isHead = $project->project_head == $authUser->id;
-            if (!$this->permissions->isElevated($authUser) && !$isHead) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only an admin, HR, or the project head can delete this project.',
-                ], 403);
-            }
-
-            if ($project->status === 'completed') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'A completed project cannot be deleted.',
-                ], 422);
-            }
-
             DB::beginTransaction();
             \App\Models\Task::where('project_id', $projectId)->update(['project_id' => null]);
-            ProjectAssign::where('project_id', $projectId)->delete();
-            $project->delete();
+            $project->delete(); // project_updates/comments/attachments/milestones/risks/assigns cascade via FK
             DB::commit();
 
             return response()->json(['success' => true, 'message' => 'Project deleted successfully.']);
@@ -293,10 +331,14 @@ class ProjectController extends Controller
 
     public function update(Request $request, $id)
     {
-        try {
-            $projectId = decrypt($id);
-            $project = Project::findOrFail($projectId);
+        $projectId = decrypt($id);
+        $project = Project::findOrFail($projectId);
 
+        if ($error = $this->authorizeProjectAccess($project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
             // Validate request
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
@@ -305,6 +347,8 @@ class ProjectController extends Controller
                 'deadline_date' => 'required|date|after_or_equal:start_date',
                 'project_head' => 'required|exists:users,id',
                 'status' => 'required|in:ongoing,pending,hold,completed,cancelled',
+                'priority' => 'nullable|in:low,medium,high,critical',
+                'budget' => 'nullable|numeric|min:0',
                 'member' => 'required|array|min:1',
                 'member.*' => 'exists:users,id',
             ], [
@@ -322,6 +366,9 @@ class ProjectController extends Controller
 
             DB::beginTransaction();
 
+            $old = $project->only(['status', 'priority', 'project_head', 'start_date', 'deadline_date', 'budget']);
+            $oldStatus = $project->status;
+
             // 1. Update project basic info
             $oldProjectHead = $project->project_head;
             $newProjectHead = $request->project_head;
@@ -332,6 +379,8 @@ class ProjectController extends Controller
             $project->deadline_date = $request->deadline_date ?: $project->deadline_date;
             $project->project_head = $newProjectHead ?: $project->project_head;
             $project->status = $request->status ?: $project->status;
+            $project->priority = $request->priority ?: $project->priority;
+            $project->budget = $request->filled('budget') ? $request->budget : $project->budget;
             $project->updated_at = now();
             $project->save();
 
@@ -414,6 +463,14 @@ class ProjectController extends Controller
 
             DB::commit();
 
+            $user = auth()->user();
+            $new = $project->fresh()->only(['status', 'priority', 'project_head', 'start_date', 'deadline_date', 'budget']);
+            $this->auditLogger->record('tenant_user', $user->id, $project->tenant_id, 'project.updated', 'Project', $project->id, $old, $new);
+
+            if ($oldStatus !== $project->status) {
+                $this->notifications->notifyStatusChanged($project->fresh(), $oldStatus, $project->status, $user);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Project updated successfully!',
@@ -425,5 +482,383 @@ class ProjectController extends Controller
                 'message' => 'Failed to update project. Please try again.',
             ], 500);
         }
+    }
+
+    // ==================== Project Updates (progress/completed/pending/issues/next actions) ====================
+
+    public function storeUpdate(Request $request, $id)
+    {
+        $projectId = $this->resolveId($id);
+        $project = Project::findOrFail($projectId);
+
+        if ($error = $this->authorizeProjectAccess($project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'reported_progress_percentage' => 'nullable|integer|min:0|max:100',
+                'completed_work' => 'nullable|string',
+                'pending_work' => 'nullable|string',
+                'issues' => 'nullable|string',
+                'next_actions' => 'nullable|string',
+                'notes' => 'nullable|string',
+            ]);
+
+            $user = auth()->user();
+
+            DB::beginTransaction();
+            $update = ProjectUpdate::create(array_merge($validated, [
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+            ]));
+
+            if ($request->filled('reported_progress_percentage')) {
+                $project->progress_percentage = $validated['reported_progress_percentage'];
+                $project->progress_manual_override = true;
+                $project->save();
+            }
+            DB::commit();
+
+            $this->notifications->notifyProjectUpdated($project->fresh(), $update, $user);
+
+            return response()->json(['success' => true, 'message' => 'Update posted successfully.', 'data' => $update]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Failed to post update.'], 500);
+        }
+    }
+
+    /** Clears the manual-override flag and immediately re-syncs progress from tasks. */
+    public function resetProgress($id)
+    {
+        $projectId = $this->resolveId($id);
+        $project = Project::findOrFail($projectId);
+
+        if ($error = $this->authorizeProjectAccess($project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $project->progress_manual_override = false;
+            $project->save();
+
+            app(TaskProgressObserver::class)->applyTaskDerivedProgress($project);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Progress reset to task-derived calculation.',
+                'progress_percentage' => $project->fresh()->progress_percentage,
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to reset progress.'], 500);
+        }
+    }
+
+    // ==================== Comments ====================
+
+    public function storeComment(Request $request, $id)
+    {
+        $projectId = $this->resolveId($id);
+        $project = Project::findOrFail($projectId);
+
+        if ($error = $this->authorizeProjectAccess($project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $validated = $request->validate(['comment' => 'required|string|max:2000']);
+
+            $comment = ProjectComment::create([
+                'project_id' => $project->id,
+                'user_id' => auth()->id(),
+                'comment' => $validated['comment'],
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Comment added.', 'data' => $comment->load('author')]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to add comment.'], 500);
+        }
+    }
+
+    public function destroyComment($commentId)
+    {
+        try {
+            $comment = ProjectComment::findOrFail($commentId);
+            if (!$this->permissions->canManageOwnedResource(auth()->user(), (int) $comment->user_id)) {
+                return response()->json(['success' => false, 'message' => 'You can only delete your own comments.'], 403);
+            }
+            $comment->delete();
+            return response()->json(['success' => true, 'message' => 'Comment deleted.']);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to delete comment.'], 500);
+        }
+    }
+
+    // ==================== Attachments ====================
+
+    public function storeAttachment(Request $request, $id)
+    {
+        $projectId = $this->resolveId($id);
+        $project = Project::findOrFail($projectId);
+
+        if ($error = $this->authorizeProjectAccess($project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $request->validate(['file' => 'required|file|max:10240']);
+
+            $file = $request->file('file');
+            $relativeDir = 'uploads/projects/' . $project->id . '/attachments';
+            $fullDir = public_path($relativeDir);
+            if (!is_dir($fullDir)) {
+                mkdir($fullDir, 0755, true);
+            }
+            $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $file->move($fullDir, $filename);
+
+            $attachment = ProjectAttachment::create([
+                'project_id' => $project->id,
+                'user_id' => auth()->id(),
+                'file_path' => $relativeDir . '/' . $filename,
+                'original_filename' => $file->getClientOriginalName(),
+                'mime_type' => $file->getClientMimeType(),
+                'file_size' => $file->getSize(),
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'File uploaded.', 'data' => $attachment]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to upload file.'], 500);
+        }
+    }
+
+    public function destroyAttachment($attachmentId)
+    {
+        try {
+            $attachment = ProjectAttachment::findOrFail($attachmentId);
+            if (!$this->permissions->canManageOwnedResource(auth()->user(), (int) $attachment->user_id)) {
+                return response()->json(['success' => false, 'message' => 'You can only delete your own attachments.'], 403);
+            }
+
+            $fullPath = public_path($attachment->file_path);
+            if (file_exists($fullPath)) {
+                @unlink($fullPath);
+            }
+            $attachment->delete();
+
+            return response()->json(['success' => true, 'message' => 'Attachment deleted.']);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to delete attachment.'], 500);
+        }
+    }
+
+    // ==================== Milestones ====================
+
+    public function storeMilestone(Request $request, $id)
+    {
+        $projectId = $this->resolveId($id);
+        $project = Project::findOrFail($projectId);
+
+        if ($error = $this->authorizeProjectAccess($project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'due_date' => 'nullable|date',
+            ]);
+
+            $milestone = ProjectMilestone::create(array_merge($validated, [
+                'project_id' => $project->id,
+                'sort_order' => $project->milestones()->count(),
+            ]));
+
+            return response()->json(['success' => true, 'message' => 'Milestone added.', 'data' => $milestone]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to add milestone.'], 500);
+        }
+    }
+
+    public function updateMilestone(Request $request, $milestoneId)
+    {
+        $milestone = ProjectMilestone::findOrFail($milestoneId);
+
+        if ($error = $this->authorizeProjectAccess($milestone->project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'title' => 'sometimes|required|string|max:255',
+                'description' => 'nullable|string',
+                'due_date' => 'nullable|date',
+                'status' => 'sometimes|in:pending,completed',
+            ]);
+
+            $wasCompleted = $milestone->status === 'completed';
+            $milestone->fill($validated);
+
+            if (($validated['status'] ?? null) === 'completed' && !$wasCompleted) {
+                $milestone->completed_at = now();
+            } elseif (($validated['status'] ?? null) === 'pending') {
+                $milestone->completed_at = null;
+            }
+            $milestone->save();
+
+            if (!$wasCompleted && $milestone->status === 'completed') {
+                $this->notifications->notifyMilestoneCompleted($milestone->project, $milestone);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Milestone updated.']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to update milestone.'], 500);
+        }
+    }
+
+    public function destroyMilestone($milestoneId)
+    {
+        $milestone = ProjectMilestone::findOrFail($milestoneId);
+
+        if ($error = $this->authorizeProjectAccess($milestone->project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $milestone->delete();
+            return response()->json(['success' => true, 'message' => 'Milestone deleted.']);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to delete milestone.'], 500);
+        }
+    }
+
+    // ==================== Risks & Blockers ====================
+
+    public function storeRisk(Request $request, $id)
+    {
+        $projectId = $this->resolveId($id);
+        $project = Project::findOrFail($projectId);
+
+        if ($error = $this->authorizeProjectAccess($project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'type' => 'required|in:risk,blocker',
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'severity' => 'required|in:low,medium,high,critical',
+            ]);
+
+            $risk = ProjectRisk::create(array_merge($validated, [
+                'project_id' => $project->id,
+                'raised_by' => auth()->id(),
+                'raised_at' => now(),
+            ]));
+
+            $this->notifications->notifyRiskRaised($project, $risk);
+
+            return response()->json(['success' => true, 'message' => ucfirst($risk->type) . ' logged.', 'data' => $risk]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to log risk.'], 500);
+        }
+    }
+
+    public function updateRisk(Request $request, $riskId)
+    {
+        $risk = ProjectRisk::findOrFail($riskId);
+
+        if ($error = $this->authorizeProjectAccess($risk->project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $validated = $request->validate(['status' => 'required|in:open,mitigated,resolved,closed']);
+
+            $risk->status = $validated['status'];
+            if (in_array($validated['status'], ['resolved', 'closed']) && !$risk->resolved_at) {
+                $risk->resolved_at = now();
+            }
+            $risk->save();
+
+            return response()->json(['success' => true, 'message' => 'Risk status updated.']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to update risk.'], 500);
+        }
+    }
+
+    public function destroyRisk($riskId)
+    {
+        $risk = ProjectRisk::findOrFail($riskId);
+
+        if ($error = $this->authorizeProjectAccess($risk->project, 'edit')) {
+            return response()->json(['success' => false, 'message' => $error], 403);
+        }
+
+        try {
+            $risk->delete();
+            return response()->json(['success' => true, 'message' => 'Risk deleted.']);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to delete risk.'], 500);
+        }
+    }
+
+    // ==================== Shared helpers ====================
+
+    private function resolveId($id)
+    {
+        try {
+            return decrypt($id);
+        } catch (\Exception $e) {
+            return $id;
+        }
+    }
+
+    /**
+     * RBAC-backed, record-level check: 'company' scope (admin/hr) passes
+     * unconditionally; 'own'/'team' scope requires the user to be the
+     * project head or an active team member — mirrors AI\ProjectController's
+     * existing RbacService::scopeFor() pattern, the one place in the
+     * codebase that already enforced this correctly.
+     *
+     * Returns null when authorized, or a human-readable error message when
+     * not (callers turn that into a 403 JSON response) — a plain return
+     * value rather than abort()/throw so it composes cleanly with each
+     * caller's own try/catch around its business logic.
+     */
+    private function authorizeProjectAccess(Project $project, string $action): ?string
+    {
+        $user = auth()->user();
+        $scope = $this->rbac->scopeFor($user, 'projects', $action);
+
+        if ($scope === null) {
+            return 'You do not have permission to perform this action.';
+        }
+
+        if ($scope === 'company') {
+            return null;
+        }
+
+        $isMember = $project->project_head == $user->id
+            || $project->assigns()->where('user_id', $user->id)->where('status', 1)->exists();
+
+        return $isMember ? null : 'You do not have permission to perform this action on this project.';
     }
 }

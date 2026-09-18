@@ -6,7 +6,6 @@ namespace App\Services;
 use App\Models\OvertimeRequest;
 use App\Models\OvertimeSetting;
 use App\Models\User;
-use App\Models\UserJobDetail;
 use App\Notifications\OvertimeNotification;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -394,11 +393,8 @@ class OvertimeNotificationService
     {
         $recipients = collect();
 
-        // 1. Get Reporting Head
-        $reportingHead = $this->getReportingHead($employeeId);
-        if ($reportingHead) {
-            $recipients->push($reportingHead);
-        }
+        // 1. Get Reporting Heads
+        $recipients = $recipients->merge($this->getReportingHeads($employeeId));
 
         // 2. Get all HR users
         $hrUsers = $this->getUsersByRole('hr');
@@ -416,17 +412,11 @@ class OvertimeNotificationService
     }
 
     /**
-     * Get reporting head for an employee
+     * Get all reporting heads for an employee (multi reporting-head support).
      */
-    private function getReportingHead($employeeId)
+    private function getReportingHeads($employeeId)
     {
-        $jobDetail = UserJobDetail::where('user_id', $employeeId)->first();
-        
-        if (!$jobDetail || !$jobDetail->reporting_head) {
-            return null;
-        }
-
-        return User::find($jobDetail->reporting_head);
+        return User::find($employeeId)?->reportingHeads ?? collect();
     }
 
     /**

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\AI;
 
 use App\Http\Controllers\Controller;
 use App\Models\Task;
-use App\Models\UserJobDetail;
+use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,8 +59,8 @@ class TaskController extends Controller
                             ->orWhereHas('assignments', function ($subQ) use ($authUser) {
                                 $subQ->whereIn('assigned_to', function ($innerQ) use ($authUser) {
                                     $innerQ->select('user_id')
-                                        ->from('user_job_details')
-                                        ->where('reporting_head', $authUser->id);
+                                        ->from('user_reporting_heads')
+                                        ->where('reporting_head_id', $authUser->id);
                                 });
                             })
                             // Tasks assigned to manager themselves
@@ -87,8 +87,8 @@ class TaskController extends Controller
                         $query->whereHas('assignments', function ($q) use ($authUser) {
                             $q->whereIn('assigned_to', function ($innerQ) use ($authUser) {
                                 $innerQ->select('user_id')
-                                    ->from('user_job_details')
-                                    ->where('reporting_head', $authUser->id);
+                                    ->from('user_reporting_heads')
+                                    ->where('reporting_head_id', $authUser->id);
                             })->orWhere('assigned_to', $authUser->id);
                         });
                     } elseif ($customScope !== 'company') {
@@ -251,8 +251,8 @@ class TaskController extends Controller
 
         // Check if user is in manager's team and this task is assigned to team member
         if ($authUser->role === 'manager' && $assignee) {
-            $isInTeam = UserJobDetail::where('user_id', $assignee->id)
-                ->where('reporting_head', $authUser->id)
+            $isInTeam = User::managedBy($authUser->id)
+                ->where('id', $assignee->id)
                 ->exists();
 
             if ($isInTeam) {
@@ -333,8 +333,8 @@ class TaskController extends Controller
                         ->orWhereHas('assignments', function ($subQ) use ($authUser) {
                             $subQ->whereIn('assigned_to', function ($innerQ) use ($authUser) {
                                 $innerQ->select('user_id')
-                                    ->from('user_job_details')
-                                    ->where('reporting_head', $authUser->id);
+                                    ->from('user_reporting_heads')
+                                    ->where('reporting_head_id', $authUser->id);
                             });
                         })
                         ->orWhereHas('assignments', function ($subQ) use ($authUser) {

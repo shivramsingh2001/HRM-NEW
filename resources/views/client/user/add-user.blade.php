@@ -468,8 +468,8 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Gender <span class="required">*</span></label>
-                                    <select name="gender" class="form-control" required>
+                                    <label class="form-label">Gender</label>
+                                    <select name="gender" class="form-control">
                                         <option value="">Select Gender</option>
                                         <option value="m">Male</option>
                                         <option value="f">Female</option>
@@ -478,8 +478,8 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Date of Birth <span class="required">*</span></label>
-                                    <input type="date" class="form-control" name="dob" required>
+                                    <label class="form-label">Date of Birth</label>
+                                    <input type="date" class="form-control" name="dob">
                                 </div>
                             </div>
 
@@ -503,15 +503,15 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Father's Name <span class="required">*</span></label>
+                                    <label class="form-label">Father's Name</label>
                                     <input type="text" class="form-control" name="father_name"
-                                        placeholder="Father's name" required>
+                                        placeholder="Father's name">
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Mother's Name <span class="required">*</span></label>
+                                    <label class="form-label">Mother's Name</label>
                                     <input type="text" class="form-control" name="mother_name"
-                                        placeholder="Mother's name" required>
+                                        placeholder="Mother's name">
                                 </div>
                             </div>
                             <div class="form-row">
@@ -532,8 +532,8 @@
                                     <input type="text" class="form-control" name="passport_number"
                                         placeholder="Passport number">
                                 </div>
-                                <label class="form-label">Languages <span class="required">*</span></label>
-                                <select class="form-control select2" name="language[]" multiple required>
+                                <label class="form-label">Languages</label>
+                                <select class="form-control select2" name="language[]" multiple>
                                     @foreach ($languages as $language)
                                         <option value="{{ $language->id }}">{{ $language->name }}</option>
                                     @endforeach
@@ -576,13 +576,13 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Reporting Head <span class="required">*</span></label>
-                                    <select name="reporting_head" class="form-control" required>
-                                        <option value="">Select Reporting Head</option>
+                                    <label class="form-label">Reporting Head(s)</label>
+                                    <select name="reporting_head[]" class="form-control select2" multiple>
                                         @foreach ($employees as $employee)
                                             <option value="{{ $employee->id }}">{{ $employee->name }}</option>
                                         @endforeach
                                     </select>
+                                    <small class="form-text text-muted">First selected is treated as the primary reporting head.</small>
                                 </div>
 
                                 <div class="form-group">
@@ -605,12 +605,22 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Office Branch <span class="required">*</span></label>
+                                    <label class="form-label">Attendance Location <span class="required">*</span></label>
                                     <select name="branch" class="form-control" required>
-                                        <option value="">Select Branch</option>
-                                        <option value="0">All Branch</option>
+                                        <option value="">Select Attendance Location</option>
+                                        <option value="0">All Locations</option>
                                         @foreach ($branches as $branch)
                                             <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Branch</label>
+                                    <select name="company_branch" class="form-control">
+                                        <option value="">-- None --</option>
+                                        @foreach ($companyBranches ?? [] as $companyBranch)
+                                            <option value="{{ $companyBranch->id }}">{{ $companyBranch->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -764,29 +774,19 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Payroll Master <span class="required">*</span></label>
-                                    <select name="payroll_master_id" id="payroll_master_id" class="form-control"
-                                        required>
-                                        <option value="" selected disabled>Select Payroll Structure</option>
-                                        @foreach ($payrollMasters ?? [] as $master)
-                                            <option value="{{ $master->id }}" data-hra="{{ $master->hra }}"
-                                                data-conveyence="{{ $master->conveyence }}"
-                                                data-medical-allowance="{{ $master->medical_allowance }}"
-                                                data-children-allowance="{{ $master->children_allowance }}"
-                                                data-post-allowance="{{ $master->post_allowance }}"
-                                                data-leave-travel-allowance="{{ $master->leave_travel_allowance }}"
-                                                data-monthly-incentive="{{ $master->monthly_incentive }}"
-                                                data-provident-fund="{{ $master->provident_fund }}"
-                                                data-employer-provident-fund="{{ $master->employer_provident_fund }}"
-                                                data-esi="{{ $master->esi }}"
-                                                data-employer-esi="{{ $master->employer_esi }}"
-                                                data-pt="{{ $master->pt }}">
-                                                {{ $master->name }}
+                                    <label class="form-label">Payroll Structure</label>
+                                    <select name="payroll_structure_id" id="payroll_structure_id" class="form-control">
+                                        <option value="" selected>Select Payroll Structure (optional)</option>
+                                        @foreach ($payrollStructures ?? [] as $structure)
+                                            <option value="{{ $structure->id }}"
+                                                data-calc='{{ json_encode($structure->calculatorComponents()) }}'>
+                                                {{ $structure->name }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    <small class="text-muted">Select the payroll structure that defines allowance
-                                        percentages</small>
+                                    <small class="text-muted">Optional — used only to pre-fill the calculator below
+                                        from that structure's configured components. The figures saved are always
+                                        whatever is shown below.</small>
                                 </div>
                             </div>
 
@@ -1242,263 +1242,128 @@
 
             function calculateSalaryBreakdown() {
                 const annualCTC = parseFloat($('#annual_ctc').val()) || 0;
-                const payrollMasterId = $('#payroll_master_id').val();
 
-                console.log('========== PAYROLL CALCULATION START ==========');
-                console.log('Annual CTC:', annualCTC);
-                console.log('Payroll Master ID:', payrollMasterId);
+                if (annualCTC <= 0) {
+                    resetAllFields();
+                    return;
+                }
 
-                if (annualCTC > 0) {
-                    // Monthly CTC
-                    const monthlyCTC = annualCTC / 12;
-                    console.log('Monthly CTC:', monthlyCTC);
+                const selectedOption = $('#payroll_structure_id option:selected');
+                let calc = {};
+                try {
+                    calc = JSON.parse(selectedOption.attr('data-calc') || '{}');
+                } catch (e) {
+                    calc = {};
+                }
 
-                    let basic, hra, conveyence, medical, children, post, lta, incentive;
-                    let pfPercentage = 0,
-                        employerPfPercentage = 0,
-                        esiPercentage = 0,
-                        employerEsiPercentage = 0,
-                        ptAmount = 0;
+                const monthlyCTC = annualCTC / 12;
 
-                    if (payrollMasterId) {
-                        // Get selected payroll master data
-                        const selectedOption = $('#payroll_master_id option:selected');
+                // Which structure component code feeds which calculator field.
+                const ALLOWANCE_FIELDS = {
+                    hra: 'hra',
+                    conveyance: 'conveyence',
+                    medical_allowance: 'medical',
+                    children_allowance: 'children',
+                    post_allowance: 'post',
+                    leave_travel_allowance: 'lta',
+                    monthly_incentive: 'incentive'
+                };
 
-                        // Log all data attributes to see what's coming from the database
-                        console.log('Raw data attributes:');
-                        console.log('data-hra:', selectedOption.data('hra'));
-                        console.log('data-conveyence:', selectedOption.data('conveyence'));
-                        console.log('data-medical-allowance:', selectedOption.data('medical-allowance'));
-                        console.log('data-provident-fund:', selectedOption.data('provident-fund'));
-                        console.log('data-esi:', selectedOption.data('esi'));
-                        console.log('data-pt:', selectedOption.data('pt'));
+                let pctSum = 0;
+                let fixedSum = 0;
+                const pctByKey = {};
+                const fixedByKey = {};
+                let hasCustomAllowance = false;
 
-                        // Get percentages from master - use EXACT values from database
-                        const hraPercentage = parseFloat(selectedOption.data('hra')) || 0;
-                        const conveyencePercentage = parseFloat(selectedOption.data('conveyence')) || 0;
-                        const medicalPercentage = parseFloat(selectedOption.data('medical-allowance')) || 0;
-                        const childrenPercentage = parseFloat(selectedOption.data('children-allowance')) || 0;
-                        const postPercentage = parseFloat(selectedOption.data('post-allowance')) || 0;
-                        const ltaPercentage = parseFloat(selectedOption.data('leave-travel-allowance')) || 0;
-                        const incentivePercentage = parseFloat(selectedOption.data('monthly-incentive')) || 0;
-
-                        console.log('Parsed allowance percentages:', {
-                            hra: hraPercentage,
-                            conveyence: conveyencePercentage,
-                            medical: medicalPercentage,
-                            children: childrenPercentage,
-                            post: postPercentage,
-                            lta: ltaPercentage,
-                            incentive: incentivePercentage
-                        });
-
-                        // Get deduction percentages - use EXACT values from database
-                        pfPercentage = parseFloat(selectedOption.data('provident-fund'));
-                        employerPfPercentage = parseFloat(selectedOption.data('employer-provident-fund'));
-                        esiPercentage = parseFloat(selectedOption.data('esi'));
-                        employerEsiPercentage = parseFloat(selectedOption.data('employer-esi'));
-                        ptPercentage = parseFloat(selectedOption.data('pt'));
-
-                        console.log('Raw deduction values:', {
-                            pf: selectedOption.data('provident-fund'),
-                            employerPf: selectedOption.data('employer-provident-fund'),
-                            esi: selectedOption.data('esi'),
-                            employerEsi: selectedOption.data('employer-esi'),
-                            pt: selectedOption.data('pt')
-                        });
-
-                        // Handle cases where data attributes might be undefined or null
-                        pfPercentage = !isNaN(pfPercentage) ? pfPercentage : 0;
-                        employerPfPercentage = !isNaN(employerPfPercentage) ? employerPfPercentage : 0;
-                        esiPercentage = !isNaN(esiPercentage) ? esiPercentage : 0;
-                        employerEsiPercentage = !isNaN(employerEsiPercentage) ? employerEsiPercentage : 0;
-                        ptAmount = !isNaN(ptAmount) ? ptAmount : 0;
-
-                        console.log('Final deduction percentages (after parsing):', {
-                            pf: pfPercentage,
-                            employerPf: employerPfPercentage,
-                            esi: esiPercentage,
-                            employerEsi: employerEsiPercentage,
-                            pt: ptAmount
-                        });
-
-                        // Total allowance percentage
-                        const totalAllowancePercentage = hraPercentage + conveyencePercentage + medicalPercentage +
-                            childrenPercentage + postPercentage + ltaPercentage + incentivePercentage;
-
-                        console.log('Total allowance percentage:', totalAllowancePercentage);
-
-                        // Check if all allowances are zero
-                        if (totalAllowancePercentage === 0) {
-                            // If all allowances are 0, then 100% goes to basic salary
-                            basic = monthlyCTC;
-                            hra = 0;
-                            conveyence = 0;
-                            medical = 0;
-                            children = 0;
-                            post = 0;
-                            lta = 0;
-                            incentive = 0;
-
-                            console.log('All allowances are zero, setting 100% to basic:', basic);
-                        } else {
-                            // Calculate Basic (where Basic + (Basic * totalAllowancePercentage/100) = monthlyCTC)
-                            basic = monthlyCTC / (1 + (totalAllowancePercentage / 100));
-                            console.log('Calculated basic (with allowances):', basic);
-
-                            // Calculate all allowances as percentage of Basic
-                            hra = basic * (hraPercentage / 100);
-                            conveyence = basic * (conveyencePercentage / 100);
-                            medical = basic * (medicalPercentage / 100);
-                            children = basic * (childrenPercentage / 100);
-                            post = basic * (postPercentage / 100);
-                            lta = basic * (ltaPercentage / 100);
-                            incentive = basic * (incentivePercentage / 100);
-
-                            console.log('Calculated allowances:', {
-                                hra,
-                                conveyence,
-                                medical,
-                                children,
-                                post,
-                                lta,
-                                incentive
-                            });
-                        }
-                    } else {
-                        // No master selected - use standard calculation
-                        console.log('No payroll master selected, using standard calculation');
-                        basic = monthlyCTC * 0.5;
-                        hra = basic * 0.4;
-                        conveyence = 1600;
-                        medical = 1250;
-                        children = 0;
-                        post = 0;
-                        lta = 0;
-                        incentive = 0;
-
-                        // Standard deduction percentages when no master is selected
-                        pfPercentage = 12;
-                        employerPfPercentage = 12;
-                        esiPercentage = 1.75;
-                        employerEsiPercentage = 3.25;
-                        ptAmount = 200;
+                $.each(ALLOWANCE_FIELDS, function(code, key) {
+                    const entry = calc[code];
+                    if (entry && entry.type === 'percentage' && entry.base === 'basic') {
+                        pctByKey[key] = entry.value;
+                        pctSum += entry.value;
+                        hasCustomAllowance = true;
+                    } else if (entry && entry.type === 'fixed') {
+                        fixedByKey[key] = entry.value;
+                        fixedSum += entry.value;
+                        hasCustomAllowance = true;
                     }
+                });
 
-                    // Total allowances
-                    const totalAllowances = hra + conveyence + medical + children + post + lta + incentive;
-                    console.log('Total allowances:', totalAllowances);
+                let basic, hra, conveyence, medical, children, post, lta, incentive;
 
-                    // Gross salary (should equal monthlyCTC)
-                    const grossSalary = basic + totalAllowances;
-                    console.log('Gross salary:', grossSalary);
-                    console.log('Expected monthly CTC:', monthlyCTC);
-                    console.log('Difference:', Math.abs(grossSalary - monthlyCTC));
+                if (hasCustomAllowance) {
+                    // Solve for Basic where Basic + fixed allowances + (Basic * pctSum/100) = monthlyCTC
+                    basic = Math.max(0, (monthlyCTC - fixedSum) / (1 + (pctSum / 100)));
+                    hra = fixedByKey.hra !== undefined ? fixedByKey.hra : basic * ((pctByKey.hra || 0) / 100);
+                    conveyence = fixedByKey.conveyence !== undefined ? fixedByKey.conveyence : basic * ((pctByKey.conveyence || 0) / 100);
+                    medical = fixedByKey.medical !== undefined ? fixedByKey.medical : basic * ((pctByKey.medical || 0) / 100);
+                    children = fixedByKey.children !== undefined ? fixedByKey.children : basic * ((pctByKey.children || 0) / 100);
+                    post = fixedByKey.post !== undefined ? fixedByKey.post : basic * ((pctByKey.post || 0) / 100);
+                    lta = fixedByKey.lta !== undefined ? fixedByKey.lta : basic * ((pctByKey.lta || 0) / 100);
+                    incentive = fixedByKey.incentive !== undefined ? fixedByKey.incentive : basic * ((pctByKey.incentive || 0) / 100);
+                } else {
+                    // No Payroll Structure selected, or it has no allowance
+                    // components configured yet — standard starting split.
+                    basic = monthlyCTC * 0.5;
+                    hra = basic * 0.4;
+                    conveyence = 1600;
+                    medical = 1250;
+                    children = 0;
+                    post = 0;
+                    lta = 0;
+                    incentive = 0;
+                }
 
-                    // Calculate deductions - only if percentages are > 0
-                    let pfDeduction = 0;
-                    if (pfPercentage > 0) {
-                        pfDeduction = Math.min(basic * (pfPercentage / 100), 1800);
-                        console.log('Calculating PF:', basic, '*', pfPercentage, '% =', basic * (pfPercentage /
-                            100), 'capped at:', pfDeduction);
-                    } else {
-                        console.log('PF percentage is 0, skipping PF deduction');
+                const totalAllowances = hra + conveyence + medical + children + post + lta + incentive;
+                const grossSalary = basic + totalAllowances;
+
+                function percentageDeduction(entry, base, defaultPct, defaultCeiling, defaultRule) {
+                    let pct = defaultPct;
+                    let ceilingAmount = defaultCeiling;
+                    let rule = defaultRule;
+
+                    if (entry && entry.type === 'fixed') {
+                        return entry.value;
                     }
-
-                    let esiDeduction = 0;
-                    if (esiPercentage > 0 && grossSalary <= 21000) {
-                        esiDeduction = grossSalary * (esiPercentage / 100);
-                        console.log('Calculating ESI:', grossSalary, '*', esiPercentage, '% =', esiDeduction);
-                    } else {
-                        console.log('ESI condition not met:', {
-                            esiPercentage,
-                            grossSalary,
-                            condition: esiPercentage > 0 && grossSalary <= 21000
-                        });
+                    if (entry && entry.type === 'percentage') {
+                        pct = entry.value;
+                        ceilingAmount = entry.ceiling_amount != null ? entry.ceiling_amount : null;
+                        rule = entry.ceiling_rule || null;
                     }
-
-                    // Professional Tax (as percentage of gross salary)
-                    let professionalTax = 0;
-                    if (ptPercentage > 0) {
-                        professionalTax = grossSalary * (ptPercentage / 100);
-                        console.log('PT Calculation:', grossSalary, '*', ptPercentage, '% =', professionalTax);
+                    if (!pct || pct <= 0) {
+                        return 0;
                     }
-                    console.log('Professional Tax:', professionalTax);
-
-                    // Total deductions
-                    const totalDeductions = pfDeduction + esiDeduction + professionalTax;
-                    console.log('Total deductions:', totalDeductions);
-
-                    // Net salary
-                    const netSalary = grossSalary - totalDeductions;
-                    console.log('Net salary:', netSalary);
-
-                    // Employer contributions - only if percentages are > 0
-                    let employerPf = 0;
-                    if (employerPfPercentage > 0) {
-                        employerPf = Math.min(basic * (employerPfPercentage / 100), 1800);
-                        console.log('Employer PF:', employerPf);
+                    if (rule === 'ceiling_exclude' && ceilingAmount && base > ceilingAmount) {
+                        return 0;
                     }
+                    const effectiveBase = (rule === 'cap_base_before_percentage' && ceilingAmount)
+                        ? Math.min(base, ceilingAmount)
+                        : base;
 
-                    let employerEsi = 0;
-                    if (employerEsiPercentage > 0 && grossSalary <= 21000) {
-                        employerEsi = grossSalary * (employerEsiPercentage / 100);
-                        console.log('Employer ESI:', employerEsi);
-                    }
+                    return effectiveBase * (pct / 100);
+                }
 
-                    // Total monthly cost to company
-                    const totalMonthlyCost = grossSalary + employerPf + employerEsi;
-                    console.log('Total monthly cost:', totalMonthlyCost);
-                    console.log('========== PAYROLL CALCULATION END ==========');
+                const pfDeduction = percentageDeduction(calc.pf_employee, basic, 12, 15000, 'cap_base_before_percentage');
+                const employerPf = percentageDeduction(calc.pf_employer, basic, 12, 15000, 'cap_base_before_percentage');
+                const esiDeduction = percentageDeduction(calc.esi_employee, grossSalary, 1.75, 21000, 'ceiling_exclude');
+                const employerEsi = percentageDeduction(calc.esi_employer, grossSalary, 3.25, 21000, 'ceiling_exclude');
 
-                    // Update both monthly and yearly views
-                    updateDisplayFields({
-                        // Monthly values
-                        monthly: {
-                            basic: basic,
-                            hra: hra,
-                            conveyence: conveyence,
-                            medical: medical,
-                            children: children,
-                            post: post,
-                            lta: lta,
-                            incentive: incentive,
-                            totalAllowances: totalAllowances,
-                            gross: grossSalary,
-                            pf: pfDeduction,
-                            esi: esiDeduction,
-                            pt: professionalTax,
-                            totalDeductions: totalDeductions,
-                            net: netSalary,
-                            employerPf: employerPf,
-                            employerEsi: employerEsi,
-                            totalMonthlyCost: totalMonthlyCost
-                        },
-                        // Yearly values (monthly × 12)
-                        yearly: {
-                            basic: basic * 12,
-                            hra: hra * 12,
-                            conveyence: conveyence * 12,
-                            medical: medical * 12,
-                            children: children * 12,
-                            post: post * 12,
-                            lta: lta * 12,
-                            incentive: incentive * 12,
-                            totalAllowances: totalAllowances * 12,
-                            gross: grossSalary * 12,
-                            pf: pfDeduction * 12,
-                            esi: esiDeduction * 12,
-                            pt: professionalTax * 12,
-                            totalDeductions: totalDeductions * 12,
-                            net: netSalary * 12,
-                            employerPf: employerPf * 12,
-                            employerEsi: employerEsi * 12,
-                            totalCTCCost: totalMonthlyCost * 12
-                        }
-                    });
+                let professionalTax;
+                if (calc.pt && calc.pt.type === 'fixed') {
+                    professionalTax = calc.pt.value;
+                } else if (calc.pt && calc.pt.type === 'percentage') {
+                    professionalTax = grossSalary * (calc.pt.value / 100);
+                } else {
+                    professionalTax = 200;
+                }
 
-                    // Set hidden fields (store monthly values in DB)
-                    setHiddenFields({
+                const totalDeductions = pfDeduction + esiDeduction + professionalTax;
+                const netSalary = grossSalary - totalDeductions;
+                const totalMonthlyCost = grossSalary + employerPf + employerEsi;
+
+                // Update both monthly and yearly views
+                updateDisplayFields({
+                    // Monthly values
+                    monthly: {
                         basic: basic,
                         hra: hra,
                         conveyence: conveyence,
@@ -1507,18 +1372,58 @@
                         post: post,
                         lta: lta,
                         incentive: incentive,
+                        totalAllowances: totalAllowances,
                         gross: grossSalary,
                         pf: pfDeduction,
                         esi: esiDeduction,
                         pt: professionalTax,
+                        totalDeductions: totalDeductions,
                         net: netSalary,
                         employerPf: employerPf,
-                        employerEsi: employerEsi
-                    });
-                } else {
-                    console.log('Annual CTC is 0, resetting fields');
-                    resetAllFields();
-                }
+                        employerEsi: employerEsi,
+                        totalMonthlyCost: totalMonthlyCost
+                    },
+                    // Yearly values (monthly × 12)
+                    yearly: {
+                        basic: basic * 12,
+                        hra: hra * 12,
+                        conveyence: conveyence * 12,
+                        medical: medical * 12,
+                        children: children * 12,
+                        post: post * 12,
+                        lta: lta * 12,
+                        incentive: incentive * 12,
+                        totalAllowances: totalAllowances * 12,
+                        gross: grossSalary * 12,
+                        pf: pfDeduction * 12,
+                        esi: esiDeduction * 12,
+                        pt: professionalTax * 12,
+                        totalDeductions: totalDeductions * 12,
+                        net: netSalary * 12,
+                        employerPf: employerPf * 12,
+                        employerEsi: employerEsi * 12,
+                        totalCTCCost: totalMonthlyCost * 12
+                    }
+                });
+
+                // Set hidden fields (store monthly values in DB)
+                setHiddenFields({
+                    basic: basic,
+                    hra: hra,
+                    conveyence: conveyence,
+                    medical: medical,
+                    children: children,
+                    post: post,
+                    lta: lta,
+                    incentive: incentive,
+                    gross: grossSalary,
+                    pf: pfDeduction,
+                    esi: esiDeduction,
+                    pt: professionalTax,
+                    net: netSalary,
+                    employerPf: employerPf,
+                    employerEsi: employerEsi
+                });
             }
             /**
              * Update display fields with calculated values (both monthly and yearly)
@@ -1658,8 +1563,8 @@
                 calculateSalaryBreakdown();
             });
 
-            // Calculate when Payroll Master changes
-            $('#payroll_master_id').change(function() {
+            // Calculate when Payroll Structure changes
+            $('#payroll_structure_id').change(function() {
                 calculateSalaryBreakdown();
             });
 
@@ -1819,43 +1724,17 @@
                 }
             }
 
-            // Step 2 validation
+            // Step 2 validation (Personal Information is optional — only
+            // validate the format of whatever was actually filled in)
             if (step === 2) {
-                const gender = currentStepElement.find('select[name="gender"]');
-                if (!gender.val()) {
-                    showError(gender, 'Please select gender');
-                    isValid = false;
-                }
-
                 const dob = currentStepElement.find('input[name="dob"]');
-                if (!dob.val()) {
-                    showError(dob, 'Date of birth is required');
-                    isValid = false;
-                } else {
+                if (dob.val()) {
                     const selectedDate = new Date(dob.val());
                     const today = new Date();
                     if (selectedDate > today) {
                         showError(dob, 'Date of birth cannot be in the future');
                         isValid = false;
                     }
-                }
-
-                const fatherName = currentStepElement.find('input[name="father_name"]');
-                if (!fatherName.val().trim()) {
-                    showError(fatherName, 'Father\'s name is required');
-                    isValid = false;
-                }
-
-                const motherName = currentStepElement.find('input[name="mother_name"]');
-                if (!motherName.val().trim()) {
-                    showError(motherName, 'Mother\'s name is required');
-                    isValid = false;
-                }
-
-                const languages = currentStepElement.find('select[name="language[]"]');
-                if (!languages.val() || languages.val().length === 0) {
-                    showError(languages, 'Please select at least one language');
-                    isValid = false;
                 }
             }
 
@@ -1911,14 +1790,9 @@
                 }
             }
 
-            // Step 6 validation (Payroll)
+            // Step 6 validation (Payroll) — Payroll Structure is optional,
+            // only used to pre-fill the calculator.
             if (step === 6) {
-                const payrollMaster = currentStepElement.find('select[name="payroll_master_id"]');
-                if (!payrollMaster.val()) {
-                    showError(payrollMaster, 'Please select a payroll master');
-                    isValid = false;
-                }
-
                 const annualCTC = currentStepElement.find('input[name="annual_ctc"]');
                 if (!annualCTC.val()) {
                     showError(annualCTC, 'Annual CTC is required');
@@ -2129,10 +2003,11 @@
             if (data.job) {
                 $('select[name="department"]').val(data.job.department);
                 $('select[name="designation"]').val(data.job.designation);
-                $('select[name="reporting_head"]').val(data.job.reporting_head);
+                $('select[name="reporting_head[]"]').val(data.job.reporting_head_ids || []).trigger('change');
                 $('select[name="employment_type"]').val(data.job.employment_type);
                 $('select[name="type"]').val(data.job.type);
                 $('select[name="branch"]').val(data.job.office_branch);
+                $('select[name="company_branch"]').val(data.job.branch_id || '');
                 $('input[name="joining_date"]').val(data.job.joining_date);
                 // $('select[name="status"]').val(data.job.status);
             }
@@ -2195,7 +2070,7 @@
 
             // Populate step 6 (Payroll)
             if (data.payroll) {
-                $('select[name="payroll_master_id"]').val(data.payroll.payroll_master_id);
+                $('select[name="payroll_structure_id"]').val(data.payroll.payroll_structure_id);
                 $('input[name="annual_ctc"]').val(data.payroll.annual_ctc);
                 $('input[name="salary_effective_date"]').val(data.payroll.effective_from || data.payroll.effective_date);
 

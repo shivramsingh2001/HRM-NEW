@@ -356,11 +356,11 @@
 <div class="page-header">
     <div class="page-header-left d-flex align-items-center">
         <div class="page-header-title">
-            <h5 class="m-b-10">Branch Wise Report</h5>
+            <h5 class="m-b-10">Attendance Location Wise Report</h5>
         </div>
         <ul class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('report.attendance.branch-wise') }}">Branch Wise Report</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('report.attendance.branch-wise') }}">Attendance Location Wise Report</a></li>
             <li class="breadcrumb-item active">{{ $branch->name }}</li>
         </ul>
     </div>

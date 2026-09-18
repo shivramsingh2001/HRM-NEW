@@ -52,18 +52,8 @@
                                 class="feather-chevron-right"></i></span>
                     </a>
                     <ul class="nxl-submenu">
-                        @if (in_array($role, ['admin', 'hr']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('leave-type.index') }}">
-                                    Leave Type</a>
-                            </li>
-                        @endif
                         @if (!in_array($role, ['admin']))
                             <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.view') }}">View
-                                    Leave</a>
-                            </li>
-                        @endif
-                        @if (in_array($role, ['admin', 'manager']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.view-all') }}">Team
                                     Leave</a>
                             </li>
                         @endif
@@ -80,49 +70,36 @@
                     </ul>
                 </li>
 
-                <li class="nxl-item nxl-hasmenu">
-                    <a href="#" class="nxl-link">
-                        <span class="nxl-micon"><i class="feather-edit-3"></i></span>
-                        <span class="nxl-mtext">Regularization</span><span class="nxl-arrow"><i
-                                class="feather-chevron-right"></i></span>
-                    </a>
-                    <ul class="nxl-submenu">
-                        @if (!in_array($role, ['admin']))
+                @if (!in_array($role, ['admin']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-edit-3"></i></span>
+                            <span class="nxl-mtext">Regularization</span><span class="nxl-arrow"><i
+                                    class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
                             <li class="nxl-item"><a class="nxl-link"
                                     href="{{ route('attendance-regularization.index') }}">
                                     Regularization</a>
                             </li>
-                        @endif
+                        </ul>
+                    </li>
+                @endif
 
-                        @if (in_array($role, ['admin', 'manager']))
-                            <li class="nxl-item"><a class="nxl-link"
-                                    href="{{ route('attendance-regularization.manage') }}">
-                                    Team Regularization</a>
-                            </li>
-                        @endif
-                    </ul>
-                </li>
-
-                <li class="nxl-item nxl-hasmenu">
-                    <a href="#" class="nxl-link">
-                        <span class="nxl-micon"><i class="feather-check-square"></i></span>
-                        <span class="nxl-mtext">Task</span><span class="nxl-arrow"><i
-                                class="feather-chevron-right"></i></span>
-                    </a>
-                    <ul class="nxl-submenu">
-
-                        @if (in_array($role, ['admin', 'manager', 'hr']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('task.assigned-by-me') }}">
-                                    Assigned By me Task</a>
-                            </li>
-                        @endif
-                        @if (!in_array($role, ['admin']))
+                @if (!in_array($role, ['admin']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-check-square"></i></span>
+                            <span class="nxl-mtext">Task</span><span class="nxl-arrow"><i
+                                    class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
                             <li class="nxl-item"><a class="nxl-link" href="{{ route('task.assigned-to-me') }}">
                                     Assigned To me Task </a>
                             </li>
-                        @endif
-                    </ul>
-                </li>
+                        </ul>
+                    </li>
+                @endif
                 <li class="nxl-item nxl-hasmenu">
                     <a href="#" class="nxl-link">
                         <span class="nxl-micon"><i class="feather-volume-2"></i></span>
@@ -152,56 +129,38 @@
                 @endif
 
                 {{-- ==================== Tier 2: Frequent self-service ==================== --}}
-                <li class="nxl-item nxl-hasmenu">
-                    <a href="#" class="nxl-link">
+                @if (!in_array($role, ['admin']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
 
-                        <span class="nxl-micon"><i class="feather-watch"></i></span>
-                        <span class="nxl-mtext">Overtime</span><span class="nxl-arrow"><i
-                                class="feather-chevron-right"></i></span>
-                    </a>
-                    <ul class="nxl-submenu">
-                        @if (in_array($role, ['admin', 'hr']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('overtime.settings') }}">
-                                    Overtime Settings</a>
+                            <span class="nxl-micon"><i class="feather-watch"></i></span>
+                            <span class="nxl-mtext">Overtime</span><span class="nxl-arrow"><i
+                                    class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
+                            <li class="nxl-item"><a class="nxl-link" href="{{ route('overtime.index') }}">
+                                    Overtime</a>
                             </li>
-                        @endif
-                        @if (!in_array($role, ['admin']))
-                        <li class="nxl-item"><a class="nxl-link" href="{{ route('overtime.index') }}">
-                                Overtime</a>
-                        </li>
-                        @endif
-                         @if (in_array($role, ['admin', 'hr' ,'manager']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('overtime.view-all') }}">
-                                    Team Overtime</a>
-                            </li>
-                        @endif
+                        </ul>
+                    </li>
+                @endif
 
-                    </ul>
-                </li>
-
-                <li class="nxl-item nxl-hasmenu">
-                    <a href="#" class="nxl-link">
-                        <span class="nxl-micon"><i class="feather-send"></i></span>
-                        <span class="nxl-mtext">Travel & WFH</span>
-                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
-                    </a>
-                    <ul class="nxl-submenu">
-                        @if (!in_array($role, ['admin']))
+                @if (!in_array($role, ['admin']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-send"></i></span>
+                            <span class="nxl-mtext">Travel & WFH</span>
+                            <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
                             <li class="nxl-item">
                                 <a class="nxl-link" href="{{ route('requests.index') }}">
                                     My Requests
                                 </a>
                             </li>
-                        @endif
-                        @if (in_array($role, ['admin', 'manager', 'hr']))
-                            <li class="nxl-item">
-                                <a class="nxl-link" href="{{ route('manager.requests') }}">
-                                    Team Requests
-                                </a>
-                            </li>
-                        @endif
-                    </ul>
-                </li>
+                        </ul>
+                    </li>
+                @endif
 
                 @if (in_array($role, ['hr', 'employee', 'manager']))
                     <li class="nxl-item">
@@ -209,6 +168,68 @@
                             <span class="nxl-micon"><i class="feather-file-text"></i></span>
                             <span class="nxl-mtext">Salary Slips</span><span class="nxl-arrow"></span>
                         </a>
+                    </li>
+                @endif
+
+                {{-- ==================== Approval Requests (consolidated) ==================== --}}
+                @if (in_array($role, ['admin', 'hr', 'manager']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-check-circle"></i></span>
+                            <span class="nxl-mtext">Approval Requests</span><span class="nxl-arrow"><i
+                                    class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
+                            @if (in_array($role, ['admin', 'manager']))
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.view-all') }}">
+                                        Leave</a>
+                                </li>
+                            @endif
+                            @if (in_array($role, ['admin', 'manager']))
+                                <li class="nxl-item"><a class="nxl-link"
+                                        href="{{ route('attendance-regularization.manage') }}">
+                                        Regularization</a>
+                                </li>
+                            @endif
+                            @if (in_array($role, ['admin', 'manager', 'hr']))
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('manager.requests') }}">
+                                        WFH & Travel</a>
+                                </li>
+                            @endif
+                            @if (in_array($role, ['admin', 'hr']))
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('expense.view-all') }}">
+                                        Expense</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('expense.payments.index') }}">
+                                        Expense Payment</a>
+                                </li>
+                            @endif
+                            @if (in_array($role, ['hr', 'admin']))
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('loan.approvals.pending') }}">
+                                        Loan Requests</a>
+                                </li>
+                            @endif
+                            @if (in_array($role, ['admin', 'hr', 'manager']))
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('overtime.view-all') }}">
+                                        Overtime</a>
+                                </li>
+                            @endif
+                            @if (in_array($role, ['admin', 'manager', 'hr']))
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('task.assigned-by-me') }}">
+                                        Tasks</a>
+                                </li>
+                            @endif
+                            @if (in_array($role, ['admin', 'hr']))
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.index') }}">
+                                        Offboarding</a>
+                                </li>
+                            @endif
+                            @if (in_array($role, ['manager']))
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.manager') }}">
+                                        Offboarding</a>
+                                </li>
+                            @endif
+                        </ul>
                     </li>
                 @endif
 
@@ -271,64 +292,37 @@
                 </li>
 
                 {{-- ==================== Tier 4: Financial requests ==================== --}}
-                <li class="nxl-item nxl-hasmenu">
-                    <a href="#" class="nxl-link">
-                        <span class="nxl-micon"><i class="feather-credit-card"></i></span>
-                        <span class="nxl-mtext">Expense</span><span class="nxl-arrow"><i
-                                class="feather-chevron-right"></i></span>
-                    </a>
-                    <ul class="nxl-submenu">
-                        @if (in_array($role, ['admin', 'hr']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('expense-type.index') }}">
-                                    Type</a>
-                            </li>
-                        @endif
-                        @if (!in_array($role, ['admin']))
+                @if (!in_array($role, ['admin']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-credit-card"></i></span>
+                            <span class="nxl-mtext">Expense</span><span class="nxl-arrow"><i
+                                    class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
                             <li class="nxl-item"><a class="nxl-link" href="{{ route('expense.index') }}">
                                     Expense</a>
                             </li>
-                        @endif
-                        @if (in_array($role, ['admin', 'hr']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('expense.view-all') }}">
-                                    Team Expense</a>
-                            </li>
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('expense.payments.index') }}">
-                                    Payment</a>
-                            </li>
-                        @endif
-                    </ul>
-                </li>
+                        </ul>
+                    </li>
+                @endif
 
-                <li class="nxl-item nxl-hasmenu">
-                    <a href="#" class="nxl-link">
-                        <span class="nxl-micon"><i class="feather-repeat"></i></span>
-                        <span class="nxl-mtext">Loan</span>
-                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
-                    </a>
-                    <ul class="nxl-submenu">
-                        @if (in_array($role, ['admin','hr']))
-                            <li class="nxl-item">
-                                <a class="nxl-link" href="{{ route('loan.categories.index') }}">
-                                    Loan Category
-                                </a>
-                            </li>
-                        @endif
-                        @if (in_array($role, ['hr','manager','employee']))
+                @if (in_array($role, ['hr','manager','employee']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-repeat"></i></span>
+                            <span class="nxl-mtext">Loan</span>
+                            <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
                             <li class="nxl-item">
                                 <a class="nxl-link" href="{{ route('loan.requests.index') }}">
                                    My Request
                                 </a>
                             </li>
-                        @endif
-                        @if (in_array($role, ['hr','admin']))
-                            <li class="nxl-item">
-                                <a class="nxl-link" href="{{ route('loan.approvals.pending') }}">
-                                   All Request
-                                </a>
-                            </li>
-                        @endif
-                    </ul>
-                </li>
+                        </ul>
+                    </li>
+                @endif
 
                 {{-- ==================== Tier 5: Payroll administration ==================== --}}
                 @feature('payroll')
@@ -342,12 +336,6 @@
                         </a>
                         <ul class="nxl-submenu">
 
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('payroll-masters.index') }}">
-                                    Payroll Master</a>
-                            </li>
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('employee-payrolls.index') }}">
-                                    Payroll Employee</a>
-                            </li>
                             <li class="nxl-item"><a class="nxl-link" href="{{ route('monthly-payrolls.index') }}">
                                     Payroll Monthly</a>
                             </li>
@@ -386,9 +374,6 @@
                                     class="feather-chevron-right"></i></span>
                         </a>
                         <ul class="nxl-submenu">
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('employee.create') }}">Add
-                                    Employee</a>
-                            </li>
                             <li class="nxl-item"><a class="nxl-link" href="{{ route('employee.index') }}">View
                                     Employee</a>
                             </li>
@@ -396,30 +381,20 @@
                     </li>
                 @endif
 
-                <li class="nxl-item nxl-hasmenu">
-                    <a href="#" class="nxl-link">
-                        <span class="nxl-micon"><i class="feather-user-minus"></i></span>
-                        <span class="nxl-mtext">Off Boarding</span><span class="nxl-arrow"><i
-                                class="feather-chevron-right"></i></span>
-                    </a>
-                    <ul class="nxl-submenu">
-                        @if (in_array($role, ['admin', 'hr']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.index') }}">
-                                    All Off boarding</a>
-                            </li>
-                        @endif
-                        @if (in_array($role, ['manager']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.manager') }}">
-                                    Team Off Boarding</a>
-                            </li>
-                        @endif
-                        @if (in_array($role, ['manager', 'employee']))
+                @if (in_array($role, ['manager', 'employee']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-user-minus"></i></span>
+                            <span class="nxl-mtext">Off Boarding</span><span class="nxl-arrow"><i
+                                    class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
                             <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.employee') }}">
                                     My Request</a>
                             </li>
-                        @endif
-                    </ul>
-                </li>
+                        </ul>
+                    </li>
+                @endif
 
                 @if (in_array($role, ['admin', 'hr']))
                     <li class="nxl-item nxl-hasmenu">
@@ -445,26 +420,64 @@
                 @endif
 
                 {{-- ==================== Tier 7: Reference & one-time setup ==================== --}}
-                <li class="nxl-item nxl-hasmenu">
-                    <a href="#" class="nxl-link">
-                        <span class="nxl-micon"><i class="feather-briefcase"></i></span>
-                        <span class="nxl-mtext">Company</span><span class="nxl-arrow"><i
-                                class="feather-chevron-right"></i></span>
+                <li class="nxl-item">
+                    <a href="{{ route('holiday.index') }}" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-sun"></i></span>
+                        <span class="nxl-mtext">Holidays</span><span class="nxl-arrow"></span>
                     </a>
-                    <ul class="nxl-submenu">
-                        <li class="nxl-item"><a class="nxl-link" href="{{ route('holiday.index') }}">
-                                Holidays</a>
-                        </li>
-                        @if (in_array($role, ['admin', 'hr']))
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('report.attendance.index') }}">
-                                    Reports</a>
-                            </li>
-                        @endif
-                        <li class="nxl-item"><a class="nxl-link" href="{{ route('project.index') }}">
-                                Projects</a>
-                        </li>
-                    </ul>
                 </li>
+
+                @if (in_array($role, ['admin', 'hr']))
+                    <li class="nxl-item">
+                        <a href="{{ route('report.attendance.index') }}" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-bar-chart-2"></i></span>
+                            <span class="nxl-mtext">Reports</span><span class="nxl-arrow"></span>
+                        </a>
+                    </li>
+                @endif
+
+                <li class="nxl-item">
+                    <a href="{{ route('project.index') }}" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-folder"></i></span>
+                        <span class="nxl-mtext">Projects</span><span class="nxl-arrow"></span>
+                    </a>
+                </li>
+
+                @if (in_array($role, ['admin', 'hr']))
+                    <li class="nxl-item nxl-hasmenu">
+                        <a href="#" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-briefcase"></i></span>
+                            <span class="nxl-mtext">Company</span><span class="nxl-arrow"><i
+                                    class="feather-chevron-right"></i></span>
+                        </a>
+                        <ul class="nxl-submenu">
+                            <li class="nxl-item"><a class="nxl-link" href="{{ route('branch.index') }}">
+                                    Branch</a>
+                            </li>
+                            <li class="nxl-item"><a class="nxl-link" href="{{ route('leave-type.index') }}">
+                                    Leave Types</a>
+                            </li>
+                            <li class="nxl-item"><a class="nxl-link" href="{{ route('expense-type.index') }}">
+                                    Expense Types</a>
+                            </li>
+                            <li class="nxl-item"><a class="nxl-link" href="{{ route('loan.categories.index') }}">
+                                    Loan Categories</a>
+                            </li>
+                            <li class="nxl-item"><a class="nxl-link" href="{{ route('overtime.settings') }}">
+                                    Overtime Settings</a>
+                            </li>
+                        </ul>
+                    </li>
+                @endif
+
+                @if (in_array($role, ['admin']))
+                    <li class="nxl-item">
+                        <a href="{{ route('job-openings.index') }}" class="nxl-link">
+                            <span class="nxl-micon"><i class="feather-user-check"></i></span>
+                            <span class="nxl-mtext">Hiring</span><span class="nxl-arrow"></span>
+                        </a>
+                    </li>
+                @endif
 
                 @if (in_array($role, ['admin', 'hr']))
                     <li class="nxl-item nxl-hasmenu">
@@ -480,14 +493,9 @@
                             <li class="nxl-item"><a class="nxl-link" href="{{ route('designation.index') }}">
                                     Designation</a>
                             </li>
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('branch.index') }}">
-                                    Branch</a>
+                            <li class="nxl-item"><a class="nxl-link" href="{{ route('attendance-location.index') }}">
+                                    Attendance Locations</a>
                             </li>
-                            @if (in_array($role, ['admin']))
-                                <li class="nxl-item"><a class="nxl-link" href="{{ route('job-openings.index') }}">
-                                        Hiring</a>
-                                </li>
-                            @endif
                             @if (optional($currentTenant)->field_tracking_enabled)
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('settings.field-tracking.index') }}">
                                         Field Tracking</a>

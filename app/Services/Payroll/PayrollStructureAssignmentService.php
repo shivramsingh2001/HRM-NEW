@@ -298,6 +298,7 @@ class PayrollStructureAssignmentService
 
         return array_merge($values, [
             'payroll_code' => null,
+            'payroll_structure_id' => $structure->payroll_structure_id,
             'effective_from' => optional($structure->effective_from)->format('Y-m-d'),
             'effective_to' => optional($structure->effective_to)->format('Y-m-d'),
             'is_current' => $structure->is_current,

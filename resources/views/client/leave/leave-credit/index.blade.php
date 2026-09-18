@@ -331,6 +331,23 @@
             color: #475569;
         }
 
+        /* ==================== EMPLOYEE COLUMN (table) ====================
+           Matches Monthly Payroll's own employee column exactly — gradient
+           initials avatar overriding the shared .employee-avatar class,
+           which is otherwise styled for an <img>, not a text div. */
+        .employee-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
         /* ==================== ACTION BUTTONS ==================== */
         .action-btn {
             width: 32px;
@@ -893,17 +910,12 @@
                                         <tr>
                                             <td>
                                                 <div class="employee-info">
-                                                    <div class="avatar-md me-2">
-                                                        <span
-                                                            class="avatar-title {{ $hasBalance ? 'bg-soft-success' : 'bg-soft-warning' }} rounded-circle">
-                                                            {{ strtoupper(substr($user->name, 0, 2)) }}
-                                                        </span>
+                                                    <div class="employee-avatar">
+                                                        {{ strtoupper(substr($user->name, 0, 2)) }}
                                                     </div>
                                                     <div class="employee-details">
-                                                        <div class="employee-name">{{ $user->name ?? 'N/A' }}
-                                                            <small class="text-muted employee-email">({{ $user->employee_id ?? 'N/A' }})</small>
-                                                        </div>
-                                                        <div class="employee-email">{{ $user->email ?? '' }}</div>
+                                                        <div class="employee-name">{{ $user->name ?? 'N/A' }} <small class="text-muted">({{ $user->employee_id ?? 'N/A' }})</small></div>
+                                                        <div class="employee-id">{{ $user->email ?? '' }}</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -920,18 +932,18 @@
                                                 <span class="badge {{ $balanceClass }}"
                                                     style="font-size: 12px; padding: 6px 12px;">
                                                     <i
-                                                        class="fas {{ $balance > 0 ? 'fa-arrow-up' : 'fa-minus' }} me-1"></i>
+                                                        class="feather-{{ $balance > 0 ? 'arrow-up' : 'minus' }} me-1"></i>
                                                     {{ number_format($balance, 2) }} days
                                                 </span>
                                             </td>
                                             <td>
                                                 @if ($hasBalance)
                                                     <span class="badge bg-success">
-                                                        <i class="fas fa-check-circle me-1"></i> Active
+                                                        <i class="feather-check-circle me-1"></i> Active
                                                     </span>
                                                 @else
                                                     <span class="badge bg-warning">
-                                                        <i class="fas fa-exclamation-triangle me-1"></i> No Balance
+                                                        <i class="feather-alert-triangle me-1"></i> No Balance
                                                     </span>
                                                 @endif
                                             </td>

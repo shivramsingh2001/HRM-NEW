@@ -40,13 +40,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: var(--primary-mid);
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary-mid);
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -86,7 +86,7 @@
         }
 
         .filter-control:focus {
-            border-color: #4f46e5;
+            border-color: var(--primary-mid);
             outline: none;
             background: white;
         }
@@ -102,13 +102,13 @@
         }
 
         .btn-filter {
-            background: #4f46e5;
+            background: var(--primary-mid);
             color: white;
             border: none;
         }
 
         .btn-filter:hover {
-            background: #4338ca;
+            background: var(--primary-dark);
         }
 
         .btn-reset {
@@ -159,7 +159,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: var(--primary-mid);
             font-size: 12px;
         }
 
@@ -176,9 +176,9 @@
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: var(--primary-light);
+            border-color: var(--primary-mid);
+            color: var(--primary-mid);
             font-weight: 600;
             text-decoration: none;
         }
@@ -194,7 +194,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: #4f46e5;
+            background: var(--primary-mid);
             color: white;
             display: flex;
             align-items: center;
@@ -245,7 +245,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #4f46e5;
+            background: var(--primary-mid);
             color: white;
             border-radius: 50%;
             display: inline-flex;
@@ -277,8 +277,8 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary-mid);
         }
 
         /* Table Styles */
@@ -330,28 +330,30 @@
             color: #92400e;
         }
 
-        /* Action Buttons */
+        /* Action Buttons — icon-only, matches Loan Management's .action-btn pattern */
         .action-btns {
             display: flex;
             gap: 6px;
+            justify-content: center;
         }
 
         .action-btn {
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            border: none;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border-radius: 8px;
+            font-size: 13px;
+            border: 1px solid transparent;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            justify-content: center;
         }
 
         .btn-approve {
-            background: #d1fae5;
-            color: #065f46;
+            background: var(--success-light);
+            color: var(--success);
         }
 
         .btn-approve:hover {
@@ -360,8 +362,8 @@
         }
 
         .btn-reject {
-            background: #fee2e2;
-            color: #991b1b;
+            background: var(--danger-light);
+            color: var(--danger);
         }
 
         .btn-reject:hover {
@@ -370,8 +372,8 @@
         }
 
         .btn-view {
-            background: #e0e7ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary-mid);
         }
 
         .btn-view:hover {
@@ -752,17 +754,7 @@
                                     </td>
                                     <td>{{ \Carbon\Carbon::parse($request->created_at)->format('d M Y') }}</td>
                                     <td>
-                                        @php
-                                            $statusClass = match ($request->status) {
-                                                'pending' => 'badge-pending',
-                                                'approved' => 'badge-approved',
-                                                'rejected' => 'badge-rejected',
-                                                default => 'badge-secondary',
-                                            };
-                                        @endphp
-                                        <span class="badge {{ $statusClass }}">
-                                            {{ ucfirst($request->status) }}
-                                        </span>
+                                        <x-ui.status-badge :status="$request->status" />
                                         @if ($request->status == 'approved' && $request->approved_hours && $request->approved_hours != $request->overtime_hours)
                                             <div class="small text-muted mt-1">
                                                 ({{ number_format($request->approved_hours, 1) }} hrs approved)
@@ -771,16 +763,16 @@
                                     </td>
                                     <td>
                                         <div class="action-btns">
-                                            <button class="action-btn btn-view" onclick="viewRequest({{ $request->id }})" title="View Details">
-                                                <i class="feather-eye"></i> View
+                                            <button class="action-btn btn-view" onclick="viewRequest({{ $request->id }})" title="View Details" data-bs-toggle="tooltip">
+                                                <i class="feather-eye"></i>
                                             </button>
 
                                             @if ($request->status == 'pending' && in_array($userRole, ['admin', 'manager']))
-                                                <button class="action-btn btn-approve" onclick="approveRequest({{ $request->id }}, {{ $request->overtime_hours }}, '{{ addslashes($request->user_name) }}')" title="Approve">
-                                                    <i class="feather-check"></i> Approve
+                                                <button class="action-btn btn-approve" onclick="approveRequest({{ $request->id }}, {{ $request->overtime_hours }}, '{{ addslashes($request->user_name) }}')" title="Approve" data-bs-toggle="tooltip">
+                                                    <i class="feather-check"></i>
                                                 </button>
-                                                <button class="action-btn btn-reject" onclick="rejectRequest({{ $request->id }}, '{{ addslashes($request->user_name) }}')" title="Reject">
-                                                    <i class="feather-x"></i> Reject
+                                                <button class="action-btn btn-reject" onclick="rejectRequest({{ $request->id }}, '{{ addslashes($request->user_name) }}')" title="Reject" data-bs-toggle="tooltip">
+                                                    <i class="feather-x"></i>
                                                 </button>
                                             @endif
                                         </div>

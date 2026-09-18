@@ -4,15 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\MonthlyPayroll;
 use App\Models\PayrollAuditLog;
-use App\Models\PayrollMaster;
 use App\Models\User;
 use App\Models\UserPayroll;
 use App\Services\Attendance\PeriodLockService;
 use App\Services\FeatureService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Tests\TestCase;
 
@@ -35,11 +32,8 @@ class PayrollAuditPhase3Test extends TestCase
     private array $monthlyPayrollIds = [];
     private array $userPayrollIds = [];
     private array $scratchUserIds = [];
-    private array $payrollMasterIds = [];
     private array $auditLogIds = [];
     private array $attendancePolicyLockCleanup = [];
-    private ?int $dynamicFlagTenantId = null;
-    private $dynamicFlagOriginalValue = null;
 
     protected function tearDown(): void
     {
@@ -52,16 +46,10 @@ class PayrollAuditPhase3Test extends TestCase
 
         UserPayroll::whereIn('id', $this->userPayrollIds)->forceDelete();
         User::whereIn('id', $this->scratchUserIds)->delete();
-        PayrollMaster::whereIn('id', $this->payrollMasterIds)->forceDelete();
         PayrollAuditLog::whereIn('id', $this->auditLogIds)->delete();
 
         foreach ($this->attendancePolicyLockCleanup as [$tenantId, $month]) {
             DB::table('attendance_period_locks')->where('tenant_id', $tenantId)->where('year_month', $month)->delete();
-        }
-
-        if ($this->dynamicFlagTenantId !== null) {
-            \App\Models\Tenant::withoutGlobalScopes()->find($this->dynamicFlagTenantId)
-                ?->forceFill(['payroll_dynamic_ui_enabled' => $this->dynamicFlagOriginalValue])->save();
         }
 
         parent::tearDown();
@@ -90,24 +78,6 @@ class PayrollAuditPhase3Test extends TestCase
 
         return [$userPayroll, $admin, $tenantId];
     }
-
-    /**
-     * The legacy Payroll Master screens are deliberately blocked
-     * (BlocksLegacyPayrollWrites) once a tenant is cut over to the dynamic
-     * engine -- the only tenant that resolves reliably over a plain HTTP
-     * test request in this dev environment (APP_URL is bound to its
-     * subdomain) happens to be cut over. Temporarily clears the flag so
-     * these Phase 3 tests can reach PayrollMasterController::store(), and
-     * restores the original value in tearDown either way.
-     */
-    private function temporarilyDisableDynamicFlag(int $tenantId): void
-    {
-        $tenant = \App\Models\Tenant::withoutGlobalScopes()->findOrFail($tenantId);
-        $this->dynamicFlagTenantId = $tenantId;
-        $this->dynamicFlagOriginalValue = $tenant->payroll_dynamic_ui_enabled;
-        $tenant->forceFill(['payroll_dynamic_ui_enabled' => false])->save();
-    }
-
 
     private function makeScratchUser(int $tenantId): User
     {
@@ -242,38 +212,9 @@ class PayrollAuditPhase3Test extends TestCase
     // H5 — payroll master name uniqueness is per-tenant
     // ------------------------------------------------------------------
 
-    public function test_payroll_master_name_uniqueness_is_scoped_per_tenant(): void
-    {
-        [, $admin, $tenantId] = $this->tenantFixture();
-        $this->temporarilyDisableDynamicFlag($tenantId);
-        $name = 'PHPUnit Shared Name ' . uniqid();
-
-        $r1 = $this->actingAs($admin)->post(route('payroll-masters.store'), [
-            'name' => $name, 'payroll_calculation_type' => 'day_based',
-        ]);
-        $r1->assertRedirect(route('payroll-masters.index'));
-        $id1 = PayrollMaster::withoutGlobalScope('tenant')->where('tenant_id', $tenantId)->where('name', $name)->value('id');
-        $this->assertNotNull($id1, 'tenant must be able to create a master with this name');
-        $this->payrollMasterIds[] = $id1;
-
-        // The SAME tenant reusing the name again must be rejected.
-        $r2 = $this->actingAs($admin)->post(route('payroll-masters.store'), [
-            'name' => $name, 'payroll_calculation_type' => 'day_based',
-        ]);
-        $r2->assertSessionHasErrors('name');
-
-        // Cross-tenant allowance, verified at the validation-rule level directly
-        // (the same Rule::unique()->where('tenant_id', ...) construction
-        // PayrollMasterController::store() uses) -- a full HTTP-level
-        // cross-tenant check isn't reliable in this dev environment, since
-        // APP_URL is bound to one tenant's subdomain and a different tenant's
-        // admin can't reach their own tenant context over a plain test request.
-        $otherTenantId = $tenantId + 1;
-        $crossTenantValidator = Validator::make(['name' => $name], [
-            'name' => Rule::unique('payroll_masters', 'name')->where('tenant_id', $otherTenantId),
-        ]);
-        $this->assertFalse($crossTenantValidator->fails(), 'a different tenant_id must be allowed to reuse the same master name');
-    }
+    // H5's tenant-scoped uniqueness lived in PayrollMasterController, removed
+    // 2026-09-18 along with the rest of the legacy engine's screens -- see
+    // PayrollLegacyRemovalTest instead.
 
     // ------------------------------------------------------------------
     // M2 — dead view-payslip route removed
@@ -289,20 +230,8 @@ class PayrollAuditPhase3Test extends TestCase
     // M4 — server-side percent cap
     // ------------------------------------------------------------------
 
-    public function test_payroll_master_rejects_earnings_over_100_percent_server_side(): void
-    {
-        [, $admin, $tenantId] = $this->tenantFixture();
-        $this->temporarilyDisableDynamicFlag($tenantId);
-
-        $response = $this->actingAs($admin)->post(route('payroll-masters.store'), [
-            'name' => 'PHPUnit Over Cap ' . uniqid(),
-            'payroll_calculation_type' => 'day_based',
-            'hra' => 60, 'conveyence' => 30, 'medical_allowance' => 20, // 110% total
-        ]);
-
-        $response->assertSessionHasErrors('hra');
-        $this->assertNull(PayrollMaster::withoutGlobalScope('tenant')->where('name', 'like', 'PHPUnit Over Cap%')->first());
-    }
+    // M4's server-side percent cap also lived in PayrollMasterController,
+    // removed 2026-09-18 along with the rest of the legacy engine's screens.
 
     // ------------------------------------------------------------------
     // M6 — arrears reconciliation contract unchanged (regression check)

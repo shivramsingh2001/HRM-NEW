@@ -441,8 +441,10 @@ class LeaveController extends Controller
 
         // 🔐 Permission-driven scope (was: hardcoded !in_array(role, [admin,hr]))
         if ($isTeamScoped) {
-            // Team scope — show only their team's leaves
-            $leaveQuery->where('user_job_details.reporting_head', $authUser->id);
+            // Team scope — show only their team's leaves (any reporting head)
+            $leaveQuery->whereIn('users.id', function ($q) use ($authUser) {
+                $q->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+            });
         }
         // Admin and HR can see all leaves
 
@@ -496,7 +498,9 @@ class LeaveController extends Controller
             ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id');
 
         if ($isTeamScoped) {
-            $countsQuery->where('user_job_details.reporting_head', $authUser->id);
+            $countsQuery->whereIn('users.id', function ($q) use ($authUser) {
+                $q->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+            });
         }
 
         $counts = $countsQuery->selectRaw("
@@ -521,9 +525,7 @@ class LeaveController extends Controller
             ->with(['jobDetails']);
 
         if ($isTeamScoped) {
-            $employeesQuery->whereHas('jobDetails', function ($q) use ($authUser) {
-                $q->where('reporting_head', $authUser->id);
-            });
+            $employeesQuery->managedBy($authUser->id);
         }
 
         $employees = $employeesQuery

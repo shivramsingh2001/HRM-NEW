@@ -41,12 +41,12 @@ class OvertimeApprovalService
             ->whereIn('id', $requestIds)
             ->where('status', 'pending');
 
-        // Managers may only bulk-approve their own reportees.
+        // Managers may only bulk-approve their own reportees (any reporting head).
         if ($this->rbac->scopeFor($actor, 'overtime', 'approve') === 'team') {
             $query->whereIn('user_id', function ($q) use ($actor, $tenantId) {
                 $q->select('user_id')
-                    ->from('user_job_details')
-                    ->where('reporting_head', $actor->id)
+                    ->from('user_reporting_heads')
+                    ->where('reporting_head_id', $actor->id)
                     ->where('tenant_id', $tenantId);
             });
         }

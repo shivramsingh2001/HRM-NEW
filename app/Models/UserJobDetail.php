@@ -18,9 +18,23 @@ class UserJobDetail extends Model
      {
           return $this->belongsTo(Department::class, 'department');
      }
-     public function Branch()
+     /**
+      * Attendance geofence location (renamed from Branch() 2026_09_20 —
+      * this is the attendance check-in location, not organizational
+      * structure; column name office_branch kept unchanged).
+      */
+     public function attendanceLocation()
      {
-          return $this->belongsTo(Branch::class, 'office_branch');
+          return $this->belongsTo(AttendanceLocation::class, 'office_branch');
+     }
+
+     /**
+      * Organizational Branch membership — separate from attendanceLocation()
+      * above. Optional; only used by multi-location companies.
+      */
+     public function branch()
+     {
+          return $this->belongsTo(CompanyBranch::class, 'branch_id');
      }
      public function user()
     {

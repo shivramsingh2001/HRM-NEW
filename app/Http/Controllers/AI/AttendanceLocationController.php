@@ -114,7 +114,9 @@ class   AttendanceLocationController extends Controller
             $query->where('u.id', $authUser->id);
         } elseif ($scope === 'team') {
             $query->where(function ($q) use ($authUser) {
-                $q->where('jd.reporting_head', $authUser->id)
+                $q->whereIn('u.id', function ($sub) use ($authUser) {
+                    $sub->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                })
                     ->orWhere('u.id', $authUser->id);
             });
         }

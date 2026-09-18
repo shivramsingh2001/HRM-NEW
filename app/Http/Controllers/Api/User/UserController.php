@@ -115,7 +115,14 @@ class UserController extends Controller
                     'department' => $user->jobDetails?->departmentRel?->name,
                     'joining_date' => $user->jobDetails?->joining_date,
                     'employment_type' => $user->jobDetails?->employment_type,
+                    // Kept for older app builds; primary reporting head only.
                     'reporting_head' => $user->jobDetails?->reportingHead?->name,
+                    // Full multi reporting-head set.
+                    'reporting_heads' => $user->reportingHeads->map(fn ($head) => [
+                        'id' => $head->id,
+                        'name' => $head->name,
+                        'is_primary' => (bool) $head->pivot->is_primary,
+                    ])->values(),
                 ],
 
                 'location' => [
@@ -144,6 +151,14 @@ class UserController extends Controller
                         ? $baseUrl . $user->basicDetails->highest_qualification_certificate
                         : null,
                 ],
+                // Full dynamic document list (any number, any type incl. "other").
+                'documents_list' => $user->documents->map(fn ($document) => [
+                    'id' => $document->id,
+                    'document_type' => $document->document_type,
+                    'document_type_label' => $document->document_type_label,
+                    'document_name' => $document->document_name,
+                    'file_url' => $baseUrl . $document->file_path,
+                ])->values(),
             ];
 
             return response()->json([
@@ -186,10 +201,8 @@ class UserController extends Controller
                     ])
                     ->get();
             } else {
-                // Manager: Get users reporting to current user
-                $teamMembers = User::whereHas('jobDetails', function ($query) use ($authUser) {
-                    $query->where('reporting_head', $authUser->id);
-                })
+                // Manager: Get users reporting to current user (any reporting head)
+                $teamMembers = User::managedBy($authUser->id)
                     ->where('status', 1)
                     ->with([
                         'basicDetails',
@@ -367,8 +380,8 @@ class UserController extends Controller
                     'jobDetails.designationRel',
                     'jobDetails.departmentRel'
                 ])
-                    ->whereHas('jobDetails', function ($query) use ($user) {
-                        $query->where('reporting_head', $user->id);
+                    ->whereIn('users.id', function ($q) use ($user) {
+                        $q->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $user->id);
                     })
                     ->where('status', 1)
                     ->where('id', '!=', $user->id)
@@ -756,7 +769,14 @@ class UserController extends Controller
                     'department' => $user->jobDetails?->departmentRel?->name,
                     'joining_date' => $user->jobDetails?->joining_date,
                     'employment_type' => $user->jobDetails?->employment_type,
+                    // Kept for older app builds; primary reporting head only.
                     'reporting_head' => $user->jobDetails?->reportingHead?->name,
+                    // Full multi reporting-head set.
+                    'reporting_heads' => $user->reportingHeads->map(fn ($head) => [
+                        'id' => $head->id,
+                        'name' => $head->name,
+                        'is_primary' => (bool) $head->pivot->is_primary,
+                    ])->values(),
                 ],
 
                 'location' => [
@@ -793,6 +813,14 @@ class UserController extends Controller
                     'twelfth_marksheet' => $user->basicDetails?->twelfth_marksheet ? asset($user->basicDetails->twelfth_marksheet) : null,
                     'highest_qualification_certificate' => $user->basicDetails?->highest_qualification_certificate ? asset($user->basicDetails->highest_qualification_certificate) : null,
                 ],
+                // Full dynamic document list (any number, any type incl. "other").
+                'documents_list' => $user->documents->map(fn ($document) => [
+                    'id' => $document->id,
+                    'document_type' => $document->document_type,
+                    'document_type_label' => $document->document_type_label,
+                    'document_name' => $document->document_name,
+                    'file_url' => asset($document->file_path),
+                ])->values(),
             ];
 
             return response()->json([

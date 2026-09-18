@@ -33,12 +33,12 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: var(--primary-mid);
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary-mid);
             font-size: 11px;
             padding: 2px 8px;
             border-radius: 20px;
@@ -70,7 +70,7 @@
         .apply-btn {
             height: 36px;
             padding: 0 20px;
-            background: #4f46e5;
+            background: var(--primary-mid);
             color: white;
             border: none;
             border-radius: 8px;
@@ -123,29 +123,27 @@
             display: inline-block;
         }
 
-        .bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
+        /* Repayment-type badges (Lump Sum / EMI) — status badges below use
+           the ui.status-badge component instead of these Bootstrap bg-* overrides. */
+        .repayment-type-badge.type-lumpsum {
+            background: var(--primary-light) !important;
+            color: var(--primary-mid);
         }
 
-        .bg-warning {
-            background: #fef3c7 !important;
-            color: #92400e;
+        .repayment-type-badge.type-emi {
+            background: var(--success-light) !important;
+            color: var(--success);
         }
 
-        .bg-danger {
-            background: #fee2e2 !important;
-            color: #991b1b;
+        /* Loan-specific statuses beyond the shared .status-badge mapping in
+           theme-custom.css (pending/approved/active already map there). */
+        .status-badge[data-status="closed"] {
+            background: var(--gray-200);
+            color: var(--gray-700);
         }
-
-        .bg-info {
-            background: #e0f2fe !important;
-            color: #0369a1;
-        }
-
-        .bg-secondary {
-            background: #f1f5f9 !important;
-            color: #475569;
+        .status-badge[data-status="default"] {
+            background: var(--danger-light);
+            color: var(--danger);
         }
 
         /* ==================== LOAN TYPE BADGES ==================== */
@@ -160,8 +158,8 @@
         }
 
         .type-salary {
-            background: #e0e7ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary-mid);
         }
 
         .type-festival {
@@ -195,8 +193,8 @@
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: #e0e7ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary-mid);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -237,40 +235,40 @@
         }
 
         .action-btn.view:hover {
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary-mid);
+            border-color: var(--primary-mid);
         }
 
         .action-btn.approve {
-            background: #d1fae5;
-            color: #065f46;
+            background: var(--success-light);
+            color: var(--success);
             border-color: #a7f3d0;
         }
 
         .action-btn.approve:hover {
-            background: #10b981;
+            background: var(--success);
             color: white;
         }
 
         .action-btn.reject {
-            background: #fee2e2;
-            color: #991b1b;
+            background: var(--danger-light);
+            color: var(--danger);
             border-color: #fecaca;
         }
 
         .action-btn.reject:hover {
-            background: #ef4444;
+            background: var(--danger);
             color: white;
         }
 
         .action-btn.disburse {
-            background: #fef3c7;
-            color: #d97706;
+            background: var(--warning-light);
+            color: var(--warning);
             border-color: #fde68a;
         }
 
         .action-btn.disburse:hover {
-            background: #f59e0b;
+            background: var(--warning);
             color: white;
         }
 
@@ -365,8 +363,8 @@
 
         .modal-comments:focus {
             outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary-mid);
+            box-shadow: var(--shadow-focus);
         }
 
         /* ==================== EMPTY STATE ==================== */
@@ -613,7 +611,7 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Loan Approval & Disbursement</h5>
-                        <span class="badge bg-info"><i class="feather-list me-1"></i>Total: {{ $loans->total() }}</span>
+                        <span class="badge" style="background: var(--primary-light); color: var(--primary-mid);"><i class="feather-list me-1"></i>Total: {{ $loans->total() }}</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -673,9 +671,9 @@
                                             </td>
                                             <td>
                                                 @if ($loan->repayment_type == 'lumpsum')
-                                                    <span class="badge bg-info">Lump Sum</span>
+                                                    <span class="badge repayment-type-badge type-lumpsum">Lump Sum</span>
                                                 @else
-                                                    <span class="badge bg-success">EMI (₹
+                                                    <span class="badge repayment-type-badge type-emi">EMI (₹
                                                         {{ number_format($loan->emi_amount, 2) }})</span>
                                                 @endif
                                             </td>
@@ -692,25 +690,13 @@
                                             </td>
                                             <td>{{ $loan->created_at->format('d M Y') }}</td>
                                             <td>
-                                                @if ($loan->status == 'pending')
-                                                    <span class="badge bg-warning">Pending</span>
-                                                @elseif($loan->status == 'approved')
-                                                    <span class="badge bg-info">Approved</span>
-                                                @elseif($loan->status == 'active')
-                                                    <span class="badge bg-success">Active</span>
-                                                @elseif($loan->status == 'closed')
-                                                    <span class="badge bg-secondary">Closed</span>
-                                                @elseif($loan->status == 'default')
-                                                    <span class="badge bg-danger">Rejected</span>
-                                                @else
-                                                    <span class="badge bg-secondary">{{ ucfirst($loan->status) }}</span>
-                                                @endif
+                                                <x-ui.status-badge :status="$loan->status" :label="$loan->status === 'default' ? 'Rejected' : null" />
                                             </td>
                                             <td class="text-center">
                                                 <div class="d-flex justify-content-center gap-1">
                                                     <!-- View Button (Always visible) -->
                                                     <button class="action-btn view view-loan"
-                                                        data-id="{{ $loan->id }}" title="View Details">
+                                                        data-id="{{ $loan->id }}" title="View Details" data-bs-toggle="tooltip">
                                                         <i class="feather-eye"></i>
                                                     </button>
 
@@ -720,14 +706,14 @@
                                                             data-id="{{ $loan->id }}"
                                                             data-number="{{ $loan->loan_number }}"
                                                             data-employee="{{ $loan->user->name ?? 'N/A' }}"
-                                                            title="Approve Loan">
+                                                            title="Approve Loan" data-bs-toggle="tooltip">
                                                             <i class="feather-check"></i>
                                                         </button>
                                                         <button class="action-btn reject reject-loan"
                                                             data-id="{{ $loan->id }}"
                                                             data-number="{{ $loan->loan_number }}"
                                                             data-employee="{{ $loan->user->name ?? 'N/A' }}"
-                                                            title="Reject Loan">
+                                                            title="Reject Loan" data-bs-toggle="tooltip">
                                                             <i class="feather-x"></i>
                                                         </button>
                                                     @endif
@@ -738,7 +724,7 @@
                                                             data-id="{{ $loan->id }}"
                                                             data-number="{{ $loan->loan_number }}"
                                                             data-employee="{{ $loan->user->name ?? 'N/A' }}"
-                                                            title="Disburse Loan">
+                                                            title="Disburse Loan" data-bs-toggle="tooltip">
                                                             <i class="feather-dollar-sign"></i>
                                                         </button>
                                                     @endif
@@ -1076,24 +1062,11 @@
                             $('#view_tenure').text(loan.tenure_months + ' months');
                             $('#view_purpose').text(loan.purpose || '-');
 
-                            // Status Badge
-                            let statusClass = '';
-                            switch (loan.status) {
-                                case 'pending':
-                                    statusClass = 'badge bg-warning';
-                                    break;
-                                case 'approved':
-                                    statusClass = 'badge bg-info';
-                                    break;
-                                case 'active':
-                                    statusClass = 'badge bg-success';
-                                    break;
-                                default:
-                                    statusClass = 'badge bg-secondary';
-                            }
-                            $('#view_status').html('<span class="' + statusClass + '">' + loan
-                                .status.charAt(0).toUpperCase() + loan.status.slice(1) +
-                                '</span>');
+                            // Status Badge — same markup the ui.status-badge component renders
+                            var statusLabel = loan.status === 'default' ? 'Rejected' :
+                                (loan.status.charAt(0).toUpperCase() + loan.status.slice(1));
+                            $('#view_status').html('<span class="status-badge" data-status="' + loan.status + '">' +
+                                statusLabel + '</span>');
 
                             // Description
                             if (loan.description) {

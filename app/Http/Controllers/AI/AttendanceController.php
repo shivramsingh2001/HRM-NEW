@@ -102,10 +102,11 @@ class AttendanceController extends Controller
         }
 
         if ($scope === 'team') {
+            $reportsToMe = ' u.id IN (SELECT user_id FROM user_reporting_heads WHERE reporting_head_id = ?) ';
             if ($requestUserId) {
-                return [' AND u.id = ? AND (jd.reporting_head = ? OR u.id = ?) ', [$requestUserId, $me, $me]];
+                return [" AND u.id = ? AND ($reportsToMe OR u.id = ?) ", [$requestUserId, $me, $me]];
             }
-            return [' AND (jd.reporting_head = ? OR u.id = ?) ', [$me, $me]];
+            return [" AND ($reportsToMe OR u.id = ?) ", [$me, $me]];
         }
 
         // company

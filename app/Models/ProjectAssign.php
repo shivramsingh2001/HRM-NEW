@@ -8,14 +8,27 @@ use App\Traits\TenantTrait;
 class ProjectAssign extends Model
 {
      use TenantTrait;
-    protected $guarded = [];
+    protected $fillable = ['tenant_id', 'project_id', 'user_id', 'is_head', 'status'];
+
+    protected $casts = [
+        'is_head' => 'boolean',
+        'status' => 'boolean',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** @deprecated kept as an alias — several views/queries still call ->users on this pivot. */
     public function users()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
-    public function user()
+
+    public function project()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(Project::class, 'project_id');
     }
 
     /**

@@ -1,13 +1,164 @@
 @extends('client.layout.master')
 
 @section('style')
+<style>
+    /* ==================== DEPARTMENT CARDS — all-blue theme, 4-per-row, compact spacing (mirrors client/announcement/all.blade.php) ==================== */
+    .department-card {
+        border: 1px solid #eaeef5;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+        transition: all .2s ease;
+    }
+
+    .department-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px -6px rgba(30, 50, 110, .14);
+        border-color: #dfe5f0;
+    }
+
+    .department-card .side-stick {
+        background-color: #1e3a8a;
+    }
+
+    .dept-title {
+        font-size: 11.5px !important;
+        font-weight: 700;
+        color: #1a2236;
+        max-width: 72%;
+    }
+
+    .dept-date {
+        font-size: 9px;
+        color: #6b7385;
+        margin-bottom: 0;
+    }
+
+    .dept-badge {
+        padding: 2px 7px;
+        border-radius: 30px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: .2px;
+        white-space: nowrap;
+    }
+
+    .badge-active {
+        background: #3b82f6;
+        color: #fff;
+    }
+
+    .badge-inactive {
+        background: #1e3a8a;
+        color: #fff;
+    }
+
+    .dept-info-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f4f6fb;
+        border-radius: 8px;
+        padding: 5px 8px;
+    }
+
+    .dept-info-label {
+        font-size: 8px;
+        color: #6b7385;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .dept-info-value {
+        font-size: 9.5px;
+        font-weight: 600;
+        color: #1a2236;
+    }
+
+    .dept-info-value i {
+        color: #1e3a8a;
+    }
+
+    .dept-description {
+        color: #475569;
+        font-size: 9.5px;
+        line-height: 1.4;
+    }
+
+    .dept-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        padding-top: 6px;
+        margin-top: 4px;
+        border-top: 1px solid #eaeef5;
+    }
+
+    .action-btn {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #f4f6fb;
+        border: 1px solid #eaeef5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7385;
+        font-size: 10px;
+        transition: all .2s;
+        cursor: pointer;
+        text-decoration: none;
+        flex-shrink: 0;
+    }
+
+    .action-btn:hover {
+        background: #1e3a8a;
+        color: #fff;
+        border-color: #1e3a8a;
+    }
+
+    /* ==================== EMPTY STATE ==================== */
+    .empty-state {
+        padding: 36px 20px;
+        text-align: center;
+        background: linear-gradient(145deg, #ffffff 0%, #f4f6fb 100%);
+        border-radius: 14px;
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        color: #93c5fd;
+        margin-bottom: 12px;
+    }
+
+    .empty-state h4 {
+        color: #1a2236;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .empty-state p {
+        color: #6b7385;
+        font-size: 11.5px;
+        margin-bottom: 0;
+    }
+
+    /* ==================== COMPACT MODAL (Add / Edit) — core chrome
+       (max-width/header/body/card/row/label/btn) is centralized in
+       public/assets/css/theme-custom.css; only this page's own extras stay here. ==================== */
+    .compact-modal .modal-header .fs-18 { font-size: 13px !important; }
+    .compact-modal .form-group { margin-bottom: 0; }
+    .compact-modal .form-control,
+    .compact-modal .form-check-label { font-size: 11.5px; }
+</style>
 @endsection
 
 @php
  $user = Auth::user();
  $role = $user->role;
  @endphp
- 
+
 @section('content-area')
     <!-- [ Main Content ] start -->
 
@@ -23,13 +174,12 @@
         </div>
         <div class="page-header-right ms-auto">
             <div class="hstack gap-2">
-                <div class="hstack">
-
-                </div>
-                  @if(in_array($role,['admin','hr']))
+                @if(in_array($role,['admin','hr']))
                 <div class="dropdown d-none d-sm-flex">
                     <a href="javascript:void(0)" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
-                        data-bs-target="#addDepartments">Add Department</a>
+                        data-bs-target="#addDepartments">
+                        <i class="feather-plus me-2"></i>Add Department
+                    </a>
                 </div>
                 @endif
             </div>
@@ -38,37 +188,26 @@
     <div class="content-area-body pb-0 h-100">
         <div class="row note-has-grid" id="note-full-container">
             <!--! BEGIN: [Single Note Item] !-->
-            @foreach ($departments as $department)
-                <div class="col-xxl-4 col-xl-6 col-lg-4 col-sm-6 single-note-item">
-                    <div class="card card-body mb-4 stretch stretch-full position-relative shadow-sm border-0">
-
-                        <!-- Top Right Actions -->
-                        <div class="position-absolute top-0 end-0 d-flex align-items-center gap-2 m-4">
-
-                            <!-- Status Badge -->
-                            <span class="badge {{ $department->status ? 'bg-success' : 'bg-danger' }}">
-                                {{ $department->status ? 'Active' : 'Inactive' }}
-                            </span>
-                            @if(in_array($role,['admin','hr']))
-                            <!-- View Icon -->
-                            <a href="{{ route('department.detail', ['id' => encrypt($department->id)]) }}"
-                                class="text-decoration-none">
-                                <i class="bi bi-eye-fill fs-5 text-muted"></i>
-                            </a>
-                            @endif
-
-                        </div>
+            @forelse ($departments as $department)
+                <div class="col-xxl-3 col-xl-3 col-lg-3 col-md-6 col-sm-6 single-note-item">
+                    <div class="card department-card card-body mb-2 stretch stretch-full position-relative border-0">
 
                         <span class="side-stick"></span>
 
-                        <!-- Department Name -->
-                        <h5 class="note-title text-truncate w-75 mb-1">
-                            {{ $department->name }}
-                            {{-- <i class="point bi bi-circle-fill ms-1 fs-7 text-primary"></i> --}}
-                        </h5>
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <!-- Department Name -->
+                            <h5 class="dept-title note-title text-truncate mb-0">
+                                {{ $department->name }}
+                            </h5>
+
+                            <!-- Status Badge -->
+                            <span class="dept-badge {{ $department->status ? 'badge-active' : 'badge-inactive' }}">
+                                {{ $department->status ? 'Active' : 'Inactive' }}
+                            </span>
+                        </div>
 
                         <!-- Created Date -->
-                        <p class="fs-11 text-muted mb-2">
+                        <p class="dept-date mb-1">
                             <i class="bi bi-calendar-event me-1"></i>
                             {{ date('d M Y', strtotime($department->created_at)) }}
                         </p>
@@ -76,22 +215,22 @@
                             $depthead = DB::table('users')->where('id',$department->department_head)->first();
                         @endphp
                         <!-- Info Row -->
-                        <div class="d-flex justify-content-between align-items-center bg-light rounded-3 px-3 py-1 mb-2">
+                        <div class="dept-info-row mb-1">
 
                             <!-- Department Head -->
                             <div>
-                                <small class="text-muted d-block fs-10">Department Head</small>
-                                <span class="fw-semibold  fs-11">
-                                    <i class="bi bi-person-badge fs-14 me-1 text-primary"></i>
+                                <small class="dept-info-label d-block">Department Head</small>
+                                <span class="dept-info-value">
+                                    <i class="bi bi-person-badge me-1"></i>
                                     {{ $depthead->name ?? 'NA' }}
                                 </span>
                             </div>
 
                             <!-- Employee Count -->
                             <div class="text-end">
-                                <small class="text-muted d-block fs-10">Employees</small>
-                                <span class="fw-bold text-dark">
-                                    <i class="bi bi-people-fill text-success me-1"></i>
+                                <small class="dept-info-label d-block">Employees</small>
+                                <span class="dept-info-value">
+                                    <i class="bi bi-people-fill me-1"></i>
                                     {{ $department->employees_count ?? 0 }}
                                 </span>
                             </div>
@@ -99,22 +238,50 @@
 
                         <!-- Description -->
                         <div class="note-content flex-grow-1">
-                            <p class="text-muted fs-12 text-truncate-3-line">
+                            <p class="dept-description text-truncate-3-line mb-0">
                                 {{ $department->description ?? 'No description available.' }}
                             </p>
                         </div>
 
+                        @if(in_array($role,['admin','hr']))
+                            <div class="dept-card-footer">
+                                <!-- View Icon -->
+                                <a href="{{ route('department.detail', ['id' => encrypt($department->id)]) }}"
+                                    class="action-btn" title="View Details">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+
+                                <!-- Edit Icon -->
+                                <a href="javascript:void(0)" class="action-btn edit-department" title="Edit Department"
+                                    data-update-url="{{ route('department.update', ['id' => encrypt($department->id)]) }}"
+                                    data-name="{{ $department->name }}"
+                                    data-head="{{ $department->department_head }}"
+                                    data-description="{{ $department->description }}"
+                                    data-status="{{ $department->status }}">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            </div>
+                        @endif
+
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="bi bi-diagram-3"></i>
+                        <h4>No Departments Found</h4>
+                        <p>Get started by adding your first department</p>
+                    </div>
+                </div>
+            @endforelse
             <!--! BEGIN: [Single Note Item] !-->
 
         </div>
     </div>
 @endsection
 @section('create-modal')
-    <div class="modal fade-scale" id="addDepartments" tabindex="-1" aria-labelledby="addDepartments" aria-hidden="true"
-        data-bs-dismiss="ou">
+    <!-- Add Department Modal -->
+    <div class="modal fade-scale" id="addDepartments" tabindex="-1" aria-labelledby="addDepartments" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
 
@@ -150,9 +317,9 @@
                                                 required>
                                                 <option value="" disabled selected>-- Select Department Head --
                                                 </option>
-                                                @foreach ($users as $user)
-                                                    <option value="{{ $user->id }}" data-icon="feather-user">
-                                                        {{ $user->name }}</option>
+                                                @foreach ($users as $u)
+                                                    <option value="{{ $u->id }}" data-icon="feather-user">
+                                                        {{ $u->name }}</option>
                                                 @endforeach
                                             </select>
                                             <small class="text-danger error-text department_head_error"></small>
@@ -170,13 +337,102 @@
                                     </div>
 
                                     <div class="col-6">
-                                        <button class="btn btn-primary" type="submit">Save</button>
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="feather-save me-2"></i>Save
+                                        </button>
                                     </div>
 
                                     <div class="col-6">
-                                        <a href="javascript:void(0)" class="btn btn-danger text-warning float-end"
+                                        <a href="javascript:void(0)" class="btn btn-modal-cancel float-end"
                                             data-bs-dismiss="modal">
-                                            Cancel
+                                            <i class="feather-x me-2"></i>Cancel
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Department Modal -->
+    <div class="modal fade-scale" id="editDepartmentModal" tabindex="-1" aria-labelledby="editDepartmentModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h2 class="d-flex flex-column mb-0">
+                        <span class="fs-18 fw-bold mb-1">Edit Department</span>
+                        <small class="d-block fs-11 fw-normal text-muted">Update department information</small>
+                    </h2>
+                    <a href="javascript:void(0)" class="avatar-text avatar-md bg-soft-danger close-icon"
+                        data-bs-dismiss="modal">
+                        <i class="feather-x text-danger"></i>
+                    </a>
+                </div>
+
+                <div class="modal-body p-0">
+                    <div class="card m-0">
+                        <div class="card-body">
+                            <form action="#" id="editDepartmentForm">
+                                <div id="editFormError" class="alert alert-danger d-none"></div>
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_department_name">Department Name *</label>
+                                            <input type="text" class="form-control" name="name" required
+                                                id="edit_department_name" placeholder="Enter Department name">
+                                            <small class="text-danger error-text name_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_department_head">Department Head *</label>
+                                            <select class="form-control" name="department_head" id="edit_department_head"
+                                                required>
+                                                <option value="" disabled>-- Select Department Head --</option>
+                                                @foreach ($users as $u)
+                                                    <option value="{{ $u->id }}" data-icon="feather-user">
+                                                        {{ $u->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <small class="text-danger error-text department_head_error"></small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_department_status">Status *</label>
+                                            <select class="form-control" name="status" id="edit_department_status" required>
+                                                <option value="1">Active</option>
+                                                <option value="0">Inactive</option>
+                                            </select>
+                                            <small class="text-danger error-text status_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_department_description">Department Description
+                                            </label>
+                                            <textarea class="form-control" name="description" id="edit_department_description" rows="3"
+                                                placeholder="Enter Department Description..."></textarea>
+                                            <small class="text-danger error-text description_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="feather-save me-2"></i>Update
+                                        </button>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <a href="javascript:void(0)" class="btn btn-modal-cancel float-end"
+                                            data-bs-dismiss="modal">
+                                            <i class="feather-x me-2"></i>Cancel
                                         </a>
                                     </div>
 
@@ -212,30 +468,113 @@
                     success: function(response) {
                         if (response.success) {
                             $('#addDepartments').modal('hide');
-                            location.reload();
+                            toastr.success(response.message);
+                            setTimeout(() => location.reload(), 1000);
                         }
                     },
                     error: function(xhr) {
 
-                        // ✅ Validation error
+                        // Validation error
                         if (xhr.status === 422) {
                             let errors = xhr.responseJSON.errors;
                             $.each(errors, function(key, value) {
                                 $('.' + key + '_error').text(value[0]);
                             });
+                            toastr.error('Please fix the validation errors');
                         }
 
-                        // ✅ Server error
+                        // Server error
                         else {
                             $('#formError')
                                 .removeClass('d-none')
                                 .text(xhr.responseJSON?.message || 'Something went wrong.');
+                            toastr.error(xhr.responseJSON?.message || 'Something went wrong');
                         }
                     }
                 });
 
             });
 
+            // Edit Department - Open Modal with Data
+            $(document).on('click', '.edit-department', function(e) {
+                e.preventDefault();
+
+                const updateUrl = $(this).data('update-url');
+                const name = $(this).data('name');
+                const head = $(this).data('head');
+                const description = $(this).data('description');
+                const status = $(this).data('status');
+
+                $('#editDepartmentForm').attr('action', updateUrl);
+                $('#edit_department_name').val(name);
+                $('#edit_department_head').val(head).trigger('change');
+                $('#edit_department_description').val(description);
+                $('#edit_department_status').val(status).trigger('change');
+
+                $('.error-text').text('');
+                $('#editFormError').addClass('d-none').text('');
+
+                $('#editDepartmentModal').modal('show');
+            });
+
+            // Edit Department Form Submission
+            $('#editDepartmentForm').on('submit', function(e) {
+                e.preventDefault();
+
+                $('.error-text').text('');
+                $('#editFormError').addClass('d-none').text('');
+
+                $.ajax({
+                    url: $(this).attr('action'),
+                    type: "POST",
+                    data: $(this).serialize(),
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            $('#editDepartmentModal').modal('hide');
+                            toastr.success(response.message);
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            let errors = xhr.responseJSON.errors;
+                            $.each(errors, function(key, value) {
+                                $('.' + key + '_error').text(value[0]);
+                            });
+                            toastr.error('Please fix the validation errors');
+                        } else {
+                            $('#editFormError')
+                                .removeClass('d-none')
+                                .text(xhr.responseJSON?.message || 'Something went wrong.');
+                            toastr.error(xhr.responseJSON?.message || 'Something went wrong');
+                        }
+                    }
+                });
+            });
+
+            $('#addDepartments').on('hidden.bs.modal', function() {
+                $('#addDepartmentForm')[0].reset();
+                $('.error-text').text('');
+                $('#formError').addClass('d-none').text('');
+            });
+
+            $('#editDepartmentModal').on('hidden.bs.modal', function() {
+                $('.error-text').text('');
+                $('#editFormError').addClass('d-none').text('');
+            });
+
+            // Initialize toastr if not already loaded
+            if (typeof toastr !== 'undefined') {
+                toastr.options = {
+                    "closeButton": true,
+                    "progressBar": true,
+                    "positionClass": "toast-top-right",
+                    "timeOut": "3000"
+                };
+            }
         });
     </script>
 @endsection

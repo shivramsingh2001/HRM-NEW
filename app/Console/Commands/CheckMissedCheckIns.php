@@ -421,11 +421,8 @@ class CheckMissedCheckIns extends Command
     {
         $ids = collect([$userId]);
 
-        // 1. Reporting head (same tenant only)
-        $reportingHeadId = $this->getReportingHeadId($userId, $tenantId);
-        if ($reportingHeadId) {
-            $ids->push($reportingHeadId);
-        }
+        // 1. Reporting heads (same tenant only)
+        $ids = $ids->merge($this->getReportingHeadIds($userId, $tenantId));
 
         // 2. HR users (same tenant only)
         $hrIds = DB::table('users')
@@ -462,26 +459,25 @@ class CheckMissedCheckIns extends Command
     }
 
     /**
-     * Get the reporting head's user ID for a user, scoped to the same
-     * tenant on BOTH the job-detail lookup and the resulting user lookup.
+     * Get all of a user's reporting heads' ids (multi reporting-head
+     * support), scoped to the same tenant on both the pivot lookup and the
+     * resulting user lookup.
      */
-    private function getReportingHeadId($userId, $tenantId)
+    private function getReportingHeadIds($userId, $tenantId)
     {
-        $jobDetail = DB::table('user_job_details')
+        $headIds = DB::table('user_reporting_heads')
             ->where('user_id', $userId)
             ->where('tenant_id', $tenantId)
-            ->first();
+            ->pluck('reporting_head_id');
 
-        if (!$jobDetail || !$jobDetail->reporting_head) {
-            return null;
+        if ($headIds->isEmpty()) {
+            return collect();
         }
 
-        $reportingHead = DB::table('users')
-            ->where('id', $jobDetail->reporting_head)
+        return DB::table('users')
+            ->whereIn('id', $headIds)
             ->where('tenant_id', $tenantId)
             ->where('status', 1)
-            ->first();
-
-        return $reportingHead->id ?? null;
+            ->pluck('id');
     }
 }

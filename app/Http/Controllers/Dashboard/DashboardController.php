@@ -463,9 +463,9 @@ class DashboardController extends Controller
         $user = Auth::user();
         $today = Carbon::today();
 
-        // Get team members using JOIN
-        $teamIds = UserJobDetail::where('reporting_head', $user->id)
-            ->pluck('user_id')
+        // Get team members (any reporting head)
+        $teamIds = User::managedBy($user->id)
+            ->pluck('id')
             ->toArray();
 
         $teamSize = count($teamIds);
@@ -1221,7 +1221,9 @@ class DashboardController extends Controller
         if (app(RbacService::class)->scopeFor($authUser, 'expenses', 'view') !== 'company') {
             $expenseQuery->where(function ($q) use ($authUser, $userId) {
                 $q->where('expenses.user_id', $userId)
-                    ->orWhere('user_job_details.reporting_head', $authUser->id);
+                    ->orWhereIn('users.id', function ($sub) use ($authUser) {
+                        $sub->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                    });
             });
         }
         // ==================== ENHANCED COUNT STATISTICS ====================
@@ -1323,9 +1325,7 @@ class DashboardController extends Controller
 
         if (app(RbacService::class)->scopeFor($authUser, 'expenses', 'view') !== 'company') {
             $employeesQuery->where(function ($q) use ($authUser, $userId) {
-                $q->whereHas('jobDetails', function ($query) use ($authUser) {
-                    $query->where('reporting_head', $authUser->id);
-                })->orWhere('id', $authUser->id);
+                $q->managedBy($authUser->id)->orWhere('id', $authUser->id);
             });
         }
 

@@ -103,7 +103,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Branch</label>
+                    <label class="form-label">Attendance Location</label>
                     <select class="form-control" name="branch_id">
                         <option value="">—</option>
                         @foreach ($branches as $b) <option value="{{ $b->id }}">{{ $b->name }}</option> @endforeach
@@ -129,7 +129,7 @@
                     <label class="form-label">Provision scope</label>
                     <select class="form-control" name="provision_scope">
                         <option value="tenant">all active employees</option>
-                        <option value="branch">only this device's branch</option>
+                        <option value="branch">only this device's attendance location</option>
                     </select>
                 </div>
                 <div class="col-12"><button class="btn btn-primary">Add device</button></div>

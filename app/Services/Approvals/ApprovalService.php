@@ -9,7 +9,6 @@ use App\Models\ApprovalRequest;
 use App\Models\ApprovalWorkflow;
 use App\Models\ApprovalWorkflowStep;
 use App\Models\User;
-use App\Models\UserJobDetail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -303,9 +302,8 @@ class ApprovalService
         if (! $user) {
             return collect();
         }
-        $head = UserJobDetail::where('user_id', $user->id)->value('reporting_head');
 
-        return $head ? collect([(int) $head]) : collect();
+        return $user->reportingHeads()->pluck('users.id');
     }
 
     private function departmentHead(?User $user): Collection

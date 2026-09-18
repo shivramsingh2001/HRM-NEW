@@ -490,7 +490,9 @@ class ExpenseController extends Controller
             if ($needsOwnerFilter) {
                 $expenseQuery->where(function ($q) use ($authUser, $userId) {
                     $q->where('expenses.user_id', $userId)
-                        ->orWhere('user_job_details.reporting_head', $authUser->id);
+                        ->orWhereIn('users.id', function ($sub) use ($authUser) {
+                            $sub->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                        });
                 });
             }
 
@@ -631,9 +633,7 @@ class ExpenseController extends Controller
 
             if ($needsOwnerFilter) {
                 $employeesQuery->where(function ($q) use ($authUser, $userId) {
-                    $q->whereHas('jobDetails', function ($query) use ($authUser) {
-                        $query->where('reporting_head', $authUser->id);
-                    })->orWhere('id', $authUser->id);
+                    $q->managedBy($authUser->id)->orWhere('id', $authUser->id);
                 });
             }
 

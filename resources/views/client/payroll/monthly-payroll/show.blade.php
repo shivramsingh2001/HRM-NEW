@@ -3,76 +3,60 @@
 
 @section('style')
     <style>
-        /* ==================== EMPLOYEE HEADER ==================== */
-        .employee-header {
-            background: linear-gradient(145deg, #1e3a8a, #1e3a8a);
-            padding: 24px 28px;
-            border-radius: 16px;
-            margin-bottom: 28px;
-            box-shadow: 0 8px 20px rgba(30, 58, 138, 0.15);
-            color: white;
-        }
-
-        .employee-name {
-            color: white;
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            letter-spacing: -0.3px;
-        }
-
-        .employee-meta {
-            font-size: 13px;
-            opacity: 0.9;
+        /* ==================== EMPLOYEE SUMMARY ====================
+           Matches Monthly Payroll's own index-table employee column
+           (.employee-info/.employee-avatar/.employee-name/.employee-id) —
+           gradient initials avatar overriding the shared .employee-avatar
+           class, which is otherwise styled for an <img>, not a text div. */
+        .employee-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            color: #fff;
             display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .employee-meta i {
-            margin-right: 6px;
-            font-size: 13px;
-        }
-
-        .status-badge {
-            display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 12px;
+            justify-content: center;
             font-weight: 600;
-            letter-spacing: 0.3px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
+            font-size: 15px;
+            flex-shrink: 0;
         }
 
-        .status-badge i {
-            font-size: 12px;
+        .payroll-meta-row {
+            font-size: 11px;
+            color: var(--gray-500);
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--gray-200);
+        }
+
+        .payroll-meta-row i {
+            margin-right: 4px;
+            font-size: 11px;
+            color: var(--gray-400);
         }
 
         .payment-info {
-            font-size: 12px;
-            opacity: 0.9;
-            margin-top: 8px;
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-top: 6px;
         }
 
         /* ==================== CARDS ==================== */
         .detail-card {
             background: white;
-            border-radius: 14px;
+            border-radius: var(--radius-md);
             border: 1px solid var(--gray-200);
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+            padding: 12px;
+            margin-bottom: 12px;
             transition: all 0.2s;
         }
 
         .detail-card:hover {
             border-color: var(--primary);
-            box-shadow: 0 8px 20px rgba(30, 58, 138, 0.08);
         }
 
         .card-header-custom {
@@ -109,8 +93,8 @@
         }
 
         .card-badge-hour {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: var(--primary-light);
+            color: var(--primary);
             padding: 4px 10px;
             border-radius: 30px;
             font-size: 11px;
@@ -166,7 +150,7 @@
         }
 
         .amount-positive {
-            color: #1e3a8a;
+            color: var(--primary);
             font-weight: 600;
         }
 
@@ -194,17 +178,17 @@
 
         /* ==================== NET PAYABLE CARD ==================== */
         .net-payable-card {
-            background: linear-gradient(145deg, var(--gray-50), white);
+            background: var(--gray-50);
             text-align: center;
-            padding: 24px;
+            padding: 16px;
         }
 
         .net-amount {
-            font-size: 36px;
+            font-size: 22px;
             font-weight: 700;
-            color: #1e3a8a;
+            color: var(--primary);
             line-height: 1.2;
-            margin: 10px 0 5px;
+            margin: 8px 0 4px;
         }
 
         .amount-in-words {
@@ -246,7 +230,7 @@
         }
 
         .stat-positive {
-            color: #1e3a8a;
+            color: var(--primary);
         }
 
         .stat-negative {
@@ -254,7 +238,7 @@
         }
 
         .stat-warning {
-            color: #2563eb;
+            color: var(--primary-mid);
         }
 
         .stat-info {
@@ -570,39 +554,19 @@
             </div>
         @endif
 
-        <!-- Employee Header -->
-        <div class="employee-header">
+        <!-- Employee Summary -->
+        <div class="detail-card">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                <div>
-                    <div class="employee-name">{{ $monthlyPayroll->user->name ?? 'N/A' }}</div>
-                    <div class="employee-meta">
-                        <span><i class="feather-user"></i> Employee ID: {{ $monthlyPayroll->user->employee_id ?? 'N/A' }}</span>
-                        <span><i class="feather-calendar"></i>
-                            {{ \Carbon\Carbon::createFromFormat('Y-m', $monthlyPayroll->payroll_month)->format('F Y') }}</span>
-                        @if ($monthlyPayroll->UserPayroll)
-                            <span><i class="feather-tag"></i> Code:
-                                {{ $monthlyPayroll->UserPayroll->payroll_code ?? 'N/A' }}</span>
-                        @endif
-                        @php
-                            $calcType = $userPayroll && $userPayroll->payrollMaster 
-                                ? ($userPayroll->payrollMaster->payroll_calculation_type ?? 'day_based') 
-                                : 'day_based';
-                        @endphp
-                        <span>
-                            <i class="feather-{{ $calcType === 'hour_based' ? 'clock' : 'calendar' }}"></i>
-                            {{ ucfirst(str_replace('_', ' ', $calcType)) }}
-                            @if($calcType === 'hour_based' && $userPayroll && $userPayroll->payrollMaster)
-                                ({{ $userPayroll->payrollMaster->working_hours_per_day ?? 8 }} hrs/day)
-                            @endif
-                        </span>
+                <div class="employee-info">
+                    <div class="employee-avatar">{{ strtoupper(substr($monthlyPayroll->user->name ?? 'NA', 0, 2)) }}</div>
+                    <div class="employee-details">
+                        <div class="employee-name">{{ $monthlyPayroll->user->name ?? 'N/A' }} <small class="text-muted">({{ $monthlyPayroll->user->employee_id ?? 'N/A' }})</small></div>
+                        <div class="employee-id">{{ $monthlyPayroll->user->email ?? '' }}</div>
                     </div>
                 </div>
-               
+
                 <div class="text-end">
-                    <span class="status-badge">
-                        <i class="feather-{{ $monthlyPayroll->payment_status == 'paid' ? 'check-circle' : ($monthlyPayroll->payment_status == 'pending' ? 'clock' : 'circle') }}"></i>
-                        {{ ucfirst($monthlyPayroll->payment_status) }}
-                    </span>
+                    <x-ui.status-badge :status="$monthlyPayroll->payment_status" />
                     @if ($monthlyPayroll->payment_date)
                         <div class="payment-info">
                             <i class="feather-credit-card"></i> Paid on:
@@ -610,6 +574,26 @@
                         </div>
                     @endif
                 </div>
+            </div>
+            <div class="payroll-meta-row">
+                <span><i class="feather-calendar"></i>
+                    {{ \Carbon\Carbon::createFromFormat('Y-m', $monthlyPayroll->payroll_month)->format('F Y') }}</span>
+                @if ($monthlyPayroll->UserPayroll)
+                    <span><i class="feather-tag"></i> Code:
+                        {{ $monthlyPayroll->UserPayroll->payroll_code ?? 'N/A' }}</span>
+                @endif
+                @php
+                    $calcType = $userPayroll && $userPayroll->payrollMaster
+                        ? ($userPayroll->payrollMaster->payroll_calculation_type ?? 'day_based')
+                        : 'day_based';
+                @endphp
+                <span>
+                    <i class="feather-{{ $calcType === 'hour_based' ? 'clock' : 'calendar' }}"></i>
+                    {{ ucfirst(str_replace('_', ' ', $calcType)) }}
+                    @if($calcType === 'hour_based' && $userPayroll && $userPayroll->payrollMaster)
+                        ({{ $userPayroll->payrollMaster->working_hours_per_day ?? 8 }} hrs/day)
+                    @endif
+                </span>
             </div>
         </div>
 
@@ -723,7 +707,7 @@
                                 <strong>Proration:</strong> <span class="highlight">{{ number_format($pct, 1) }}%</span>
                             </span>
                             @if(($monthlyPayroll->paid_leaves ?? 0) > 0)
-                                <span class="info-item" style="background: #e3edfe; padding: 2px 10px; border-radius: 4px; color: #1e3a8a;">
+                                <span class="info-item" style="background: var(--primary-light); padding: 2px 10px; border-radius: 4px; color: var(--primary);">
                                     <i class="feather-calendar"></i>
                                     <strong>Paid Leaves:</strong> {{ $monthlyPayroll->paid_leaves ?? 0 }} days
                                     ({{ $paidLeaveHours }} hrs)
@@ -932,7 +916,7 @@
                 <div class="detail-card net-payable-card">
                     <div class="card-header-custom" style="border-bottom-color: #93c5fd;">
                         <h6 class="card-title">
-                            <i class="fa-solid fa-rupee-sign" style="color: #1e3a8a;"></i>
+                            <i class="fa-solid fa-rupee-sign" style="color: var(--primary);"></i>
                             Net Payable
                         </h6>
                     </div>
@@ -945,7 +929,7 @@
                             {{ number_format(($monthlyPayroll->actual_worked_hours ?? 0) + (($monthlyPayroll->paid_leaves ?? 0) * ($userPayroll && $userPayroll->payrollMaster ? $userPayroll->payrollMaster->working_hours_per_day ?? 8 : 8)), 2) }} 
                             payable hours @ ₹{{ number_format($monthlyPayroll->hourly_rate ?? 0, 2) }}/hr
                             @if(($monthlyPayroll->paid_leaves ?? 0) > 0)
-                                <span style="color: #1e3a8a; background: #e3edfe; padding: 1px 6px; border-radius: 4px;">
+                                <span style="color: var(--primary); background: var(--primary-light); padding: 1px 6px; border-radius: 4px;">
                                     +{{ ($monthlyPayroll->paid_leaves ?? 0) * ($userPayroll && $userPayroll->payrollMaster ? $userPayroll->payrollMaster->working_hours_per_day ?? 8 : 8) }} hrs leaves
                                 </span>
                             @endif

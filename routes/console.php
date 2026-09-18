@@ -52,6 +52,13 @@ Schedule::command('tasks:deadline-reminders')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/task-deadline-reminders.log'));
 
+// Remind project managers/teams when a deadline is within 7 days, then daily while overdue.
+Schedule::command('projects:check-deadlines')
+    ->dailyAt('08:15')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/project-deadline-reminders.log'));
+
 // Rebuild the current month's attendance summaries nightly, and on the 1st also
 // finalise the month that just ended.
 Schedule::command('attendance:update-summaries')

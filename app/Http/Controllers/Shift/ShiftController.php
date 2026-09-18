@@ -338,7 +338,7 @@ class ShiftController extends Controller
             // A manager only sees their own direct reportees on the roster.
             if (Auth::user()->role === 'manager') {
                 $managerId = Auth::id();
-                $userQuery->whereHas('jobDetails', fn ($q) => $q->where('reporting_head', $managerId));
+                $userQuery->managedBy($managerId);
             }
 
             if ($request->filled('search')) {

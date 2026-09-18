@@ -11,7 +11,7 @@ return [
         'employee', 'attendance', 'leave', 'payroll', 'tasks', 'projects', 'recruitment',
         'onboarding', 'offboarding', 'expenses', 'loans', 'meetings',
         'announcements', 'reports', 'settings', 'performance', 'performance_reviews', 'overtime', 'team',
-        'requests',
+        'requests', 'branches',
     ],
 
     'actions' => ['view', 'create', 'edit', 'delete', 'approve', 'export', 'manage'],
@@ -35,20 +35,26 @@ return [
             'projects' => 'all', 'recruitment' => 'all', 'onboarding' => 'all', 'offboarding' => 'all',
             'expenses' => 'all', 'loans' => 'all', 'meetings' => 'all', 'announcements' => 'all',
             'reports' => 'all', 'settings' => 'all', 'performance' => 'all', 'performance_reviews' => 'all',
-            'overtime' => 'all', 'team' => 'all', 'requests' => 'all',
+            'overtime' => 'all', 'team' => 'all', 'requests' => 'all', 'branches' => 'all',
         ]],
         'hr' => ['HR', true, [
-            // tasks => 'all' (not just 'view'): matches the pre-RBAC
+            // tasks/projects => 'all': matches the pre-RBAC
             // TaskPermissionService::isElevated() behavior (admin+hr always
             // treated as equally privileged for tasks/projects) — kept as
             // 'all' deliberately so wiring HR through the permission system
-            // doesn't silently narrow access they already had.
+            // doesn't silently narrow access they already had. NOTE: this
+            // comment always claimed 'projects' was included, but the key
+            // was actually missing from this array until the Project module
+            // upgrade (2026-09-21) wired real permission: middleware onto
+            // project.* routes — until then the gap was silently inert since
+            // nothing read this grant for the real web ProjectController.
             // payroll => 'all' (was implicitly true: MonthlyPayrollController's
             // create/store/update/status/bulk-update/export/destroy routes had
             // NO role check at all before RBAC — HR is who actually runs
             // monthly payroll processing, so this preserves their real
             // workflow rather than the accidental "view only" narrower grant).
             'employee' => 'all', 'attendance' => 'all', 'leave' => 'all', 'payroll' => 'all', 'tasks' => 'all',
+            'projects' => 'all',
             // expenses => 'all' (was implicitly true for hr under the old
             // in_array(role, ['admin','hr','manager']) approval gate).
             'expenses' => 'all',
@@ -61,6 +67,9 @@ return [
             // admin) — hr fell through to the "regular employee, own only"
             // branch. Corrected to match hr's access everywhere else.
             'overtime' => 'all', 'team' => 'all', 'requests' => 'all',
+            // branches => 'all': hr manages the new organizational Branch
+            // module the same as Department/Designation-adjacent org setup.
+            'branches' => 'all',
         ]],
         'manager' => ['Manager', true, [
             'employee' => ['view' => 'team'],
@@ -85,7 +94,13 @@ return [
             // employee only meetings they're a participant of, admin/hr saw
             // all. 'own' is reused here to mean "meetings I'm part of" since
             // there's no single owner column for a many-to-many relation.
-            'projects' => ['view'], 'recruitment' => ['view'],
+            // projects edit => own: Project Management upgrade (2026-09-21) —
+            // a manager can edit/update projects where they're the project
+            // head or an active team member (record-level check in
+            // ProjectController::authorizeProjectAccess()), not company-wide.
+            // Was 'view' only, which didn't match the detail page's existing
+            // "Edit Project" button already being shown to managers.
+            'projects' => ['view', 'edit' => 'own'], 'recruitment' => ['view'],
             // meetings edit => own: any meeting creator (any role) could
             // already update/cancel/complete their own meeting.
             'meetings' => ['view' => 'own', 'edit' => 'own'], 'reports' => ['view'],
@@ -117,6 +132,10 @@ return [
             // saw every tenant loan unfiltered. team scope here is the
             // corrected behavior for manager; employee below gets 'own'.
             'loans' => ['view' => 'team'],
+            // branches => company: Branch is reference/org-structure data,
+            // visible read-only to every role — same spirit as Department/
+            // Designation dropdowns being populated for all roles.
+            'branches' => ['view' => 'company'],
         ]],
         'employee' => ['Employee', true, [
             'employee' => ['view' => 'own'],
@@ -142,6 +161,7 @@ return [
             'team' => ['view' => 'own'],
             'overtime' => ['view' => 'own'],
             'requests' => ['view' => 'own'],
+            'branches' => ['view' => 'company'],
         ]],
     ],
 ];

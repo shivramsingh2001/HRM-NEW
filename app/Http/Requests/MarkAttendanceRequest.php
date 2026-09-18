@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\AttendanceStatus;
-use App\Models\UserJobDetail;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,11 +16,11 @@ class MarkAttendanceRequest extends FormRequest
             return false;
         }
 
-        // A manager may only mark their own reportees.
+        // A manager may only mark their own reportees (any reporting head).
         if ($actor->role === 'manager') {
-            return UserJobDetail::where('user_id', $this->input('user_id'))
+            return User::managedBy($actor->id)
+                ->where('id', $this->input('user_id'))
                 ->where('tenant_id', $actor->tenant_id)
-                ->where('reporting_head', $actor->id)
                 ->exists();
         }
 

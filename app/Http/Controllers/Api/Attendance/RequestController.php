@@ -8,7 +8,6 @@ use App\Models\RequestHistory;
 use App\Models\Request as RequestStore;
 use App\Models\RequestType;
 use App\Models\User;
-use App\Models\UserJobDetail;
 use Exception;
 use Google\Cloud\Storage\Connection\Rest;
 use Illuminate\Http\Request;
@@ -16,11 +15,22 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Services\RbacService;
+use App\Services\AuditLogger;
+use App\Services\RequestNotificationService;
 use App\Traits\AuthorizesByScope;
 
 class RequestController extends Controller
 {
     use AuthorizesByScope;
+
+    protected $auditLogger;
+    protected $notificationService;
+
+    public function __construct(AuditLogger $auditLogger, RequestNotificationService $notificationService)
+    {
+        $this->auditLogger = $auditLogger;
+        $this->notificationService = $notificationService;
+    }
 
     public function type(Request $request)
     {
@@ -63,11 +73,7 @@ class RequestController extends Controller
             DB::beginTransaction();
             
             // Check for overlapping requests
-            $overlapping = $this->checkOverlappingRequests(
-                $user->id, 
-                $validated['start_date'], 
-                $validated['end_date']
-            );
+            $overlapping = RequestStore::overlapping($user->id, $validated['start_date'], $validated['end_date'])->exists();
     
             if ($overlapping) {
                 DB::rollBack();
@@ -99,8 +105,8 @@ class RequestController extends Controller
                     }
                     
                     $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                    $path = public_path('uploads/request/attachments');
-    
+                    $path = public_path('uploads/requests/attachments');
+
                     $file->move($path, $filename);
                     $filePath = 'uploads/requests/attachments/' . $filename;
                     
@@ -128,46 +134,202 @@ class RequestController extends Controller
                 'action' => 'CREATED',
                 'new_values' => json_encode($newRequest->toArray())
             ]);
-    
+
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.created', 'Request', $newRequest->id, [], $newRequest->toArray());
+
             DB::commit();
-    
+
+            try {
+                $this->notificationService->notifyRequestSubmitted($newRequest);
+            } catch (\Exception $e) {
+                \Log::error('Failed to send request notification: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Request created successfully.',
             ], 200);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            
+
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create request. Please try again.',
-               
+
             ], 500);
         }
     }
 
-    private function checkOverlappingRequests($userId, $startDate, $endDate, $excludeRequestId = null)
+    /**
+     * Update a pending request (mobile — was missing entirely; web has the
+     * equivalent in Attendance\RequestController::update()).
+     */
+    public function update(Request $request, $id)
     {
-        $query = RequestStore::where('user_id', $userId)
-            ->whereIn('status', ['PENDING', 'APPROVED'])
-            ->where(function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('start_date', [$startDate, $endDate])
-                    ->orWhereBetween('end_date', [$startDate, $endDate])
-                    ->orWhere(function ($q) use ($startDate, $endDate) {
-                        $q->where('start_date', '<=', $startDate)
-                            ->where('end_date', '>=', $endDate);
-                    });
-            });
-        
-        if ($excludeRequestId) {
-            $query->where('id', '!=', $excludeRequestId);
+        $validator = Validator::make($request->all(), [
+            'request_type_id' => 'required|exists:request_types,id',
+            'start_date' => 'required|date|after_or_equal:today',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'reason' => 'required|string|max:1000',
+            'attachment' => 'sometimes|nullable|file|max:5120|mimes:jpg,jpeg,png,pdf,doc,docx'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 200);
         }
-        
-        return $query->exists();
+
+        $validated = $validator->validated();
+        $user = Auth::user();
+
+        try {
+            $existingRequest = RequestStore::findOrFail($id);
+
+            if ($existingRequest->user_id != $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access.'
+                ], 200);
+            }
+
+            if (!$existingRequest->canBeEdited()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only pending requests can be updated.'
+                ], 200);
+            }
+
+            DB::beginTransaction();
+
+            $overlapping = RequestStore::overlapping($user->id, $validated['start_date'], $validated['end_date'], $id)->exists();
+
+            if ($overlapping) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have another pending or approved request for this date range.'
+                ], 200);
+            }
+
+            $oldValues = $existingRequest->toArray();
+
+            $existingRequest->update([
+                'request_type_id' => $validated['request_type_id'],
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'],
+                'reason' => $validated['reason']
+            ]);
+
+            if ($request->hasFile('attachment') && $request->file('attachment')->isValid()) {
+                $file = $request->file('attachment');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = public_path('uploads/requests/attachments');
+
+                $file->move($path, $filename);
+                $filePath = 'uploads/requests/attachments/' . $filename;
+
+                RequestAttachment::create([
+                    'request_id' => $existingRequest->id,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $filePath,
+                    'file_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                    'uploaded_by' => $user->id
+                ]);
+            }
+
+            RequestHistory::create([
+                'request_id' => $existingRequest->id,
+                'action_by' => $user->id,
+                'action' => 'UPDATED',
+                'old_values' => json_encode($oldValues),
+                'new_values' => json_encode($existingRequest->toArray())
+            ]);
+
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.updated', 'Request', $existingRequest->id, $oldValues, $existingRequest->toArray());
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Request updated successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update request. Please try again.'
+            ], 500);
+        }
     }
-    
+
+    /**
+     * Cancel (soft-cancel, not delete) a PENDING or APPROVED request — was
+     * missing entirely on mobile; mirrors the web controller's destroy().
+     */
+    public function cancel($id)
+    {
+        $user = Auth::user();
+
+        try {
+            $existingRequest = RequestStore::findOrFail($id);
+
+            if ($existingRequest->user_id != $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access.'
+                ], 200);
+            }
+
+            if (!$existingRequest->canBeCancelled()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This request cannot be cancelled.'
+                ], 200);
+            }
+
+            DB::beginTransaction();
+
+            $oldStatus = $existingRequest->status;
+            $wasApproved = $oldStatus === 'APPROVED';
+
+            $existingRequest->update(['status' => 'CANCELLED']);
+
+            RequestHistory::create([
+                'request_id' => $existingRequest->id,
+                'action_by' => $user->id,
+                'action' => 'CANCELLED',
+                'old_values' => json_encode(['status' => $oldStatus]),
+                'new_values' => json_encode(['status' => 'CANCELLED'])
+            ]);
+
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.cancelled', 'Request', $existingRequest->id, ['status' => $oldStatus], ['status' => 'CANCELLED']);
+
+            DB::commit();
+
+            try {
+                $this->notificationService->notifyRequestCancelled($existingRequest, $wasApproved);
+            } catch (\Exception $e) {
+                \Log::error('Failed to send request cancellation notification: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Request cancelled successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel request. Please try again.'
+            ], 500);
+        }
+    }
+
     public function view(Request $request)
     {
         try {
@@ -260,8 +422,8 @@ class RequestController extends Controller
     
             // Apply scope-based filtering
             if ($viewScope === 'team') {
-                $teamUserIds = UserJobDetail::where('reporting_head', $user->id)
-                    ->pluck('user_id')
+                $teamUserIds = User::managedBy($user->id)
+                    ->pluck('id')
                     ->toArray();
                 
                 // If no team members, return empty result
@@ -416,27 +578,48 @@ class RequestController extends Controller
                 ], 200);
             }
 
-            $validated = $request->validate([
-                'comments' => 'nullable|string|max:500'
+            $commentsValidator = Validator::make($request->all(), [
+                'comments' => $request->status === 'REJECTED' ? 'required|string|max:500' : 'nullable|string|max:500'
             ]);
+            if ($commentsValidator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $commentsValidator->errors()->first()
+                ], 200);
+            }
 
             DB::beginTransaction();
 
             $oldStatus = $existingRequest->status;
+            $remarks = $request->remarks ?? $request->comments ?? null;
             $existingRequest->update([
                 'status' => $request->status,
-                'comments' => $request->remarks ?? null
+                'comments' => $remarks
             ]);
 
             RequestHistory::create([
                 'request_id' => $existingRequest->id,
                 'action_by' => $user->id,
                 'action' => $request->status,
-                'comments' => $request->remarks ?? null,
+                'comments' => $remarks,
                 'old_values' => json_encode(['status' => $oldStatus]),
                 'new_values' => json_encode(['status' => $request->status])
             ]);
+
+            $this->auditLogger->record('tenant_user', $user->id, (int) $user->tenant_id, 'requests.' . strtolower($request->status), 'Request', $existingRequest->id, ['status' => $oldStatus], ['status' => $request->status]);
+
             DB::commit();
+
+            try {
+                if ($request->status === 'APPROVED') {
+                    $this->notificationService->notifyRequestApproved($existingRequest, $remarks);
+                } else {
+                    $this->notificationService->notifyRequestRejected($existingRequest, $remarks);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send request status notification: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Request ' . $request->status . ' successfully.'

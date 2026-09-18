@@ -377,8 +377,8 @@ class PerformanceController extends Controller
 
         // If manager, only show their team
         if ($user->role == 'manager') {
-            $query->whereHas('user.jobDetails', function ($q) use ($user) {
-                $q->where('reporting_head', $user->id);
+            $query->whereHas('user', function ($q) use ($user) {
+                $q->managedBy($user->id);
             });
         }
 
@@ -445,9 +445,7 @@ class PerformanceController extends Controller
             ->where('tenant_id', $user->tenant_id);
 
         if ($user->role == 'manager') {
-            $employeeQuery->whereHas('jobDetails', function ($q) use ($user) {
-                $q->where('reporting_head', $user->id);
-            });
+            $employeeQuery->managedBy($user->id);
         }
 
         $allEmployees = $employeeQuery->orderBy('name')->get();

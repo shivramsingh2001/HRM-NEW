@@ -87,7 +87,7 @@ All registered as aliases in `bootstrap/app.php`'s `withMiddleware()` (Laravel 1
 | `shifts.custom` | `EnsureCustomShiftsEnabled` | Blocks shift-management routes unless `tenant->custom_shifts_enabled`. |
 | `field.tracking` | `EnsureFieldTrackingEnabled` | Blocks field-tracking routes unless `tenant->field_tracking_enabled` (paid add-on). |
 | `feature` | `EnsureFeatureEnabled` | `feature:payroll` — generic plan/feature gate via `FeatureService`. |
-| `permission` | `EnsurePermission` | `permission:payroll,approve` — tenant RBAC gate via `RbacService`. **Applied on 45+ routes** (payroll, leave, expense, task, team, overtime, etc. — verified 2026-09-16); `role:` still gates other routes directly, both are live concurrently. |
+| `permission` | `EnsurePermission` | `permission:payroll,approve` — tenant RBAC gate via `RbacService`. **Applied on 45+ routes** (payroll, leave, expense, task, team, overtime, requests, etc. — `requests`' manager-facing routes migrated from ad hoc `role ==` checks 2026-09-17); `role:` still gates other routes directly, both are live concurrently. |
 | `apiv1` | `ApiV1` | Forces `Accept: application/json`, stamps `X-Request-Id` — applied to the whole `/api/v1/*` group. |
 | `apikey` | `ResolveApiClient` | Authenticates Tier 2 API requests via `Authorization: Bearer <key_id>.<secret>` against `ApiClient`, binds `current_tenant`/`current_api_client`, logs to `ApiRequestLog`. |
 | `idempotency` | `Idempotency` | `Idempotency-Key` header support for unsafe methods on `/api/v1/*` — replays stored response for a repeat key+body, `409` on key reuse with a different body, 24h TTL, uses `idempotency_keys` table. |

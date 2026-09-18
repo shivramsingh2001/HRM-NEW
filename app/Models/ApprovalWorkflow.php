@@ -20,7 +20,8 @@ class ApprovalWorkflow extends Model
 
     /**
      * Does this workflow apply to the given subject user (by department /
-     * designation / branch)? A null applies_to matches everyone.
+     * designation / attendance location / organizational branch)? A null
+     * applies_to matches everyone.
      */
     public function matchesUser(?User $user): bool
     {
@@ -33,7 +34,13 @@ class ApprovalWorkflow extends Model
         $checks = [
             'departments' => $jd->department ?? null,
             'designations' => $jd->designation ?? null,
-            'branches' => $jd->office_branch ?? null,
+            // Renamed from 'branches' (2026_09_20) — this checks
+            // office_branch, the attendance-geofencing location, not the
+            // organizational Branch below.
+            'attendance_locations' => $jd->office_branch ?? null,
+            // Organizational Branch (company_branches.id) — separate from
+            // attendance_locations above.
+            'branches' => $jd->branch_id ?? null,
         ];
 
         foreach ($checks as $key => $value) {

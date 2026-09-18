@@ -71,21 +71,6 @@
             gap: 4px;
         }
 
-        .badge.bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
-        }
-
-        .badge.bg-danger {
-            background: #fee2e2 !important;
-            color: #991b1b;
-        }
-
-        .badge.bg-warning {
-            background: #fef3c7 !important;
-            color: #92400e;
-        }
-
         /* Amount styling */
         .amount-text {
             font-weight: 600;
@@ -95,7 +80,7 @@
         /* Interest rate styling */
         .rate-text {
             font-weight: 500;
-            color: #4f46e5;
+            color: var(--primary-mid);
         }
 
         /* Sort order badge */
@@ -119,7 +104,7 @@
             border-radius: 6px;
             font-size: 11px;
             font-weight: 600;
-            color: #4f46e5;
+            color: var(--primary-mid);
             display: inline-block;
         }
 
@@ -219,7 +204,7 @@
         }
 
         .result-box p strong {
-            color: #4f46e5;
+            color: var(--primary-mid);
         }
 
         /* Responsive */
@@ -398,7 +383,7 @@
                                             <td>
                                                 <strong>{{ $category->name }}</strong>
                                                 @if ($category->requires_approval)
-                                                    <i class="feather-shield text-info ms-1" title="Requires Approval"></i>
+                                                    <i class="feather-shield text-info ms-1" title="Requires Approval" data-bs-toggle="tooltip"></i>
                                                 @endif
                                             </td>
                                             <td><span class="code-badge">{{ $category->code }}</span></td>
@@ -434,11 +419,7 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                @if ($category->status)
-                                                    <span class="badge bg-success">Active</span>
-                                                @else
-                                                    <span class="badge bg-danger">Inactive</span>
-                                                @endif
+                                                <x-ui.status-badge :status="$category->status ? 'active' : 'inactive'" />
                                             </td>
                                             <td class="text-center">
                                                 <div class="d-flex justify-content-center gap-1">
@@ -450,17 +431,17 @@
                                                         data-max_tenure_months="{{ $category->max_tenure_months }}"
                                                         data-requires_approval="{{ $category->requires_approval }}"
                                                         data-sort_order="{{ $category->sort_order }}"
-                                                        data-status="{{ $category->status }}" title="Edit Category">
+                                                        data-status="{{ $category->status }}" title="Edit Category" data-bs-toggle="tooltip">
                                                         <i class="feather-edit-3"></i>
                                                     </a>
                                                     <a href="#" class="action-btn"
                                                         onclick="openEmiCalculator({{ $category->id }}, '{{ $category->name }}')"
-                                                        title="Calculate EMI">
-                                                        <i class="fa fa-calculator"></i>
+                                                        title="Calculate EMI" data-bs-toggle="tooltip">
+                                                        <i class="feather-percent"></i>
                                                     </a>
                                                     <a href="#" class="action-btn delete delete-category"
                                                         data-id="{{ $category->id }}" data-name="{{ $category->name }}"
-                                                        title="Delete Category">
+                                                        title="Delete Category" data-bs-toggle="tooltip">
                                                         <i class="feather-trash-2"></i>
                                                     </a>
                                                 </div>

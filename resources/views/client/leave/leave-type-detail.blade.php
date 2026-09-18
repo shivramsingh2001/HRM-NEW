@@ -2,17 +2,59 @@
 
 @section('style')
 <style>
-    .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #eaeef5; }
-    .personal-info .form-control { border-color: #eaeef5; font-size: 12px; }
+    .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #dfe5f0; }
+    .personal-info .form-control[readonly] { background: #f8fafc; border-color: #dfe5f0; color: #1a2236; }
     .personal-info label { font-size: 12px; }
-    .btn-warning { background: #2563eb; border-color: #2563eb; color: #fff; }
-    .btn-warning:hover { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }
-    .badge.bg-soft-primary { background: #e3edfe; }
+
+    .lt-detail-badge {
+        padding: 3px 10px;
+        border-radius: 30px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .2px;
+    }
+
+    .badge-active { background: #3b82f6; color: #fff; }
+    .badge-inactive { background: #1e3a8a; color: #fff; }
+    .badge-system { background: #e3edfe; color: #1e3a8a; }
+    .badge-unpaid { background: #93c5fd; color: #1e3a8a; }
+
+    .customers-nav-tabs .nav-link.active {
+        color: #1e3a8a;
+        border-color: #dfe5f0 #dfe5f0 #fff;
+    }
+
+    .customers-nav-tabs .nav-link {
+        color: #6b7385;
+    }
 </style>
 @endsection
 
 @section('content-area')
-    <x-ui.page-header title="Leave Type Detail" :parent="['label' => 'Leave Types', 'route' => 'leave-type.index']" />
+    <div class="content-area-header sticky-top">
+        <div class="page-header-left d-flex align-items-center gap-2">
+            <div class="page-header-title">
+                <h5 class="m-b-10">Leave Type Management</h5>
+            </div>
+            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
+                <li class="breadcrumb-item"><a href="{{ route('leave-type.index') }}">Leave Types</a></li>
+                <li class="breadcrumb-item">Details</li>
+            </ul>
+        </div>
+        <div class="page-header-right ms-auto d-flex align-items-center gap-2">
+            @if ($leaveType->isSystemType())
+                <span class="lt-detail-badge badge-system" title="System-managed leave type — cannot be edited or deleted">
+                    <i class="feather-lock me-1"></i>System type — locked
+                </span>
+            @endif
+            @if ($leaveType->is_unpaid)
+                <span class="lt-detail-badge badge-unpaid">Unpaid</span>
+            @endif
+            <span class="lt-detail-badge {{ $leaveType->status ? 'badge-active' : 'badge-inactive' }}">
+                {{ $leaveType->status ? 'Active' : 'Inactive' }}
+            </span>
+        </div>
+    </div>
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="row">
@@ -33,19 +75,9 @@
                                 <div class="mb-4 d-flex align-items-center justify-content-between">
                                     <h5 class="fw-bold mb-0 me-4">
                                         <span class="d-block mb-2">Leave Type Information:</span>
-                                        <span class="fs-12 fw-normal text-muted text-truncate-1-line">* marked
-                                            fields must be filled ! </span>
-                                    </h5>
-                                    <h5 class="fw-bold mb-0">
-                                        @if ($leaveType->isSystemType())
-                                            <span class="badge bg-soft-primary text-primary" title="System-managed leave type — cannot be edited or deleted">
-                                                <i class="feather-lock me-1"></i>System type — locked
-                                            </span>
-                                        @else
-                                            <a href="javascript:void(0);" class="btn btn-warning" data-bs-toggle="modal"
-                                                data-bs-target="#changeLeaveTypeDetails">Change
-                                                Leave Type Details</a>
-                                        @endif
+                                        <span class="fs-12 fw-normal text-muted text-truncate-1-line">Read-only
+                                            overview — use the edit icon on the Leave Type card to update these
+                                            details.</span>
                                     </h5>
                                 </div>
 
@@ -110,198 +142,4 @@
             </div>
         </div>
     </div>
-@endsection
-
-@section('create-modal')
-    <!-- Update Leave Type Modal -->
-    <div class="modal fade" id="changeLeaveTypeDetails" tabindex="-1" aria-labelledby="changeLeaveTypeDetailsLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="d-flex flex-column mb-0">
-                        <span class="fs-18 fw-bold mb-1">Update Leave Type Details</span>
-                        <small class="d-block fs-11 fw-normal text-muted">Update leave type information</small>
-                    </h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div class="card m-0">
-                        <div class="card-body">
-                            <form id="updateLeaveTypeForm"
-                                action="{{ route('leave-type.update', ['id' => encrypt($leaveType->id)]) }}"
-                                method="POST">
-                                @csrf
-
-                                <div id="updateFormError" class="alert alert-danger d-none"></div>
-                                <div class="row">
-                                    <div class="col-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_name">Leave Type Name *</label>
-                                            <input type="text" class="form-control" name="name" id="edit_name"
-                                                value="{{ $leaveType->name }}" placeholder="Enter leave type name">
-                                            <small class="text-danger error-text name_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_credit_type">Credit Type *</label>
-                                            <select class="form-control" name="credit_type" id="edit_credit_type"
-                                                required>
-                                                <option value="no"
-                                                    {{ $leaveType->credit_type == 'no' ? 'selected' : '' }}>
-                                                    No Credit
-                                                </option>
-                                                <option value="weekly"
-                                                    {{ $leaveType->credit_type == 'weekly' ? 'selected' : '' }}>
-                                                    Weekly
-                                                </option>
-                                                <option value="monthly"
-                                                    {{ $leaveType->credit_type == 'monthly' ? 'selected' : '' }}>
-                                                    Monthly
-                                                </option>
-                                                <option value="yearly"
-                                                    {{ $leaveType->credit_type == 'yearly' ? 'selected' : '' }}>
-                                                    Yearly
-                                                </option>
-                                            </select>
-                                            <small class="text-danger error-text credit_type_error"></small>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_credit_value">Credit Value *</label>
-                                            <input type="number" step="any"class="form-control" name="credit_value"
-                                                required id="edit_credit_value" placeholder="Enter credit value"
-                                                value="{{ $leaveType->credit_value }}">
-                                            <small class="text-danger error-text credit_value_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_status">Status *</label>
-                                            <select class="form-control" name="status" id="edit_status" required>
-                                                <option value="1" {{ $leaveType->status == '1' ? 'selected' : '' }}>
-                                                    Active
-                                                </option>
-                                                <option value="0" {{ $leaveType->status == '0' ? 'selected' : '' }}>
-                                                    Inactive
-                                                </option>
-
-                                            </select>
-                                            <small class="text-danger error-text status_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 mb-3">
-                                        <div class="form-group">
-                                            <label class="fw-semibold" for="edit_description">Description</label>
-                                            <textarea class="form-control" name="description" id="edit_description" rows="3"
-                                                placeholder="Enter leave type description...">{{ $leaveType->description }}</textarea>
-                                            <small class="text-danger error-text description_error"></small>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="d-flex justify-content-end gap-2">
-                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                                                Cancel
-                                            </button>
-                                            <button type="submit" class="btn btn-primary">
-                                                Update Leave Type
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-@endsection
-
-@section('script-area')
-    <script>
-        $(document).ready(function() {
-            // Update form submission
-            $('#updateLeaveTypeForm').on('submit', function(e) {
-                e.preventDefault();
-                console.log('Update form submitted');
-
-                // Get form data
-                var formData = $(this).serialize();
-                console.log('Form data:', formData);
-
-                // Reset errors
-                $('.error-text').text('');
-                $('#updateFormError').addClass('d-none').text('');
-
-                // Show loading
-                var submitBtn = $(this).find('button[type="submit"]');
-                var originalText = submitBtn.text();
-                submitBtn.prop('disabled', true).text('Updating...');
-
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: "POST",
-                    data: formData,
-                    dataType: 'json',
-                    success: function(response) {
-                        console.log('Update success:', response);
-                        submitBtn.prop('disabled', false).text(originalText);
-
-                        if (response.success) {
-                            // Show success message
-                            alert('Leave Type updated successfully!');
-
-                            // Close modal
-                            $('#changeLeaveTypeDetails').modal('hide');
-
-                            // Reload page to show updated data
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('Update error:', error);
-                        console.log('Status:', status);
-                        console.log('XHR response:', xhr.responseText);
-
-                        submitBtn.prop('disabled', false).text(originalText);
-
-                        if (xhr.status === 422) {
-                            // Validation errors
-                            console.log('Validation errors:', xhr.responseJSON.errors);
-                            let errors = xhr.responseJSON.errors;
-                            $.each(errors, function(key, value) {
-                                $('.' + key + '_error').text(value[0]);
-                            });
-                        } else if (xhr.status === 500) {
-                            // Server error
-                            $('#updateFormError')
-                                .removeClass('d-none')
-                                .text('Server error. Please try again later.');
-                        } else {
-                            // Other errors
-                            let errorMsg = xhr.responseJSON?.message ||
-                                'Something went wrong. Please try again.';
-                            console.log('Error message:', errorMsg);
-
-                            $('#updateFormError')
-                                .removeClass('d-none')
-                                .text(errorMsg);
-                        }
-                    }
-                });
-            });
-
-            // Clear errors when modal is closed
-            $('#changeLeaveTypeDetails').on('hidden.bs.modal', function() {
-                $('.error-text').text('');
-                $('#updateFormError').addClass('d-none').text('');
-            });
-        });
-    </script>
 @endsection

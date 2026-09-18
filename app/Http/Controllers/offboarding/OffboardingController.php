@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\OffboardingRequest;
 use App\Models\ExitInterview;
-use App\Models\UserJobDetail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -114,7 +113,7 @@ class OffboardingController extends Controller
     public function managerIndex(Request $request)
     {
         try {
-            $teamMemberIds = UserJobDetail::where('reporting_head', auth()->id())->pluck('user_id');
+            $teamMemberIds = User::managedBy(auth()->id())->pluck('id');
             $teamMemberIds->push(auth()->id());
 
             $query = OffboardingRequest::with(['employee', 'createdBy'])
@@ -318,7 +317,9 @@ class OffboardingController extends Controller
             }
 
             if ($userRole == 'manager') {
-                $isTeamMember = $offboarding->employee->jobDetails && $offboarding->employee->jobDetails->reporting_head == auth()->user()->id;
+                $isTeamMember = User::managedBy(auth()->user()->id)
+                    ->where('id', $offboarding->employee_id)
+                    ->exists();
                 if (!$isTeamMember && !$isRequester) {
                     return redirect()->route('offboarding.manager')->with('error', 'You can only view your team members\' offboarding requests.');
                 }
