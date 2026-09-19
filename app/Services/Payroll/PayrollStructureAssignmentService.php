@@ -103,16 +103,9 @@ class PayrollStructureAssignmentService
         DB::transaction(function () use ($structure, $components, $ctc) {
             $structure->components()->delete();
 
+            $masters = $this->loadMastersFor($components);
             foreach ($components as $componentId => $row) {
-                $structure->components()->create([
-                    'tenant_id' => $structure->tenant_id,
-                    'payroll_component_master_id' => (int) $componentId,
-                    'calculation_method' => $row['calculation_method'],
-                    'calculation_base_type' => $row['calculation_base_type'] ?? 'none',
-                    'amount' => $row['calculation_method'] === 'fixed_amount' ? ($row['amount'] ?? 0) : null,
-                    'percentage_value' => $row['calculation_method'] === 'percentage' ? ($row['percentage_value'] ?? 0) : null,
-                    'is_enabled' => true,
-                ]);
+                $this->createComponentSnapshot($structure, (int) $componentId, $row, $masters->get((int) $componentId));
             }
 
             $structure->update(['ctc' => $ctc]);
@@ -137,16 +130,9 @@ class PayrollStructureAssignmentService
 
             $structure->components()->delete();
 
+            $masters = $this->loadMastersFor($components);
             foreach ($components as $componentId => $row) {
-                $structure->components()->create([
-                    'tenant_id' => $structure->tenant_id,
-                    'payroll_component_master_id' => (int) $componentId,
-                    'calculation_method' => $row['calculation_method'],
-                    'calculation_base_type' => $row['calculation_base_type'] ?? 'none',
-                    'amount' => $row['calculation_method'] === 'fixed_amount' ? ($row['amount'] ?? 0) : null,
-                    'percentage_value' => $row['calculation_method'] === 'percentage' ? ($row['percentage_value'] ?? 0) : null,
-                    'is_enabled' => true,
-                ]);
+                $this->createComponentSnapshot($structure, (int) $componentId, $row, $masters->get((int) $componentId));
             }
 
             $structure->update(['ctc' => $ctc, 'is_current' => true, 'status' => 'active']);
@@ -189,16 +175,9 @@ class PayrollStructureAssignmentService
                 'created_by' => $meta['created_by'] ?? null,
             ]);
 
+            $masters = $this->loadMastersFor($components);
             foreach ($components as $componentId => $row) {
-                $structure->components()->create([
-                    'tenant_id' => $tenantId,
-                    'payroll_component_master_id' => (int) $componentId,
-                    'calculation_method' => $row['calculation_method'],
-                    'calculation_base_type' => $row['calculation_base_type'] ?? 'none',
-                    'amount' => $row['calculation_method'] === 'fixed_amount' ? ($row['amount'] ?? 0) : null,
-                    'percentage_value' => $row['calculation_method'] === 'percentage' ? ($row['percentage_value'] ?? 0) : null,
-                    'is_enabled' => true,
-                ]);
+                $this->createComponentSnapshot($structure, (int) $componentId, $row, $masters->get((int) $componentId));
             }
 
             $actor = $meta['actor'] ?? Auth::user();
@@ -307,5 +286,49 @@ class PayrollStructureAssignmentService
             'net_salary' => $grossEarnings - $totalDeductions,
             'ctc' => (float) $structure->ctc,
         ]);
+    }
+
+    /**
+     * Eager-loads the real PayrollComponentMaster rows (with their
+     * baseComponents pivot) for a $componentId => spec map, once per call —
+     * needed so createComponentSnapshot() can copy the catalog's real base
+     * selection instead of the hardcoded 'none' every snapshot-write path
+     * used before this fix.
+     */
+    private function loadMastersFor(array $components): \Illuminate\Support\Collection
+    {
+        return PayrollComponentMaster::with('baseComponents')
+            ->whereIn('id', array_map('intval', array_keys($components)))
+            ->get()
+            ->keyBy('id');
+    }
+
+    /**
+     * Creates one PayrollEmployeeComponent snapshot row, copying the real
+     * catalog base-selection (calculation_base_type/calculation_base/
+     * calculation_base_component_id + the multi-base pivot) from $master
+     * instead of hardcoding calculation_base_type => 'none' — that hardcode
+     * previously made "percentage of another component" silently compute
+     * ₹0 for every assigned employee regardless of catalog configuration.
+     */
+    private function createComponentSnapshot(PayrollEmployeeStructure $structure, int $componentId, array $row, ?PayrollComponentMaster $master): void
+    {
+        $employeeComponent = $structure->components()->create([
+            'tenant_id' => $structure->tenant_id,
+            'payroll_component_master_id' => $componentId,
+            'calculation_method' => $row['calculation_method'],
+            'amount' => $row['calculation_method'] === 'fixed_amount' ? ($row['amount'] ?? 0) : null,
+            'percentage_value' => $row['calculation_method'] === 'percentage' ? ($row['percentage_value'] ?? 0) : null,
+            'is_enabled' => true,
+        ] + ($master ? $master->snapshotBaseFields() : ['calculation_base_type' => $row['calculation_base_type'] ?? 'none']));
+
+        if ($master && $master->calculation_base_type === 'component' && $master->baseComponents->isNotEmpty()) {
+            foreach ($master->baseComponents as $base) {
+                $employeeComponent->baseComponentBases()->create([
+                    'tenant_id' => $structure->tenant_id,
+                    'base_payroll_component_master_id' => $base->id,
+                ]);
+            }
+        }
     }
 }

@@ -22,7 +22,7 @@ class PayrollComponentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = PayrollComponentMaster::query()->with('baseComponent');
+        $query = PayrollComponentMaster::query()->with(['baseComponent', 'baseComponents']);
 
         if ($request->filled('component_type')) {
             $query->where('component_type', $request->component_type);
@@ -33,12 +33,17 @@ class PayrollComponentController extends Controller
 
         $components = $query->orderBy('priority')->orderBy('display_order')->get();
 
-        // Options for the "Calculate % Of -> Another component" select in
-        // both the Add and Edit modals. Unlike the old edit() page, this is
-        // one shared list rendered once for every row's edit modal, so the
-        // component being edited can't be excluded server-side any more —
-        // the edit-open JS instead disables that one <option> client-side.
-        $baseComponents = PayrollComponentMaster::active()->orderBy('priority')->get();
+        // Options for the "Calculate % Of -> Earnings components" multi-select
+        // in both the Add and Edit modals. Percentage components (Deductions
+        // like PF/ESIC/PT/TDS, and Employer Contributions) can only be
+        // calculated against Earnings — scoped here so the option list can't
+        // even offer a Deduction/Employer-Contribution base, in addition to
+        // the server-side type check in assertValidBaseComponents(). Unlike
+        // the old edit() page, this is one shared list rendered once for
+        // every row's edit modal, so the component being edited can't be
+        // excluded server-side any more — the edit-open JS instead disables
+        // that one <option> client-side.
+        $baseComponents = PayrollComponentMaster::active()->earnings()->orderBy('priority')->get();
 
         return view('client.payroll.components.index', compact('components', 'baseComponents'));
     }
@@ -56,7 +61,18 @@ class PayrollComponentController extends Controller
             ], 422);
         }
 
-        $data = $this->prepareComponentData($validator->validated(), $request, $tenantId);
+        $validated = $validator->validated();
+        $baseIds = array_map('intval', $validated['calculation_base_component_ids'] ?? []);
+
+        if ($validated['calculation_base_type'] === 'component') {
+            try {
+                PayrollComponentMaster::assertValidBaseComponents($validated['component_type'], (int) $validated['priority'], $baseIds, $tenantId);
+            } catch (\RuntimeException $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+        }
+
+        $data = $this->prepareComponentData($validated, $request, $tenantId, $baseIds);
 
         try {
             DB::beginTransaction();
@@ -66,6 +82,8 @@ class PayrollComponentController extends Controller
                 'is_system_default' => false,
                 'created_by' => auth()->id(),
             ]));
+
+            $this->syncBaseComponents($component, $baseIds, $tenantId);
 
             DB::commit();
 
@@ -96,6 +114,18 @@ class PayrollComponentController extends Controller
             ], 422);
         }
 
+        // "Basic Salary" is relied on by every tenant's CTC/salary calculation
+        // as the universal percentage base — locked to its name and type so
+        // it can never be renamed into something else or repurposed into a
+        // Deduction/Employer Contribution out from under existing structures.
+        if ($component->code === 'basic'
+            && ($request->name !== $component->name || $request->component_type !== $component->component_type)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Basic Salary is a fixed component — its name and type cannot be changed.',
+            ], 422);
+        }
+
         $validator = $this->componentValidator($request, $tenantId, $component->id);
 
         if ($validator->fails()) {
@@ -105,12 +135,25 @@ class PayrollComponentController extends Controller
             ], 422);
         }
 
-        $data = $this->prepareComponentData($validator->validated(), $request, $tenantId);
+        $validated = $validator->validated();
+        $baseIds = array_map('intval', $validated['calculation_base_component_ids'] ?? []);
+
+        if ($validated['calculation_base_type'] === 'component') {
+            try {
+                PayrollComponentMaster::assertValidBaseComponents($validated['component_type'], (int) $validated['priority'], $baseIds, $tenantId);
+            } catch (\RuntimeException $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+        }
+
+        $data = $this->prepareComponentData($validated, $request, $tenantId, $baseIds);
 
         try {
             DB::beginTransaction();
 
             $component->update(array_merge($data, ['updated_by' => auth()->id()]));
+
+            $this->syncBaseComponents($component, $baseIds, $tenantId);
 
             DB::commit();
 
@@ -143,6 +186,18 @@ class PayrollComponentController extends Controller
 
         try {
             $component = PayrollComponentMaster::findOrFail($id);
+
+            // Every structure/slip assumes at least Basic Salary is always
+            // available and active — deactivating it would silently zero out
+            // every employee's CTC base. Kept fixed rather than allowing a
+            // tenant to switch it off.
+            if ($component->code === 'basic' && $component->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Basic Salary is a fixed component and cannot be deactivated.',
+                ], 422);
+            }
+
             $component->is_active = ! $component->is_active;
             $component->save();
 
@@ -175,8 +230,15 @@ class PayrollComponentController extends Controller
             'calculation_method' => 'required|in:fixed_amount,percentage',
             'calculation_base_type' => 'required|in:none,fixed_base,component',
             'calculation_base' => 'nullable|required_if:calculation_base_type,fixed_base|in:basic,gross_pass1,ctc',
-            'calculation_base_component_id' => [
-                'nullable', 'required_if:calculation_base_type,component',
+            // Multi-select: "Calculate % Of -> Earnings components". Replaces
+            // the old single calculation_base_component_id form field — that
+            // column still exists on the model, but only as a denormalized
+            // "primary base" mirror written from the first submitted id here
+            // (see prepareComponentData()); the real, authoritative set is
+            // the baseComponentSelections() pivot synced in store()/update().
+            'calculation_base_component_ids' => 'nullable|array|required_if:calculation_base_type,component',
+            'calculation_base_component_ids.*' => [
+                'integer',
                 Rule::exists('payroll_component_master', 'id')->where('tenant_id', $tenantId),
             ],
             'percentage_value' => 'nullable|required_if:calculation_method,percentage|numeric|min:0|max:100',
@@ -194,7 +256,7 @@ class PayrollComponentController extends Controller
         ]);
     }
 
-    private function prepareComponentData(array $data, Request $request, int $tenantId): array
+    private function prepareComponentData(array $data, Request $request, int $tenantId, array $baseIds = []): array
     {
         foreach (['is_statutory', 'is_taxable', 'has_wage_ceiling', 'affects_gross', 'affects_ctc', 'affects_net'] as $flag) {
             $data[$flag] = $request->boolean($flag);
@@ -203,17 +265,50 @@ class PayrollComponentController extends Controller
         $data['tenant_id'] = $tenantId;
         $data['display_order'] = $data['display_order'] ?? $data['priority'];
 
+        // Not a real column — the multi-select submission is handled
+        // separately via syncBaseComponents(), never passed to create()/update().
+        unset($data['calculation_base_component_ids']);
+
         if ($data['calculation_base_type'] !== 'fixed_base') {
             $data['calculation_base'] = null;
         }
-        if ($data['calculation_base_type'] !== 'component') {
-            $data['calculation_base_component_id'] = null;
-        }
+
+        // calculation_base_component_id is kept only as a denormalized
+        // "primary base" mirror (the first submitted base) for any
+        // backward-compat reader of that single column — the real,
+        // authoritative multi-base set lives in baseComponentSelections().
+        $data['calculation_base_component_id'] = $data['calculation_base_type'] === 'component'
+            ? ($baseIds[0] ?? null)
+            : null;
+
         if (! $data['has_wage_ceiling']) {
             $data['ceiling_amount'] = null;
             $data['ceiling_apply_rule'] = null;
         }
 
         return $data;
+    }
+
+    /**
+     * Delete-then-recreate the component's base-selection pivot from the
+     * submitted multi-select — mirrors this codebase's established pattern
+     * for pivot-style tables (see PayrollStructureController::syncComponents()),
+     * not belongsToMany()->sync() (which bypasses TenantTrait's tenant_id
+     * auto-fill since it does raw inserts, not full Eloquent model saves).
+     */
+    private function syncBaseComponents(PayrollComponentMaster $component, array $baseIds, int $tenantId): void
+    {
+        $component->baseComponentSelections()->delete();
+
+        if ($component->calculation_base_type !== 'component') {
+            return;
+        }
+
+        foreach (array_unique($baseIds) as $baseId) {
+            $component->baseComponentSelections()->create([
+                'tenant_id' => $tenantId,
+                'base_payroll_component_master_id' => $baseId,
+            ]);
+        }
     }
 }

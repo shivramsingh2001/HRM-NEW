@@ -43,7 +43,7 @@ class PayrollCalculationEngine
     {
     }
 
-    public function calculate(User $employee, int $tenantId, string $yearMonth, bool $includeLoanDeductions = true): array
+    public function calculate(User $employee, int $tenantId, string $yearMonth, bool $includeLoanDeductions = true, ?array $dayOverrides = null): array
     {
         $monthEnd = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth()->toDateString();
 
@@ -59,14 +59,14 @@ class PayrollCalculationEngine
         }
 
         $components = $structure->components()
-            ->with(['component', 'baseComponent'])
+            ->with(['component', 'baseComponent', 'baseComponents'])
             ->enabled()
             ->get()
             ->filter(fn ($ec) => $ec->component && $ec->component->is_active)
             ->sortBy(fn ($ec) => $ec->component->priority)
             ->values();
 
-        $context = $this->contextBuilder->build($employee->id, $tenantId, $yearMonth);
+        $context = $this->contextBuilder->build($employee->id, $tenantId, $yearMonth, $dayOverrides);
         $context['ctc'] = (float) $structure->ctc;
         $context['tenant_id'] = $tenantId;
         $context['month_end_date'] = $monthEnd;
@@ -178,6 +178,32 @@ class PayrollCalculationEngine
             'net_payable' => $netPayable,
             'line_items' => $lineItems,
             'context' => $context,
+        ];
+    }
+
+    /**
+     * The single reusable "what components apply to this employee, with
+     * computed amounts" resolver — built from calculate()'s own line_items,
+     * not a re-derivation, so the Monthly Payroll Edit dynamic partial, the
+     * salary slip, and any future consumer all agree with calculate() by
+     * construction instead of drifting via independent re-implementations.
+     * Zero/unused components are simply whatever calculate() didn't include
+     * (disabled/unselected components never appear in $components at all —
+     * see the enabled() filter in calculate()); callers that also want to
+     * hide zero-*amount* rows (e.g. a component enabled but computing to 0)
+     * should filter the returned arrays themselves.
+     */
+    public function resolveEmployeeComponents(User $employee, int $tenantId, string $yearMonth, ?array $dayOverrides = null): array
+    {
+        $result = $this->calculate($employee, $tenantId, $yearMonth, true, $dayOverrides);
+
+        $grouped = collect($result['line_items'])->groupBy('component_type');
+
+        return [
+            'earnings' => $grouped->get('earning', collect())->values()->all(),
+            'deductions' => $grouped->get('deduction', collect())->values()->all(),
+            'employer_contributions' => $grouped->get('employer_contribution', collect())->values()->all(),
+            'reimbursements' => $grouped->get('reimbursement', collect())->values()->all(),
         ];
     }
 
@@ -350,8 +376,20 @@ class PayrollCalculationEngine
 
     private function resolveBase($ec, array $resolvedSoFar, ?float $grossPass1, array $context): float
     {
-        if ($ec->calculation_base_type === 'component' && $ec->calculation_base_component_id && $ec->baseComponent) {
-            return $resolvedSoFar[$ec->baseComponent->code] ?? 0.0;
+        if ($ec->calculation_base_type === 'component') {
+            $baseComponents = $ec->relationLoaded('baseComponents') ? $ec->baseComponents : $ec->baseComponents()->get();
+
+            if ($baseComponents->isNotEmpty()) {
+                return $baseComponents->sum(fn ($base) => $resolvedSoFar[$base->code] ?? 0.0);
+            }
+
+            // Legacy single-FK fallback for snapshots created before the
+            // multi-base pivot existed (payroll_employee_component_bases).
+            if ($ec->calculation_base_component_id && $ec->baseComponent) {
+                return $resolvedSoFar[$ec->baseComponent->code] ?? 0.0;
+            }
+
+            return 0.0;
         }
 
         return match ($ec->calculation_base) {

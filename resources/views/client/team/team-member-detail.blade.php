@@ -20,11 +20,6 @@
             }
         }
 
-        /* Hide FullCalendar toolbar */
-        .fc-toolbar-chunk {
-            display: none !important;
-        }
-
         /* Loading text */
         .loading-text {
             display: inline-flex;
@@ -32,139 +27,62 @@
             gap: 8px;
         }
 
-        /* Month picker styling */
-        input[type="month"] {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-color: white;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            padding: 0.375rem 2rem 0.375rem 0.75rem;
-            font-size: 0.875rem;
-            line-height: 1.25rem;
-            color: #374151;
-            background-repeat: no-repeat;
-            background-position: right 0.5rem center;
-            background-size: 1.5em 1.5em;
-        }
-
-        input[type="month"]:focus {
-            outline: 2px solid transparent;
-            outline-offset: 2px;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        input[type="month"]::-webkit-calendar-picker-indicator {
-            opacity: 0;
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-
         /* Profile Header */
         .profile-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
             color: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-md);
         }
 
         .profile-avatar {
-            width: 120px;
-            height: 120px;
+            width: 90px;
+            height: 90px;
             border-radius: 50%;
-            border: 4px solid white;
+            border: 3px solid white;
             object-fit: cover;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Stats Cards */
-        .stats-grid {
-            margin: 15px 0 20px;
-        }
-
-        .stats-card {
-            padding: 15px;
-            border-radius: 10px;
-            background: white;
-            border: 1px solid #e5e7eb;
-            transition: all 0.3s ease;
-            height: 100%;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .stats-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            border-color: #3b82f6;
-        }
-
-        .stats-number {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 2px;
-        }
-
-        .stats-label {
-            font-size: 12px;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Month Filter Card */
-        .month-filter-card {
-            background: #f8fafc;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
         }
 
         /* Tabs */
         .nav-tabs {
-            border-bottom: 2px solid #e5e7eb;
+            border-bottom: 2px solid var(--border);
             padding: 0 5px;
         }
 
         .nav-tabs .nav-link {
-            padding: 10px 20px;
+            padding: 7px 14px;
             margin: 0 5px -2px 0;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .tab-content {
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             border-top: none;
-            border-radius: 0 0 12px 12px;
-            padding: 20px;
+            border-radius: 0 0 10px 10px;
+            padding: 14px;
         }
 
         /* Info Cards */
         .info-card {
             border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
             background-color: #ffffff;
         }
 
         .info-card .card-header {
-            padding: 12px 15px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: 12px;
             background: #f8fafc;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border);
         }
 
         .info-item {
-            padding: 10px 15px;
+            padding: 7px 12px;
             border-bottom: 1px solid #f1f5f9;
             display: flex;
             align-items: center;
@@ -191,7 +109,7 @@
         }
 
         .document-card:hover {
-            border-color: #3b82f6;
+            border-color: var(--primary-mid);
             background: #f0f9ff;
         }
 
@@ -233,7 +151,7 @@
         }
 
         .badge-leave {
-            background: #3b82f6;
+            background: var(--primary-mid);
             color: white;
         }
 
@@ -279,33 +197,33 @@
         }
 
         .fc .fc-toolbar {
-            padding: 24px 24px 16px;
+            padding: 10px 14px;
             margin-bottom: 0 !important;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
             color: white;
             border-radius: 10px 12px 0 0;
         }
 
         .fc .fc-toolbar-title {
-            font-size: 16px !important;
+            font-size: 13px !important;
             font-weight: 600;
-            color: #374151;
+            color: #ffffff;
         }
 
         .fc .fc-button {
-            padding: 6px 12px !important;
-            font-size: 13px !important;
-            background-color: #3b82f6 !important;
-            border-color: #3b82f6 !important;
+            padding: 4px 10px !important;
+            font-size: 11.5px !important;
+            background-color: var(--primary-mid) !important;
+            border-color: var(--primary-mid) !important;
         }
 
         .fc .fc-button:hover {
-            background-color: #2563eb !important;
-            border-color: #2563eb !important;
+            background-color: var(--primary-dark) !important;
+            border-color: var(--primary-dark) !important;
         }
 
         .fc .fc-day-today {
-            background-color: rgba(59, 130, 246, 0.1) !important;
+            background-color: var(--primary-light) !important;
         }
 
         .fc-daygrid-event {
@@ -320,26 +238,26 @@
         /* Calendar Controls */
         .calendar-controls {
             background: #f8fafc;
-            padding: 15px;
+            padding: 8px 10px;
             border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 15px;
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
 
         .calendar-view-options {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
 
         .calendar-view-btn {
-            padding: 6px 12px;
-            border: 1px solid #e5e7eb;
+            padding: 4px 10px;
+            border: 1px solid var(--border);
             background: white;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 500;
             color: #64748b;
             transition: all 0.2s ease;
@@ -347,13 +265,13 @@
         }
 
         .calendar-view-btn:hover {
-            border-color: #3b82f6;
-            color: #3b82f6;
+            border-color: var(--primary-mid);
+            color: var(--primary-mid);
         }
 
         .calendar-view-btn.active {
-            background: #3b82f6;
-            border-color: #3b82f6;
+            background: var(--primary-mid);
+            border-color: var(--primary-mid);
             color: white;
         }
 
@@ -393,8 +311,8 @@
         /* Table */
         .attendance-table th,
         .attendance-table td {
-            padding: 10px 12px !important;
-            font-size: 13px;
+            padding: 7px 10px !important;
+            font-size: 11.5px;
         }
 
         .attendance-table th {
@@ -406,14 +324,14 @@
         /* Responsive */
         @media (max-width: 768px) {
             .profile-header {
-                padding: 20px;
+                padding: 14px;
                 text-align: center;
             }
 
             .profile-avatar {
-                width: 100px;
-                height: 100px;
-                margin: 0 auto 15px;
+                width: 80px;
+                height: 80px;
+                margin: 0 auto 12px;
             }
 
             .info-item {
@@ -518,41 +436,23 @@
 
         <!-- Attendance Stats -->
         <div class="row stats-grid g-2">
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-present">{{ $attendanceSummary['present'] ?? 0 }}</div>
-                    <div class="stats-label">Present</div>
-                </div>
+            <div class="col-md-2 col-sm-4 col-6">
+                <x-ui.stat-card icon="check-circle" label="Present" value="{{ $attendanceSummary['present'] ?? 0 }}" valueId="stat-present" />
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-absent">{{ $attendanceSummary['absent'] ?? 0 }}</div>
-                    <div class="stats-label">Absent</div>
-                </div>
+            <div class="col-md-2 col-sm-4 col-6">
+                <x-ui.stat-card icon="x-circle" label="Absent" value="{{ $attendanceSummary['absent'] ?? 0 }}" valueId="stat-absent" />
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-leave">{{ $attendanceSummary['on_leave'] ?? 0 }}</div>
-                    <div class="stats-label">On Leave</div>
-                </div>
+            <div class="col-md-2 col-sm-4 col-6">
+                <x-ui.stat-card icon="calendar" label="On Leave" value="{{ $attendanceSummary['on_leave'] ?? 0 }}" valueId="stat-leave" />
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-holiday">{{ $attendanceSummary['holiday'] ?? 0 }}</div>
-                    <div class="stats-label">Holidays</div>
-                </div>
+            <div class="col-md-2 col-sm-4 col-6">
+                <x-ui.stat-card icon="star" label="Holidays" value="{{ $attendanceSummary['holiday'] ?? 0 }}" valueId="stat-holiday" />
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-weekoff">{{ $attendanceSummary['week_off'] ?? 0 }}</div>
-                    <div class="stats-label">Week Off</div>
-                </div>
+            <div class="col-md-2 col-sm-4 col-6">
+                <x-ui.stat-card icon="coffee" label="Week Off" value="{{ $attendanceSummary['week_off'] ?? 0 }}" valueId="stat-weekoff" />
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-workdays">{{ $attendanceSummary['work_days'] ?? 0 }}</div>
-                    <div class="stats-label">Work Days</div>
-                </div>
+            <div class="col-md-2 col-sm-4 col-6">
+                <x-ui.stat-card icon="briefcase" label="Work Days" value="{{ $attendanceSummary['work_days'] ?? 0 }}" valueId="stat-workdays" />
             </div>
         </div>
 
@@ -576,6 +476,14 @@
                     <i class="feather-calendar me-1"></i>Attendance
                 </button>
             </li>
+            @if ($userInfo->role === 'manager')
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="team-tab" data-bs-toggle="tab" data-bs-target="#reportingTeam"
+                        type="button" role="tab">
+                        <i class="feather-users me-1"></i>Team ({{ $directReports->count() }})
+                    </button>
+                </li>
+            @endif
         </ul>
 
         <!-- Tab Content -->
@@ -691,40 +599,15 @@
             </div>
 
             <!-- Attendance Tab -->
-            <div class="tab-pane fade show active" id="attendance" role="tabpanel">
-                <!-- Month Filter -->
-                <div class="month-filter-card">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <div class="d-flex flex-column flex-md-row align-items-center gap-2">
-                                <div class="position-relative w-100 w-md-auto" style="max-width: 180px;">
-                                    <input type="month" id="monthFilter" class="form-control form-control-sm"
-                                        value="{{ $selectedMonth }}" max="{{ date('Y-m') }}"
-                                        data-onboard-date="{{ $userCreatedDate ?? date('Y-m-d') }}"
-                                        style="padding-right: 30px;">
-                                    <i class="feather-calendar position-absolute"
-                                        style="right: 8px; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none;"></i>
-                                </div>
-                                <button id="applyFilter" class="btn btn-primary btn-sm w-100 w-md-auto">
-                                    <i class="feather-filter me-2"></i> Apply
-                                </button>
-                                <button id="resetFilter" class="btn btn-secondary btn-sm w-100 w-md-auto">
-                                    <i class="feather-refresh-cw me-2"></i> Current
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-6 text-end mt-3 mt-md-0">
-                            <div class="text-muted fs-12">
-                                <i class="feather-calendar me-1"></i>
-                                Showing: <span
-                                    id="currentMonthDisplay">{{ date('F Y', strtotime($selectedMonth)) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+            <div class="tab-pane fade show active" id="attendance" role="tabpanel"
+                data-onboard-date="{{ $userCreatedDate ?? date('Y-m-d') }}">
                 <!-- Calendar View -->
                 <div class="attendance-section active" id="calendarView">
+                    <div class="text-muted fs-12 mb-2">
+                        <i class="feather-calendar me-1"></i>
+                        Showing: <span id="currentMonthDisplay">{{ date('F Y', strtotime($selectedMonth)) }}</span>
+                    </div>
+
                     <!-- Calendar Controls -->
                     <div class="calendar-controls">
                         <div class="calendar-view-options">
@@ -837,6 +720,13 @@
                     </div>
                 </div>
             </div>
+
+            @if ($userInfo->role === 'manager')
+                <!-- Reporting Team Tab -->
+                <div class="tab-pane fade" id="reportingTeam" role="tabpanel">
+                    @include('client.team.partials.direct-reports', ['directReports' => $directReports])
+                </div>
+            @endif
 
             <!-- Documents Tab -->
             <div class="tab-pane fade" id="documents" role="tabpanel">
@@ -962,12 +852,12 @@
                 setTimeout(initializeCalendar, 100);
             }
 
-            $('#applyFilter').on('click', function() {
-                const selectedMonth = $('#monthFilter').val();
-                const encryptedId = '{{ encrypt($userInfo->id) }}';
+            // Navigation-driven month change (calendar's own prev/next/today
+            // buttons), replacing the old Apply/Reset filter form.
+            window.currentCalendarMonth = '{{ $selectedMonth }}';
 
-                if (!selectedMonth) {
-                    showToast('Please select a month', 'warning');
+            window.handleCalendarMonthChange = function(selectedMonth) {
+                if (selectedMonth === window.currentCalendarMonth) {
                     return;
                 }
 
@@ -975,33 +865,28 @@
                 const currentDate = moment();
 
                 if (selectedDate.isAfter(currentDate, 'month')) {
-                    showToast('Cannot select future months', 'warning');
-                    $('#monthFilter').val(currentDate.format('YYYY-MM'));
+                    if (calendar) calendar.gotoDate(currentDate.format('YYYY-MM') + '-01');
                     return;
                 }
 
-                const userOnboardDate = $('#monthFilter').data('onboard-date');
+                const userOnboardDate = $('#attendance').data('onboard-date');
                 if (userOnboardDate) {
                     const onboardDate = moment(userOnboardDate);
                     if (selectedDate.isBefore(onboardDate, 'month')) {
-                        showToast('Selected month is before employee onboarding date', 'warning');
+                        if (calendar) calendar.gotoDate(onboardDate.format('YYYY-MM') + '-01');
                         return;
                     }
                 }
+
+                window.currentCalendarMonth = selectedMonth;
+                const encryptedId = '{{ encrypt($userInfo->id) }}';
 
                 $('#calendarView').addClass('opacity-50');
                 $('#tableView').addClass('opacity-50');
                 $('.stats-grid').addClass('opacity-50');
 
                 updateAttendanceStats(selectedMonth, encryptedId);
-            });
-
-            $('#resetFilter').on('click', function(e) {
-                e.preventDefault();
-                const currentMonth = '{{ date('Y-m') }}';
-                $('#monthFilter').val(currentMonth);
-                $('#applyFilter').click();
-            });
+            };
         });
 
         let calendar = null;
@@ -1125,10 +1010,20 @@
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+                    right: ''
                 },
                 themeSystem: 'standard',
                 events: events,
+                datesSet: function(info) {
+                    // Native prev/next/today navigation replaces the old
+                    // Apply/Reset month filter — fetch the newly-visible
+                    // month's data as soon as the calendar moves.
+                    const visibleMonth = moment(info.view.currentStart).format('YYYY-MM');
+                    $('#currentMonthDisplay').text(moment(visibleMonth + '-01').format('MMMM YYYY'));
+                    if (window.handleCalendarMonthChange) {
+                        window.handleCalendarMonthChange(visibleMonth);
+                    }
+                },
                 eventClick: function(info) {
                     const formattedDate = info.event.startStr.split('T')[0];
                     const encryptedUserId = info.event.extendedProps.encrypted_user_id;
@@ -1189,7 +1084,7 @@
                 type: 'GET',
                 data: { month: selectedMonth, _token: '{{ csrf_token() }}' },
                 beforeSend: function() {
-                    $('#applyFilter').prop('disabled', true).addClass('loading-text').html('<span class="loading-spinner"></span> Loading...');
+                    $('.fc-prev-button, .fc-next-button, .fc-today-button').prop('disabled', true);
                 },
                 success: function(response) {
                     if (response.status) {
@@ -1216,7 +1111,7 @@
                     $('#calendarView').removeClass('opacity-50');
                     $('#tableView').removeClass('opacity-50');
                     $('.stats-grid').removeClass('opacity-50');
-                    $('#applyFilter').prop('disabled', false).removeClass('loading-text').html('<i class="feather-filter me-1"></i> Apply');
+                    $('.fc-prev-button, .fc-next-button, .fc-today-button').prop('disabled', false);
                 }
             });
         }

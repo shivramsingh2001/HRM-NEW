@@ -166,7 +166,7 @@
             border-radius: 6px;
             font-size: 9.5px;
             font-weight: 600;
-            background: #1e3a8a;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
             color: white;
             border: none;
             transition: all 0.3s;

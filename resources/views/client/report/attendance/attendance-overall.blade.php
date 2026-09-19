@@ -23,7 +23,6 @@
         .overall-table-wrapper {
             overflow-x: auto;
             padding: 0;
-            max-height: 600px;
             overflow-y: auto;
             position: relative;
         }
@@ -59,7 +58,6 @@
             z-index: 15;
             background: white;
             min-width: 100px;
-            max-width: 100px;
         }
 
         .overall-table th:nth-child(2),
@@ -79,27 +77,22 @@
             left: 250px;
             z-index: 15;
             background: white;
-            min-width: 120px;
-            max-width: 120px;
             text-align: left !important;
         }
 
         .overall-table th:nth-child(4),
         .overall-table td:nth-child(4) {
-            position: sticky;
             left: 370px;
             z-index: 15;
             background: white;
-            min-width: 120px;
-            max-width: 120px;
             text-align: left !important;
         }
 
         /* Header background for sticky columns */
         .overall-table th:first-child,
         .overall-table th:nth-child(2),
-        .overall-table th:nth-child(3),
-        .overall-table th:nth-child(4) {
+        .overall-table th:nth-child(3)
+         {
             background: #f1f5f9;
             z-index: 25;
         }
@@ -107,7 +100,7 @@
         .overall-table td {
             padding: 4px 6px;
             border: 1px solid #eef2f6;
-            text-align: center;
+            /* text-align: center; */
             vertical-align: middle;
             white-space: nowrap;
             font-size: 10px;
@@ -120,7 +113,7 @@
         .overall-table tbody tr:hover td:first-child,
         .overall-table tbody tr:hover td:nth-child(2),
         .overall-table tbody tr:hover td:nth-child(3),
-        .overall-table tbody tr:hover td:nth-child(4) {
+         {
             background-color: #f1f5f9 !important;
         }
 
@@ -295,21 +288,27 @@
         .stat-card.present .stat-number {
             color: #1e3a8a;
         }
+
         .stat-card.absent .stat-number {
             color: #475569;
         }
+
         .stat-card.leave .stat-number {
             color: #2563eb;
         }
+
         .stat-card.halfday .stat-number {
             color: #2563eb;
         }
+
         .stat-card.weekoff .stat-number {
             color: #2563eb;
         }
+
         .stat-card.holiday .stat-number {
             color: #3b82f6;
         }
+
         .stat-card.total .stat-number {
             color: #1e3a8a;
         }
@@ -340,18 +339,23 @@
         .legend-dot.present {
             background: #e3edfe;
         }
+
         .legend-dot.absent {
             background: #e2e8f0;
         }
+
         .legend-dot.leave {
             background: #bfd3f7;
         }
+
         .legend-dot.weekoff {
             background: #e3edfe;
         }
+
         .legend-dot.holiday {
             background: #dbeafe;
         }
+
         .legend-dot.halfday {
             background: #e3edfe;
         }
@@ -427,9 +431,11 @@
             .filter-item {
                 flex: 1 1 100%;
             }
+
             .filter-item.search-filter {
                 flex: 1 1 100%;
             }
+
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -445,14 +451,14 @@
             </div>
             <ul class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                 <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
                 <li class="breadcrumb-item active">Overall Attendance Report</li>
             </ul>
         </div>
         <div class="page-header-right ms-auto">
             <div class="page-header-right-items">
-                <a href="{{ route('report.attendance.overall.export', request()->query()) }}" 
-                   class="btn btn-sm btn-primary" target="_blank">
+                <a href="{{ route('report.attendance.overall.export', request()->query()) }}" class="btn btn-sm btn-primary"
+                    target="_blank">
                     <i class="feather-download me-1"></i> Export CSV
                 </a>
             </div>
@@ -465,16 +471,15 @@
             <form action="{{ route('report.attendance.overall.index') }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     <div class="filter-item">
-                        <input type="month" name="month" class="filter-input" 
-                               value="{{ request('month', now()->format('Y-m')) }}" 
-                               onchange="this.form.submit()">
+                        <input type="month" name="month" class="filter-input"
+                            value="{{ request('month', now()->format('Y-m')) }}" onchange="this.form.submit()">
                     </div>
 
                     <div class="filter-item">
                         <select name="department" class="filter-select" onchange="this.form.submit()">
                             <option value="">All Departments</option>
-                            @foreach($departments as $dept)
-                                <option value="{{ $dept->id }}" 
+                            @foreach ($departments as $dept)
+                                <option value="{{ $dept->id }}"
                                     {{ request('department') == $dept->id ? 'selected' : '' }}>
                                     {{ $dept->name }}
                                 </option>
@@ -572,12 +577,12 @@
                 <table class="overall-table" id="overallTable">
                     <thead>
                         <tr>
-                            <th>Employee ID</th>
                             <th>Employee Name</th>
                             <th>Designation</th>
                             <th>Department</th>
                             @foreach ($dateLabels as $day => $date)
-                                <th class="{{ in_array(Carbon::parse($date)->format('D'), ['Sat', 'Sun']) ? 'weekend-header' : '' }}">
+                                <th
+                                    class="{{ in_array(Carbon::parse($date)->format('D'), ['Sat', 'Sun']) ? 'weekend-header' : '' }}">
                                     <span>{{ Carbon::parse($date)->format('D') }}</span>
                                     <br><small>{{ $day }}</small>
                                 </th>
@@ -593,25 +598,38 @@
                     <tbody>
                         @forelse($reportData as $index => $row)
                             <tr>
-                                <td>{{ $row['employee_id'] }}</td>
-                                <td style="text-align: left; font-weight: 600;">{{ $row['employee_name'] }}</td>
+                                <td>
+                                    <div class="employee-info">
+                                        <div class="employee-avatar">
+                                            {{ strtoupper(substr($row['employee_name'] ?? 'N/A', 0, 2)) }}
+                                        </div>
+                                        <div class="employee-details">
+                                            <div class="employee-name-text">{{ $row['employee_name'] ?? 'N/A' }}
+                                                <small class="employee-id-text">( {{ $row['employee_id'] ?? 'N/A' }} )</small>
+                                            </div>
+                                            <div class="employee-email-text">
+                                                {{$row['employee_email'] ?? 'N/A' }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                
                                 <td style="text-align: left;">{{ $row['designation'] }}</td>
                                 <td style="text-align: left;">{{ $row['department'] }}</td>
-                                
+
                                 @foreach ($row['days'] as $day => $status)
-                                    <td class="
-                                        @if($status == 'P') cell-present
+                                    <td
+                                        class="
+                                        @if ($status == 'P') cell-present
                                         @elseif($status == 'Absent') cell-absent
                                         @elseif($status == 'Leave') cell-leave
                                         @elseif($status == 'WeekOff') cell-weekoff
                                         @elseif($status == 'Holiday') cell-holiday
-                                        @elseif($status == 'Halfday') cell-halfday
-                                        @endif
+                                        @elseif($status == 'Halfday') cell-halfday @endif
                                     ">
                                         {{ $status }}
                                     </td>
                                 @endforeach
-                                
+
                                 <td class="summary-cell">{{ $row['total_present'] }}</td>
                                 <td class="summary-cell">{{ $row['total_absent'] }}</td>
                                 <td class="summary-cell">{{ $row['total_leave'] }}</td>
@@ -634,12 +652,12 @@
                 </table>
             </div>
 
-            @if(method_exists($paginator, 'links') && $paginator->hasPages())
+            @if (method_exists($paginator, 'links') && $paginator->hasPages())
                 <div class="card-footer">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="text-muted small">
-                            Showing <strong>{{ $paginator->firstItem() }}</strong> to 
-                            <strong>{{ $paginator->lastItem() }}</strong> 
+                            Showing <strong>{{ $paginator->firstItem() }}</strong> to
+                            <strong>{{ $paginator->lastItem() }}</strong>
                             of <strong>{{ $paginator->total() }}</strong> entries
                         </div>
                         <div>

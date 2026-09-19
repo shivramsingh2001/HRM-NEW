@@ -18,5 +18,7 @@
     {{-- <link rel="stylesheet" type="text/css" href="{{ asset('assets/vendors/css/dataTables.bs5.min.css') }}"> --}}
 
     <!--! BEGIN: App theme (design tokens + shared components) -->
-    <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/theme-custom.css') }}?v={{ filemtime(public_path('assets/css/theme-custom.css')) }}" />
+    <link rel="stylesheet" type="text/css"
+        href="{{ asset('assets/css/theme-custom.css') }}?v={{ filemtime(public_path('assets/css/theme-custom.css')) }}" />
     <!--! END: App theme -->
+  

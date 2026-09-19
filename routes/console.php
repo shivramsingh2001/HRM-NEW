@@ -2,6 +2,27 @@
 
 use Illuminate\Support\Facades\Schedule;
 
+// Guarantee every tenant's payroll component catalog has the platform's
+// default components (Basic Salary, HRA, PF, ESI, ...) — idempotent, skips
+// any tenant/code pair that already exists. Tenants are provisioned by the
+// separate hrm-superadmin app directly against the shared DB, so this app
+// has no create event to hook; running this daily is how a brand-new tenant
+// picks up Basic Salary without a manual `--tenant=` run.
+Schedule::command('payroll:backfill-component-catalog')
+    ->dailyAt('00:10')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/payroll-backfill-component-catalog.log'));
+
+// Keep every active Permanent shift assignment's user_shifts cache extended
+// to the rolling horizon — the mechanism that removes any need to manually
+// re-assign a standing shift.
+Schedule::command('shift:roll-permanent-horizon')
+    ->dailyAt('00:20')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/shift-roll-permanent-horizon.log'));
+
 // Alert HR/manager when an employee misses check-in past the grace period.
 // Dedupe is persisted on user_shifts.missed_checkin_notified; FirebaseService
 // degrades gracefully when credentials are absent.

@@ -25,10 +25,21 @@ class ShiftSettingsController extends Controller
             ? Shift::withoutGlobalScopes()->where('tenant_id', $tenant->id)->find($tenant->default_shift_id)
             : null;
 
+        $activeShiftsCount = Shift::where('tenant_id', $tenant->id)->where('status', 1)->count();
+        $employeeCount = User::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('status', 1)->count();
+        $assignedThisMonth = DB::table('user_shifts')
+            ->where('tenant_id', $tenant->id)
+            ->whereMonth('date', now()->month)
+            ->whereYear('date', now()->year)
+            ->count();
+
         return view('client.shift.settings', [
             'tenant' => $tenant,
             'defaultShift' => $defaultShift,
             'weekdays' => UpdateShiftSettingsRequest::WEEKDAYS,
+            'activeShiftsCount' => $activeShiftsCount,
+            'employeeCount' => $employeeCount,
+            'assignedThisMonth' => $assignedThisMonth,
         ]);
     }
 

@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\TenantTrait;
 
 class CandidateDocument extends Model
 {
+    use TenantTrait;
+
     protected $table = 'candidate_documents';
 
     protected $fillable = [

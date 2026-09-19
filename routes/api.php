@@ -105,6 +105,8 @@ Route::middleware('tenant')->group(function () {
         Route::post('/user/attendance/track-batch', [AttendanceController::class, 'trackBatch'])->middleware('throttle:location-ingest');
         Route::get('/user/attendance/today', [AttendanceController::class, 'getAttendance']);
         Route::get('/user/attendance/today-locations', [AttendanceController::class, 'todayLocations']);
+        Route::get('/user/attendance/punches', [AttendanceController::class, 'punchHistory']);
+        Route::get('/user/attendance/current-session', [AttendanceController::class, 'currentSession']);
         
         Route::post('/location/status', [LocationTrackingController::class, 'locationStatus']);
 

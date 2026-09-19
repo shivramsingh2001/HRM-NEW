@@ -32,16 +32,35 @@
         }
 
         .schedule-form-control:focus {
-            border-color: #4f46e5;
+            border-color: var(--primary);
             outline: none;
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 2px var(--shadow-focus);
         }
 
-        /* .stats-grid/.stats-card/.stats-number/.stats-label are centralized
-           in client.layout.head (single blue-only theme) — no local copy.
-           This page's cards have no icon, so stack number/label vertically
-           and center them instead of the shared side-by-side icon layout. */
-        .stats-card { flex-direction: column; text-align: center; }
+        /* .stats-grid/.stats-card/.stats-info/.stats-icon are centralized in
+           client.layout.head (single blue-only theme, same icon + h3/p card
+           used on Job Openings Management) — no local copy needed for the
+           card itself, just a tighter fit for 8-across on one row. */
+        .stats-card { padding: 8px 10px; gap: 8px; cursor: pointer; }
+        .stats-card .stats-icon { width: 26px; height: 26px; }
+        .stats-card .stats-icon i { font-size: 13px !important; }
+        .stats-card .stats-info h3 { font-size: 15px; }
+        .stats-card .stats-info p { font-size: 8.5px; white-space: nowrap; }
+
+        /* This page always renders exactly 8 stage cards — force one row
+           instead of the shared auto-fit(150px) grid wrapping to two. */
+        .stats-grid {
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+        }
+
+        @media (max-width: 992px) {
+            .stats-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        @media (max-width: 576px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
 
         /* ── Filter ── */
         .filter-wrapper {
@@ -81,7 +100,7 @@
         }
 
         .filter-select:focus {
-            border-color: #4f46e5;
+            border-color: var(--primary);
             outline: none;
         }
 
@@ -95,7 +114,7 @@
         }
 
         .search-input:focus {
-            border-color: #4f46e5;
+            border-color: var(--primary);
             outline: none;
         }
 
@@ -185,7 +204,17 @@
             color: #166534;
         }
 
+        .stage-onboarding {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
         .stage-onboarded {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .stage-hired {
             background: #d1fae5;
             color: #065f46;
         }
@@ -216,8 +245,8 @@
 
         .action-btn:hover {
             background: #fff;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary);
+            border-color: var(--primary);
         }
 
         .dropdown-item {
@@ -230,7 +259,7 @@
 
         /* ── Misc ── */
         .resume-link {
-            color: #4f46e5;
+            color: var(--primary);
             text-decoration: none;
             font-size: 11px;
         }
@@ -253,8 +282,8 @@
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: var(--primary);
+            border-color: var(--primary);
         }
 
         .empty-state {
@@ -311,7 +340,7 @@
             border-radius: 6px;
             font-family: monospace;
             font-size: 11px;
-            color: #4f46e5;
+            color: var(--primary);
         }
 
         @media(max-width:768px) {
@@ -389,39 +418,63 @@
             </div>
         </div>
 
-        {{-- Stats --}}
+        {{-- Stats — same .stats-card (icon + h3/p) style as Job Openings Management --}}
         <div class="stats-grid">
-            <div class="stats-card">
-                <div class="stats-number">{{ $applicationStats['total_applications'] }}</div>
-                <div class="stats-label">Total</div>
+            <div class="stats-card" data-stage="">
+                <div class="stats-info">
+                    <h3>{{ $applicationStats['total_applications'] }}</h3>
+                    <p>Total</p>
+                </div>
+                <div class="stats-icon"><i class="feather-list"></i></div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number" style="color:#7c3aed;">{{ $applicationStats['application_received'] }}</div>
-                <div class="stats-label">Received</div>
+            <div class="stats-card" data-stage="application_received">
+                <div class="stats-info">
+                    <h3>{{ $applicationStats['application_received'] }}</h3>
+                    <p>Received</p>
+                </div>
+                <div class="stats-icon"><i class="feather-inbox"></i></div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number text-success">{{ $applicationStats['shortlisted'] }}</div>
-                <div class="stats-label">Shortlisted</div>
+            <div class="stats-card" data-stage="cv_shortlisted">
+                <div class="stats-info">
+                    <h3>{{ $applicationStats['shortlisted'] }}</h3>
+                    <p>Shortlisted</p>
+                </div>
+                <div class="stats-icon"><i class="feather-check-circle"></i></div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number text-warning">{{ $applicationStats['interview_scheduled'] }}</div>
-                <div class="stats-label">Interviewing</div>
+            <div class="stats-card" data-stage="interview_scheduled">
+                <div class="stats-info">
+                    <h3>{{ $applicationStats['interview_scheduled'] }}</h3>
+                    <p>Interviewing</p>
+                </div>
+                <div class="stats-icon"><i class="feather-calendar"></i></div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number text-info">{{ $applicationStats['interview_completed'] }}</div>
-                <div class="stats-label">Selected</div>
+            <div class="stats-card" data-stage="interview_completed">
+                <div class="stats-info">
+                    <h3>{{ $applicationStats['interview_completed'] }}</h3>
+                    <p>Selected</p>
+                </div>
+                <div class="stats-icon"><i class="feather-award"></i></div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number text-primary">{{ $applicationStats['offered'] }}</div>
-                <div class="stats-label">Offered</div>
+            <div class="stats-card" data-stage="offer_released,offer_accepted">
+                <div class="stats-info">
+                    <h3>{{ $applicationStats['offered'] }}</h3>
+                    <p>Offered</p>
+                </div>
+                <div class="stats-icon"><i class="feather-file-text"></i></div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number text-success">{{ $applicationStats['onboarded'] }}</div>
-                <div class="stats-label">Onboarded</div>
+            <div class="stats-card" data-stage="onboarding,onboarded,hired">
+                <div class="stats-info">
+                    <h3>{{ $applicationStats['onboarded'] }}</h3>
+                    <p>Onboarded</p>
+                </div>
+                <div class="stats-icon"><i class="feather-user-check"></i></div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number text-danger">{{ $applicationStats['rejected'] }}</div>
-                <div class="stats-label">Rejected</div>
+            <div class="stats-card" data-stage="cv_rejected,rejected,offer_rejected">
+                <div class="stats-info">
+                    <h3>{{ $applicationStats['rejected'] }}</h3>
+                    <p>Rejected</p>
+                </div>
+                <div class="stats-icon"><i class="feather-x-circle"></i></div>
             </div>
         </div>
 
@@ -430,7 +483,7 @@
             <form action="{{ route('job-openings.applications', $jobOpening->id) }}" method="GET">
                 <div class="filter-row">
                     <div class="filter-item">
-                        <select name="stage" class="filter-select" onchange="this.form.submit()">
+                        <select name="stage" id="stageFilter" class="filter-select" onchange="this.form.submit()">
                             <option value="">All Stages</option>
                             @foreach ([
             'application_received' => 'Application Received',
@@ -440,7 +493,10 @@
             'interview_completed' => 'Interview Completed',
             'offer_released' => 'Offer Released',
             'offer_accepted' => 'Offer Accepted',
-            'onboarded' => 'Onboarded',
+            'offer_rejected' => 'Offer Rejected',
+            'onboarding' => 'Onboarding',
+            'onboarded' => 'Onboarding Complete',
+            'hired' => 'Hired',
             'rejected' => 'Rejected',
         ] as $val => $label)
                                 <option value="{{ $val }}" {{ request('stage') === $val ? 'selected' : '' }}>
@@ -501,6 +557,11 @@
                                         ->orderBy('interview_round', 'desc')
                                         ->first();
                                 @endphp
+                                {{-- Defensive: candidate is soft-deleted (or, in inconsistent
+                                     legacy data, genuinely missing) — the controller now
+                                     eager-loads with withTrashed() so this shouldn't fire in
+                                     practice, but skip rather than crash the whole page. --}}
+                                @continue(!$candidate)
                                 <tr id="app-row-{{ $application->id }}">
                                     <td>{{ $applications->firstItem() + $index }}</td>
                                     <td>
@@ -548,126 +609,110 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <div class="dropdown">
-                                            <a href="#" class="action-btn" data-bs-toggle="dropdown"
-                                                data-bs-offset="0,5">
-                                                <i class="feather-more-vertical"></i>
+                                        <div class="d-flex justify-content-center gap-1">
+                                            {{-- ① Received → shortlist or CV reject --}}
+                                            @if ($stage === 'application_received')
+                                                <button class="action-btn text-success" title="Shortlist CV"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="shortlistApplication({{ $application->id }})">
+                                                    <i class="feather-check-circle"></i>
+                                                </button>
+                                                <button class="action-btn text-danger" title="Reject CV"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="rejectApplication({{ $application->id }})">
+                                                    <i class="feather-x-circle"></i>
+                                                </button>
+                                            @endif
+
+                                            {{-- ② cv_shortlisted → schedule interview OR reject --}}
+                                            @if ($stage === 'cv_shortlisted')
+                                                @php
+                                                    $nextRound = ($application->interviews()->max('interview_round') ?? 0) + 1;
+                                                @endphp
+                                                <button class="action-btn" title="Schedule Interview"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="showScheduleModal({{ $application->id }}, '{{ addslashes($candidate->full_name) }}', '{{ $nextRound === 1 ? 'First Round' : 'Round ' . $nextRound }}')">
+                                                    <i class="feather-calendar"></i>
+                                                </button>
+                                                <button class="action-btn text-danger" title="Reject"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="rejectApplication({{ $application->id }})">
+                                                    <i class="feather-x-circle"></i>
+                                                </button>
+                                            @endif
+
+                                            {{-- ③ interview_scheduled → feedback / cancel / reschedule / reject --}}
+                                            @if ($stage === 'interview_scheduled' && $scheduledInterview)
+                                                <button class="action-btn text-primary" title="Submit Feedback"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="showFeedbackModal(
+                                                    {{ $scheduledInterview->id }},
+                                                    '{{ addslashes($candidate->full_name) }}',
+                                                    '{{ addslashes($scheduledInterview->round_name) }}',
+                                                    '{{ $scheduledInterview->scheduled_date->format('d M Y') }}'
+                                                )">
+                                                    <i class="feather-check-square"></i>
+                                                </button>
+                                                <button class="action-btn" title="Reschedule Interview"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="rescheduleInterview({{ $scheduledInterview->id }})">
+                                                    <i class="feather-clock"></i>
+                                                </button>
+                                                <button class="action-btn text-danger" title="Cancel Interview"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="cancelInterview({{ $scheduledInterview->id }})">
+                                                    <i class="feather-slash"></i>
+                                                </button>
+                                                <button class="action-btn text-danger" title="Reject Application"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="rejectApplication({{ $application->id }})">
+                                                    <i class="feather-x-circle"></i>
+                                                </button>
+                                            @endif
+
+                                            {{-- ④ interview_completed → release offer OR reject --}}
+                                            @if ($stage === 'interview_completed')
+                                                <button class="action-btn text-success" title="Release Offer"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="showOfferModal({{ $application->id }}, '{{ addslashes($candidate->full_name) }}')">
+                                                    <i class="feather-file-text"></i>
+                                                </button>
+                                                <button class="action-btn text-danger" title="Reject"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="rejectApplication({{ $application->id }})">
+                                                    <i class="feather-x-circle"></i>
+                                                </button>
+                                            @endif
+
+                                            {{-- ⑤ offer_released → accept / reject offer --}}
+                                            @if ($stage === 'offer_released')
+                                                <button class="action-btn text-success" title="Mark Offer Accepted"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="updateOfferStatus({{ $application->id }}, 'accepted')">
+                                                    <i class="feather-thumbs-up"></i>
+                                                </button>
+                                                <button class="action-btn text-danger" title="Mark Offer Rejected"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="updateOfferStatus({{ $application->id }}, 'rejected')">
+                                                    <i class="feather-thumbs-down"></i>
+                                                </button>
+                                            @endif
+
+                                            {{-- ⑥ offer_accepted / onboarding / onboarded / hired → onboarding checklist --}}
+                                            @if (in_array($stage, ['offer_accepted', 'onboarding', 'onboarded', 'hired']))
+                                                <a class="action-btn text-success"
+                                                    title="{{ $stage === 'hired' ? 'View Onboarding' : 'Onboarding Checklist' }}"
+                                                    data-bs-toggle="tooltip"
+                                                    href="{{ route('onboarding.show', $application->id) }}">
+                                                    <i class="feather-user-plus"></i>
+                                                </a>
+                                            @endif
+
+                                            {{-- Always available: view interview/stage history --}}
+                                            <a class="action-btn" title="Interview Details" data-bs-toggle="tooltip"
+                                                href="{{ route('recruitment.interview-details', $application->id) }}">
+                                                <i class="feather-eye"></i>
                                             </a>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-
-                                                {{-- ① Received → shortlist or CV reject --}}
-                                                @if ($stage === 'application_received')
-                                                    <li>
-                                                        <button class="dropdown-item text-success"
-                                                            onclick="shortlistApplication({{ $application->id }})">
-                                                            <i class="feather-check-circle"></i> Shortlist CV
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button class="dropdown-item text-danger"
-                                                            onclick="rejectApplication({{ $application->id }})">
-                                                            <i class="feather-x-circle"></i> Reject CV
-                                                        </button>
-                                                    </li>
-                                                @endif
-
-                                                {{-- ② cv_shortlisted → schedule interview OR reject --}}
-                                                @if ($stage === 'cv_shortlisted')
-                                                    <li>
-                                                        <button class="dropdown-item"
-                                                            onclick="showScheduleModal({{ $application->id }}, '{{ addslashes($candidate->full_name) }}')">
-                                                            <i class="feather-calendar"></i> Schedule Interview
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button class="dropdown-item text-danger"
-                                                            onclick="rejectApplication({{ $application->id }})">
-                                                            <i class="feather-x-circle"></i> Reject
-                                                        </button>
-                                                    </li>
-                                                @endif
-
-                                                {{-- ③ interview_scheduled → complete (submit feedback) --}}
-                                                @if ($stage === 'interview_scheduled' && $scheduledInterview)
-                                                    <li>
-                                                        <button class="dropdown-item text-primary"
-                                                            onclick="showFeedbackModal(
-                                                            {{ $scheduledInterview->id }},
-                                                            '{{ addslashes($candidate->full_name) }}',
-                                                            '{{ addslashes($scheduledInterview->round_name) }}',
-                                                            '{{ $scheduledInterview->scheduled_date->format('d M Y') }}'
-                                                        )">
-                                                            <i class="feather-check-square"></i> Submit Feedback
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button class="dropdown-item text-danger"
-                                                            onclick="rejectApplication({{ $application->id }})">
-                                                            <i class="feather-x-circle"></i> Reject
-                                                        </button>
-                                                    </li>
-                                                @endif
-
-                                                {{-- ④ interview_completed → release offer OR start onboarding --}}
-                                                @if ($stage === 'interview_completed')
-                                                    <li>
-                                                        <button class="dropdown-item text-success"
-                                                            onclick="showOfferModal({{ $application->id }}, '{{ addslashes($candidate->full_name) }}')">
-                                                            <i class="feather-file-text"></i> Release Offer
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item text-info"
-                                                            href="{{ route('employee.create', ['applicationId' => $application->id]) }}">
-                                                            <i class="feather-user-plus"></i> Start Onboarding
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <button class="dropdown-item text-danger"
-                                                            onclick="rejectApplication({{ $application->id }})">
-                                                            <i class="feather-x-circle"></i> Reject
-                                                        </button>
-                                                    </li>
-                                                @endif
-
-                                                {{-- ⑤ offer_released → accept / reject offer --}}
-                                                @if ($stage === 'offer_released')
-                                                    <li>
-                                                        <button class="dropdown-item text-success"
-                                                            onclick="updateOfferStatus({{ $application->id }}, 'accepted')">
-                                                            <i class="feather-thumbs-up"></i> Mark Offer Accepted
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button class="dropdown-item text-danger"
-                                                            onclick="updateOfferStatus({{ $application->id }}, 'rejected')">
-                                                            <i class="feather-thumbs-down"></i> Mark Offer Rejected
-                                                        </button>
-                                                    </li>
-                                                @endif
-
-                                                {{-- ⑥ offer_accepted → start onboarding --}}
-                                                @if ($stage === 'offer_accepted')
-                                                    <li>
-                                                        <a class="dropdown-item text-success"
-                                                            href="{{ route('employee.create', ['applicationId' => $application->id]) }}">
-                                                            <i class="feather-user-plus"></i> Start Onboarding
-                                                        </a>
-                                                    </li>
-                                                @endif
-
-                                                {{-- Always available: view interview details --}}
-                                                <li>
-                                                    <hr class="dropdown-divider my-1">
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item"
-                                                        href="{{ route('recruitment.interview-details', $application->id) }}">
-                                                        <i class="feather-eye"></i> Interview Details
-                                                    </a>
-                                                </li>
-
-                                            </ul>
                                         </div>
                                     </td>
                                 </tr>
@@ -723,7 +768,7 @@
                     </div>
                     <div class="modal-footer py-2">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success btn-sm">Shortlist</button>
+                        <button type="submit" class="btn btn-success btn-sm" id="shortlistSubmitBtn">Shortlist</button>
                     </div>
                 </form>
             </div>
@@ -774,22 +819,12 @@
                             <strong>Position:</strong> {{ $jobOpening->title }}
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="schedule-form-group">
-                                    <label class="required">Round #</label>
-                                    <input type="number" name="interview_round" id="interview_round"
-                                        class="schedule-form-control" value="1" min="1" required>
-                                </div>
-                            </div>
-                            <div class="col-md-9">
-                                <div class="schedule-form-group">
-                                    <label class="required">Round Name</label>
-                                    <input type="text" name="round_name" id="round_name"
-                                        class="schedule-form-control" placeholder="e.g., Technical Round 1, HR Round"
-                                        required>
-                                </div>
-                            </div>
+                        <div class="schedule-form-group">
+                            <label class="required">Round Name</label>
+                            <input type="text" name="round_name" id="round_name"
+                                class="schedule-form-control" placeholder="e.g., Technical Round 1, HR Round"
+                                required>
+                            <small class="text-muted">The round number is assigned automatically based on prior rounds for this candidate.</small>
                         </div>
 
                         <div class="row">
@@ -812,16 +847,6 @@
                                     <select name="interviewer_id" id="interviewer_id" class="schedule-form-control"
                                         required>
                                         <option value="">Select Interviewer</option>
-                                        @php
-                                            $interviewers = \App\Models\User::whereIn('role', [
-                                                'hr',
-                                                'manager',
-                                                'admin',
-                                                'super_admin',
-                                            ])
-                                                ->orderBy('name')
-                                                ->get();
-                                        @endphp
                                         @foreach ($interviewers as $iv)
                                             <option value="{{ $iv->id }}">{{ $iv->name }}
                                                 ({{ ucfirst($iv->role) }})
@@ -890,6 +915,66 @@
                         <button type="submit" class="btn btn-primary btn-sm" id="scheduleSubmitBtn">
                             <i class="feather-calendar"></i> Schedule Interview
                         </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- ── CANCEL INTERVIEW MODAL ──────────────────────── --}}
+    <div class="modal fade" id="cancelInterviewModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">Cancel Interview</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="cancelInterviewForm" method="POST">
+                    @csrf
+                    <div class="modal-body py-3">
+                        <p style="font-size:13px;">Are you sure you want to cancel this scheduled interview?
+                            The application will return to Shortlisted.</p>
+                        <div class="mb-2">
+                            <label class="form-label small">Reason (Optional)</label>
+                            <textarea name="reason" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Back</button>
+                        <button type="submit" class="btn btn-danger btn-sm" id="cancelInterviewSubmitBtn">Cancel Interview</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- ── RESCHEDULE INTERVIEW MODAL ──────────────────── --}}
+    <div class="modal fade" id="rescheduleInterviewModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">Reschedule Interview</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="rescheduleInterviewForm" method="POST">
+                    @csrf
+                    <div class="modal-body py-3">
+                        <div class="mb-2">
+                            <label class="form-label small required">New Date</label>
+                            <input type="date" name="scheduled_date" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small required">New Time</label>
+                            <input type="time" name="scheduled_time" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Reason (Optional)</label>
+                            <textarea name="reason" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm" id="rescheduleInterviewSubmitBtn">Reschedule</button>
                     </div>
                 </form>
             </div>
@@ -1030,7 +1115,7 @@
                                     <label class="required">Department</label>
                                     <select name="department_id" class="schedule-form-control" required>
                                         <option value="">Select Department</option>
-                                        @foreach (\App\Models\Department::orderBy('name')->get() as $dept)
+                                        @foreach ($departments as $dept)
                                             <option value="{{ $dept->id }}">{{ $dept->name }}</option>
                                         @endforeach
                                     </select>
@@ -1041,7 +1126,7 @@
                                     <label class="required">Designation</label>
                                     <select name="designation_id" class="schedule-form-control" required>
                                         <option value="">Select Designation</option>
-                                        @foreach (\App\Models\Designation::orderBy('name')->get() as $desig)
+                                        @foreach ($designations as $desig)
                                             <option value="{{ $desig->id }}">{{ $desig->name }}</option>
                                         @endforeach
                                     </select>
@@ -1059,6 +1144,7 @@
                                         <option value="part_time">Part Time</option>
                                         <option value="contract">Contract</option>
                                         <option value="internship">Internship</option>
+                                        <option value="temporary">Temporary</option>
                                     </select>
                                 </div>
                             </div>
@@ -1144,6 +1230,29 @@
                 document.getElementById('nextRoundDiv').style.display =
                     this.value === 'next_round' ? 'block' : 'none';
             });
+
+            [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(function (el) {
+                new bootstrap.Tooltip(el);
+            });
+
+            // Stats card click filter (same pattern as Job Openings Management).
+            // Navigates directly rather than driving the <select> — some
+            // cards (Offered/Onboarded/Rejected) group several stages into
+            // one comma-separated value with no matching single <option>.
+            document.querySelectorAll('.stats-card').forEach(function (card) {
+                card.addEventListener('click', function () {
+                    const stage = card.getAttribute('data-stage') || '';
+                    const base = "{{ route('job-openings.applications', $jobOpening->id) }}";
+                    window.location.href = stage ? (base + '?stage=' + encodeURIComponent(stage)) : base;
+                });
+            });
+
+            const currentStage = '{{ request('stage') }}';
+            document.querySelectorAll('.stats-card').forEach(function (card) {
+                if ((card.getAttribute('data-stage') || '') === currentStage) {
+                    card.classList.add('active');
+                }
+            });
         });
 
         // ── Modal openers ──────────────────────────────────────────────────────────
@@ -1164,26 +1273,12 @@
             new bootstrap.Modal(document.getElementById('rejectModal')).show();
         }
 
-        function showScheduleModal(id, candidateName) {
+        function showScheduleModal(id, candidateName, suggestedRoundName) {
             const form = document.getElementById('scheduleForm');
             form.reset();
             form.action = `/recruitment/${id}/schedule-interview`;
             document.getElementById('scheduleCandidateName').textContent = candidateName;
-
-            // Get next round number
-            fetch(`/recruitment/${id}/interviews-count`)
-                .then(res => res.json())
-                .then(data => {
-                    const nextRound = (data.count || 0) + 1;
-                    document.getElementById('interview_round').value = nextRound;
-                    document.getElementById('round_name').value = nextRound === 1 ? 'First Round' :
-                        `Round ${nextRound}`;
-                })
-                .catch(() => {
-                    document.getElementById('interview_round').value = 1;
-                    document.getElementById('round_name').value = 'First Round';
-                });
-
+            document.getElementById('round_name').value = suggestedRoundName || '';
             new bootstrap.Modal(document.getElementById('scheduleModal')).show();
         }
 
@@ -1204,6 +1299,20 @@
             form.action = `/recruitment/applications/${applicationId}/release-offer`;
             document.getElementById('offerCandidateName').textContent = candidateName;
             new bootstrap.Modal(document.getElementById('offerModal')).show();
+        }
+
+        function cancelInterview(interviewId) {
+            const form = document.getElementById('cancelInterviewForm');
+            form.reset();
+            form.action = `/recruitment/interviews/${interviewId}/cancel`;
+            new bootstrap.Modal(document.getElementById('cancelInterviewModal')).show();
+        }
+
+        function rescheduleInterview(interviewId) {
+            const form = document.getElementById('rescheduleInterviewForm');
+            form.reset();
+            form.action = `/recruitment/interviews/${interviewId}/reschedule`;
+            new bootstrap.Modal(document.getElementById('rescheduleInterviewModal')).show();
         }
 
         function updateOfferStatus(applicationId, status) {
@@ -1284,17 +1393,16 @@
         }
 
         // Bind all forms
-        bindAjaxForm('shortlistForm', 'shortlistModal', 'shortlistForm', 'Shortlist');
-        bindAjaxForm('rejectForm', 'rejectModal', 'rejectForm', 'Reject');
+        bindAjaxForm('shortlistForm', 'shortlistModal', 'shortlistSubmitBtn', 'Shortlist');
+        bindAjaxForm('rejectForm', 'rejectModal', 'rejectSubmitBtn', 'Reject');
         bindAjaxForm('scheduleForm', 'scheduleModal', 'scheduleSubmitBtn',
             '<i class="feather-calendar"></i> Schedule Interview');
         bindAjaxForm('feedbackForm', 'feedbackModal', 'feedbackSubmitBtn',
             '<i class="feather-save"></i> Submit Feedback & Decision');
         bindAjaxForm('offerForm', 'offerModal', 'offerSubmitBtn',
             '<i class="feather-send"></i> Release Offer');
-
-        // Override submit-btn id for shortlist/reject (they use form id as btn id above — fix)
-        document.getElementById('shortlistForm')?.addEventListener('submit', function() {}, true);
+        bindAjaxForm('cancelInterviewForm', 'cancelInterviewModal', 'cancelInterviewSubmitBtn', 'Cancel Interview');
+        bindAjaxForm('rescheduleInterviewForm', 'rescheduleInterviewModal', 'rescheduleInterviewSubmitBtn', 'Reschedule');
 
         // ── Toast ──────────────────────────────────────────────────────────────────
         function showToast(message, type = 'success') {

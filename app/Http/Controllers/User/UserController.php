@@ -748,18 +748,18 @@ class UserController extends Controller
         $basicDetails->fill([
             'personal_email' => $validated['personal_email'] ?? null,
             'alternate_phone' => $validated['alternate_phone'] ?? null,
-            'gender' => $validated['gender'],
-            'dob' => $validated['dob'],
+            'gender' => $validated['gender'] ?? null,
+            'dob' => $validated['dob'] ?? null,
             'blood_group' => $validated['blood_group'] ?? null,
             'marital_status' => $validated['marital_status'] ?? null,
-            'father_name' => $validated['father_name'],
-            'mother_name' => $validated['mother_name'],
+            'father_name' => $validated['father_name'] ?? null,
+            'mother_name' => $validated['mother_name'] ?? null,
             'nationality' => $validated['nationality'] ?? 'Indian',
             'about' => $validated['about'] ?? null,
             'aadhaar_no' => $validated['aadhaar_no'] ?? null,
             'pan_no' => $validated['pan_no'] ?? null,
             'passport_number' => $validated['passport_number'] ?? null,
-            'language' => json_encode($validated['language']),
+            'language' => json_encode($validated['language'] ?? []),
         ]);
 
         // Add any file paths from this step
@@ -1246,18 +1246,18 @@ class UserController extends Controller
             $basicDetailsData = [
                 'personal_email' => $validated['personal_email'] ?? null,
                 'alternate_phone' => $validated['alternate_phone'] ?? null,
-                'gender' => $validated['gender'],
-                'dob' => $validated['dob'],
+                'gender' => $validated['gender'] ?? null,
+                'dob' => $validated['dob'] ?? null,
                 'about' => $validated['about'] ?? null,
-                'father_name' => $validated['father_name'],
-                'mother_name' => $validated['mother_name'],
+                'father_name' => $validated['father_name'] ?? null,
+                'mother_name' => $validated['mother_name'] ?? null,
                 'blood_group' => $validated['blood_group'] ?? null,
                 'aadhaar_no' => $validated['aadhaar_no'] ?? null,
                 'pan_no' => $validated['pan_no'] ?? null,
                 'passport_number' => $validated['passport_number'] ?? null,
                 'marital_status' => $validated['marital_status'] ?? null,
                 'nationality' => $validated['nationality'] ?? null,
-                'language' => json_encode($validated['language']),
+                'language' => json_encode($validated['language'] ?? []),
             ];
 
             // Add file paths to basic details
@@ -1495,18 +1495,18 @@ class UserController extends Controller
         $basicDetails->fill([
             'personal_email' => $validated['personal_email'] ?? null,
             'alternate_phone' => $validated['alternate_phone'] ?? null,
-            'gender' => $validated['gender'],
-            'dob' => $validated['dob'],
+            'gender' => $validated['gender'] ?? null,
+            'dob' => $validated['dob'] ?? null,
             'blood_group' => $validated['blood_group'] ?? null,
             'marital_status' => $validated['marital_status'] ?? null,
-            'father_name' => $validated['father_name'],
-            'mother_name' => $validated['mother_name'],
+            'father_name' => $validated['father_name'] ?? null,
+            'mother_name' => $validated['mother_name'] ?? null,
             'nationality' => $validated['nationality'] ?? 'Indian',
             'about' => $validated['about'] ?? null,
             'aadhaar_no' => $validated['aadhaar_no'] ?? null,
             'pan_no' => $validated['pan_no'] ?? null,
             'passport_number' => $validated['passport_number'] ?? null,
-            'language' => json_encode($validated['language']),
+            'language' => json_encode($validated['language'] ?? []),
         ]);
 
         foreach ($filePaths as $field => $path) {

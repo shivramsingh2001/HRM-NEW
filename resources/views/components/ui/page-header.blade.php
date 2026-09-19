@@ -19,9 +19,9 @@
     <div class="page-header-left d-flex align-items-center">
         <div class="page-header-title">
             <h5 class="m-b-10">{{ $title }}</h5>
-            @isset($subtitle)
+            {{-- @isset($subtitle)
                 <span class="d-block fs-12 text-muted">{{ $subtitle }}</span>
-            @endisset
+            @endisset --}}
         </div>
         <ul class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>

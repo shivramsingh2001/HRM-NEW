@@ -28,12 +28,27 @@ class PayrollAttendanceContextBuilder
     ) {
     }
 
-    public function build(int $userId, int $tenantId, string $yearMonth): array
+    /**
+     * $dayOverrides (optional): present_days/paid_leave_days/week_offs/holidays
+     * submitted from the Monthly Payroll Edit form — merged on top of the
+     * attested attendance-derived values before payable_days/proration are
+     * (re)computed, so an HR edit to Week Off/Absent/Holiday actually flows
+     * through to the real per-component proration, not just a display field.
+     */
+    public function build(int $userId, int $tenantId, string $yearMonth, ?array $dayOverrides = null): array
     {
         $start = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
         $end = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth();
 
         $days = $this->payrollDays->forMonth($userId, $yearMonth, $tenantId);
+
+        if (! empty($dayOverrides)) {
+            $days = array_merge($days, array_intersect_key(
+                $dayOverrides,
+                array_flip(['present_days', 'paid_leave_days', 'week_offs', 'holidays'])
+            ));
+            $days['payable_days'] = $days['present_days'] + $days['paid_leave_days'] + $days['week_offs'] + $days['holidays'];
+        }
 
         $overtime = $this->approvedOvertimeHours($userId, $tenantId, $start->toDateString(), $end->toDateString());
         $overtimeRateMultiplier = $this->overtimeRateMultiplier($tenantId);

@@ -96,8 +96,8 @@
 
         .toggle-switch {
             position: relative;
-            width: 44px;
-            height: 22px;
+            width: 32px;
+            height: 17px;
             background: #e2e8f0;
             border-radius: 30px;
             cursor: pointer;
@@ -106,14 +106,15 @@
 
         .toggle-switch.active {
             background: var(--primary);
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
         }
 
         .toggle-switch .toggle-circle {
             position: absolute;
             top: 2px;
             left: 2px;
-            width: 18px;
-            height: 18px;
+            width: 13px;
+            height: 13px;
             background: white;
             border-radius: 50%;
             transition: left 0.2s;
@@ -121,11 +122,11 @@
         }
 
         .toggle-switch.active .toggle-circle {
-            left: 24px;
+            left: 17px;
         }
 
         .status-label {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 500;
         }
 
@@ -147,12 +148,11 @@
         }
 
         .toggle-switch.face-toggle.active {
-            background: var(--primary);
-            /* Different color for face register toggle */
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
         }
 
         .toggle-switch.location-toggle.active {
-            background: var(--primary);
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
         }
 
         /* ==================== ATTENDANCE TYPE SELECT ==================== */
@@ -576,14 +576,14 @@
            order or specificity. This page's theme is #1e3a8a, so the
            override has to fight !important with !important. */
         .add-employee-btn {
-            background: var(--primary) !important;
-            border-color: var(--primary) !important;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
+            border-color: #1e3a8a !important;
             font-size: 12px;
         }
 
         .add-employee-btn:hover {
-            background: var(--primary-dark) !important;
-            border-color: var(--primary-dark) !important;
+            background: linear-gradient(135deg, #16306f, #1e40af) !important;
+            border-color: #16306f !important;
         }
 
         /* ==================== ACTION BUTTONS ==================== */
@@ -765,7 +765,7 @@
         .ui-drawer p,
         .ui-drawer span,
         .ui-drawer .btn {
-            font-size: 12.5px;
+            font-size: 10px;
         }
 
         .ui-drawer .form-label {
@@ -775,6 +775,11 @@
         .ui-drawer .form-group {
             margin-bottom: 10px;
         }
+
+        /* Select2 multi-select styling now lives globally in
+           public/assets/css/theme-custom.css — applies to every Select2
+           field app-wide, not just this drawer. Do not re-add a scoped
+           copy here; edit the global rules instead. */
 
         .ui-drawer .step-content {
             display: none;

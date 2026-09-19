@@ -14,6 +14,23 @@
 <body style="min-height: 100vh; width: 100vw; margin: 0px;">
     <div style="padding: 8px 8px;">
         <div style="border: 1px solid #e5e7eb; padding: 14px 28px;">
+            @php
+                // PAN / Account No. / IFSC / UAN / ESI No. are sensitive
+                // identifiers — the slip only ever shows the last 4
+                // characters, matching how bank/card numbers are
+                // conventionally partially masked. A closure (not a named
+                // function) since this view can render more than once per
+                // request (bulk payslip export loops) and a named function
+                // would fatal on the second render with "cannot redeclare".
+                $maskId = function ($value, $visible = 4) {
+                    if (empty($value)) {
+                        return 'N/A';
+                    }
+                    $value = (string) $value;
+                    $len = strlen($value);
+                    return $len <= $visible ? $value : str_repeat('X', $len - $visible) . substr($value, -$visible);
+                };
+            @endphp
             <table style="width: 100%;">
                 <tbody>
                     <tr>
@@ -35,7 +52,7 @@
                             @endif
                         </td>
                         <td style="padding: 8px; width: 80%;">
-                            <h3 style="text-align: center; padding-right: 80px; font-size: 16px; color: #1e3a8a; margin-bottom: 2px;">{{ $company->company_name ?? 'Company Name' }}</h3>
+                            <h3 style="text-align: center; padding-right: 80px; font-size: 20px; color: #1e3a8a; margin-bottom: 2px;">{{ $company->company_name ?? 'Company Name' }}</h3>
                             <h5 style="text-align: center; padding-right: 80px; font-size: 11px; font-weight: 400; color: #475569;">{{ $company->address ?? 'Company Address' }}</h5>
                         </td>
                     </tr>
@@ -108,7 +125,7 @@
                                 <tbody>
                                     <tr>
                                         <td style="width: 50%; font-weight: 500; font-size: 11px; color: #64748b;">PAN :</td>
-                                        <td style="width: 50%; text-align: right; font-size: 12px; color: #111827;">{{ $monthlyPayroll->user->basicDetails->pan_no ?? 'N/A' }}</td>
+                                        <td style="width: 50%; text-align: right; font-size: 12px; color: #111827;">{{ $maskId($monthlyPayroll->user->basicDetails->pan_no ?? null) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -142,7 +159,7 @@
                                 <tbody>
                                     <tr>
                                         <td style="width: 50%; font-weight: 500; font-size: 11px; color: #64748b;">Account No. :</td>
-                                        <td style="width: 50%; font-size: 12px; color: #111827;">{{ $bankDetails->account_number ?? 'N/A' }}</td>
+                                        <td style="width: 50%; font-size: 12px; color: #111827;">{{ $maskId($bankDetails->account_number ?? null) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -152,7 +169,7 @@
                                 <tbody>
                                     <tr>
                                         <td style="width: 50%; font-weight: 500; font-size: 11px; color: #64748b;">UAN No. :</td>
-                                        <td style="width: 50%; text-align: right; font-size: 12px; color: #111827;">{{ $monthlyPayroll->user->basicDetails->uan_no ?? 'N/A' }}</td>
+                                        <td style="width: 50%; text-align: right; font-size: 12px; color: #111827;">{{ $maskId($monthlyPayroll->user->basicDetails->uan_no ?? null) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -164,7 +181,7 @@
                                 <tbody>
                                     <tr>
                                         <td style="width: 50%; font-weight: 500; font-size: 11px; color: #64748b;">IFSC No. :</td>
-                                        <td style="width: 50%; font-size: 12px; color: #111827;">{{ $bankDetails->ifsc ?? 'N/A' }}</td>
+                                        <td style="width: 50%; font-size: 12px; color: #111827;">{{ $maskId($bankDetails->ifsc ?? null) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -174,7 +191,7 @@
                                 <tbody>
                                     <tr>
                                         <td style="width: 50%; font-weight: 500; font-size: 11px; color: #64748b;">ESI No. :</td>
-                                        <td style="width: 50%; text-align: right; font-size: 12px; color: #111827;">{{ $monthlyPayroll->user->basicDetails->esi_no ?? 'N/A' }}</td>
+                                        <td style="width: 50%; text-align: right; font-size: 12px; color: #111827;">{{ $maskId($monthlyPayroll->user->basicDetails->esi_no ?? null) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -216,6 +233,76 @@
                     </tr>   
                 </tbody>
             </table>
+            {{--
+                Fully dynamic Earnings/Deductions: built from
+                PayrollCalculationEngine::resolveEmployeeComponents() for a
+                dynamic-engine payroll (only the employee's actual assigned
+                structure components, e.g. a Basic-only employee's slip shows
+                only Basic), or from the legacy flat fields for a legacy-engine
+                payroll — either way, every row is zero-suppressed and the two
+                columns are independent lists (not positionally paired, which
+                is what previously let an Employer Contribution row leak into
+                the visual "Deductions" column below).
+            --}}
+            @php
+                $isDynamicSlip = ($monthlyPayroll->engine_version ?? null) === 'dynamic_v1';
+
+                if ($isDynamicSlip) {
+                    $slipResolved = app(\App\Services\Payroll\PayrollCalculationEngine::class)
+                        ->resolveEmployeeComponents($monthlyPayroll->user, $monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month);
+
+                    $slipEarnings = collect($slipResolved['earnings'])
+                        ->merge($slipResolved['reimbursements'])
+                        ->filter(fn ($c) => $c['amount'] > 0)
+                        ->map(fn ($c) => ['name' => $c['name'], 'amount' => $c['amount']])
+                        ->values();
+                    $slipDeductions = collect($slipResolved['deductions'])
+                        ->filter(fn ($c) => $c['amount'] > 0)
+                        ->map(fn ($c) => ['name' => $c['name'], 'amount' => $c['amount']])
+                        ->values();
+                } else {
+                    $legacyEarningFields = [
+                        'basic_salary' => 'Basic', 'hra' => 'HRA', 'conveyence' => 'Conveyence',
+                        'medical_allowance' => 'Medical Allowance', 'children_allowance' => 'Children Allowance',
+                        'post_allowance' => 'Post Allowance', 'leave_travel_allowance' => 'Leave Travel Allowance',
+                        'monthly_incentive' => 'Monthly Incentive', 'special_allowance' => 'Special Allowance',
+                        'overtime_amount' => 'Overtime',
+                    ];
+                    $legacyDeductionFields = [
+                        'provident_fund' => 'Provident Fund', 'esi' => 'ESI', 'professional_tax' => 'PT',
+                        'tds' => 'TDS', 'loan_deduction' => 'Loan Deduction', 'other_deductions' => 'Other Deductions',
+                    ];
+
+                    $slipEarnings = collect($legacyEarningFields)
+                        ->map(fn ($label, $field) => ['name' => $label, 'amount' => (float) ($monthlyPayroll->{$field} ?? 0)])
+                        ->filter(fn ($c) => $c['amount'] > 0)
+                        ->values();
+                    $slipDeductions = collect($legacyDeductionFields)
+                        ->map(fn ($label, $field) => ['name' => $label, 'amount' => (float) ($monthlyPayroll->{$field} ?? 0)])
+                        ->filter(fn ($c) => $c['amount'] > 0)
+                        ->values();
+
+                    // Any component that only exists as a payroll_components row --
+                    // custom bonuses, arrears, or anything the dynamic engine
+                    // produced with no dedicated fixed column above.
+                    if ($monthlyPayroll->components) {
+                        $slipEarnings = $slipEarnings->merge(
+                            $monthlyPayroll->components->where('component_type', 'earning')
+                                ->whereNotIn('component_name', array_values($legacyEarningFields))
+                                ->filter(fn ($c) => (float) $c->amount > 0)
+                                ->map(fn ($c) => ['name' => $c->component_name, 'amount' => (float) $c->amount])
+                        )->values();
+                        $slipDeductions = $slipDeductions->merge(
+                            $monthlyPayroll->components->where('component_type', 'deduction')
+                                ->whereNotIn('component_name', array_values($legacyDeductionFields))
+                                ->filter(fn ($c) => (float) $c->amount > 0)
+                                ->map(fn ($c) => ['name' => $c->component_name, 'amount' => (float) $c->amount])
+                        )->values();
+                    }
+                }
+
+                $slipRowCount = max($slipEarnings->count(), $slipDeductions->count());
+            @endphp
             <table style="width: 100%; border: 1px solid #e5e7eb; border-spacing: 0; border-collapse: collapse; margin-top: 16px;">
                 <tbody style=" border-spacing: 0; margin: 0px; padding: 0px;">
                     <tr style=" border-spacing: 0;">
@@ -236,223 +323,30 @@
                             </table>
                         </td>
                     </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Basic</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->basic_salary ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Provident Fund</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->provident_fund ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">HRA</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->hra ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Employer Provident Fund</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->employer_provident_fund ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Conveyence</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->conveyence ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">ESI</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->esi ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Medical Allowance</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->medical_allowance ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Employer ESI</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->employer_esi ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Children Allowance</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->children_allowance ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">PT</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->professional_tax ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Post Allowance</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->post_allowance ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">TDS</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->tds ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Leave Travel Allowance</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->leave_travel_allowance ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Loan Deduction</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->loan_deduction ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Monthly Incentive</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->monthly_incentive ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Other Deductions</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->other_deductions ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Special Allowance</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->special_allowance ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;"></td>
-                    </tr>
-                    <tr>
-                        <td style="width: 50%;">
-                            <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                <tbody>
-                                    <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">Overtime</td>
-                                    <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($monthlyPayroll->overtime_amount ?? 0, 2) }}</td>
-                                </tbody>
-                            </table>
-                        </td>
-                        <td style="width: 50%;"></td>
-                    </tr>
-                    {{--
-                        Any component that only exists as a payroll_components row -- custom
-                        bonuses, arrears, or anything the dynamic engine produced with no
-                        dedicated fixed column above -- rendered here so the downloadable PDF
-                        can't diverge from what show.blade.php already displays on screen.
-                    --}}
-                    @php
-                        $pdfFixedEarningNames = [
-                            'Basic Salary', 'HRA', 'Conveyance Allowance', 'Medical Allowance',
-                            'Children Allowance', 'Post Allowance', 'Leave Travel Allowance',
-                            'Monthly Incentive', 'Special Allowance', 'Overtime',
-                        ];
-                        $pdfFixedDeductionNames = [
-                            'Provident Fund', 'ESI', 'Professional Tax', 'TDS',
-                            'Loan Deduction', 'Other Deductions',
-                        ];
-                        $pdfExtraEarnings = $monthlyPayroll->components
-                            ? $monthlyPayroll->components->where('component_type', 'earning')
-                                ->whereNotIn('component_name', $pdfFixedEarningNames)
-                            : collect();
-                        $pdfExtraDeductions = $monthlyPayroll->components
-                            ? $monthlyPayroll->components->where('component_type', 'deduction')
-                                ->whereNotIn('component_name', $pdfFixedDeductionNames)
-                            : collect();
-                    @endphp
-                    @foreach ($pdfExtraEarnings as $extraEarning)
+                    @for ($i = 0; $i < $slipRowCount; $i++)
                         <tr>
                             <td style="width: 50%;">
-                                <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                    <tbody>
-                                        <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">{{ $extraEarning->component_name }}</td>
-                                        <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($extraEarning->amount, 2) }}</td>
-                                    </tbody>
-                                </table>
+                                @if ($slipEarnings->has($i))
+                                    <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
+                                        <tbody>
+                                            <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">{{ $slipEarnings[$i]['name'] }}</td>
+                                            <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($slipEarnings[$i]['amount'], 2) }}</td>
+                                        </tbody>
+                                    </table>
+                                @endif
                             </td>
-                            <td style="width: 50%;"></td>
-                        </tr>
-                    @endforeach
-                    @foreach ($pdfExtraDeductions as $extraDeduction)
-                        <tr>
-                            <td style="width: 50%;"></td>
                             <td style="width: 50%;">
-                                <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
-                                    <tbody>
-                                        <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">{{ $extraDeduction->component_name }}</td>
-                                        <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($extraDeduction->amount, 2) }}</td>
-                                    </tbody>
-                                </table>
+                                @if ($slipDeductions->has($i))
+                                    <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
+                                        <tbody>
+                                            <td style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px;">{{ $slipDeductions[$i]['name'] }}</td>
+                                            <td style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px;">{{ number_format($slipDeductions[$i]['amount'], 2) }}</td>
+                                        </tbody>
+                                    </table>
+                                @endif
                             </td>
                         </tr>
-                    @endforeach
+                    @endfor
                     <tr>
                         <td style="width: 50%;">
                             <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
@@ -496,42 +390,57 @@
             </table>
 
 
-            <table style="width: 100%; margin-top: 14px; border-collapse: collapse; border-spacing: 0px; border: 1px solid #e5e7eb;">
-                <tbody>
-                    <tr>
-                        <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 11px; color: #1e3a8a; width: 50%;">
-                            Employer Contribution
-                        </th>
-                        <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 11px; color: #1e3a8a; width: 50%;">
-                            Amount (Rs.)
-                        </th>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px; width: 50%;">
-                            Employer PF
-                        </td>
-                        <td style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px; width: 50%;">
-                            {{ number_format($monthlyPayroll->employer_provident_fund ?? 0, 2) }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px; width: 50%;">
-                            Employer ESI
-                        </td>
-                        <td style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px; width: 50%;">
-                            {{ number_format($monthlyPayroll->employer_esi ?? 0, 2) }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px; width: 50%;">
-                            Cost To Company (CTC)
-                        </th>
-                        <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px; width: 50%;">
-                            {{ number_format(($monthlyPayroll->gross_earnings ?? 0) + ($monthlyPayroll->employer_provident_fund ?? 0) + ($monthlyPayroll->employer_esi ?? 0), 2) }}
-                        </th>
-                    </tr>
-                </tbody>
-            </table>
+            {{-- Employer Contribution / CTC breakdown is intentionally never
+                 shown on the salary slip, for anyone (admin or employee) —
+                 was previously employee-view-only via $isEmployeeView; now
+                 unconditionally hidden here instead. --}}
+            @if (false)
+                @php
+                    $slipEmployerContributions = $isDynamicSlip
+                        ? collect($slipResolved['employer_contributions'])->filter(fn ($c) => $c['amount'] > 0)->values()
+                        : collect([
+                            ['name' => 'Employer PF', 'amount' => (float) ($monthlyPayroll->employer_provident_fund ?? 0)],
+                            ['name' => 'Employer ESI', 'amount' => (float) ($monthlyPayroll->employer_esi ?? 0)],
+                        ])->filter(fn ($c) => $c['amount'] > 0)->values();
+                    $slipEmployerContributionsTotal = $slipEmployerContributions->sum('amount');
+                @endphp
+                <table style="width: 100%; margin-top: 14px; border-collapse: collapse; border-spacing: 0px; border: 1px solid #e5e7eb;">
+                    <tbody>
+                        <tr>
+                            <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 11px; color: #1e3a8a; width: 50%;">
+                                Employer Contribution
+                            </th>
+                            <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 11px; color: #1e3a8a; width: 50%;">
+                                Amount (Rs.)
+                            </th>
+                        </tr>
+                        @forelse ($slipEmployerContributions as $contribution)
+                            <tr>
+                                <td style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px; width: 50%;">
+                                    {{ $contribution['name'] }}
+                                </td>
+                                <td style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px; width: 50%;">
+                                    {{ number_format($contribution['amount'], 2) }}
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="2" style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: center; font-size: 11px; color: #94a3b8;">
+                                    No employer contribution components
+                                </td>
+                            </tr>
+                        @endforelse
+                        <tr>
+                            <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 12px; width: 50%;">
+                                Cost To Company (CTC)
+                            </th>
+                            <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 12px; width: 50%;">
+                                {{ number_format(($monthlyPayroll->gross_earnings ?? 0) + $slipEmployerContributionsTotal, 2) }}
+                            </th>
+                        </tr>
+                    </tbody>
+                </table>
+            @endif
 
             <p style="text-align: center; margin-top: 16px; margin-bottom: 0px; font-size: 10px; color: #94a3b8;">Note : This is a computer generated document, hence no signature is required.</p>
         </div>

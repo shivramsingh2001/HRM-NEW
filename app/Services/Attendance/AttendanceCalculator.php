@@ -143,6 +143,59 @@ class AttendanceCalculator
     }
 
     /**
+     * Minutes the clock-out is early versus the scheduled end, after the
+     * shift's grace period. 0 when on time / late / no shift. Symmetric to
+     * lateMinutes().
+     */
+    public function earlyDepartureMinutes($shift, CarbonInterface $scheduledEnd, CarbonInterface $clockOut): int
+    {
+        if ($shift === null) {
+            return 0;
+        }
+
+        if ($clockOut->greaterThanOrEqualTo($scheduledEnd)) {
+            return 0;
+        }
+
+        $grace = (int) ($this->prop($shift, 'grace_minutes') ?? 0);
+        $early = (int) floor($clockOut->diffInSeconds($scheduledEnd) / 60);
+
+        return $early > $grace ? $early : 0;
+    }
+
+    /**
+     * The calendar date a punch should be attributed to. A night-shift punch
+     * landing 00:00-05:59, before the shift's own start hour, is attributed to
+     * the previous day. Lifted verbatim from the mobile clock-in "night shift
+     * fix" so every punch source (mobile, web, manual, biometric, kiosk)
+     * agrees on the same attendance date.
+     */
+    public function resolveAttendanceDate(CarbonInterface $punchedAt, $shift = null): string
+    {
+        $date = $punchedAt->format('Y-m-d');
+
+        [$start, $end] = $this->shiftTimes($shift);
+        if ($shift === null || $start === null || $end === null) {
+            return $date;
+        }
+
+        $shiftStart = Carbon::parse($start);
+        $shiftEnd = Carbon::parse($end);
+        $isNightShift = $shiftEnd->format('H:i') < $shiftStart->format('H:i')
+            || ($shiftEnd->format('H:i') <= '04:00' && $shiftStart->format('H:i') >= '20:00');
+
+        if ($isNightShift) {
+            $hour = (int) $punchedAt->format('H');
+            $startHour = (int) $shiftStart->format('H');
+            if ($hour >= 0 && $hour < 6 && $hour < $startHour) {
+                return $punchedAt->copy()->subDay()->format('Y-m-d');
+            }
+        }
+
+        return $date;
+    }
+
+    /**
      * Expected paid seconds for a shift (end - start, +24h when overnight),
      * minus its break_time (minutes). 0 when the shift is unknown.
      */

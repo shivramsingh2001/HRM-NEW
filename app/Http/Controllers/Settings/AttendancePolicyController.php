@@ -8,6 +8,7 @@ use App\Models\AttendancePolicy;
 use App\Models\Tenant;
 use App\Services\Attendance\PolicyResolver;
 use Carbon\Carbon;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 
 class AttendancePolicyController extends Controller
@@ -49,7 +50,7 @@ class AttendancePolicyController extends Controller
 
         AttendancePolicy::updateOrCreate(
             ['tenant_id' => $tenantId, 'effective_from' => $effectiveFrom],
-            array_merge($data, [
+            array_merge(Arr::except($data, ['allow_multiple_punches']), [
                 'created_by' => Auth::id(),
             ])
         );
@@ -57,6 +58,7 @@ class AttendancePolicyController extends Controller
         Tenant::whereKey($tenantId)->update([
             'late_halfday_enabled' => $data['late_halfday_enabled'],
             'monthly_late_allowance' => $data['monthly_late_allowance'],
+            'allow_multiple_punches' => $data['allow_multiple_punches'],
         ]);
 
         app(PolicyResolver::class)->forget();

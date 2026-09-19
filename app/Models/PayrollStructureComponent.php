@@ -31,4 +31,26 @@ class PayrollStructureComponent extends Model
     {
         return $this->belongsTo(PayrollComponentMaster::class, 'payroll_component_master_id');
     }
+
+    /**
+     * Per-structure-template override of the "% Of (Earnings)" base
+     * selection (payroll_structure_component_bases). Falls back to the
+     * catalog's own PayrollComponentMaster::baseComponents() when empty —
+     * see createComponentSnapshots()/PayrollCalculationEngine::resolveBase()
+     * for where each layer is actually consulted.
+     */
+    public function baseComponentBases()
+    {
+        return $this->hasMany(PayrollStructureComponentBase::class, 'payroll_structure_component_id');
+    }
+
+    public function baseComponents()
+    {
+        return $this->belongsToMany(
+            PayrollComponentMaster::class,
+            'payroll_structure_component_bases',
+            'payroll_structure_component_id',
+            'base_payroll_component_master_id'
+        )->withTimestamps();
+    }
 }

@@ -16,6 +16,13 @@ use App\Http\Controllers\Holiday\HolidayController;
 use App\Http\Controllers\Attendance\AttendanceContoller;
 use App\Http\Controllers\Task\TaskController;
 use App\Http\Controllers\Project\ProjectController;
+use App\Http\Controllers\Asset\AssetController;
+use App\Http\Controllers\Asset\AssetLifecycleController;
+use App\Http\Controllers\Asset\AssetCategoryController;
+use App\Http\Controllers\Asset\AssetTypeController;
+use App\Http\Controllers\Asset\VendorController;
+use App\Http\Controllers\Asset\AssetAttachmentController;
+use App\Http\Controllers\Report\AssetReportController;
 use App\Http\Controllers\Shift\ShiftController;
 use App\Http\Controllers\Expense\ExpenseController;
 use App\Http\Controllers\Expense\ExpenseTypeController;
@@ -42,6 +49,7 @@ use App\Http\Controllers\Performance\PerformanceController;
 use App\Http\Controllers\offboarding\OffboardingController;
 use App\Http\Controllers\Recruitment\JobOpeningController;
 use App\Http\Controllers\Recruitment\RecruitmentController;
+use App\Http\Controllers\Recruitment\OnboardingController;
 use App\Http\Controllers\Report\AttendanceReportController;
 use App\Http\Controllers\Report\TaskReportController;
 use App\Http\Controllers\Report\ProjectReportController;
@@ -80,7 +88,7 @@ Route::get('/reset-password', function (\Illuminate\Http\Request $request) {
 })->name('password.reset');
 
 Route::group(['middleware' => ['tenant']], function () {
-      Route::prefix('careers')->name('public.jobs.')->group(function () {
+      Route::prefix('careers')->name('public.jobs.')->middleware('feature:recruitment')->group(function () {
             Route::get('/', [RecruitmentController::class, 'index'])->name('list');
             Route::get('/{id}/apply', [RecruitmentController::class, 'showApplyForm'])->name('apply.form');
             Route::post('/apply-store', [RecruitmentController::class, 'submitApplication'])->name('apply');
@@ -240,6 +248,69 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::delete('/risks/{riskId}', [ProjectController::class, 'destroyRisk'])->name('risks.destroy')->middleware('permission:projects,edit');
         });
 
+        //Assets Route
+        // Prefix is 'company-assets' (not 'assets') because public/assets/ is
+        // a real directory — Apache's rewrite rule only forwards a request to
+        // index.php when the path doesn't match an existing file/directory,
+        // so GET /assets never reached Laravel at all. Route *names* stay
+        // 'assets.*' so no other file needs to change.
+        Route::prefix('company-assets')->name('assets.')->group(function () {
+            Route::get('/', [AssetController::class, 'index'])->name('index')->middleware('permission:assets,view');
+            Route::post('/', [AssetController::class, 'store'])->name('store')->middleware('permission:assets,create');
+            Route::get('/export', [AssetController::class, 'export'])->name('export')->middleware('permission:assets,export');
+            Route::post('/bulk-action', [AssetController::class, 'bulkAction'])->name('bulk-action')->middleware('permission:assets,manage');
+            Route::get('/{id}', [AssetController::class, 'show'])->name('show')->middleware('permission:assets,view');
+            Route::post('/{id}/update', [AssetController::class, 'update'])->name('update')->middleware('permission:assets,edit');
+            Route::delete('/{id}', [AssetController::class, 'destroy'])->name('destroy')->middleware('permission:assets,delete');
+
+            // Lifecycle actions
+            Route::post('/{id}/assign', [AssetLifecycleController::class, 'assign'])->name('assign')->middleware('permission:assets,manage');
+            Route::post('/{id}/transfer', [AssetLifecycleController::class, 'transfer'])->name('transfer')->middleware('permission:assets,manage');
+            Route::post('/{id}/send-for-repair', [AssetLifecycleController::class, 'sendForRepair'])->name('send-for-repair')->middleware('permission:assets,manage');
+            Route::post('/repairs/{id}/complete', [AssetLifecycleController::class, 'completeRepair'])->name('repairs.complete')->middleware('permission:assets,manage');
+            Route::post('/{id}/report-damage', [AssetLifecycleController::class, 'reportDamage'])->name('report-damage')->middleware('permission:assets,edit');
+            Route::post('/damage-reports/{id}/resolve', [AssetLifecycleController::class, 'resolveDamage'])->name('damage-reports.resolve')->middleware('permission:assets,manage');
+            Route::post('/{id}/retire', [AssetLifecycleController::class, 'retire'])->name('retire')->middleware('permission:assets,manage');
+            Route::post('/{id}/dispose', [AssetLifecycleController::class, 'dispose'])->name('dispose')->middleware('permission:assets,manage');
+            // Accept/return are ownership-checked inside the controller (an
+            // employee always may act on their own assignment), so only
+            // 'view' is required at the route level.
+            Route::post('/assignments/{id}/accept', [AssetLifecycleController::class, 'accept'])->name('assignments.accept')->middleware('permission:assets,view');
+            Route::post('/assignments/{id}/return', [AssetLifecycleController::class, 'returnAsset'])->name('assignments.return')->middleware('permission:assets,view');
+
+            // Attachments
+            Route::post('/{id}/attachments', [AssetAttachmentController::class, 'store'])->name('attachments.store')->middleware('permission:assets,edit');
+            Route::delete('/attachments/{attachmentId}', [AssetAttachmentController::class, 'destroy'])->name('attachments.destroy')->middleware('permission:assets,edit');
+        });
+
+        // Asset reference data
+        Route::prefix('asset-categories')->name('asset-categories.')->group(function () {
+            Route::get('/', [AssetCategoryController::class, 'index'])->name('index')->middleware('permission:assets,view');
+            Route::post('/', [AssetCategoryController::class, 'store'])->name('store')->middleware('permission:assets,manage');
+            Route::post('/{id}/update', [AssetCategoryController::class, 'update'])->name('update')->middleware('permission:assets,manage');
+            Route::delete('/{id}', [AssetCategoryController::class, 'destroy'])->name('destroy')->middleware('permission:assets,manage');
+        });
+
+        Route::prefix('asset-types')->name('asset-types.')->group(function () {
+            Route::get('/', [AssetTypeController::class, 'index'])->name('index')->middleware('permission:assets,view');
+            Route::post('/', [AssetTypeController::class, 'store'])->name('store')->middleware('permission:assets,manage');
+            Route::post('/{id}/update', [AssetTypeController::class, 'update'])->name('update')->middleware('permission:assets,manage');
+            Route::delete('/{id}', [AssetTypeController::class, 'destroy'])->name('destroy')->middleware('permission:assets,manage');
+        });
+
+        Route::prefix('asset-vendors')->name('asset-vendors.')->group(function () {
+            Route::get('/', [VendorController::class, 'index'])->name('index')->middleware('permission:assets,view');
+            Route::post('/', [VendorController::class, 'store'])->name('store')->middleware('permission:assets,manage');
+            Route::post('/{id}/update', [VendorController::class, 'update'])->name('update')->middleware('permission:assets,manage');
+            Route::delete('/{id}', [VendorController::class, 'destroy'])->name('destroy')->middleware('permission:assets,manage');
+        });
+
+        // Employee self-service
+        Route::prefix('my-assets')->name('my-assets.')->group(function () {
+            Route::get('/', [AssetController::class, 'myAssets'])->name('index')->middleware('permission:assets,view');
+            Route::get('/{id}', [AssetController::class, 'myAssetShow'])->name('show')->middleware('permission:assets,view');
+        });
+
         //Tasks Route
         Route::prefix('tasks')->name('task.')->group(function () {
             Route::get('/assigned-by-me', [TaskController::class, 'tasksAssignedByMe'])->name('assigned-by-me');
@@ -349,6 +420,8 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::get('/user-shifts/data', [ShiftController::class, 'getUserShiftsData'])->name('user-shifts.data');
                 Route::get('/user-shifts/export', [ShiftController::class, 'exportUserShifts'])->name('user-shifts.export');
                 Route::get('/get-users-by-type', [ShiftController::class, 'getUsersByType'])->name('get-users-by-type');
+                Route::post('/assignment-conflicts', [ShiftController::class, 'checkAssignmentConflicts'])->name('assignment-conflicts');
+                Route::get('/assignments/history', [ShiftController::class, 'assignmentHistory'])->name('assignments.history');
             });
 
             // Everything that mutates shift data — admin / hr only
@@ -365,6 +438,7 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::delete('/destroy-assigned/{id}', [ShiftController::class, 'destroyAssigned'])->name('destroy-assigned');
                 Route::post('/user-shifts/bulk-update', [ShiftController::class, 'bulkUpdateUserShifts'])->name('user-shifts.bulk-update');
                 Route::post('/user-shifts/assign-bulk', [ShiftController::class, 'assignBulkShifts'])->name('user-shifts.assign-bulk');
+                Route::post('/assignments/{id}/end-permanent', [ShiftController::class, 'endPermanentShift'])->name('assignments.end-permanent');
             });
         });
         Route::prefix('my-payroll')->name('my-payroll.')->middleware(['feature:payroll', 'permission:payroll,view'])->group(function () {
@@ -388,6 +462,7 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::post('/export', [MonthlyPayrollController::class, 'export'])->name('export')->middleware('permission:payroll,export');
             Route::delete('/{id}', [MonthlyPayrollController::class, 'destroy'])->name('destroy')->middleware('permission:payroll,delete');
             Route::post('/calculate-estimates', [MonthlyPayrollController::class, 'calculateEstimates'])->name('calculate-estimates')->middleware('permission:payroll,create');
+            Route::post('/{id}/recalculate-preview', [MonthlyPayrollController::class, 'recalculatePreview'])->name('recalculate-preview')->middleware('permission:payroll,edit');
         });
 
         // ==================== Payroll rebuild — Phase 3 dynamic engine UI ====================
@@ -699,34 +774,39 @@ Route::group(['middleware' => ['tenant']], function () {
         });
         
         Route::prefix('job-openings')->name('job-openings.')->middleware('feature:recruitment')->group(function () {
-            Route::get('/', [JobOpeningController::class, 'index'])->name('index');
-            Route::get('/create', [JobOpeningController::class, 'create'])->name('create');
-            Route::post('/store', [JobOpeningController::class, 'store'])->name('store');
-            Route::get('/show/{id}', [JobOpeningController::class, 'show'])->name('show');
-            Route::get('/edit/{id}', [JobOpeningController::class, 'edit'])->name('edit');
-            Route::post('/update/{id}', [JobOpeningController::class, 'update'])->name('update');
-            Route::get('/destroy/{id}', [JobOpeningController::class, 'destroy'])->name('destroy');
-            Route::post('/{id}/publish', [JobOpeningController::class, 'publish'])->name('publish');
-            Route::post('/{id}/close', [JobOpeningController::class, 'close'])->name('close');
-            Route::post('/{id}/duplicate', [JobOpeningController::class, 'duplicate'])->name('duplicate');
-            Route::get('/{id}/applications', [JobOpeningController::class, 'getApplications'])->name('applications');
+            Route::get('/', [JobOpeningController::class, 'index'])->name('index')->middleware('permission:recruitment,view');
+            Route::post('/store', [JobOpeningController::class, 'store'])->name('store')->middleware('permission:recruitment,create');
+            Route::get('/show/{id}', [JobOpeningController::class, 'show'])->name('show')->middleware('permission:recruitment,view');
+            Route::get('/edit/{id}', [JobOpeningController::class, 'edit'])->name('edit')->middleware('permission:recruitment,view');
+            Route::post('/update/{id}', [JobOpeningController::class, 'update'])->name('update')->middleware('permission:recruitment,edit');
+            Route::post('/destroy/{id}', [JobOpeningController::class, 'destroy'])->name('destroy')->middleware('permission:recruitment,delete');
+            Route::post('/{id}/publish', [JobOpeningController::class, 'publish'])->name('publish')->middleware('permission:recruitment,edit');
+            Route::post('/{id}/close', [JobOpeningController::class, 'close'])->name('close')->middleware('permission:recruitment,edit');
+            Route::post('/{id}/duplicate', [JobOpeningController::class, 'duplicate'])->name('duplicate')->middleware('permission:recruitment,create');
+            Route::get('/{id}/applications', [JobOpeningController::class, 'getApplications'])->name('applications')->middleware('permission:recruitment,view');
         });
         Route::prefix('recruitment')->name('recruitment.')->middleware('feature:recruitment')->group(function () {
-            Route::post('/applications/{id}/shortlist', [JobOpeningController::class, 'shortlist'])->name('shortlist');
-            Route::post('/applications/{id}/reject', [JobOpeningController::class, 'reject'])->name('reject');
-            Route::post('/{id}/schedule-interview', [JobOpeningController::class, 'scheduleInterview'])->name('schedule-interview');
-            Route::post('/interviews/{id}/feedback', [JobOpeningController::class, 'submitFeedback'])->name('submit-feedback');
-            Route::post('/applications/{id}/release-offer', [JobOpeningController::class, 'releaseOffer'])->name('release-offer');
+            Route::post('/applications/{id}/shortlist', [JobOpeningController::class, 'shortlist'])->name('shortlist')->middleware('permission:recruitment,edit');
+            Route::post('/applications/{id}/reject', [JobOpeningController::class, 'reject'])->name('reject')->middleware('permission:recruitment,edit');
+            Route::post('/{id}/schedule-interview', [JobOpeningController::class, 'scheduleInterview'])->name('schedule-interview')->middleware('permission:recruitment,edit');
+            Route::post('/interviews/{id}/cancel', [JobOpeningController::class, 'cancelInterview'])->name('cancel-interview')->middleware('permission:recruitment,edit');
+            Route::post('/interviews/{id}/reschedule', [JobOpeningController::class, 'rescheduleInterview'])->name('reschedule-interview')->middleware('permission:recruitment,edit');
+            Route::post('/interviews/{id}/feedback', [JobOpeningController::class, 'submitFeedback'])->name('submit-feedback')->middleware('permission:recruitment,edit');
+            Route::post('/applications/{id}/release-offer', [JobOpeningController::class, 'releaseOffer'])->name('release-offer')->middleware('permission:recruitment,edit');
             Route::post('/applications/{id}/offer-accepted', [JobOpeningController::class, 'offerAccepted'])
-                ->name('recruitment.offer-accepted');
+                ->name('offer-accepted')->middleware('permission:recruitment,edit');
             Route::post('/applications/{id}/offer-rejected', [JobOpeningController::class, 'offerRejected'])
-                ->name('recruitment.offer-rejected');
-            Route::post('/applications/{id}/next-round', [JobOpeningController::class, 'nextRound'])->name('recruitment.next-round');
-            Route::post('/applications/{id}/hire', [JobOpeningController::class, 'hire'])->name('recruitment.hire');
-    
-            Route::get('/interviewers', [JobOpeningController::class, 'getInterviewers'])->name('interviewers');
-            Route::get('/stages', [JobOpeningController::class, 'getRecruitmentStages'])->name('stages');
-            Route::get('/applications/{id}/interview-details', [JobOpeningController::class, 'interviewDetails'])->name('interview-details');
+                ->name('offer-rejected')->middleware('permission:recruitment,edit');
+            Route::get('/applications/{id}/interview-details', [JobOpeningController::class, 'interviewDetails'])->name('interview-details')->middleware('permission:recruitment,view');
+        });
+        Route::prefix('recruitment/onboarding')->name('onboarding.')->middleware('feature:recruitment')->group(function () {
+            Route::get('/applications/{id}', [OnboardingController::class, 'show'])->name('show')->middleware('permission:onboarding,view');
+            Route::post('/{assignmentId}/documents', [OnboardingController::class, 'uploadDocument'])->name('documents.upload')->middleware('permission:onboarding,edit');
+            Route::post('/documents/{documentId}/verify', [OnboardingController::class, 'verifyDocument'])->name('documents.verify')->middleware('permission:onboarding,edit');
+            Route::post('/documents/{documentId}/reject', [OnboardingController::class, 'rejectDocument'])->name('documents.reject')->middleware('permission:onboarding,edit');
+            Route::post('/task-items/{itemId}', [OnboardingController::class, 'updateTaskItem'])->name('task-items.update')->middleware('permission:onboarding,edit');
+            Route::post('/{assignmentId}/complete', [OnboardingController::class, 'complete'])->name('complete')->middleware('permission:onboarding,edit');
+            Route::post('/{assignmentId}/hire', [OnboardingController::class, 'hire'])->name('hire')->middleware('permission:onboarding,manage');
         });
 
       
@@ -785,6 +865,13 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::get('/project/task-performance/export', [ProjectReportController::class, 'taskPerformanceExport'])->name('project.task-performance.export');
             Route::get('/project/timeline', [ProjectReportController::class, 'timeline'])->name('project.timeline.index');
             Route::get('/project/timeline/export', [ProjectReportController::class, 'timelineExport'])->name('project.timeline.export');
+
+            // Asset Reports
+            Route::get('/asset/register', [AssetReportController::class, 'register'])->name('asset.register.index');
+            Route::get('/asset/register/export', [AssetReportController::class, 'exportRegister'])->name('asset.register.export');
+            Route::get('/asset/employee-wise', [AssetReportController::class, 'employeeWise'])->name('asset.employee-wise.index');
+            Route::get('/asset/summary', [AssetReportController::class, 'summary'])->name('asset.summary.index');
+            Route::get('/asset/warranty-expiry', [AssetReportController::class, 'warrantyExpiry'])->name('asset.warranty-expiry.index');
         });
 
     });

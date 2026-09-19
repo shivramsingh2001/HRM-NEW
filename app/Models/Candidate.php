@@ -183,11 +183,6 @@ class Candidate extends Model
         return $this->belongsTo(User::class, 'referral_by');
     }
 
-    public function emailLogs()
-    {
-        return $this->hasMany(EmailLog::class);
-    }
-
     // Scopes
     public function scopeNew($query)
     {

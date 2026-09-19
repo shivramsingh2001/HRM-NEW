@@ -20,7 +20,7 @@ Regenerate this doc's source data any time with:
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `tenants` | One row per customer org (the actual "tenant"). | `uuid`, `subdomain`/`custom_domain`, `status` enum(active/inactive/suspended/trial), `subscription_plan_id`, `max_employees`, `settings` JSON, `field_tracking_*`, `payroll_dynamic_ui_enabled`, `late_halfday_enabled`, `default_weekoff_days` JSON |
+| `tenants` | One row per customer org (the actual "tenant"). | `uuid`, `subdomain`/`custom_domain`, `status` enum(active/inactive/suspended/trial), `subscription_plan_id`, `max_employees`, `settings` JSON, `field_tracking_*`, `payroll_dynamic_ui_enabled`, `late_halfday_enabled`, `custom_shifts_enabled`, `allow_multiple_punches` (added 2026-09-23, default false — see `docs/modules.md` "Attendance — multiple punches per day"), `default_weekoff_days` JSON |
 | `companies` | Legal company record(s) under a tenant (a tenant can theoretically have >1 company; `isdefault` flag). | `tenant_id`, `subdomain`, `gstnumber`/`pannumber`, `settings` JSON |
 | `subscription_plans` | Plan catalog (pricing/limits/features) super-admin manages. | `pricing_type` enum(fixed/per_employee_per_day/per_employee_per_month), `features` JSON, `max_employees` |
 | `tenant_subscriptions` | A tenant's active/historic plan assignment. | `plan_id`, `features_snapshot` JSON, `status` enum(active/trial/expired/cancelled) |
@@ -66,7 +66,7 @@ Regenerate this doc's source data any time with:
 | `user_reporting_heads` | Multi reporting-head pivot (2026-09-19): `user_id`, `reporting_head_id`, `is_primary`. Source of truth for "who manages whom"; `user_job_details.reporting_head` is a denormalized copy of the primary row for backward compatibility with older single-head read sites. | unique `(user_id, reporting_head_id)`, indexed on `reporting_head_id` for reverse ("my team") lookups |
 | `employee_documents` | Dynamic, multi-row employee document uploads (2026-09-19) — replaces the 4 fixed columns on `user_basic_details`. `document_type` is a predefined slug (`App\Models\EmployeeDocument::$documentTypes`) or `other` (+ free-text `document_type_other`), optional `document_name`, `file_path`, soft-deletable. | indexed on `user_id` |
 | `user_locations` | Address + geo (country/state/city FK to master tables, lat/long). | |
-| `user_shifts` | Per-day shift assignment (date-specific override of default shift). | unique `(user_id, date)` |
+| `user_shifts` | Per-day shift assignment. Since 2026-09-18, a **generated cache** materialized from `shift_assignments` by `App\Services\Shift\ShiftMaterializer` — not hand-written directly by the assign flow anymore. | unique `(user_id, date)` (not tenant-scoped), `shift_assignment_id` (nullable, no FK — null for pre-2026-09-18 rows or a raw single-day `updateUserShift` edit) |
 | `user_weekoffs` | Weekly-recurring or date-range week-off definitions. | `off_type` enum(day_based/date_based) |
 | `user_payrolls` | Legacy fixed payroll structure per employee, versioned by `effective_from`/`is_current`. | full earnings/deductions breakdown (HRA, conveyance, PF, ESI, TDS…), `ctc`, `net_salary` |
 | `user_expense_balances` | Running wallet balance per employee for advances/settlements/reimbursements. | `current_balance`, `advance_balance`, `settlement_balance`, `reimbursement_balance` |
@@ -82,8 +82,9 @@ Regenerate this doc's source data any time with:
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `attendances` | One row per employee per day — the attendance "fact" table. | `attendance_status` enum(present/absent/half_day/late/early_departure/overtime/on_leave/first_half_leave/second_half_leave/holiday/weekoff), `attendance_type` enum(manual/fingerprint/face/card/app), `location_verification` enum(verified/unverified/out_of_bounds), `clock_in_utc`/`clock_out_utc` + `tz`, `day_fraction`, `metadata` JSON. Composite indexes `(tenant_id,user_id,date)` and `(tenant_id,user_id,clock_in_utc)`. |
-| `attendance_logs` | Immutable event log feeding `attendances` (check-in/out, geofence enter/exit, manual adjustment…). High-volume GPS/device metadata table. | `event_type` enum (9 values incl. `geofence_enter/exit`, `device_change`), lat/long/accuracy/speed/bearing, `is_mock_location`, `verification_method`, `before`/`after` JSON diff |
+| `attendances` | One row per employee per day — the attendance "fact" table, and (since 2026-09-23) a **materialized rollup of `attendance_punches`** rather than a direct write target. `clock_in`=first punch of the day, `clock_out`=last punch (null while a session is open), `worked_hours`=sum of session durations. | `attendance_status` enum(present/absent/half_day/late/early_departure/overtime/on_leave/first_half_leave/second_half_leave/holiday/weekoff), `attendance_type` enum(manual/fingerprint/face/card/app), `location_verification` enum(verified/unverified/out_of_bounds), `clock_in_utc`/`clock_out_utc` + `tz`, `day_fraction`, `session_count` (added 2026-09-23, sessions that day; always 1 for `allow_multiple_punches=0` tenants and pre-2026-09-23 history), `punches_last_synced_at`, `metadata` JSON. Composite indexes `(tenant_id,user_id,date)` and `(tenant_id,user_id,clock_in_utc)`. |
+| `attendance_punches` | Added 2026-09-23. Raw Clock In/Out event log, one row per punch, from every source (mobile GPS, web, manual/admin, biometric, kiosk). `AttendancePunchService::capture()` is the single write funnel; `PunchSessionCalculator` pairs punches into sessions; `AttendanceRollupService` writes the derived day back into `attendances` via the existing `AttendanceEntryService::record()` funnel. See `docs/modules.md` "Attendance — multiple punches per day". | `direction` enum(in/out), `source` enum(mobile_app/web/manual/biometric/kiosk/api/backfill), `status` enum(active/void, soft-cancel only), `session_seq`, `paired_punch_id` (self-referencing), `client_ref` (mobile offline-retry idempotency key, unique per `(tenant_id,user_id,client_ref)`), `attendance_id` (FK-by-convention back to the day's rollup row), lat/long/address/distance_meters/accuracy_meters, device telemetry columns mirroring `attendances`' own clock_in_*/clock_out_* shape. Indexes `(tenant_id,user_id,date,punched_at)`, `(tenant_id,status)`, `(attendance_id)`, `(biometric_device_id,punched_at)`. No hard uniqueness on `(user,punched_at,direction)` — duplicate suppression is an application-level debounce window (`config('biometric.dedupe_window_seconds')`), not a DB constraint. Backfilled from every historical `attendances` row on migration (`source='backfill'`). |
+| `attendance_logs` | Immutable event log feeding `attendances` (check-in/out, geofence enter/exit, manual adjustment…). High-volume GPS/device metadata table. | `event_type` enum (9 values incl. `geofence_enter/exit`, `device_change`), lat/long/accuracy/speed/bearing, `is_mock_location`, `verification_method`, `before`/`after` JSON diff, `attendance_punch_id` (added 2026-09-23, nullable, links a log row to the specific punch it audits) |
 | `attendance_tracks` | GPS breadcrumb trail while clocked in (field employees). High write volume. | `lat`/`long` (7-decimal precision), composite indexes `(attendance_id,track_time)` and `(tenant_id,user_id,track_time)` — added 2026-09-13 for scale |
 | `attendance_summaries` | Pre-aggregated monthly rollup per user (dashboard/report source of truth, avoids re-scanning `attendances`). | unique `(user_id, year_month)`, `stale_at` (invalidation marker), dozens of aggregate counters |
 | `attendance_regularizations` | Employee request to fix a missed/incorrect punch. | `status` enum(pending/approved/rejected) |
@@ -91,6 +92,7 @@ Regenerate this doc's source data any time with:
 | `attendance_policies` | Tenant-configurable policy: present/half-day thresholds, grace/rounding minutes, OT multiplier, sandwich-leave rule. Versioned by `effective_from`. | `present_ratio`, `half_day_ratio`, `grace_minutes`, `overtime_after_hours`, `sandwich_leave` |
 | `attendance_period_locks` | Locks a tenant+month from further attendance edits (pre-payroll lock). | unique `(tenant_id, year_month)`, `status` enum(open/…) |
 | `shifts` | Shift master (start/end time, grace, break). | `color_code` for UI |
+| `shift_assignments` | Added 2026-09-18. Source-of-truth, append-only history of Permanent/Flexible shift assignments — never hard-deleted; `user_shifts` above is generated from this. See [[hrm-shift-management-overhaul-plan]] and `docs/modules.md` "Shift Management". | `type` enum(permanent/flexible), `status` enum(active/superseded/ended/cancelled), `superseded_by_id` self-referencing (no FK), `end_date` nullable (null = open-ended, only legal for `permanent`), indexes `(tenant_id,user_id,type,status)` and `(tenant_id,user_id,start_date,end_date)` |
 | `overtime_requests` / `overtime_settings` | Employee OT request + tenant OT policy (rate multiplier, auto-approve threshold). | |
 | `biometric_devices` | Registered SBXPC biometric terminals per tenant. | `serial_number` (unique), `direction_mode`, `auto_provision`, `provision_scope` |
 | `biometric_enrollments` | Maps a device's local enrollment slot to a platform `user_id`. | unique `(biometric_device_id, enroll_no)`, `sync_state` |
@@ -131,12 +133,15 @@ The schema shows **two generations of payroll engine**, distinguished by `monthl
 **New component-based engine** (built 2026-09-12, tenant opt-in via `tenants.payroll_dynamic_ui_enabled`):
 | Table | Purpose |
 |---|---|
-| `payroll_component_master` | Tenant-defined pay components (earning/deduction/employer_contribution/reimbursement) with formula config: `calculation_method` (fixed/percentage), `calculation_base` (basic/gross_pass1/ctc), wage ceilings, proration rule. |
+| `payroll_component_master` | Tenant-defined pay components (earning/deduction/employer_contribution/reimbursement) with formula config: `calculation_method` (fixed/percentage), `calculation_base` (basic/gross_pass1/ctc), wage ceilings, proration rule. `calculation_base_component_id` (single FK) is kept only as a denormalized "primary base" mirror since 2026-09-19 — the authoritative multi-base selection lives in `payroll_component_base_components`. |
+| `payroll_component_base_components` | (added 2026-09-19) Multi-base selection for `calculation_base_type = 'component'`: which Earnings components a percentage component (PF/ESIC/PT/TDS, or any Employer Contribution) sums when computing its base — e.g. "12% of Basic + HRA". One row per selected base. `PayrollComponentMaster::baseComponents()`. |
 | `payroll_component_templates` | Platform-level starter templates offered to new tenants (not tenant-scoped). |
 | `payroll_structures` | Named salary structure (e.g. "Standard CTC") combining components. |
-| `payroll_structure_components` | Join table: which components belong to a structure, with per-structure overrides. |
+| `payroll_structure_components` | Join table: which components belong to a structure, with per-structure overrides. `override_calculation_base_component_id` (single FK) is dead (never read/written). The multi-base override lives in `payroll_structure_component_bases` instead (added 2026-09-19). |
+| `payroll_structure_component_bases` | (added 2026-09-19) Per-structure-template override of which Earnings components a percentage component's base sums (e.g. this template wants "12% of Basic" while another wants "12% of Basic + HRA") — falls back to `payroll_component_base_components` (the catalog default) when empty. `PayrollStructureComponent::baseComponents()`. When a template with its own override is selected while assigning an employee, the Assign/Revise drawer pre-fills from *this* table, not the catalog. |
 | `payroll_employee_structures` | Employee's assigned structure, versioned/effective-dated, with approval workflow (`status` enum draft→pending_approval→active→superseded). |
-| `payroll_employee_components` | Per-employee component overrides layered on their structure. |
+| `payroll_employee_components` | Per-employee component overrides layered on their structure — a SNAPSHOT of the catalog's base-selection fields at assignment time (fixed 2026-09-19: every write path previously hardcoded `calculation_base_type => 'none'` here regardless of the catalog's real config, silently making "percentage of another component" compute ₹0 for every assigned employee). |
+| `payroll_employee_component_bases` | (added 2026-09-19) Snapshot of `payroll_component_base_components` onto one `payroll_employee_components` row at assignment time. `PayrollEmployeeComponent::baseComponents()`. |
 | `payroll_periods` | Tenant's monthly pay period lifecycle: open→processing→locked→paid→reopened. |
 | `payroll_runs` | A calculation run within a period (supports re-runs via `run_number`), with totals and approval link. |
 | `payroll_revision_logs` | Full audit diff whenever an employee's structure changes (increment/promotion/correction/transfer). |
@@ -186,29 +191,47 @@ Both engines share `loans`/`loan_repayments` (below) as a deduction source.
 | `task_comments` / `task_attachments` | Discussion thread + files. | soft-deletes on comments |
 | `daily_reports` | Daily work-log tied to a `requests` row (see WFH/Travel below), not to tasks directly. | `status` enum(DRAFT/SUBMITTED), unique `(request_id, report_date)` |
 
+## Assets (2026-09-22)
+
+Full asset lifecycle module: registration → assignment → employee acceptance → return/transfer/repair/damage → retirement/disposal, with a unified history table. Everything except the four "core" columns on `assets` is nullable by design — a tenant can register an asset with just a name, or fill in the full purchase/warranty/financial detail set. `assets`/`asset_categories`/`asset_types`/`vendors` are standalone tables with a required `tenant_id`; the rest are detail/child tables (nullable `tenant_id`, scoped via their `asset_id` FK — mirrors `project_attachments`/`project_milestones`).
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `asset_categories` | Reference data (e.g. IT Equipment, Furniture, Vehicles). | `code` nullable (used as the asset-code prefix when set) |
+| `asset_types` | Reference data, optionally under a category. | `asset_category_id` nullable |
+| `vendors` | Supplier/vendor master used by both purchase and repair records. | |
+| `assets` | The registration record — the only required fields are `asset_code` (system-generated, e.g. `AST-00001` or `{category-code}-00001`), `name`, and `status`. Everything else (classification, serial/model/brand, purchase, warranty, branch/location, condition, financial/depreciation) is nullable. | `status` enum(available/pending_acceptance/assigned/in_repair/damaged/lost/retired/disposed), `current_assignee_id` (denormalized — set only once an assignment is **accepted**, not on assign), `pre_repair_status` (internal — the status to restore to when a repair completes), soft-deletes |
+| `asset_assignments` | One row per assignment episode; doubles as the current-holder pointer (latest row not `returned`/`transferred`) and full assignment history. | `status` enum(pending_acceptance/accepted/returned/transferred), `accepted_by` (usually = `user_id`, differs on admin force-accept), `return_condition` |
+| `asset_transfers` | Transfer event record for reporting — the actual state change happens via `asset_assignments` (old row closed `transferred`, new row opened `pending_acceptance` for the new holder; acceptance is required again after a transfer). | `from_user_id`/`to_user_id`, `from_branch_id`/`to_branch_id` |
+| `asset_repairs` | Repair/service record. Sending an assigned asset for repair does **not** end its assignment — `assets.status` flips to `in_repair` and restores from `pre_repair_status` on completion. | `status` enum(reported/in_progress/completed/cancelled) |
+| `asset_damage_reports` | Damage/loss reports. | `type` enum(damaged/lost), `resolution` enum(written_off/repaired/replaced/recovered) |
+| `asset_disposals` | Disposal record. Blocked while an asset is `assigned`/`pending_acceptance`/`in_repair` (must be returned/retired first). | `method` enum(sold/scrapped/donated/write_off/other) |
+| `asset_histories` | Unified timeline behind the Asset History UI tab — one row per lifecycle transition, written alongside the tenant-wide `audit_logs` entry. | `action` (REGISTERED/ASSIGNED/ACCEPTED/ACCEPTANCE_FORCED/RETURNED/TRANSFERRED/SENT_FOR_REPAIR/REPAIR_COMPLETED/DAMAGED/LOST/RESOLVED/RETIRED/DISPOSED/UPDATED), `old_values`/`new_values` json |
+| `asset_attachments` | File uploads (invoices, warranty cards, handover forms, damage photos) — mirrors `project_attachments`' shape with a `context` label instead of polymorphism. | `context` nullable string label |
+
 ## Recruitment / ATS
 
 | Table | Purpose | Key columns |
 |---|---|---|
 | `candidates` | Candidate pool (soft-deletes). | `status` enum(new/contacted/screening/interviewing/offered/onboarded/rejected/hired), `source` enum(career_page/linkedin/naukri/indeed/referral/agency/walkin/other) |
 | `candidate_documents` | Resume/ID/offer letter uploads with verification flag. | `document_type` enum (11 values) |
-| `job_openings` | Requisitions (soft-deletes). | `status` enum(draft/published/closed/on_hold) |
+| `job_openings` | Requisitions (soft-deletes). | `status` enum(draft/published/closed/on_hold), `close_reason` (added 2026-09-18 — previously the close reason was accepted by the UI and silently discarded) |
 | `job_applications` | Candidate ↔ opening link. | unique `(job_opening_id, candidate_id)`, `current_stage` |
 | `recruitment_stages` | Tenant-configurable pipeline stages. | `stage_type` enum(screening/technical/hr/managerial/assignment/final) |
 | `recruitment_workflow_logs` | Stage-transition audit log. | `from_stage`/`to_stage`, `metadata` JSON |
 | `interviews` | Scheduling + outcome. | `interview_type` enum(online/offline/telephonic/video), `status` enum(scheduled/completed/cancelled/rescheduled/no_show), `outcome` enum(selected/rejected/next_round/on_hold), self-referencing `rescheduled_from` |
 | `interview_feedbacks` | Per-interviewer scorecard. | unique `(interview_id, interviewer_id)`, 1–5 ratings on 5 dimensions, `recommendation` enum(strong_hire/hire/maybe/no_hire) |
-| `job_offers` | Offer letter + comp details. | `offer_status` enum(draft/sent/accepted/rejected/expired/withdrawn), full comp breakdown (basic/hra/other_allowances/variable_pay) |
-| `email_templates` / `email_logs` | Recruitment email templating + send log. | `template_type`/`email_type` share the same enum of 7 email kinds |
-| `career` | Public careers-page content (no detailed columns captured — check model/migration if touched). | |
+| `job_offers` | Offer letter + comp details. | `offer_status` enum(draft/sent/accepted/rejected/expired/withdrawn), `employment_type` enum(full_time/part_time/contract/internship/temporary — `temporary` added 2026-09-18 to match `job_openings.employment_type`, which already had it), full comp breakdown (basic/hra/other_allowances/variable_pay) |
+| `email_templates` / `email_logs` | **Dead tables** — schema exists (`template_type`/`email_type` share the same enum of 7 email kinds) but no model or code path writes to either; real recruitment emails go through `App\Mail\*` Mailables instead. Not part of the live pipeline — don't build against them without adding the missing `EmailTemplate`/`EmailLog` models first. |
+| `career` | **Does not exist in the live DB** (confirmed via `SHOW CREATE TABLE`, 2026-09-18) despite this row's earlier claim — the entire `CareerController`/`Career`-model duplicate candidate-intake pipeline it backed was dead/unrouted code and has been deleted. The real public application intake is `RecruitmentController`/`careers.*` routes → `candidates`/`job_applications`. |
 
 ## Onboarding / Offboarding
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `onboarding_assignments` | Links an accepted offer to an onboarding checklist run; produces the eventual `users` row. | unique on both `candidate_id` and `job_offer_id`, `onboarding_status` enum(not_started/in_progress/completed/cancelled) |
-| `onboarding_tasks` | Checklist template item catalog. | `task_category` enum(document/account_creation/asset/training/compliance/orientation/other) |
-| `onboarding_task_items` | Per-assignment instance of a checklist item. | `status` enum(pending/in_progress/completed/skipped/overdue) |
+| `onboarding_assignments` | Links an accepted offer to an onboarding checklist run; produces the eventual `users` row via `App\Services\Recruitment\EmployeeProvisioningService::hire()` (implemented 2026-09-18 — previously this table had no model at all). | unique on both `candidate_id` and `job_offer_id`, `onboarding_status` enum(not_started/in_progress/completed/cancelled) |
+| `onboarding_tasks` | Checklist template item catalog. Rows with `tenant_id = NULL` are the shared/global default catalog (9 seeded rows spanning all 6 real categories) visible to every tenant — see `OnboardingTask::scopeForTenant()`. | `task_category` enum(document/account_creation/asset/training/compliance/orientation/other) |
+| `onboarding_task_items` | Per-assignment instance of a checklist item, generated from `onboarding_tasks` when `OnboardingService::startOnboarding()` runs (on offer acceptance). | `status` enum(pending/in_progress/completed/skipped/overdue) |
 | `offboarding_requests` | Very wide table covering the full exit workflow: manager review → HR review → asset/document/knowledge-transfer clearance → exit interview → final settlement. | multiple parallel `*_status` enum columns per sub-workflow, `full_final_settlement` |
 | `exit_interviews` | Structured exit interview responses (5 rating dimensions + free text). | |
 
@@ -265,6 +288,7 @@ Used by leave/expense/loan/offboarding/payroll-structure changes etc. via `subje
 - **`employee_kpi_scores`**: heavily indexed (13 secondary indexes) including a composite `(tenant_id,reporting_month,overall_score)` for leaderboard-style queries.
 - **`loans`** / **`loan_repayments`**: indexed on `(tenant_id,status)`, `(status,due_date)`, `(user_id,status,remaining_amount)` — built for dashboards showing "who owes what."
 - **`biometric_punches`**: dedupe-safety unique key `(serial_number,enroll_no,punched_at,raw_verify_mode)` prevents double-ingesting the same device punch.
+- **`attendance_punches`**: composite `(tenant_id,user_id,date,punched_at)` for pairing/aggregation, `(tenant_id,status)` and `(attendance_id)` for lookups; `(tenant_id,user_id,client_ref)` unique for mobile offline-retry idempotency (nullable, so non-retried punches are unaffected).
 - **`meetings.duration_minutes`** is a **generated/virtual column** (`TIMESTAMPDIFF` of date+start/end time) — don't try to write to it directly.
 
 ## Notable queries

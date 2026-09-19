@@ -40,6 +40,7 @@ class Tenant extends Model
         'late_halfday_enabled',
         'monthly_late_allowance',
         'custom_shifts_enabled',
+        'allow_multiple_punches',
         'default_shift_id',
         'default_weekoff_days',
         'field_tracking_enabled',
@@ -54,6 +55,7 @@ class Tenant extends Model
         'deleted_at' => 'datetime',
         'late_halfday_enabled' => 'boolean',
         'custom_shifts_enabled' => 'boolean',
+        'allow_multiple_punches' => 'boolean',
         'default_weekoff_days' => 'array',
         'field_tracking_enabled' => 'boolean',
     ];

@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\JobOpening;
 use App\Models\Candidate;
 use App\Models\JobApplication;
+use App\Mail\ApplicationReceivedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -50,12 +52,11 @@ class RecruitmentController extends Controller
                 'total' => JobOpening::where('status', 'published')->count(),
                 'departments' => JobOpening::where('status', 'published')->distinct('department_id')->count('department_id'),
                 'locations' => JobOpening::where('status', 'published')->whereNotNull('location')->distinct('location')->count('location'),
-                'hired' => JobApplication::where('current_stage', 'onboarded')->count(),
+                'hired' => JobApplication::where('current_stage', 'hired')->count(),
             ];
 
             return view('client.recruitment.recruitment.job', compact('jobs', 'stats'));
         } catch (\Exception $e) {
-            dd($e->getMessage());
             Log::error('Failed to fetch jobs: ' . $e->getMessage());
             return view('public.jobs.index', ['jobs' => collect([]), 'stats' => []])
                 ->with('error', 'Unable to load jobs at the moment.');
@@ -204,8 +205,11 @@ class RecruitmentController extends Controller
 
             DB::commit();
 
-            // TODO: Send email notification
-            // $this->sendApplicationReceivedEmail($candidate, $jobOpening);
+            try {
+                Mail::to($candidate->email)->send(new ApplicationReceivedMail($candidate, $jobOpening));
+            } catch (\Exception $e) {
+                Log::error('Failed to send application received email: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'success' => true,

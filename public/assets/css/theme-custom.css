@@ -93,7 +93,12 @@
 }
 
 .btn-primary {
-    background: var(--primary-mid);
+    /* theme.min.css's .btn-primary sets background-color with !important
+       (vendor default), so this needs !important too — the gradient
+       background-image itself would visually cover a plain background-color
+       either way, but !important keeps this robust and consistent with the
+       rest of this file's overrides of that same vendor rule. */
+    background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
     color: #fff;
     border: none;
     font-size: 12px;
@@ -102,7 +107,25 @@
 }
 
 .btn-primary:hover {
-    background: var(--primary);
+    background: linear-gradient(135deg, #1a3277, #1d4fc4) !important;
+}
+
+/* Toggle switches (Bootstrap .form-switch) — blue gradient "on" state
+   app-wide, replacing the default flat green. Bootstrap draws the round
+   knob itself via background-image (a white-circle SVG data URI), so that
+   same SVG is kept as the first background layer and the gradient is
+   layered behind it as a second background-image — swapping only
+   background-color would just recolor flat, not produce a gradient. */
+.form-switch .form-check-input:checked {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e"), linear-gradient(135deg, #1e3a8a, #2563eb);
+    background-repeat: no-repeat, no-repeat;
+    background-position: right center, center;
+    background-color: #1e3a8a;
+    border-color: #1e3a8a;
+}
+
+.form-switch .form-check-input:focus {
+    box-shadow: 0 0 0 .2rem rgba(30, 58, 138, .18);
 }
 
 .table-responsive {
@@ -127,8 +150,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--primary-light);
-    color: var(--primary-mid);
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -238,6 +261,10 @@
     font-weight: 600;
     font-size: 12px;
 }
+.employee-text,
+.employee-id-text {
+    font-size: 9px !important;
+}
 
 .employee-email,
 .employee-email-text {
@@ -271,6 +298,7 @@
     height: 36px;
     border-radius: 50%;
     object-fit: cover;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
     border: 2px solid #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: all 0.2s;
@@ -523,7 +551,9 @@
 .status-badge[data-status="late"],
 .status-badge[data-status="tentative"],
 .status-badge[data-status="postponed"],
-.status-badge[data-status="not_started"] {
+.status-badge[data-status="not_started"],
+.status-badge[data-status="pending_acceptance"],
+.status-badge[data-status="in_repair"] {
     background: #fef3c7;
     color: #92400e;
 }
@@ -534,7 +564,8 @@
 .status-badge[data-status="present"],
 .status-badge[data-status="confirmed"],
 .status-badge[data-status="finalized"],
-.status-badge[data-status="success"] {
+.status-badge[data-status="success"],
+.status-badge[data-status="available"] {
     background: #d1fae5;
     color: #065f46;
 }
@@ -543,15 +574,23 @@
 .status-badge[data-status="failed"],
 .status-badge[data-status="absent"],
 .status-badge[data-status="declined"],
-.status-badge[data-status="inactive"] {
+.status-badge[data-status="inactive"],
+.status-badge[data-status="damaged"],
+.status-badge[data-status="lost"] {
     background: #fee2e2;
     color: #991b1b;
 }
 .status-badge[data-status="processing"],
 .status-badge[data-status="in_progress"],
-.status-badge[data-status="ongoing"] {
+.status-badge[data-status="ongoing"],
+.status-badge[data-status="assigned"] {
     background: var(--primary-light);
     color: var(--primary);
+}
+.status-badge[data-status="retired"],
+.status-badge[data-status="disposed"] {
+    background: #e5e7eb;
+    color: #374151;
 }
 
 /* ============================================
@@ -1153,4 +1192,96 @@ html.app-skin-dark .content-area-header {
     .row-grid-4 { grid-template-columns: 1fr; }
     .row-grid-2 { grid-template-columns: 1fr; }
     .full-width { grid-column: span 1; }
+}
+
+/* Select2 multi-selects — global app-wide compact/blue design, so every
+   Select2 multi-select (Languages, Reporting Head, Leave Types, etc. on
+   any page) looks the same without a per-page override. theme.min.css
+   (compiled from assets/scss/themes/plugins/_select2.scss) ships the
+   default oversized pill/padding styling chained 4-5 classes deep with
+   no !important; this file loads after theme.min.css and select2*.min.css
+   (see client/layout/head.blade.php) and every selector below matches or
+   exceeds that same chain depth, so it wins on specificity/source order
+   without needing !important. Select2 renders its dropdown as a portal
+   appended to <body>, not nested under the trigger field, so dropdown
+   rules intentionally stay unscoped (a page-scoped wrapper class would
+   never match it). */
+.select2-container .select2-selection--multiple {
+    min-height: 32px;
+    border-radius: 10px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.select2-container--focus .select2-selection--multiple,
+.select2-container--open .select2-selection--multiple {
+    border-color: #1e3a8a;
+    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+}
+
+.select2-container .select2-selection--multiple .select2-selection__rendered {
+    padding: 0;
+    gap: 5px;
+}
+
+.select2-container .select2-selection--multiple .select2-selection__rendered .select2-selection__choice {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin: 3px 0 3px 4px;
+    padding: 3px 26px 3px 10px;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 19px;
+    border-radius: 999px;
+    background: #dbeafe;
+    border: 1px solid #1e3a8a;
+    color: #1e3a8a;
+}
+
+.select2-container .select2-selection--multiple .select2-selection__rendered .select2-selection__choice__display {
+    padding-right: 2px;
+}
+
+.select2-container .select2-selection--multiple .select2-selection__rendered .select2-selection__choice .select2-selection__choice__remove {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-right: 0;
+    border-radius: 50%;
+    color: #1e3a8a;
+    font-size: 13px;
+    line-height: 1;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.select2-container .select2-selection--multiple .select2-selection__rendered .select2-selection__choice .select2-selection__choice__remove:hover {
+    background: #1e3a8a;
+    color: #fff;
+}
+
+.select2-container .select2-selection--multiple .select2-search--inline .select2-search__field {
+    font-size: 11.5px;
+    margin-top: 5px;
+    color: #1e3a8a;
+}
+
+.select2-dropdown {
+    font-size: 12px;
+    border-color: #93c5fd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.select2-results__option {
+    padding: 5px 10px;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background: #1e3a8a;
 }

@@ -36,6 +36,7 @@ class JobOpening extends Model
         'status',
         'published_date',
         'closed_date',
+        'close_reason',
         'created_by'
     ];
 

@@ -37,5 +37,15 @@ class UserShift extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-    
+
+    /**
+     * The Permanent/Flexible assignment record this cached day was
+     * materialized from (null for rows written before this feature, or by a
+     * raw single-day edit that doesn't go through ShiftMaterializer).
+     */
+    public function shiftAssignment()
+    {
+        return $this->belongsTo(ShiftAssignment::class, 'shift_assignment_id');
+    }
+
 }

@@ -40,6 +40,7 @@ class JobApplication extends Model
     const STAGE_OFFER_RELEASED = 'offer_released';
     const STAGE_OFFER_ACCEPTED = 'offer_accepted';
     const STAGE_OFFER_REJECTED = 'offer_rejected';
+    const STAGE_ONBOARDING = 'onboarding';
     const STAGE_HIRED = 'hired';
     const STAGE_REJECTED = 'rejected';
     const STAGE_ONBOARDED = 'onboarded';
@@ -64,9 +65,10 @@ class JobApplication extends Model
         self::STAGE_OFFER_RELEASED => 'Offer Released',
         self::STAGE_OFFER_ACCEPTED => 'Offer Accepted',
         self::STAGE_OFFER_REJECTED => 'Offer Rejected',
+        self::STAGE_ONBOARDING => 'Onboarding',
+        self::STAGE_ONBOARDED => 'Onboarding Complete',
         self::STAGE_HIRED => 'Hired',
-        self::STAGE_REJECTED => 'Rejected',
-        self::STAGE_ONBOARDED => 'Onboarded'
+        self::STAGE_REJECTED => 'Rejected'
     ];
 
     public static $sources = [
@@ -170,10 +172,10 @@ class JobApplication extends Model
     }
 
     // Helper methods
-    public function moveToStage($newStage, $remarks = null)
+    public function moveToStage($newStage, $remarks = null, $action = 'stage_changed')
     {
         $oldStage = $this->current_stage;
-        
+
         $this->update(['current_stage' => $newStage]);
 
         // Update candidate status based on application stage
@@ -185,7 +187,7 @@ class JobApplication extends Model
             'job_application_id' => $this->id,
             'from_stage' => $oldStage,
             'to_stage' => $newStage,
-            'action' => 'stage_changed',
+            'action' => $action,
             'action_by' => auth()->id(),
             'remarks' => $remarks
         ]);
@@ -201,14 +203,20 @@ class JobApplication extends Model
             self::STAGE_INTERVIEW_SCHEDULED => Candidate::STATUS_INTERVIEWING,
             self::STAGE_INTERVIEW_COMPLETED => Candidate::STATUS_INTERVIEWING,
             self::STAGE_OFFER_RELEASED => Candidate::STATUS_OFFERED,
-            self::STAGE_OFFER_ACCEPTED => Candidate::STATUS_OFFERED,
+            self::STAGE_OFFER_ACCEPTED => Candidate::STATUS_HIRED,
+            self::STAGE_ONBOARDING => Candidate::STATUS_HIRED,
             self::STAGE_ONBOARDED => Candidate::STATUS_ONBOARDED,
+            self::STAGE_HIRED => Candidate::STATUS_HIRED,
             self::STAGE_CV_REJECTED => Candidate::STATUS_REJECTED,
             self::STAGE_REJECTED => Candidate::STATUS_REJECTED,
             self::STAGE_OFFER_REJECTED => Candidate::STATUS_REJECTED
         ];
 
-        if (isset($candidateStatusMap[$stage])) {
+        // $this->candidate is tenant-scoped (plain belongsTo); a data-integrity
+        // mismatch (candidate row in another tenant / soft-deleted) resolves it
+        // to null, and ->update() on null throws \Error, not \Exception, which
+        // controller catch(\Exception) blocks don't catch — guard defensively.
+        if (isset($candidateStatusMap[$stage]) && $this->candidate) {
             $this->candidate->update(['status' => $candidateStatusMap[$stage]]);
         }
     }
@@ -225,5 +233,14 @@ class JobApplication extends Model
     {
         return $this->current_stage === self::STAGE_INTERVIEW_COMPLETED;
     }
-    
+
+    public function canStartHire()
+    {
+        return $this->current_stage === self::STAGE_ONBOARDED;
+    }
+
+    public function getOnboardingAssignmentAttribute()
+    {
+        return $this->offer?->onboarding;
+    }
 }

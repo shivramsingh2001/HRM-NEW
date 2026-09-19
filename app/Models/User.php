@@ -164,6 +164,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(EmployeeDocument::class, 'user_id');
     }
 
+    public function assetAssignments()
+    {
+        return $this->hasMany(AssetAssignment::class, 'user_id');
+    }
+
     /**
      * Canonical "my team" query: users who report to $headId via ANY of
      * their reporting heads, not just the primary. Replaces ad hoc

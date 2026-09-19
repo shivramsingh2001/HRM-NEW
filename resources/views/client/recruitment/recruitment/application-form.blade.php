@@ -17,7 +17,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -62,7 +62,7 @@
         }
 
         .job-meta-item i {
-            color: #667eea;
+            color: #1e3a8a;
             font-size: 11px;
         }
 
@@ -113,7 +113,7 @@
             color: #1e293b;
             margin-bottom: 12px;
             padding-bottom: 6px;
-            border-bottom: 2px solid #667eea;
+            border-bottom: 2px solid #1e3a8a;
             display: inline-block;
         }
 
@@ -159,7 +159,7 @@
 
         input:focus, select:focus, textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
         }
 
@@ -191,7 +191,7 @@
         }
 
         .file-upload:hover {
-            border-color: #667eea;
+            border-color: #1e3a8a;
             background: #f8fafc;
         }
 
@@ -201,7 +201,7 @@
 
         .file-upload-icon {
             font-size: 32px;
-            color: #667eea;
+            color: #1e3a8a;
             margin-bottom: 5px;
         }
 
@@ -213,14 +213,14 @@
         .file-name {
             margin-top: 5px;
             font-size: 10px;
-            color: #667eea;
+            color: #1e3a8a;
         }
 
         /* Submit Button - Compact */
         .submit-btn {
             width: 100%;
             padding: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
             border: none;
             border-radius: 10px;
@@ -317,7 +317,7 @@
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #1e3a8a;
             border: none;
             padding: 8px 20px;
             font-size: 12px;

@@ -2105,6 +2105,7 @@ class AttendanceReportController extends Controller
                     'u.id',
                     'u.name',
                     'u.employee_id',
+                    'u.email',
                     'd.name as department_name',
                     'ds.name as designation_name',
                     'uj.department as department_id'
@@ -2187,6 +2188,7 @@ class AttendanceReportController extends Controller
     
                 $row = [
                     'employee_name' => $employee->name,
+                    'employee_email' => $employee->email,
                     'employee_id' => $employee->employee_id ?? '--',
                     'designation' => $employee->designation_name ?? '--',
                     'department' => $employee->department_name ?? '--',

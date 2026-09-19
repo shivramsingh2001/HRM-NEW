@@ -4,7 +4,7 @@
 @section('style')
     <style>
         .profile-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
@@ -87,9 +87,9 @@
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background: #4f46e5;
+            background: #1e3a8a;
             border: 2px solid #fff;
-            box-shadow: 0 0 0 2px #4f46e5;
+            box-shadow: 0 0 0 2px #1e3a8a;
         }
 
         .timeline-dot.completed {
@@ -397,7 +397,7 @@
                     @endphp
                     <div class="d-flex justify-content-around text-center mt-1">
                         <div>
-                            <div style="font-size:22px;font-weight:700;color:#4f46e5;">{{ $totalRounds }}</div>
+                            <div style="font-size:22px;font-weight:700;color:#1e3a8a;">{{ $totalRounds }}</div>
                             <div style="font-size:10px;color:#64748b;text-transform:uppercase;">Total</div>
                         </div>
                         <div>
