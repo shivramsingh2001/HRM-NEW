@@ -7,6 +7,7 @@ use App\Exceptions\OpenPunchSessionException;
 use App\Exceptions\PeriodLockedException;
 use App\Models\Attendance;
 use App\Models\AttendancePunch;
+use App\Services\FieldTracking\TrackingSessionService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +34,7 @@ class AttendancePunchService
         private TenantShiftResolver $shifts,
         private PeriodLockService $locks,
         private AttendanceRollupService $rollup,
+        private TrackingSessionService $trackingSessions,
     ) {
     }
 
@@ -197,6 +199,8 @@ class AttendancePunchService
                 ->max('session_seq');
             $punch->forceFill(['session_seq' => $seq + 1])->save();
         }
+
+        $this->trackingSessions->onPunchCaptured($punch);
 
         $ctx = $input->audit ?? new AuditContext(
             source: $input->direction === 'in' ? 'clock_in' : 'clock_out',

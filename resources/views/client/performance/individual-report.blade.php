@@ -3,600 +3,327 @@
 
 @section('style')
     <style>
-        .employee-header {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            border-radius: 16px;
-            padding: 20px 24px;
-            margin-bottom: 24px;
-            color: white;
-        }
-
-        .score-circle {
-            width: 80px;
-            height: 80px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 50%;
+        .perf-hero {
+            background: #1e3a8a;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            border-radius: 14px;
+            padding: 18px 22px;
+            margin-bottom: 18px;
+            color: #fff;
             display: flex;
             align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .score-circle .score {
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1;
-        }
-
-        .score-circle .grade {
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .trend-up { color: #10b981; }
-        .trend-down { color: #ef4444; }
-        .trend-stable { color: #f59e0b; }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            justify-content: space-between;
             gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stat-box {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-        }
-
-        .stat-box:hover {
-            border-color: #4f46e5;
-        }
-
-        .stat-value {
-            font-size: 22px;
-            font-weight: 700;
-            color: #1e293b;
-        }
-
-        .stat-label {
-            font-size: 10px;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-top: 4px;
-        }
-
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-
-        .kpi-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px 18px;
-        }
-
-        .kpi-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .kpi-title {
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            text-transform: uppercase;
-        }
-
-        .kpi-number {
-            font-size: 26px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 8px;
-        }
-
-        .progress {
-            height: 6px;
-            background: #e2e8f0;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            border-radius: 3px;
-        }
-
-        .stats-row {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stats-row .stat-item {
-            flex: 1;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 12px;
-            text-align: center;
-        }
-
-        .stats-row .stat-number {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .stats-row .stat-label {
-            font-size: 10px;
-            margin-top: 4px;
-        }
-
-        .section-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            overflow: hidden;
-        }
-
-        .section-header {
-            padding: 12px 20px;
-            background: #fafcff;
-            border-bottom: 1px solid #e2e8f0;
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .section-body {
-            padding: 18px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 12px;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .badge-sm {
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 12px;
-        }
-
-        .badge-success { background: #d1fae5; color: #065f46; }
-        .badge-warning { background: #fef3c7; color: #92400e; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
-        .badge-info { background: #e0f2fe; color: #0369a1; }
-        .badge-purple { background: #ede9fe; color: #6d28d9; }
-
-        .feedback-box {
-            background: #fffbeb;
-            border-left: 3px solid #f59e0b;
-            padding: 14px;
-            border-radius: 8px;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             flex-wrap: wrap;
         }
+        .perf-hero .employee-info { color: #fff; }
+        .perf-hero .employee-initials { background: rgba(255,255,255,0.25); width: 36px; height: 36px; font-size: 14px; }
+        .perf-hero h5 { font-size: 15px; margin: 0 0 3px; color: #fff; }
+        .perf-hero p { font-size: 12px; margin: 0; opacity: .9; }
+        .perf-hero-score { display: flex; align-items: center; gap: 14px; }
+        #overallGauge { width: 96px; height: 96px; }
+        .perf-hero-score .score-text { text-align: right; }
+        .perf-hero-score .score-text .val { font-size: 26px; font-weight: 700; line-height: 1; }
+        .perf-hero-score .score-text .diff { font-size: 11px; opacity: .9; margin-top: 3px; }
 
-        @media (max-width: 1000px) {
-            .stats-grid { grid-template-columns: repeat(3, 1fr); }
-            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-            .stats-row { flex-wrap: wrap; }
-        }
+        .perf-stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 18px; }
+        @media (max-width: 1200px) { .perf-stats-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 640px) { .perf-stats-grid { grid-template-columns: repeat(2, 1fr); } }
 
-        @media (max-width: 640px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .kpi-grid { grid-template-columns: 1fr; }
-        }
+        .perf-section-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 0; }
+        .perf-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+
+        .perf-info-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border, #f1f5f9); font-size: 12px; }
+        .perf-info-row:last-child { border-bottom: none; }
+        .perf-info-row span { color: #64748b; }
+        .perf-info-row strong { color: var(--text-primary); font-weight: 600; }
+
+        .compare-item { text-align: center; padding: 10px; border-radius: 10px; background: #f8fafc; border: 1px solid var(--border, #e2e8f0); }
+        .compare-item .val { font-size: 18px; font-weight: 700; }
+        .compare-item .lbl { font-size: 10.5px; color: #64748b; text-transform: uppercase; margin-top: 3px; }
+
+        .feedback-box { background: var(--primary-light); border-left: 3px solid var(--primary); padding: 14px 16px; border-radius: 8px; font-size: 12.5px; }
     </style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left">
-            <h5 class="m-b-10">Performance Dashboard</h5>
-            <ul class="breadcrumb mb-0">
-                <li class="breadcrumb-item">
-                    <a href="{{ url('/dashboard') }}">Home</a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="{{ route('performance.team') }}">Performance</a>
-                </li>
-                <li class="breadcrumb-item active">
-                    {{ $employee->name }}
-                </li>
-            </ul>
-        </div>
-
-        <div class="page-header-right">
-            <div class="d-flex align-items-center gap-2">
-                @if ($prevMonth)
-                    <a href="{{ route('performance.individual', ['userId' => $employee->id, 'month' => $prevMonth]) }}"
-                        class="btn btn-sm btn-outline-secondary">
-                        <i class="feather-chevron-left"></i>
-                    </a>
-                @else
-                    <button class="btn btn-sm btn-outline-secondary" disabled>
-                        <i class="feather-chevron-left"></i>
-                    </button>
-                @endif
-
-                <div class="px-3 py-1 border rounded bg-light fw-semibold">
-                    {{ date('F Y', strtotime($month . '-01')) }}
-                </div>
-
-                @if ($nextMonth && ($nextMonthExists ?? false))
-                    <a href="{{ route('performance.individual', ['userId' => $employee->id, 'month' => $nextMonth]) }}"
-                        class="btn btn-sm btn-outline-secondary">
+    <x-ui.page-header title="Employee Performance Report" :parent="['label' => 'Team Report', 'route' => 'performance.team']">
+        <x-slot:actions>
+            <div class="btn-group btn-group-sm">
+                <a href="{{ route('performance.individual', ['userId' => $employee->id, 'month' => $prevMonth]) }}" class="btn btn-outline-secondary">
+                    <i class="feather-chevron-left"></i>
+                </a>
+                <button class="btn btn-light disabled">{{ date('F Y', strtotime($month . '-01')) }}</button>
+                @if($nextMonth)
+                    <a href="{{ route('performance.individual', ['userId' => $employee->id, 'month' => $nextMonth]) }}" class="btn btn-outline-secondary">
                         <i class="feather-chevron-right"></i>
                     </a>
                 @else
-                    <button class="btn btn-sm btn-outline-secondary" disabled>
-                        <i class="feather-chevron-right"></i>
-                    </button>
+                    <button class="btn btn-outline-secondary disabled" disabled><i class="feather-chevron-right"></i></button>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
-    <div class="main-content" style="padding: 24px !important;">
+    <div class="main-content" style="padding: 18px !important;">
 
-        <!-- Employee Header -->
-        <div class="employee-header">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="score-circle">
-                        <div class="score">{{ $overallScore ?? 0 }}%</div>
-                        <div class="grade">Grade {{ $grade ?? 'N/A' }}</div>
-                    </div>
-                    <div>
-                        <h5 class="mb-1 text-light" style="font-size: 18px;">{{ $employee->name }}</h5>
-                        <p class="mb-0" style="font-size: 12px; opacity: 0.9;">
-                            {{ $employee->jobDetails?->Designation?->name ?? 'No Designation' }} |
-                            {{ $employee->jobDetails?->Department?->name ?? 'No Department' }}
-                        </p>
-                        <small style="opacity: 0.85;">ID: {{ $employee->employee_id ?? 'N/A' }}</small>
-                    </div>
+        <div class="perf-hero">
+            <div class="employee-info">
+                <span class="employee-initials">{{ strtoupper(substr($employee->name, 0, 1)) }}</span>
+                <div>
+                    <h5>{{ $employee->name }}</h5>
+                    <p>{{ $employee->jobDetails?->department ? \App\Models\Department::find($employee->jobDetails->department)?->name : ($employee->role ? ucfirst($employee->role) : '') }} &middot; {{ date('F Y', strtotime($month . '-01')) }}</p>
                 </div>
-                <div class="text-end">
-                    @if (isset($scoreDifference))
-                        <div class="mb-1">
-                            @if ($scoreDifference > 0)
-                                <span class="trend-up"><i class="feather-trending-up"></i> +{{ $scoreDifference }}%</span>
-                            @elseif($scoreDifference < 0)
-                                <span class="trend-down"><i class="feather-trending-down"></i> {{ $scoreDifference }}%</span>
-                            @else
-                                <span class="trend-stable"><i class="feather-minus"></i> No change</span>
-                            @endif
-                        </div>
-                    @endif
-                    @if (isset($departmentAvg))
-                        <div>
-                            <small>Dept Avg</small>
-                            <div class="fw-bold">{{ $departmentAvg }}%</div>
-                        </div>
+            </div>
+            <div class="perf-hero-score">
+                <div id="overallGauge"></div>
+                <div class="score-text">
+                    <div class="val">{{ $overallScore ?? '—' }}@if($overallScore !== null)%@endif</div>
+                    @if($prevOverallScore !== null && $overallScore !== null)
+                        <div class="diff"><i class="feather-arrow-{{ $scoreTrend === 'down' ? 'down' : 'up' }}"></i> {{ abs($scoreDifference) }}% vs last month</div>
                     @endif
                 </div>
             </div>
         </div>
 
-        <!-- Stats Grid - 5 Metrics -->
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div class="stat-value">{{ $kpiScore->attendance_score ?? 0 }}%</div>
-                <div class="stat-label">Attendance</div>
-                @if(($kpiScore->late_count ?? 0) > 0)
-                    <small class="text-warning" style="font-size: 9px;">({{ $kpiScore->late_count }} late)</small>
-                @endif
-            </div>
-            <div class="stat-box">
-                <div class="stat-value">{{ $kpiScore->task_completion_score ?? 0 }}%</div>
-                <div class="stat-label">Task Completion</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-value">{{ $kpiScore->deadline_met_score ?? 0 }}%</div>
-                <div class="stat-label">Deadline Met</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-value">{{ $kpiScore->regularization_score ?? 100 }}%</div>
-                <div class="stat-label">Regularization</div>
-                @if(($kpiScore->regularization_count ?? 0) > 0)
-                    <small class="text-warning" style="font-size: 9px;">({{ $kpiScore->regularization_count }} req)</small>
-                @endif
-            </div>
-            <div class="stat-box">
-                <div class="stat-value">{{ $kpiScore->manager_rating_score ?? 'N/A' }}%</div>
-                <div class="stat-label">Manager Rating</div>
-            </div>
+        <div class="perf-stats-grid">
+            <x-ui.stat-card icon="calendar" label="Attendance" :value="($kpiScore->attendance_score ?? null) !== null ? $kpiScore->attendance_score.'%' : 'N/A'" />
+            <x-ui.stat-card icon="check-square" label="Task Completion" :value="($kpiScore->task_completion_score ?? null) !== null ? $kpiScore->task_completion_score.'%' : 'N/A'" />
+            <x-ui.stat-card icon="clock" label="On-Time Completion" :value="($kpiScore->deadline_met_score ?? null) !== null ? $kpiScore->deadline_met_score.'%' : 'N/A'" />
+            <x-ui.stat-card icon="briefcase" label="Project Participation" :value="($kpiScore->project_participation_score ?? null) !== null ? $kpiScore->project_participation_score.'%' : 'N/A'" />
+            <x-ui.stat-card icon="file-text" label="Regularization" :value="($kpiScore->regularization_score ?? null) !== null ? $kpiScore->regularization_score.'%' : 'N/A'" />
+            <x-ui.stat-card icon="star" label="Manager Rating" :value="$kpiScore->manager_rating_score ?? 'N/A'" />
         </div>
 
-        <!-- KPI Cards -->
-        <div class="kpi-grid">
-            <!-- Overall Score -->
-            <div class="kpi-card">
-                <div class="kpi-header">
-                    <span class="kpi-title">Overall Score</span>
-                    <span class="badge-sm badge-info">Grade {{ $grade ?? 'C' }}</span>
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="compare-item">
+                    <div class="val">{{ $overallScore ?? 'N/A' }}</div>
+                    <div class="lbl">{{ $employee->name }}</div>
                 </div>
-                <div class="kpi-number">{{ $overallScore ?? 0 }}%</div>
-                <div class="progress">
-                    <div class="progress-bar bg-primary" style="width: {{ $overallScore ?? 0 }}%"></div>
-                </div>
-                @if (isset($scoreDifference) && $scoreDifference != 0)
-                    <small class="text-muted d-block mt-2">
-                        {{ $scoreDifference > 0 ? '+' : '' }}{{ $scoreDifference }}% vs last month
-                    </small>
-                @endif
             </div>
-
-            <!-- Attendance Breakdown -->
-            <div class="kpi-card">
-                <div class="kpi-header">
-                    <span class="kpi-title">Attendance Details</span>
+            <div class="col-md-4">
+                <div class="compare-item">
+                    <div class="val">{{ $departmentAvg ?? 'N/A' }}</div>
+                    <div class="lbl">Department Average</div>
                 </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="font-size: 11px;">Present Days</span>
-                    <strong class="text-success">{{ $kpiScore->present_days ?? 0 }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="font-size: 11px;">Absent Days</span>
-                    <strong class="text-danger">{{ $kpiScore->absent_days ?? 0 }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="font-size: 11px;">Late Days</span>
-                    <strong class="text-warning">{{ $kpiScore->late_days ?? 0 }}</strong>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span style="font-size: 11px;">Paid Leaves</span>
-                    <strong>{{ $kpiScore->paid_leaves ?? 0 }}</strong>
-                </div>
-                @if(($kpiScore->late_penalty ?? 0) > 0)
-                    <small class="text-warning d-block mt-2">Penalty: -{{ $kpiScore->late_penalty }}%</small>
-                @endif
             </div>
-
-            <!-- Task Performance -->
-            <div class="kpi-card">
-                <div class="kpi-header">
-                    <span class="kpi-title">Task Performance</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="font-size: 11px;">Completed</span>
-                    <strong class="text-success">{{ $kpiScore->completed_tasks ?? 0 }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="font-size: 11px;">Assigned</span>
-                    <strong>{{ $kpiScore->assigned_tasks ?? 0 }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span style="font-size: 11px;">On-Time</span>
-                    <strong class="text-info">{{ $kpiScore->on_time_completed_tasks ?? 0 }}</strong>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span style="font-size: 11px;">Late Tasks</span>
-                    <strong class="text-warning">
-                        {{ ($kpiScore->completed_tasks ?? 0) - ($kpiScore->on_time_completed_tasks ?? 0) }}
-                    </strong>
-                </div>
-                <div class="progress mt-2">
-                    <div class="progress-bar bg-primary" style="width: {{ $kpiScore->task_completion_score ?? 0 }}%"></div>
+            <div class="col-md-4">
+                <div class="compare-item">
+                    <div class="val">{{ $companyAvg ?? 'N/A' }}</div>
+                    <div class="lbl">Company Average</div>
                 </div>
             </div>
         </div>
 
-        <!-- Stats Row -->
-        <div class="stats-row">
-            <div class="stat-item">
-                <div class="stat-number">{{ $kpiScore->regularization_count ?? 0 }}</div>
-                <div class="stat-label">Regularization Requests</div>
-                @if(($kpiScore->regularization_count ?? 0) > 0)
-                    <div class="mt-1">
-                        <span class="badge-sm badge-success">A: {{ $kpiScore->approved_regularization_count ?? 0 }}</span>
-                        <span class="badge-sm badge-warning ms-1">P: {{ $kpiScore->pending_regularization_count ?? 0 }}</span>
-                        <span class="badge-sm badge-danger ms-1">R: {{ $kpiScore->rejected_regularization_count ?? 0 }}</span>
+        <div class="row g-3 mb-3">
+            <div class="col-lg-8">
+                <x-ui.card>
+                    <div class="perf-card-head">
+                        <h6 class="perf-section-title">Performance Trend</h6>
+                        <div class="period-toggle" id="trendToggle">
+                            <button type="button" class="active" data-period="daily">Daily</button>
+                            <button type="button" data-period="weekly">Weekly</button>
+                            <button type="button" data-period="monthly">Monthly</button>
+                        </div>
                     </div>
-                @endif
+                    <div id="trendChart" style="height: 270px;"></div>
+                </x-ui.card>
             </div>
-            <div class="stat-item">
-                <div class="stat-number">{{ $kpiScore->overtime_hours ?? 0 }}<span style="font-size: 11px;">h</span></div>
-                <div class="stat-label">Overtime</div>
-                <small class="text-muted">Bonus metric (+0.5%/hr)</small>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">{{ $kpiScore->manager_rating_raw ?? 'N/A' }}<span style="font-size: 11px;">/5</span></div>
-                <div class="stat-label">Manager Rating</div>
-                @if($kpiScore->manager_rating_score)
-                    <small class="text-muted">{{ $kpiScore->manager_rating_score }}%</small>
-                @endif
+            <div class="col-lg-4">
+                <x-ui.card>
+                    <h6 class="perf-section-title mb-2">Score Composition</h6>
+                    <div id="compositionChart" style="height: 230px;"></div>
+                </x-ui.card>
             </div>
         </div>
 
-        <!-- Attendance & Leave Details -->
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-3">
             <div class="col-md-6">
-                <div class="section-card">
-                    <div class="section-header">Attendance Breakdown</div>
-                    <div class="section-body">
-                        <div class="info-row"><span>Present Days</span><strong class="text-success">{{ $kpiScore->present_days ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Absent Days</span><strong class="text-danger">{{ $kpiScore->absent_days ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Half Days</span><strong>{{ $kpiScore->half_days ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Late Days</span><strong class="text-warning">{{ $kpiScore->late_days ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Early Departure Days</span><strong>{{ $kpiScore->early_departure_days ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Paid Leaves</span><strong>{{ $kpiScore->paid_leaves ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Unpaid Leaves</span><strong class="text-danger">{{ $kpiScore->unpaid_leaves ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Holidays</span><strong>{{ $kpiScore->holidays ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Week-offs</span><strong>{{ $kpiScore->weekoffs ?? 0 }} days</strong></div>
-                        <div class="info-row"><span>Total Late Minutes</span><strong>{{ $kpiScore->total_late_minutes ?? 0 }} min</strong></div>
-                    </div>
-                </div>
+                <x-ui.card title="Attendance Breakdown">
+                    <div class="perf-info-row"><span>Present Days</span><strong>{{ $kpiScore->present_days ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Absent Days</span><strong class="text-danger">{{ $kpiScore->absent_days ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Half Days</span><strong>{{ $kpiScore->half_days ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Late Days</span><strong class="text-warning">{{ $kpiScore->late_days ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Early Departure Days</span><strong>{{ $kpiScore->early_departure_days ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Paid / Unpaid Leaves</span><strong>{{ $kpiScore->paid_leaves ?? 0 }} / {{ $kpiScore->unpaid_leaves ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Holidays / Week-offs</span><strong>{{ $kpiScore->holidays ?? 0 }} / {{ $kpiScore->weekoffs ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Days calculated / expected</span><strong>{{ $kpiScore->days_calculated ?? 0 }} / {{ $kpiScore->days_expected ?? 0 }}</strong></div>
+                </x-ui.card>
             </div>
             <div class="col-md-6">
-                <div class="section-card">
-                    <div class="section-header">Quick Insights</div>
-                    <div class="section-body">
-                        <div class="info-row">
-                            <span>Best Area</span>
-                            <strong class="text-success">
-                                @php
-                                    $scores = [
-                                        'Attendance' => $kpiScore->attendance_score ?? 0,
-                                        'Task Completion' => $kpiScore->task_completion_score ?? 0,
-                                        'Deadline Met' => $kpiScore->deadline_met_score ?? 0,
-                                        'Regularization' => $kpiScore->regularization_score ?? 100
-                                    ];
-                                    arsort($scores);
-                                    echo key($scores) . ' (' . round(current($scores), 1) . '%)';
-                                @endphp
-                            </strong>
-                        </div>
-                        <div class="info-row">
-                            <span>Needs Improvement</span>
-                            <strong class="text-warning">
-                                @php
-                                    asort($scores);
-                                    echo key($scores) . ' (' . round(current($scores), 1) . '%)';
-                                @endphp
-                            </strong>
-                        </div>
-                        <div class="info-row">
-                            <span>Performance Level</span>
-                            <strong>
-                                @php
-                                    $overall = $kpiScore->overall_score ?? 0;
-                                    if ($overall >= 90) echo 'Outstanding';
-                                    elseif ($overall >= 80) echo 'Excellent';
-                                    elseif ($overall >= 70) echo 'Good';
-                                    elseif ($overall >= 60) echo 'Satisfactory';
-                                    elseif ($overall >= 50) echo 'Needs Improvement';
-                                    else echo 'Critical';
-                                @endphp
-                            </strong>
-                        </div>
-                        @if(($kpiScore->regularization_count ?? 0) > 0)
-                            <div class="info-row">
-                                <span>Regularization Impact</span>
-                                <strong class="text-warning">
-                                    @php
-                                        $rejectionPenalty = ($kpiScore->rejected_regularization_count ?? 0) * 5;
-                                    @endphp
-                                    -{{ $rejectionPenalty }}% from rejections
-                                </strong>
-                            </div>
-                        @endif
-                        @if(($kpiScore->late_penalty ?? 0) > 0)
-                            <div class="info-row">
-                                <span>Late Penalty</span>
-                                <strong class="text-warning">-{{ $kpiScore->late_penalty }}%</strong>
-                            </div>
-                        @endif
-                        @if(($kpiScore->overtime_hours ?? 0) > 0)
-                            <div class="info-row">
-                                <span>Overtime Bonus</span>
-                                <strong class="text-success">+{{ min(10, ($kpiScore->overtime_hours * 0.5)) }}%</strong>
-                            </div>
-                        @endif
-                    </div>
-                </div>
+                <x-ui.card title="Task &amp; Project Performance">
+                    <div class="perf-info-row"><span>Assigned Tasks</span><strong>{{ $kpiScore->assigned_tasks ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Completed Tasks</span><strong class="text-success">{{ $kpiScore->completed_tasks ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>On-Time Completed</span><strong>{{ $kpiScore->on_time_completed_tasks ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Late Completed</span><strong class="text-warning">{{ $kpiScore->late_completed_tasks ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Overdue Tasks</span><strong class="text-danger">{{ $kpiScore->overdue_tasks ?? 0 }}</strong></div>
+                    <div class="perf-info-row"><span>Project-linked Tasks</span><strong>{{ $kpiScore->project_assigned_tasks ?? 0 }}</strong></div>
+                </x-ui.card>
             </div>
         </div>
 
-        <!-- Regularization Details -->
-        @if(($kpiScore->regularization_count ?? 0) > 0 && isset($regularizationDetails) && count($regularizationDetails) > 0)
-            <div class="section-card">
-                <div class="section-header">Regularization Requests</div>
-                <div class="section-body">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Reason</th>
-                            </tr>
-                        </thead>
+        @if($regularizationDetails && $regularizationDetails->isNotEmpty())
+            <x-ui.card title="Regularization Requests This Month" :bodyClass="'p-0'">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Reason</th></tr></thead>
                         <tbody>
-                            @foreach ($regularizationDetails as $reg)
+                            @foreach($regularizationDetails as $reg)
                                 <tr>
-                                    <td>{{ $reg['date'] ?? 'N/A' }}</td>
-                                    <td>{{ $reg['request_type'] ?? 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge-sm 
-                                            @if($reg['status'] == 'approved') badge-success
-                                            @elseif($reg['status'] == 'pending') badge-warning
-                                            @else badge-danger @endif">
-                                            {{ ucfirst($reg['status'] ?? 'N/A') }}
-                                        </span>
-                                    </td>
-                                    <td>{{ Str::limit($reg['reason'] ?? '', 40) }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($reg->date)->format('d M Y') }}</td>
+                                    <td>{{ ucfirst(str_replace('_', ' ', $reg->request_type)) }}</td>
+                                    <td><x-ui.status-badge :status="$reg->status" /></td>
+                                    <td>{{ $reg->reason }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
-                    <small class="text-muted">
-                        Score calculation: {{ $kpiScore->approved_regularization_count ?? 0 }}/{{ $kpiScore->regularization_count ?? 0 }} approved = 
-                        {{ round((($kpiScore->approved_regularization_count ?? 0) / max(1, $kpiScore->regularization_count ?? 1)) * 100, 1) }}% - 
-                        {{ ($kpiScore->rejected_regularization_count ?? 0) * 5 }}% penalty = 
-                        {{ $kpiScore->regularization_score ?? 100 }}%
-                    </small>
                 </div>
-            </div>
+            </x-ui.card>
         @endif
 
-        <!-- Manager Feedback -->
-        @if($kpiScore->manager_feedback)
-            <div class="section-card">
-                <div class="section-header">Manager Feedback</div>
-                <div class="section-body">
-                    <div class="feedback-box">
-                        <p class="mb-2" style="font-size: 12px;">{{ $kpiScore->manager_feedback }}</p>
-                        <small class="text-muted">
-                            Rating: {{ $kpiScore->manager_rating_raw ?? 'N/A' }}/5 |
-                            @if($kpiScore->manager_rated_at)
-                                {{ \Carbon\Carbon::parse($kpiScore->manager_rated_at)->format('d M, Y') }}
-                            @else
-                                Not rated yet
-                            @endif
-                        </small>
+        @if($managerReview)
+            <x-ui.card title="Manager Feedback">
+                <div class="feedback-box">
+                    {{ $managerReview->additional_feedback ?: 'No written feedback provided.' }}
+                    <div class="text-muted mt-2" style="font-size:11px;">
+                        Rating: {{ $managerReview->overall_rating ?? 'N/A' }}/5
+                        @if($managerReview->submitted_at) &middot; {{ \Carbon\Carbon::parse($managerReview->submitted_at)->format('d M, Y') }} @endif
                     </div>
                 </div>
-            </div>
+            </x-ui.card>
         @endif
     </div>
+
+    <x-ui.drawer id="dayDetailDrawer" title="Day Detail">
+        <div id="dayDetailBody">
+            <x-ui.empty-state icon="calendar" title="Pick a day on the Daily trend chart" />
+        </div>
+    </x-ui.drawer>
 @endsection
 
 @section('script-area')
     <script>
-        $(document).ready(function() {
-            // Toggle for leave details
-            $('[data-bs-toggle="collapse"]').on('click', function(e) {
-                e.preventDefault();
-                const target = $(this).data('target');
-                $(target).toggleClass('show');
-                $(this).find('i').toggleClass('feather-chevron-down feather-chevron-up');
+        $(function () {
+            const overall = {{ (float) ($overallScore ?? 0) }};
+            const grade = @json($grade ?? 'N/A');
+            const gaugeColor = overall >= 80 ? '#059669' : (overall >= 60 ? '#1e3a8a' : (overall >= 40 ? '#d97706' : '#dc2626'));
+
+            try {
+                new ApexCharts(document.querySelector('#overallGauge'), {
+                    chart: { type: 'radialBar', height: 96, width: 96, sparkline: { enabled: true } },
+                    series: [overall],
+                    colors: [gaugeColor],
+                    plotOptions: {
+                        radialBar: {
+                            hollow: { size: '55%' },
+                            track: { background: 'rgba(255,255,255,0.25)' },
+                            dataLabels: { show: true, value: { show: true, fontSize: '15px', fontWeight: 700, color: '#fff', offsetY: 4, formatter: () => grade } },
+                        },
+                    },
+                    stroke: { lineCap: 'round' },
+                }).render();
+            } catch (e) { console.error(e); }
+
+            try {
+                new ApexCharts(document.querySelector('#compositionChart'), {
+                    chart: { type: 'donut', height: 230, toolbar: { show: false } },
+                    series: [
+                        {{ (float) ($kpiScore->attendance_score ?? 0) }},
+                        {{ (float) ($kpiScore->task_completion_score ?? 0) }},
+                        {{ (float) ($kpiScore->deadline_met_score ?? 0) }},
+                        {{ (float) ($kpiScore->project_participation_score ?? 0) }},
+                        {{ (float) ($kpiScore->regularization_score ?? 0) }},
+                    ],
+                    labels: ['Attendance', 'Task Completion', 'On-Time', 'Project Participation', 'Regularization'],
+                    colors: ['#1e3a8a', '#2563eb', '#059669', '#d97706', '#7c3aed'],
+                    legend: { position: 'bottom', fontSize: '10.5px' },
+                    dataLabels: { style: { fontSize: '10px' } },
+                    plotOptions: { pie: { donut: { size: '62%' } } },
+                }).render();
+            } catch (e) { console.error(e); }
+
+            const daily = @json($dailyPerformance ?? []);
+            const weekly = @json($weeklyPerformance ?? []);
+            const monthly = @json(($history ?? collect())->reverse()->values());
+
+            const datasets = {
+                daily: {
+                    categories: daily.map(d => new Date(d.performance_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })),
+                    raw: daily.map(d => d.performance_date),
+                    series: [{ name: 'Daily Score', data: daily.map(d => d.overall_daily_score ?? null) }],
+                },
+                weekly: {
+                    categories: weekly.map(w => w.label),
+                    raw: [],
+                    series: [{ name: 'Weekly Score', data: weekly.map(w => w.overall_score ?? null) }],
+                },
+                monthly: {
+                    categories: monthly.map(m => m.reporting_month ? new Date(m.reporting_month).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }) : 'N/A'),
+                    raw: [],
+                    series: [{ name: 'Monthly Score', data: monthly.map(m => m.overall_score ?? null) }],
+                },
+            };
+
+            let trendChart = null;
+            function renderTrend(period) {
+                const d = datasets[period];
+                const opts = {
+                    chart: { type: 'line', height: 270, toolbar: { show: false }, zoom: { enabled: false },
+                        events: {
+                            dataPointSelection: function (event, ctx, config) {
+                                if (period === 'daily') {
+                                    const date = d.raw[config.dataPointIndex];
+                                    if (date) openDayDetail(date);
+                                }
+                            },
+                        },
+                    },
+                    series: d.series,
+                    xaxis: { categories: d.categories, labels: { style: { fontSize: '10px' } } },
+                    yaxis: { min: 0, max: 100, labels: { formatter: v => v + '%' } },
+                    colors: ['#1e3a8a'],
+                    stroke: { curve: 'smooth', width: 2 },
+                    markers: { size: period === 'daily' ? 3 : 4 },
+                    grid: { borderColor: '#eef1f7', strokeDashArray: 4 },
+                    tooltip: { y: { formatter: v => (v === null ? 'No data' : v + '%') } },
+                };
+                if (trendChart) { trendChart.updateOptions(opts, true, true); return; }
+                trendChart = new ApexCharts(document.querySelector('#trendChart'), opts);
+                trendChart.render();
+            }
+            try { renderTrend('daily'); } catch (e) { console.error(e); }
+
+            $('#trendToggle button').on('click', function () {
+                $('#trendToggle button').removeClass('active');
+                $(this).addClass('active');
+                renderTrend($(this).data('period'));
             });
+
+            function openDayDetail(date) {
+                $('#dayDetailBody').html('<div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span></div>');
+                const off = new bootstrap.Offcanvas(document.getElementById('dayDetailDrawer'));
+                off.show();
+                $.get('{{ route("performance.daily-detail", $employee->id) }}', { date: date }, function (res) {
+                    if (!res.success) { $('#dayDetailBody').html('<p class="text-muted">No data for this day.</p>'); return; }
+                    const r = res.data;
+                    const row = (label, val) => `<div class="perf-info-row"><span>${label}</span><strong>${val ?? 'N/A'}</strong></div>`;
+                    $('#dayDetailBody').html(
+                        `<h6 class="mb-3">${new Date(r.performance_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</h6>` +
+                        row('Day Type', r.day_type) +
+                        row('Attendance Status', r.attendance_status) +
+                        row('Attendance Score', r.attendance_score !== null ? r.attendance_score + '%' : null) +
+                        row('Task Completion Score', r.task_completion_score !== null ? r.task_completion_score + '%' : null) +
+                        row('On-Time Score', r.task_ontime_score !== null ? r.task_ontime_score + '%' : null) +
+                        row('Project Participation Score', r.project_participation_score !== null ? r.project_participation_score + '%' : null) +
+                        row('Regularization Score', r.regularization_score !== null ? r.regularization_score + '%' : null) +
+                        row('Overall Daily Score', r.overall_daily_score !== null ? r.overall_daily_score + '%' : null)
+                    );
+                }).fail(function () {
+                    $('#dayDetailBody').html('<p class="text-danger">Could not load this day.</p>');
+                });
+            }
         });
     </script>
 @endsection

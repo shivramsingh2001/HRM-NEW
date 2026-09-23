@@ -2,10 +2,62 @@
 
 @section('style')
     <style>
-        /* Report tabs — matches the .customers-nav-tabs convention used on
-           project/branch/leave-type/etc. detail pages. */
-        .customers-nav-tabs .nav-link.active { color: #1e3a8a; border-color: #dfe5f0 #dfe5f0 #fff; }
-        .customers-nav-tabs .nav-link { color: #6b7385; font-size: 11.5px; }
+        /* Report tabs — compact segmented pill bar: ONE rounded outer border, equal-width segments,
+           active = blue gradient (same #1e3a8a→#2563eb as the theme buttons) / white text, inactive = white / dark text. */
+        #reportTab {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: stretch;
+            gap: 3px;
+            padding: 3px;
+            background: #fff;
+            border: 1px solid #dfe5f0 !important;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+        }
+
+        #reportTab .nav-item {
+            flex: 1 1 0;
+            min-width: 0;
+            border: 0 !important;
+            margin: 0;
+        }
+
+        #reportTab .nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            width: 100%;
+            height: 32px;
+            padding: 0 10px;
+            margin: 0;
+            font-size: 11.5px;
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+            color: #1a2236;
+            background: #fff;
+            border: 0 !important;
+            border-radius: 20px;
+            transition: background .18s ease, color .18s ease;
+        }
+
+        #reportTab .nav-link i { font-size: 12px; margin: 0 !important; }
+
+        #reportTab .nav-link:hover:not(.active) { background: #f1f5fd; color: #1e3a8a; }
+
+        #reportTab .nav-link.active,
+        #reportTab .nav-link.active:hover {
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(30, 58, 138, .25);
+        }
+
+        @media (max-width: 767.98px) {
+            #reportTab { flex-wrap: wrap; }
+            #reportTab .nav-item { flex: 1 1 calc(50% - 3px); }
+        }
 
         /* Report Cards Styles - Compact Version */
         .report-cards-grid {
@@ -368,32 +420,86 @@
     </div>
 
     <div class="main-content" style="padding: 20px !important;">
+        @php
+            // The Expense reports are behind permission:expenses,export — only offer the tab to people who can open them.
+            $canExpenseReports = app(\App\Services\RbacService::class)->can(auth()->user(), 'expenses', 'export') && app(\App\Services\FeatureService::class)->enabledForCurrentTenant('expense_management');
+            // Payroll is money-sensitive: only offer the tab when the caller's payroll,view scope is
+            // company-wide (admin/hr) — a manager's scope is 'own', same rule PayrollReportController enforces.
+            $canPayrollReports = app(\App\Services\RbacService::class)->scopeFor(auth()->user(), 'payroll', 'view') === 'company';
+
+            // Each report category is only offered if its source module is enabled for this tenant's plan.
+            $reportFeatures = app(\App\Services\FeatureService::class);
+            $canAttendanceReports = $reportFeatures->enabledForCurrentTenant('attendance');
+            $canProjectReports = $reportFeatures->enabledForCurrentTenant('project_management');
+            $canTaskReports = $reportFeatures->enabledForCurrentTenant('task_single') || $reportFeatures->enabledForCurrentTenant('task_group');
+            $canAssetReports = $reportFeatures->enabledForCurrentTenant('asset_management');
+            $canLeaveReports = $reportFeatures->enabledForCurrentTenant('leave_management');
+            $canOvertimeReport = $reportFeatures->enabledForCurrentTenant('overtime');
+            $canShiftReport = $reportFeatures->enabledForCurrentTenant('fixed_shift') || $reportFeatures->enabledForCurrentTenant('custom_shift');
+            $canRegularizationReport = $reportFeatures->enabledForCurrentTenant('regularization');
+            $canWfhTravelReport = $reportFeatures->enabledForCurrentTenant('wfh_travel');
+        @endphp
 
         <!-- Report Category Tabs -->
-        <div class="card mb-3">
-            <div class="card-body p-0">
-                <ul class="nav nav-tabs flex-wrap w-100 text-center customers-nav-tabs" id="reportTab" role="tablist">
-                    <li class="nav-item flex-fill border-top">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#attendanceReportTab">
-                            <i class="feather-calendar me-1"></i> Attendance Report
-                        </a>
-                    </li>
-                    <li class="nav-item flex-fill border-top">
-                        <a class="nav-link" data-bs-toggle="tab" href="#projectReportTab">
-                            <i class="feather-briefcase me-1"></i> Project Report
-                        </a>
-                    </li>
-                    <li class="nav-item flex-fill border-top">
-                        <a class="nav-link" data-bs-toggle="tab" href="#taskReportTab">
-                            <i class="feather-check-square me-1"></i> Task Report
-                        </a>
-                    </li>
+        <div class="mb-3">
+            <div>
+                <ul class="nav nav-tabs w-100 text-center customers-nav-tabs" id="reportTab" role="tablist">
+                    @if ($canAttendanceReports)
+                        <li class="nav-item flex-fill border-top">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#attendanceReportTab">
+                                <i class="feather-calendar me-1"></i> Attendance Report
+                            </a>
+                        </li>
+                    @endif
+                    @if ($canProjectReports)
+                        <li class="nav-item flex-fill border-top">
+                            <a class="nav-link" data-bs-toggle="tab" href="#projectReportTab">
+                                <i class="feather-briefcase me-1"></i> Project Report
+                            </a>
+                        </li>
+                    @endif
+                    @if ($canTaskReports)
+                        <li class="nav-item flex-fill border-top">
+                            <a class="nav-link" data-bs-toggle="tab" href="#taskReportTab">
+                                <i class="feather-check-square me-1"></i> Task Report
+                            </a>
+                        </li>
+                    @endif
+                    @if ($canExpenseReports)
+                        <li class="nav-item flex-fill border-top">
+                            <a class="nav-link" data-bs-toggle="tab" href="#expenseReportTab">
+                                <i class="feather-credit-card me-1"></i> Expense Reports
+                            </a>
+                        </li>
+                    @endif
+                    @if ($canAssetReports)
+                        <li class="nav-item flex-fill border-top">
+                            <a class="nav-link" data-bs-toggle="tab" href="#assetReportTab">
+                                <i class="feather-hard-drive me-1"></i> Asset Reports
+                            </a>
+                        </li>
+                    @endif
+                    @if ($canPayrollReports)
+                        <li class="nav-item flex-fill border-top">
+                            <a class="nav-link" data-bs-toggle="tab" href="#payrollReportTab">
+                                <i class="feather-dollar-sign me-1"></i> Payroll Reports
+                            </a>
+                        </li>
+                    @endif
+                    @if ($canLeaveReports)
+                        <li class="nav-item flex-fill border-top">
+                            <a class="nav-link" data-bs-toggle="tab" href="#leaveReportTab">
+                                <i class="feather-briefcase me-1"></i> Leave Reports
+                            </a>
+                        </li>
+                    @endif
                 </ul>
             </div>
         </div>
 
         <div class="tab-content">
             {{-- ==================== ATTENDANCE REPORT TAB ==================== --}}
+            @if ($canAttendanceReports)
             <div class="tab-pane fade show active" id="attendanceReportTab">
                 <div class="report-cards-grid">
                     <!-- Overall Attendance Report -->
@@ -471,6 +577,7 @@
                         </div>
                     </div>
 
+                    @if ($canOvertimeReport)
                     <!-- Overtime Report (Monthly) -->
                     <div class="report-card">
                         <div class="card-icon primary">
@@ -485,6 +592,7 @@
                             </a>
                         </div>
                     </div>
+                    @endif
 
                     <div class="report-card coming-soon-card">
                         <!--<div class="coming-soon-overlay">Coming Soon</div>-->
@@ -500,10 +608,29 @@
                             </a>
                         </div>
                     </div>
+
+                    @if ($canShiftReport)
+                    <!-- Shift Report (Monthly) -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-layers"></i>
+                        </div>
+                        <h6 class="card-title">Shift Report</h6>
+                        <p class="card-description">Monthly matrix of which employee is on which shift on which date, with week-offs marked and a shift/employee/department filter.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-info">Monthly</span>
+                            <a href="{{ route('report.attendance.shift-monthly.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
+            @endif
 
             {{-- ==================== PROJECT REPORT TAB ==================== --}}
+            @if ($canProjectReports)
             <div class="tab-pane fade" id="projectReportTab">
                 <div class="report-cards-grid">
                     <!-- Project Summary Report -->
@@ -564,8 +691,10 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             {{-- ==================== TASK REPORT TAB ==================== --}}
+            @if ($canTaskReports)
             <div class="tab-pane fade" id="taskReportTab">
                 <div class="report-cards-grid">
                     <!-- Task & Project Overview Report -->
@@ -640,6 +769,267 @@
                     </div>
                 </div>
             </div>
+            @endif
+
+            {{-- ==================== EXPENSE REPORTS TAB ==================== --}}
+            @if ($canExpenseReports)
+                <div class="tab-pane fade" id="expenseReportTab">
+                    <div class="report-cards-grid">
+                        <!-- Payment Register -->
+                        <div class="report-card">
+                            <div class="card-icon primary">
+                                <i class="feather-list"></i>
+                            </div>
+                            <h6 class="card-title">Payment Register</h6>
+                            <p class="card-description">Every expense payment in a date range — voucher, employee, expense, mode, reference and status, with voided payments shown.</p>
+                            <div class="card-footer">
+                                <span class="badge badge-primary">Payments</span>
+                                <a href="{{ route('expense.reports.show', 'register') }}" class="btn-generate">
+                                    <i class="feather-arrow-right"></i> Generate
+                                </a>
+                            </div>
+                        </div>
+                        <!-- Expense Summary -->
+                        <div class="report-card">
+                            <div class="card-icon primary">
+                                <i class="feather-bar-chart-2"></i>
+                            </div>
+                            <h6 class="card-title">Expense Summary</h6>
+                            <p class="card-description">Claims, submitted, approved, pending and rejected amounts grouped by employee, category or project for a period.</p>
+                            <div class="card-footer">
+                                <span class="badge badge-purple">Summary</span>
+                                <a href="{{ route('expense.reports.show', 'summary') }}" class="btn-generate">
+                                    <i class="feather-arrow-right"></i> Generate
+                                </a>
+                            </div>
+                        </div>
+                        <!-- Outstanding Advances (ageing) -->
+                        <div class="report-card">
+                            <div class="card-icon primary">
+                                <i class="feather-clock"></i>
+                            </div>
+                            <h6 class="card-title">Outstanding Advances</h6>
+                            <p class="card-description">Unspent advance per employee aged into 0-30, 31-60, 61-90 and 90+ day buckets, with the oldest balance highlighted.</p>
+                            <div class="card-footer">
+                                <span class="badge badge-warning">Ageing</span>
+                                <a href="{{ route('expense.reports.show', 'ageing') }}" class="btn-generate">
+                                    <i class="feather-arrow-right"></i> Generate
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- ==================== ASSET REPORTS TAB ==================== --}}
+            @if ($canAssetReports)
+            <div class="tab-pane fade" id="assetReportTab">
+                <div class="report-cards-grid">
+                    <!-- Asset Register -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-hard-drive"></i>
+                        </div>
+                        <h6 class="card-title">Asset Register</h6>
+                        <p class="card-description">Every company asset with category, status, branch, current assignee, purchase date and warranty end — filter by category, status or branch and export to CSV.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Register</span>
+                            <a href="{{ route('report.asset.register.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Employee-wise Assets -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-users"></i>
+                        </div>
+                        <h6 class="card-title">Employee-wise Assets</h6>
+                        <p class="card-description">Each employee who holds company assets, with the assets assigned to them, their category and assignment date.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-success">Employees</span>
+                            <a href="{{ route('report.asset.employee-wise.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Asset Summary -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-pie-chart"></i>
+                        </div>
+                        <h6 class="card-title">Asset Summary</h6>
+                        <p class="card-description">Total assets broken down by status and by category, at a glance.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-purple">Summary</span>
+                            <a href="{{ route('report.asset.summary.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Warranty Expiry -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-shield"></i>
+                        </div>
+                        <h6 class="card-title">Warranty Expiry</h6>
+                        <p class="card-description">Assets whose warranty has already ended or ends within the next 90 days (adjustable), oldest first, so renewals can be planned.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-warning">Warranty</span>
+                            <a href="{{ route('report.asset.warranty-expiry.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- ==================== PAYROLL REPORTS TAB ==================== --}}
+            @if ($canPayrollReports)
+                <div class="tab-pane fade" id="payrollReportTab">
+                    <div class="report-cards-grid">
+                        <!-- Monthly Payroll Report -->
+                        <div class="report-card">
+                            <div class="card-icon primary">
+                                <i class="feather-calendar"></i>
+                            </div>
+                            <h6 class="card-title">Monthly Payroll Report</h6>
+                            <p class="card-description">Every employee's gross, deductions, net payable and payment status for a selected month, filterable by department.</p>
+                            <div class="card-footer">
+                                <span class="badge badge-primary">Monthly</span>
+                                <a href="{{ route('report.payroll.show', 'monthly') }}" class="btn-generate">
+                                    <i class="feather-arrow-right"></i> Generate
+                                </a>
+                            </div>
+                        </div>
+                        <!-- Employee Payroll Structure Report -->
+                        <div class="report-card">
+                            <div class="card-icon primary">
+                                <i class="feather-layers"></i>
+                            </div>
+                            <h6 class="card-title">Employee Payroll Structure</h6>
+                            <p class="card-description">Each employee's current salary structure, annual CTC, effective date and approval status.</p>
+                            <div class="card-footer">
+                                <span class="badge badge-success">Structure</span>
+                                <a href="{{ route('report.payroll.show', 'structure') }}" class="btn-generate">
+                                    <i class="feather-arrow-right"></i> Generate
+                                </a>
+                            </div>
+                        </div>
+                        <!-- Loan Report -->
+                        <div class="report-card">
+                            <div class="card-icon primary">
+                                <i class="feather-credit-card"></i>
+                            </div>
+                            <h6 class="card-title">Loan Report</h6>
+                            <p class="card-description">Every employee loan with category, amount, outstanding balance and status, filterable by department and status.</p>
+                            <div class="card-footer">
+                                <span class="badge badge-warning">Loans</span>
+                                <a href="{{ route('report.payroll.show', 'loan') }}" class="btn-generate">
+                                    <i class="feather-arrow-right"></i> Generate
+                                </a>
+                            </div>
+                        </div>
+                        <!-- Payroll Summary Report -->
+                        <div class="report-card">
+                            <div class="card-icon primary">
+                                <i class="feather-pie-chart"></i>
+                            </div>
+                            <h6 class="card-title">Payroll Summary</h6>
+                            <p class="card-description">Department-wise rollup of employees, gross, deductions and net payable for a selected month, with a paid/total count.</p>
+                            <div class="card-footer">
+                                <span class="badge badge-purple">Summary</span>
+                                <a href="{{ route('report.payroll.show', 'summary') }}" class="btn-generate">
+                                    <i class="feather-arrow-right"></i> Generate
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- ==================== LEAVE REPORTS TAB ==================== --}}
+            @if ($canLeaveReports)
+            <div class="tab-pane fade" id="leaveReportTab">
+                <div class="report-cards-grid">
+                    <!-- Leave Balance Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-battery-charging"></i>
+                        </div>
+                        <h6 class="card-title">Leave Balance Report</h6>
+                        <p class="card-description">Every employee's remaining balance per leave type, filterable by department and leave type.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Balance</span>
+                            <a href="{{ route('report.leave.show', 'balance') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Leave Report (register) -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-file-text"></i>
+                        </div>
+                        <h6 class="card-title">Leave Report</h6>
+                        <p class="card-description">Every leave application in a date range with type, dates, days and status.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-success">Register</span>
+                            <a href="{{ route('report.leave.show', 'register') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Leave Summary Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-bar-chart-2"></i>
+                        </div>
+                        <h6 class="card-title">Leave Summary</h6>
+                        <p class="card-description">Applications and days taken grouped by leave type, with approved/pending/cancelled counts for a date range.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-purple">Summary</span>
+                            <a href="{{ route('report.leave.show', 'summary') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    @if ($canRegularizationReport)
+                    <!-- Regularization Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-edit-3"></i>
+                        </div>
+                        <h6 class="card-title">Regularization Report</h6>
+                        <p class="card-description">Attendance regularization requests in a date range with in/out time, reason and status.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-warning">Regularization</span>
+                            <a href="{{ route('report.leave.show', 'regularization') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    @endif
+                    @if ($canWfhTravelReport)
+                    <!-- WFH & Travel Report -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-map-pin"></i>
+                        </div>
+                        <h6 class="card-title">WFH &amp; Travel Report</h6>
+                        <p class="card-description">Work-from-home and travel requests in a date range, filterable by type and status.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-info">Requests</span>
+                            <a href="{{ route('report.leave.show', 'wfh-travel') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endif
         </div>
 
         <!-- Info Alert - Compact -->
@@ -651,7 +1041,7 @@
                         <div>
                             <h6 class="mb-0" style="font-weight: 600; color: #1e40af; font-size: 10.5px;">All Reports Available</h6>
                             <p class="mb-0" style="color: #3b82f6; font-size: 10px;">
-                                Generate attendance reports with real-time data. All reports can be exported as CSV for further analysis.
+                                Generate attendance, project, task, expense, asset, payroll and leave reports with real-time data. Reports can be exported as CSV for further analysis.
                             </p>
                         </div>
                     </div>
@@ -672,6 +1062,28 @@
             "showMethod": "fadeIn",
             "hideMethod": "fadeOut"
         };
+
+        // Open the tab named in the URL hash (or the one last used) so coming back from a report page
+        // lands on the tab you were in, and remember the choice.
+        (function() {
+            const KEY = 'reportsLastTab';
+            const tabs = document.querySelectorAll('#reportTab a[data-bs-toggle="tab"]');
+            const known = h => Array.from(tabs).some(a => a.getAttribute('href') === h);
+            let target = null;
+            try {
+                if (known(location.hash)) target = location.hash;
+                else if (known(localStorage.getItem(KEY))) target = localStorage.getItem(KEY);
+            } catch (e) {}
+            if (target && window.bootstrap) {
+                const link = document.querySelector('#reportTab a[href="' + target + '"]');
+                if (link) bootstrap.Tab.getOrCreateInstance(link).show();
+            }
+            tabs.forEach(a => a.addEventListener('shown.bs.tab', function() {
+                const h = a.getAttribute('href');
+                try { localStorage.setItem(KEY, h); } catch (e) {}
+                if (history.replaceState) history.replaceState(null, '', h);
+            }));
+        })();
 
         // Animate cards on load
         document.addEventListener('DOMContentLoaded', function() {

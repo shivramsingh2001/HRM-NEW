@@ -50,6 +50,8 @@ Notable global overrides in this file (apply site-wide unless a page has its own
 - `.employee-info` / `.employee-avatar` / `.employee-initials` / `.employee-initials-sm` / `.employee-name` / `.employee-email` — the canonical "avatar + name + email" cell pattern, centralized here specifically so pages stop re-declaring it
 - `.kpi5-card` / `.kpi5-top` / `.kpi5-icon` / `.kpi5-pill` / `.kpi5-value` / `.kpi5-label` — the canonical compact stat-card anatomy (icon+pill header, bold value+label). Use `<x-ui.stat-card>` (§3) rather than hand-rolling this markup.
 - `.custom-employee-dropdown` — searchable employee-picker dropdown styling
+- `.grade-badge[data-grade]` — letter-grade→color pill (A/B/C green/blue/amber, D/F red), added for Performance's 10-band grade scale; same one-mapping-for-the-whole-app idea as `.status-badge`
+- `.period-toggle` — compact Daily/Weekly/Monthly pill switch (Performance's dashboard/individual-report trend section), styled like a `.filter-tag` chip group
 
 ## 3. Reusable Blade components — `resources/views/components/ui/`
 
@@ -71,10 +73,11 @@ A small, well-documented component library exists (each file's own top-comment i
 - `master.blade.php` — the shell every page extends (`@extends('client.layout.master')`); includes head/header/sidebar/footer partials and yields `@yield('content')`, `@yield('create-modal')` (see drawer note above), and others — check the file directly for the full yield list before adding a new section name.
 - `head.blade.php` — `<head>` asset includes (§1)
 - `header.blade.php` — topbar
-- `sidebar.blade.php` — left nav
+- `sidebar.blade.php` — left nav. Menu entries gated by a subscription-plan feature are wrapped in `@feature('key') ... @endfeature` (the same directive used on route middleware, see `docs/architecture.md`'s feature-gating row); as of 2026-09-22 this covers most modules (Leave, Holiday, Task, Project, Asset, Expense, Loan, Overtime, Regularization, WFH & Travel, Meetings, Biometric) — previously only the Payroll menu item used this pattern, everything else relied solely on `role:`/`in_array($role, ...)` checks even though the underlying routes were plan-gated.
 - `footer.blade.php` — page footer
 - `foot.blade.php` — pre-`</body>` JS includes + two site-wide inline scripts: Select2 auto-init (`$('.select2').select2(...)`) and a custom `.table-responsive` wheel/touch/drag-scroll handler (see §5 — this is what stands in for DataTables)
 - `impersonation-banner.blade.php` — shown when a super-admin is impersonating a tenant user (one of the few places using FontAwesome (`fas fa-user-secret`) instead of Feather)
+- `subscription-banner.blade.php` (2026-09-22) — sticky, inline-styled amber/red banner shown to every logged-in user when `App\Services\SubscriptionStatusService::forTenant()` reports the tenant's subscription is ending soon or already past its end date; same sticky-bar pattern as `impersonation-banner.blade.php`, stacked directly below it in `client.layout.master`
 
 Pages extend the master and fill `@section('content')`; module views live under `resources/views/client/<module>/*.blade.php` (e.g. `client/leave/`, `client/attendance/`, `client/payroll/`).
 

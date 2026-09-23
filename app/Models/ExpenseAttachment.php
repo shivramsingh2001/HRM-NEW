@@ -40,11 +40,12 @@ class ExpenseAttachment extends Model
     }
 
     /**
-     * Get full file URL
+     * Short-lived signed URL. (This used to be asset($file_path) — a PUBLIC path — which is wrong
+     * now that receipts live on the private disk.)
      */
     public function getFileUrlAttribute()
     {
-        return $this->file_path ? asset($this->file_path) : null;
+        return app(\App\Services\Expense\ExpenseAttachmentService::class)->attachmentUrl($this);
     }
 
     /**

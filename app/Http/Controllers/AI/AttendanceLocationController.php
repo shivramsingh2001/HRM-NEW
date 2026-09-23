@@ -4,7 +4,7 @@ namespace App\Http\Controllers\AI;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
-use App\Models\AttendanceTrack;
+use App\Models\AttendanceTrackingPoint;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -165,10 +165,7 @@ class   AttendanceLocationController extends Controller
         }
         // Get all tracks for these attendances
         $attendanceIds = $attendances->pluck('id')->toArray();
-        $tracks = AttendanceTrack::whereIn('attendance_id', $attendanceIds)
-            ->orderBy('track_time', 'asc')
-            ->get()
-            ->groupBy('attendance_id');
+        $tracks = AttendanceTrackingPoint::forAttendanceIds($attendanceIds)->groupBy('attendance_id');
 
         // Group attendances by user and date
         $userAttendanceMap = [];

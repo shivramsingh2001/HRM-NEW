@@ -32,42 +32,26 @@ class BiometricRosterService
 
         $conflicts = 0;
         foreach ($targets as $user) {
-            $enrollNo = (string) $user->id;
-
-            // Natural key is (device, enroll_no) — the table's unique constraint —
-            // and enroll_no is deterministically the user id under this scheme.
-            $row = BiometricEnrollment::firstOrNew([
-                'biometric_device_id' => $device->id,
-                'enroll_no' => $enrollNo,
-            ]);
+            // A direct-onboarded (or otherwise manually mapped) row already
+            // represents this person on this device under a different
+            // enroll_no — don't create a second, biometrics-less identity.
+            if ($this->alreadyOnDeviceUnderOtherEnroll($device, $user)) {
+                continue;
+            }
 
             // A deliberate manual mapping of this enroll_no to a different person
             // wins — don't hijack it.
-            if ($row->exists && $row->source === 'manual' && $row->user_id && (int) $row->user_id !== (int) $user->id) {
+            $existing = BiometricEnrollment::where('biometric_device_id', $device->id)
+                ->where('enroll_no', (string) $user->id)->first();
+            if ($existing && $existing->source === 'manual' && $existing->user_id && (int) $existing->user_id !== (int) $user->id) {
                 $conflicts++;
 
                 continue;
             }
 
-            $desiredName = $this->nameFor($user);
-            $desiredCard = $user->card_number ?: null;
-            $isNew = ! $row->exists;
-
-            $row->tenant_id = $tenantId;
-            $row->user_id = $user->id;
-            $row->device_user_id = $user->id;
-            $row->source = 'auto';
-            $row->name_on_device = $row->name_on_device ?: $desiredName;
-
-            if ($isNew
-                || $row->name_pushed !== $desiredName
-                || $row->card_pushed !== $desiredCard
-                || $row->sync_state === 'failed') {
-                $row->sync_state = 'pending';
+            if ($this->upsertEnrollment($device, $user)) {
                 $pending++;
             }
-
-            $row->save();
         }
 
         // Auto rows that dropped out of scope (deactivated / off-boarded / branch move).
@@ -102,40 +86,75 @@ class BiometricRosterService
             ->get();
 
         foreach ($devices as $device) {
+            if ($this->alreadyOnDeviceUnderOtherEnroll($device, $user)) {
+                continue;
+            }
+
             $inScope = $this->userInScope($device, $user);
 
-            $row = BiometricEnrollment::firstOrNew([
-                'biometric_device_id' => $device->id,
-                'enroll_no' => (string) $user->id,
-            ]);
+            $existing = BiometricEnrollment::where('biometric_device_id', $device->id)
+                ->where('enroll_no', (string) $user->id)->first();
 
             // Never touch a manual mapping of this enroll_no to someone else.
-            if ($row->exists && $row->source === 'manual' && $row->user_id && (int) $row->user_id !== (int) $user->id) {
+            if ($existing && $existing->source === 'manual' && $existing->user_id && (int) $existing->user_id !== (int) $user->id) {
                 continue;
             }
 
             if (! $inScope) {
-                if ($row->exists && $row->source === 'auto' && $row->sync_state !== 'removing') {
-                    $row->update(['sync_state' => 'removing']);
+                if ($existing && $existing->source === 'auto' && $existing->sync_state !== 'removing') {
+                    $existing->update(['sync_state' => 'removing']);
                 }
 
                 continue;
             }
 
-            $desiredName = $this->nameFor($user);
-            $desiredCard = $user->card_number ?: null;
-            $row->tenant_id = (int) $user->tenant_id;
-            $row->user_id = $user->id;
-            $row->device_user_id = $user->id;
-            $row->source = 'auto';
-            $row->name_on_device = $row->name_on_device ?: $desiredName;
+            $this->upsertEnrollment($device, $user);
+        }
+    }
 
-            if (! $row->exists || $row->name_pushed !== $desiredName || $row->card_pushed !== $desiredCard) {
-                $row->sync_state = 'pending';
+    /**
+     * Immediately mark specific users pending for a specific device,
+     * regardless of the device's auto_provision flag — used by the
+     * Employees list's "Push to device" bulk action, where the admin picks
+     * both the employees and the target device explicitly.
+     *
+     * @param  iterable<User>  $users
+     * @return array{queued:int,skipped:int}
+     */
+    public function pushToDevice(BiometricDevice $device, iterable $users): array
+    {
+        $queued = 0;
+        $skipped = 0;
+
+        foreach ($users as $user) {
+            if ((int) $user->tenant_id !== (int) $device->tenant_id) {
+                $skipped++;
+
+                continue;
             }
 
-            $row->save();
+            if ($this->alreadyOnDeviceUnderOtherEnroll($device, $user)) {
+                $skipped++;
+
+                continue;
+            }
+
+            $existing = BiometricEnrollment::where('biometric_device_id', $device->id)
+                ->where('enroll_no', (string) $user->id)->first();
+            if ($existing && $existing->source === 'manual' && $existing->user_id && (int) $existing->user_id !== (int) $user->id) {
+                $skipped++;
+
+                continue;
+            }
+
+            if ($this->upsertEnrollment($device, $user)) {
+                $queued++;
+            } else {
+                $skipped++;
+            }
         }
+
+        return ['queued' => $queued, 'skipped' => $skipped];
     }
 
     /** Name string written to the terminal: "Ravi Kumar (EMP17)", clipped. */
@@ -149,6 +168,58 @@ class BiometricRosterService
         $max = (int) config('biometric.roster.name_max_len', 40);
 
         return $max > 0 ? mb_substr($name, 0, $max) : $name;
+    }
+
+    /**
+     * Shared upsert body for rebuild()/syncUser()/pushToDevice(): find-or-create
+     * the (device, enroll_no=user id) row, flag it pending if it's new or the
+     * pushed name/card would change. Returns whether it was flagged pending.
+     */
+    private function upsertEnrollment(BiometricDevice $device, User $user): bool
+    {
+        $row = BiometricEnrollment::firstOrNew([
+            'biometric_device_id' => $device->id,
+            'enroll_no' => (string) $user->id,
+        ]);
+
+        $desiredName = $this->nameFor($user);
+        $desiredCard = $user->card_number ?: null;
+        $isNew = ! $row->exists;
+
+        $row->tenant_id = (int) $device->tenant_id;
+        $row->user_id = $user->id;
+        $row->device_user_id = $user->id;
+        $row->source = 'auto';
+        $row->name_on_device = $row->name_on_device ?: $desiredName;
+
+        $flagPending = $isNew
+            || $row->name_pushed !== $desiredName
+            || $row->card_pushed !== $desiredCard
+            || $row->sync_state === 'failed';
+
+        if ($flagPending) {
+            $row->sync_state = 'pending';
+        }
+
+        $row->save();
+
+        return $flagPending;
+    }
+
+    /**
+     * True when this user already has an enrollment row on this device under
+     * a different enroll_no than (string) $user->id — e.g. a direct-onboarded
+     * employee, whose row deliberately keeps the device's original enroll_no
+     * (see BiometricEmployeeProvisioningService). Prevents rebuild()/
+     * syncUser()/pushToDevice() from creating a second, biometrics-less
+     * identity for the same person.
+     */
+    private function alreadyOnDeviceUnderOtherEnroll(BiometricDevice $device, User $user): bool
+    {
+        return BiometricEnrollment::where('biometric_device_id', $device->id)
+            ->where('user_id', $user->id)
+            ->where('enroll_no', '!=', (string) $user->id)
+            ->exists();
     }
 
     /** @return array<int,User> keyed by user id */

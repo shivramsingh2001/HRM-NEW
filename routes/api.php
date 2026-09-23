@@ -18,7 +18,8 @@ use App\Http\Controllers\Api\Attendance\RequestController;
 use App\Http\Controllers\Api\Attendance\OvertimeController;
 use App\Http\Controllers\Api\Mom\MeetingController;
 use App\Http\Controllers\Api\Loan\LoanController;
-use App\Http\Controllers\Api\Offboarding\offboardingController;
+use App\Http\Controllers\Api\Offboarding\OffboardingController;
+use App\Http\Controllers\Api\Performance\PerformanceController as ApiPerformanceController;
 
 use App\Http\Controllers\AI\AnnoucementController as AIAnnoucementController;
 use App\Http\Controllers\AI\AttendanceController as AIAttendanceController;
@@ -92,6 +93,8 @@ Route::middleware('tenant')->group(function () {
         //Expense
         Route::get('/expense-type', [ExpenseController::class, 'fetch_type']);
         Route::get('/view-expense', [ExpenseController::class, 'view']);
+        Route::get('/view-expense-payments', [ExpenseController::class, 'payments']);
+        Route::post('/withdraw-expense', [ExpenseController::class, 'withdraw']);
         Route::post('/create-expense', [ExpenseController::class, 'store']);
 
         Route::get('/view-team-expense', [ExpenseController::class, 'view_all']);
@@ -114,6 +117,15 @@ Route::middleware('tenant')->group(function () {
         Route::get('/user/attendance/view-regularization', [AttendanceController::class, 'getMyRegularizations']);
         Route::get('/manager/attendance/view-regularization', [AttendanceController::class, 'getReporteesRegularizations']);
         Route::post('/manager/attendance/update-regularization-approval', [AttendanceController::class, 'regularizationApproval']);
+
+        //Performance (employee self-service — no team/manager endpoints here)
+        Route::get('/user/performance/summary', [ApiPerformanceController::class, 'summary']);
+        Route::get('/user/performance/history', [ApiPerformanceController::class, 'history']);
+        Route::get('/user/performance/daily', [ApiPerformanceController::class, 'daily']);
+        Route::get('/user/performance/weekly', [ApiPerformanceController::class, 'weekly']);
+        Route::get('/user/performance/daily-detail', [ApiPerformanceController::class, 'dailyDetail']);
+        Route::get('/user/performance/review', [ApiPerformanceController::class, 'review']);
+        Route::post('/user/performance/review/{id}/acknowledge', [ApiPerformanceController::class, 'acknowledgeReview']);
 
         //shift plan
         Route::get('/user/shift/plan', [ShiftController::class, 'myShiftPlan']);
@@ -206,7 +218,8 @@ Route::middleware('tenant')->group(function () {
             Route::get('/noticePeriode', [OffboardingController::class, 'noticePeriode']);
             Route::get('/my-requests', [OffboardingController::class, 'myRequests']);
             Route::get('/show', [OffboardingController::class, 'show']);
-            Route::post('/store', [offboardingController::class, 'store']);
+            Route::post('/store', [OffboardingController::class, 'store']);
+            Route::post('/cancel/{id}', [OffboardingController::class, 'cancel']);
         });
         
         Route::prefix('ai')->group(function () {

@@ -436,6 +436,18 @@
                         </select>
                     </div>
                     <div class="filter-item">
+                        <select name="branch_id" class="form-control-sm-custom" onchange="this.form.submit()" style="width: 160px;">
+                            <option value="">-- All Branches --</option>
+                            @foreach($branches ?? [] as $b)
+                                <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <input type="text" name="search" class="form-control-sm-custom" placeholder="Search name or ID…"
+                               value="{{ request('search') }}" style="width: 170px;">
+                    </div>
+                    <div class="filter-item">
                         <button type="submit" class="btn-sm-custom">
                             <i class="feather-eye"></i> View
                         </button>
@@ -457,7 +469,7 @@
                     <div class="col-md-6">
                         <div class="emp-code">EmpCode: {{ $employee->employee_id ?? 'N/A' }}</div>
                         <div class="emp-name">{{ $employee->name }}</div>
-                        <div class="emp-dept">Dept: <strong>{{ $employee->department_name ?? 'N/A' }}</strong> | Desig: <strong>{{ $employee->designation_name ?? 'N/A' }}</strong></div>
+                        <div class="emp-dept">Dept: <strong>{{ $employee->department_name ?? 'N/A' }}</strong> | Desig: <strong>{{ $employee->designation_name ?? 'N/A' }}</strong> | Branch: <strong>{{ $employee->branch_name ?? 'N/A' }}</strong></div>
                     </div>
                     <div class="col-md-6 text-md-end mt-2 mt-md-0">
                         <span class="badge bg-light text-dark px-3 py-2">
@@ -570,6 +582,7 @@
                             </div>
                             <div class="emp-dept">
                                 {{ $emp->department_name ?? 'N/A' }}
+                                <br><small class="text-muted">{{ $emp->branch_name ?? 'No branch' }}</small>
                             </div>
                             <div class="emp-stats">
                                 <span class="stat">P: <strong class="num present">{{ $summary['present'] }}</strong></span>

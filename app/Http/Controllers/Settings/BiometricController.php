@@ -37,6 +37,11 @@ class BiometricController extends Controller
             'devices' => $devices,
             'branches' => AttendanceLocation::where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']),
             'timezones' => self::TZS,
+            'totalDevices' => $devices->count(),
+            'activeDevices' => $devices->where('is_active', true)->count(),
+            'inactiveDevices' => $devices->where('is_active', false)->count(),
+            'mappedTotal' => $devices->sum('mapped_count'),
+            'unmappedTotal' => $devices->sum('unmapped_count'),
         ]);
     }
 
@@ -53,8 +58,9 @@ class BiometricController extends Controller
             'direction_mode' => ['required', 'in:auto,in,out,by_verify_mode'],
             'provision_scope' => ['nullable', 'in:tenant,branch'],
             'default_privilege' => ['nullable', 'integer', 'in:0,1,2,3'],
+            'allow_direct_onboarding' => ['nullable', 'boolean'],
         ]);
-        unset($data['provision_scope'], $data['default_privilege']);
+        unset($data['provision_scope'], $data['default_privilege'], $data['allow_direct_onboarding']);
 
         BiometricDevice::create($data + [
             'tenant_id' => $tenantId,
@@ -62,8 +68,13 @@ class BiometricController extends Controller
             'auto_provision' => $request->boolean('auto_provision', true),
             'provision_scope' => $request->input('provision_scope', 'tenant'),
             'default_privilege' => (int) $request->input('default_privilege', 0),
+            'allow_direct_onboarding' => $request->boolean('allow_direct_onboarding', false),
             'created_by' => Auth::id(),
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Device added.']);
+        }
 
         return back()->with('success', 'Device added.');
     }
@@ -81,14 +92,20 @@ class BiometricController extends Controller
             'is_active' => ['nullable', 'boolean'],
             'provision_scope' => ['nullable', 'in:tenant,branch'],
             'default_privilege' => ['nullable', 'integer', 'in:0,1,2,3'],
+            'allow_direct_onboarding' => ['nullable', 'boolean'],
         ]);
-        unset($data['provision_scope'], $data['default_privilege']);
+        unset($data['provision_scope'], $data['default_privilege'], $data['allow_direct_onboarding']);
         $device->update($data + [
             'is_active' => $request->boolean('is_active'),
             'auto_provision' => $request->boolean('auto_provision'),
             'provision_scope' => $request->input('provision_scope', 'tenant'),
             'default_privilege' => (int) $request->input('default_privilege', 0),
+            'allow_direct_onboarding' => $request->boolean('allow_direct_onboarding'),
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Device updated.']);
+        }
 
         return back()->with('success', 'Device updated.');
     }
@@ -153,25 +170,36 @@ class BiometricController extends Controller
                 ['Content-Type' => 'application/json']);
     }
 
-    public function enrollments(BiometricDevice $device)
+    public function enrollments(Request $request, BiometricDevice $device)
     {
         $this->authorizeTenant($device);
         $tenantId = (int) $device->tenant_id;
+        $q = trim((string) $request->input('q', ''));
+
+        $counts = [
+            'synced' => BiometricEnrollment::where('biometric_device_id', $device->id)->where('sync_state', 'synced')->count(),
+            'pending' => BiometricEnrollment::where('biometric_device_id', $device->id)->where('sync_state', 'pending')->count(),
+            'removing' => BiometricEnrollment::where('biometric_device_id', $device->id)->where('sync_state', 'removing')->count(),
+            'failed' => BiometricEnrollment::where('biometric_device_id', $device->id)->where('sync_state', 'failed')->count(),
+        ];
 
         $rows = BiometricEnrollment::where('biometric_device_id', $device->id)
             ->with('user:id,name,employee_id,card_number')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($w) use ($q) {
+                    $w->where('enroll_no', 'like', "%{$q}%")
+                        ->orWhere('device_user_id', 'like', "%{$q}%")
+                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")->orWhere('employee_id', 'like', "%{$q}%"));
+                });
+            })
             ->orderByRaw("FIELD(sync_state,'failed','pending','removing','synced')")
-            ->orderBy('enroll_no')->get();
+            ->orderBy('enroll_no')->paginate(50)->withQueryString();
 
         return view('client.settings.biometric.enrollments', [
             'device' => $device,
             'rows' => $rows,
-            'counts' => [
-                'synced' => $rows->where('sync_state', 'synced')->count(),
-                'pending' => $rows->where('sync_state', 'pending')->count(),
-                'removing' => $rows->where('sync_state', 'removing')->count(),
-                'failed' => $rows->where('sync_state', 'failed')->count(),
-            ],
+            'q' => $q,
+            'counts' => $counts,
             'employees' => User::where('tenant_id', $tenantId)->where('status', 1)
                 ->orderBy('name')->get(['id', 'name', 'employee_id']),
         ]);
@@ -238,6 +266,60 @@ class BiometricController extends Controller
         return back()->with('success', 'Enrollment removed.');
     }
 
+    public function bulkRepushEnrollments(Request $request, BiometricDevice $device)
+    {
+        $this->authorizeTenant($device);
+        $data = $request->validate([
+            'enrollment_ids' => ['required', 'array', 'min:1'],
+            'enrollment_ids.*' => ['integer'],
+        ]);
+
+        $count = BiometricEnrollment::where('biometric_device_id', $device->id)
+            ->whereIn('id', $data['enrollment_ids'])
+            ->update(['sync_state' => 'pending', 'last_error' => null]);
+
+        $message = "{$count} enrollment(s) queued for re-push.";
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    public function bulkRemoveEnrollments(Request $request, BiometricDevice $device)
+    {
+        $this->authorizeTenant($device);
+        $data = $request->validate([
+            'enrollment_ids' => ['required', 'array', 'min:1'],
+            'enrollment_ids.*' => ['integer'],
+        ]);
+
+        $rows = BiometricEnrollment::where('biometric_device_id', $device->id)
+            ->whereIn('id', $data['enrollment_ids'])->get();
+
+        $queued = 0;
+        $deleted = 0;
+        foreach ($rows as $r) {
+            if ($r->device_user_id) {
+                $r->update(['sync_state' => 'removing']);
+                $queued++;
+            } else {
+                $r->delete();
+                $deleted++;
+            }
+        }
+
+        $message = trim(($queued ? "{$queued} queued for removal from the device. " : '').($deleted ? "{$deleted} removed." : ''));
+        $message = $message ?: 'Nothing to remove.';
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return back()->with('success', $message);
+    }
+
     public function mapEnrollment(Request $request, BiometricDevice $device)
     {
         $this->authorizeTenant($device);
@@ -293,13 +375,29 @@ class BiometricController extends Controller
     public function punches(Request $request)
     {
         $tenantId = (int) Auth::user()->tenant_id;
+        $q = trim((string) $request->input('q', ''));
 
         $punches = BiometricPunch::where('tenant_id', $tenantId)
             ->with(['user:id,name,employee_id', 'device:id,name'])
-            ->when($request->input('status'), fn ($q, $s) => $q->where('status', $s))
+            ->when($request->input('status'), fn ($query, $s) => $query->where('status', $s))
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($w) use ($q) {
+                    $w->where('enroll_no', 'like', "%{$q}%")
+                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")->orWhere('employee_id', 'like', "%{$q}%"))
+                        ->orWhereHas('device', fn ($d) => $d->where('name', 'like', "%{$q}%"));
+                });
+            })
             ->orderByDesc('id')->paginate(50)->withQueryString();
 
-        return view('client.settings.biometric.punches', compact('punches'));
+        if ($request->wantsJson()) {
+            return response()->json([
+                'html' => view('client.settings.biometric.partials._punch-rows', ['punches' => $punches])->render(),
+                'pagination' => $punches->links()->toHtml(),
+                'is_empty' => $punches->isEmpty(),
+            ]);
+        }
+
+        return view('client.settings.biometric.punches', ['punches' => $punches, 'q' => $q]);
     }
 
     public function reprocessPunch(BiometricPunch $punch)

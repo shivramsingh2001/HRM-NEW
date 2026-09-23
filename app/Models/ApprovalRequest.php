@@ -27,4 +27,9 @@ class ApprovalRequest extends Model
     {
         return $this->morphTo(null, 'subject_type', 'subject_id');
     }
+
+    public function requestedBy()
+    {
+        return $this->belongsTo(User::class, 'requested_by');
+    }
 }

@@ -292,6 +292,7 @@ class MonthlyPayrollController extends Controller
 
                 foreach ($toReplace as $mp) {
                     $this->loanDeductionService->revokeForPayroll($mp->id, $mp->tenant_id);
+                    app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->revokeForPayroll($mp->id, $mp->tenant_id);
                     PayrollComponent::where('monthly_payroll_id', $mp->id)->delete();
                     $mp->delete();
                 }
@@ -653,6 +654,21 @@ class MonthlyPayrollController extends Controller
         }
 
         // =====================================================================
+        // LATE ARRIVAL / EARLY LEAVING DEDUCTIONS -- independent of whether
+        // the tenant's attendance-status action (half day/absent) is even
+        // enabled; see App\Services\Payroll\LateEarlyDeductionCalculator.
+        // =====================================================================
+        $lateEarly = app(\App\Services\Payroll\LateEarlyDeductionCalculator::class)
+            ->calculate($employee, $tenantId, $yearMonth);
+
+        if ($lateEarly['late_deduction_amount'] > 0) {
+            $employeeDeductions['late'] = $lateEarly['late_deduction_amount'];
+        }
+        if ($lateEarly['early_deduction_amount'] > 0) {
+            $employeeDeductions['early'] = $lateEarly['early_deduction_amount'];
+        }
+
+        // =====================================================================
         // TOTALS
         // =====================================================================
         $grossEarnings = array_sum($earnings);
@@ -727,6 +743,8 @@ class MonthlyPayrollController extends Controller
             'loan_deduction'            => $employeeDeductions['loan'] ?? 0,
             'loan_deduction_enabled'    => $includeLoanDeductions,
             'loan_deduction_computed'   => $loanDeductionDue,
+            'late_deduction'            => $employeeDeductions['late'] ?? 0,
+            'early_deduction'           => $employeeDeductions['early'] ?? 0,
             'other_deductions'          => $employeeDeductions['other'] ?? 0,
             // Employer Contributions (STORED but NOT deducted from salary)
             'employer_provident_fund'   => $employerContributions['employer_pf'] ?? 0,
@@ -850,6 +868,8 @@ class MonthlyPayrollController extends Controller
             'loan_deduction' => $result['loan_deduction'],
             'loan_deduction_enabled' => $includeLoanDeductions,
             'loan_deduction_computed' => $result['loan_deduction_due'],
+            'late_deduction' => $result['late_deduction'] ?? 0,
+            'early_deduction' => $result['early_deduction'] ?? 0,
             'gross_earnings' => $result['gross_earnings'],
             'total_deductions' => $result['total_deductions'],
             'net_payable' => $result['net_payable'],
@@ -894,6 +914,9 @@ class MonthlyPayrollController extends Controller
         if ($includeLoanDeductions && $result['loan_deduction'] > 0) {
             $this->updateLoanRepayments($employee->id, $yearMonth, $result['loan_deduction'], $tenantId, $monthlyPayroll->id);
         }
+
+        // Expense reimbursements the engine put on this payslip: link them to it (so a recalculation re-reads exactly these).
+        $this->linkExpenseReimbursements($monthlyPayroll, $result);
 
         // Now that this payslip is actually persisted, close the loop from
         // Phase 6: mark whatever arrears/bonus rows it just paid out.
@@ -1762,6 +1785,8 @@ class MonthlyPayrollController extends Controller
             'pt'    => 'Professional Tax',
             'tds'   => 'TDS',
             'loan'  => 'Loan Deduction',
+            'late'  => 'Late Arrival Deduction',
+            'early' => 'Early Leaving Deduction',
             'other' => 'Other Deductions',
         ][$key] ?? ucwords(str_replace('_', ' ', $key));
     }
@@ -2378,7 +2403,8 @@ class MonthlyPayrollController extends Controller
         }
 
         foreach ($result['line_items'] as &$li) {
-            if (array_key_exists($li['code'], $overrides)) {
+            // A reimbursement line is fixed by the approved claim - payroll pays exactly that amount.
+            if ($li['code'] !== \App\Services\Expense\ExpenseReimbursementPayrollService::CODE && array_key_exists($li['code'], $overrides)) {
                 $li['amount'] = round((float) $overrides[$li['code']], 2);
             }
         }
@@ -2433,6 +2459,8 @@ class MonthlyPayrollController extends Controller
             'loan_deduction' => $result['loan_deduction'],
             'loan_deduction_enabled' => $includeLoanDeductions,
             'loan_deduction_computed' => $result['loan_deduction_due'],
+            'late_deduction' => $result['late_deduction'] ?? 0,
+            'early_deduction' => $result['early_deduction'] ?? 0,
             'gross_earnings' => $result['gross_earnings'],
             'total_deductions' => $result['total_deductions'],
             'net_payable' => $result['net_payable'],
@@ -2474,6 +2502,21 @@ class MonthlyPayrollController extends Controller
         } else {
             $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $monthlyPayroll->tenant_id);
         }
+
+        $this->linkExpenseReimbursements($monthlyPayroll, $result);
+    }
+
+    /**
+     * Attach the payslip's `expense_reimbursement` lines to their expenses (idempotent revoke-then-relink, so a
+     * recalculation that no longer includes one lets it go). Same shape as the loan-ledger sync above.
+     */
+    private function linkExpenseReimbursements(MonthlyPayroll $monthlyPayroll, array $result): void
+    {
+        $ids = collect($result['line_items'])
+            ->where('code', \App\Services\Expense\ExpenseReimbursementPayrollService::CODE)
+            ->pluck('source_id')->filter()->all();
+
+        app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->applyToPayroll((int) $monthlyPayroll->id, (int) $monthlyPayroll->tenant_id, $ids);
     }
 
     public function destroy($id)
@@ -2498,6 +2541,7 @@ class MonthlyPayrollController extends Controller
             // the cascade below) while still marked paid, permanently
             // desyncing the loan balance from any surviving payslip.
             $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $tenantId);
+            app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->revokeForPayroll((int) $monthlyPayroll->id, (int) $tenantId);   // reimbursements go back to the queue
             PayrollComponent::where('monthly_payroll_id', $id)->delete();
             $monthlyPayroll->delete();
             DB::commit();
@@ -2549,6 +2593,8 @@ class MonthlyPayrollController extends Controller
 
             DB::beginTransaction();
             $monthlyPayroll->update(['payment_status' => 'pending']);
+            // A paid payslip's reimbursement payments are reversed so the payslip can be corrected and paid again.
+            app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->onPayrollStatusChange($monthlyPayroll, $previousStatus, 'pending', Auth::user());
 
             PayrollAuditLog::create([
                 'tenant_id' => $tenantId,
@@ -2606,11 +2652,19 @@ class MonthlyPayrollController extends Controller
                 $updateData['transaction_reference'] = $request->transaction_reference;
             }
 
-            $monthlyPayroll->update($updateData);
+            $previousStatus = $monthlyPayroll->payment_status;
+
+            // One transaction: if a reimbursement on this payslip can no longer be paid, the payslip is NOT marked paid.
+            DB::transaction(function () use ($monthlyPayroll, $updateData, $previousStatus, $request) {
+                $monthlyPayroll->update($updateData);
+                app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->onPayrollStatusChange($monthlyPayroll, $previousStatus, $request->payment_status, Auth::user());
+            });
 
             $this->maybeLockPeriod($monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month, $request->payment_status);
 
             return redirect()->back()->with('success', 'Payment status updated successfully.');
+        } catch (\App\Exceptions\ExpenseException $e) {
+            return redirect()->back()->with('error', 'Cannot change the status: ' . $e->getMessage());
         } catch (\Exception $e) {
             Log::error('Update status error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update status: ' . $e->getMessage());
@@ -2665,7 +2719,18 @@ class MonthlyPayrollController extends Controller
             $affected = MonthlyPayroll::whereIn('id', $request->ids)
                 ->get(['tenant_id', 'payroll_month'])->unique(fn ($r) => $r->tenant_id . $r->payroll_month);
 
+            // The bulk update below is a query-builder update, so model events never fire - remember each
+            // payslip's previous status and drive the reimbursement settlement explicitly.
+            $before = MonthlyPayroll::whereIn('id', $request->ids)->orderBy('id')->get()->keyBy('id');
+            $previousStatus = $before->map->payment_status->all();
+
             MonthlyPayroll::whereIn('id', $request->ids)->update($updateData);
+
+            $expensePayroll = app(\App\Services\Expense\ExpenseReimbursementPayrollService::class);
+            foreach ($before as $slipId => $slip) {
+                $slip->refresh();
+                $expensePayroll->onPayrollStatusChange($slip, $previousStatus[$slipId], $request->payment_status, Auth::user());
+            }
 
             DB::commit();
 
@@ -2674,6 +2739,10 @@ class MonthlyPayrollController extends Controller
             }
 
             return redirect()->back()->with('success', count($request->ids) . ' payroll records updated successfully.');
+        } catch (\App\Exceptions\ExpenseException $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'Nothing was changed - a reimbursement on one of the payslips cannot be paid: ' . $e->getMessage());
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Bulk update error: ' . $e->getMessage());

@@ -88,6 +88,81 @@ class ExpensePaymentNotificationService
         }
     }
 
+    /** Reminder to an employee who still holds an unspent advance (push + in-app). Returns false on failure. */
+    public function notifyAdvanceReminder(User $employee, string $totalFormatted, int $oldestDays): bool
+    {
+        try {
+            $this->sendNotification(
+                $employee,
+                '⏰ Unsettled advance',
+                "You still hold ₹{$totalFormatted} of unspent advance (oldest {$oldestDays} day(s)). Please settle it.",
+                ['type' => 'expense_advance_reminder', 'action' => 'advance_reminder', 'total' => $totalFormatted, 'oldest_days' => $oldestDays]
+            );
+
+            $employee->notify(new \App\Notifications\ExpenseAdvanceReminderNotification($totalFormatted, $oldestDays));
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to send advance reminder', ['error' => $e->getMessage(), 'user_id' => $employee->id]);
+
+            return false;
+        }
+    }
+
+    /**
+     * A whole voucher was posted: ONE digest per employee (their lines only) plus ONE
+     * summary to the payer — not a notification per payment to every reporting head,
+     * admin and HR user. Recipients are resolved with a single query.
+     *
+     * @param  \Illuminate\Support\Collection<int, ExpensePayment>  $payments
+     * @param  \Illuminate\Support\Collection<int, Expense>  $expenses  keyed by expense id
+     */
+    public function notifyBatchPaid(\App\Models\ExpensePaymentBatch $batch, $payments, $expenses, User $payer): bool
+    {
+        try {
+            $byEmployee = $payments->groupBy(fn ($p) => $expenses[$p->expense_id]->user_id);
+            $employees = User::whereIn('id', $byEmployee->keys())->get()->keyBy('id');
+            $date = $batch->payment_date?->format('Y-m-d') ?? '';
+
+            foreach ($byEmployee as $userId => $rows) {
+                $employee = $employees->get($userId);
+                if (! $employee) {
+                    continue;
+                }
+
+                $total = number_format($rows->sum(fn ($p) => \App\Support\Money::toCents($p->amount)) / 100, 2);
+                $title = '💰 Payment received';
+                $body = "₹{$total} has been paid to you in {$rows->count()} payment(s) — voucher {$batch->voucher_number}";
+
+                $this->sendNotification($employee, $title, $body, [
+                    'type' => 'expense_payment',
+                    'action' => 'batch_paid',
+                    'batch_id' => $batch->id,
+                    'voucher_number' => $batch->voucher_number,
+                    'line_count' => $rows->count(),
+                    'total' => $total,
+                    'payment_mode' => $batch->payment_mode,
+                    'payment_date' => $date,
+                ]);
+
+                $employee->notify(new \App\Notifications\ExpenseBatchPaymentNotification(
+                    $batch->id, $batch->voucher_number, 'employee', $rows->count(), $total, $batch->payment_mode, $date
+                ));
+            }
+
+            $payer->notify(new \App\Notifications\ExpenseBatchPaymentNotification(
+                $batch->id, $batch->voucher_number, 'payer', $payments->count(),
+                number_format((float) $batch->total_amount, 2), $batch->payment_mode, $date, $byEmployee->count()
+            ));
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to send batch payment notifications', ['error' => $e->getMessage(), 'batch_id' => $batch->id]);
+
+            return false;
+        }
+    }
+
     /**
      * Send notification when payment is updated
      */

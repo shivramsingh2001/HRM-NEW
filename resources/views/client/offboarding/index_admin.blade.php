@@ -1,78 +1,75 @@
-{{-- resources/views/client/offboarding/index_admin.blade.php --}}
 @extends('client.layout.master')
 
 @section('style')
     <style>
-        /* ==================== OFFBOARDING STATUS BADGES ==================== */
-        .offboarding-status {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
+        .employee-sub {
+            font-size: 10.5px;
+            color: #94a3b8;
+        }
+
+        .custom-employee-dropdown .btn {
+            height: 36px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            color: #1e293b;
+            font-size: 12px;
+            padding: 0 12px;
+        }
+
+        .custom-employee-dropdown .btn:hover {
+            background: #ffffff;
+            border-color: #cbd5e1;
+        }
+
+        .employee-initials,
+        .employee-initials-sm {
+            width: 28px;
+            height: 28px;
+            background: var(--primary-mid, #1e3a8a);
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             font-weight: 600;
-            display: inline-block;
+            font-size: 12px;
+            flex-shrink: 0;
         }
 
-        .status-pending_approval {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-approved {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .status-completed {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .status-rejected {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status-cancelled {
-            background: #f1f5f9;
-            color: #475569;
-        }
-
-        /* ==================== STAGE BADGES ==================== */
-        .stage-badge {
-            padding: 3px 10px;
-            border-radius: 20px;
+        .employee-initials-sm {
+            width: 24px;
+            height: 24px;
             font-size: 11px;
-            font-weight: 500;
-            display: inline-block;
         }
 
-        .stage-completed {
-            background: #d1fae5;
-            color: #065f46;
+        .custom-employee-dropdown .dropdown-menu {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            min-width: 260px;
         }
 
-        .stage-in_progress {
-            background: #dbeafe;
-            color: #1e40af;
+        .custom-employee-dropdown .dropdown-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            margin-bottom: 2px;
         }
 
-        .stage-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .stage-not_started {
+        .custom-employee-dropdown .dropdown-item:hover {
             background: #f1f5f9;
-            color: #64748b;
         }
 
-        /* ==================== STATS CARDS ==================== */
-        /* .stats-grid/.stats-card/.stats-card.active/.stats-info/.stats-icon
-           are centralized in client.layout.head (single blue-only theme,
-           click-to-filter JS below still targets .stats-card/data-status
-           unchanged) — no local copy. */
+        .custom-employee-dropdown .dropdown-item.active {
+            background: var(--primary-light, #e3edfe);
+            color: var(--primary-mid, #1e3a8a);
+        }
 
-        /* ==================== FILTER SECTION ==================== */
+        /* ==================== MODERN FILTER SECTION ====================
+                   Same markup/classes as Tasks "Assigned By Me" / Overtime Management. */
         .filter-wrapper {
             background: white;
             border-radius: 12px;
@@ -99,13 +96,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: var(--primary-mid, #1e3a8a);
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light, #e3edfe);
+            color: var(--primary-mid, #1e3a8a);
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -130,6 +127,10 @@
             color: #ef4444;
         }
 
+        .clear-all-link i {
+            font-size: 14px;
+        }
+
         .filter-row {
             display: flex;
             flex-wrap: wrap;
@@ -138,29 +139,53 @@
         }
 
         .filter-item {
-            flex: 0 0 auto;
-            min-width: 160px;
+            flex: 1;
+            min-width: 150px;
         }
 
-        .filter-select {
+        .filter-item .form-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 4px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .filter-select,
+        .filter-input {
             width: 100%;
             height: 36px;
-            padding: 6px 28px 6px 10px;
+            padding: 6px 10px;
             font-size: 12px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             background: #f8fafc;
-            background-size: 14px;
-            appearance: none;
-            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .filter-select:focus {
+        .filter-select {
+            padding-right: 28px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .filter-select:focus,
+        .filter-input:focus {
             background-color: white;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary-mid, #1e3a8a);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
             outline: none;
+        }
+
+        .filter-select:hover {
+            background-color: white;
+            border-color: #94a3b8;
         }
 
         .reset-btn {
@@ -186,40 +211,99 @@
             color: #1e293b;
         }
 
-        /* ==================== TABLE STYLES ==================== */
-        .employee-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .employee-avatar {
-            width: 32px;
-            height: 32px;
-            background: #4f46e5;
-            color: white;
+        .filter-submit-btn {
+            height: 36px;
+            padding: 0 16px;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            color: #fff;
+            border: none;
             border-radius: 8px;
-            display: flex;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 12px;
+            gap: 6px;
+            white-space: nowrap;
+            cursor: pointer;
         }
 
-        .employee-details {
+        .filter-submit-btn:hover {
+            filter: brightness(0.9);
+        }
+
+        .active-filters {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
         }
 
-        .employee-name {
+        .active-filters-label {
+            font-size: 11px;
             font-weight: 600;
-            font-size: 12px;
-            color: #1e293b;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 20px;
         }
 
-        .employee-email {
-            font-size: 10px;
-            color: #64748b;
+        .filter-tag {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            padding: 3px 10px 3px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .filter-tag i {
+            color: var(--primary-mid, #1e3a8a);
+            font-size: 11px;
+        }
+
+        .filter-tag .remove-tag {
+            color: #94a3b8;
+            margin-left: 2px;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .filter-tag .remove-tag:hover {
+            color: #ef4444;
+        }
+
+        .filter-tag.clear-all {
+            background: var(--primary-light, #e3edfe);
+            border-color: var(--primary-mid, #1e3a8a);
+            color: var(--primary-mid, #1e3a8a);
+            font-weight: 600;
+            text-decoration: none;
+            padding: 3px 10px;
+        }
+
+        .filter-tag.clear-all:hover {
+            background: var(--primary-mid, #1e3a8a);
+            color: white;
+        }
+
+        /* ==================== TABLE ==================== */
+        .ob-table-card {
+            background: #fff;
+            border: 1px solid #edf2f7;
+            border-radius: 12px;
+            padding: 4px 14px;
         }
 
         .table {
@@ -249,11 +333,10 @@
             background-color: #f8fafc;
         }
 
-        /* ==================== ACTION BUTTON ==================== */
         .action-btn {
             width: 28px;
             height: 28px;
-            border-radius: 6px;
+            border-radius: 7px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -265,147 +348,101 @@
 
         .action-btn:hover {
             background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary-mid, #1e3a8a);
+            border-color: var(--primary-mid, #1e3a8a);
         }
 
-        .dropdown-item {
-            font-size: 12px;
-            padding: 6px 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .dropdown-item i {
-            font-size: 12px;
-        }
-
-        /* ==================== CUSTOM EMPLOYEE DROPDOWN ==================== */
-        .custom-employee-dropdown .btn {
-            height: 36px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            color: #1e293b;
-            font-size: 13px;
-            padding: 0 12px;
-        }
-
-        .custom-employee-dropdown .btn:hover {
-            background: #ffffff;
-            border-color: #cbd5e1;
-        }
-
-        .custom-employee-dropdown .dropdown-menu {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            padding: 8px;
-            max-height: 300px;
-            overflow-y: auto;
-            min-width: 250px;
-        }
-
-        .custom-employee-dropdown .dropdown-item {
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #1e293b;
-            margin-bottom: 2px;
-        }
-
-        .custom-employee-dropdown .dropdown-item:hover {
-            background: #f1f5f9;
-        }
-
-        .employee-initials {
-            width: 32px;
-            height: 32px;
-            background: #eef2ff;
-            color: #4f46e5;
-            border-radius: 8px;
+        /* ==================== NEW REQUEST BUTTON ==================== */
+        .ob-btn {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 12px;
+            gap: 6px;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            color: #fff;
+            border: none;
+            font-size: 12.5px;
+            font-weight: 500;
+            padding: 7px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            cursor: pointer;
         }
 
-        /* ==================== BUTTON STYLES ==================== */
-        .btn-xs {
-            padding: 2px 8px;
-            font-size: 10px;
-            border-radius: 4px;
+        .ob-btn:hover {
+            filter: brightness(0.9);
+            color: #fff;
         }
 
-        .btn-xs i {
-            font-size: 10px;
-            margin-right: 2px;
+        /* ==================== DRAWER FORM ==================== */
+        .ui-drawer .form-group {
+            margin-bottom: 14px;
         }
 
-        .stage-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-        }
-
-        /* ==================== PAGINATION ==================== */
-        .pagination {
-            margin: 0;
-            gap: 4px;
-            padding: 15px;
-        }
-
-        .page-link {
-            border: 1px solid #e2e8f0;
-            color: #475569;
+        .ui-drawer label {
             font-size: 11px;
-            padding: 5px 10px;
-            border-radius: 6px !important;
-        }
-
-        .page-link:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-        }
-
-        .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
-        }
-
-        /* ==================== MODAL STYLES ==================== */
-        .modal-form-group {
-            margin-bottom: 15px;
-        }
-
-        .modal-form-group label {
-            font-size: 12px;
             font-weight: 600;
-            color: #334155;
-            margin-bottom: 5px;
+            color: #1a2236;
+            margin-bottom: 3px;
             display: block;
         }
 
-        .modal-form-group .required:after {
-            content: "*";
-            color: #dc3545;
-            margin-left: 4px;
-        }
-
-        .reject-stage-info {
-            background: #fff7ed;
-            border: 1px solid #fed7aa;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 14px;
+        .ui-drawer .form-control,
+        .ui-drawer select.form-control {
             font-size: 12px;
-            color: #9a3412;
+            padding: 7px 10px;
+            border-radius: 7px;
+            border: 1px solid #dfe5f0;
         }
 
-        /* ==================== RESPONSIVE ==================== */
+        .ui-drawer .form-control:focus {
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 .15rem rgba(30, 58, 138, .12);
+        }
+
+        .ui-drawer .form-hint {
+            font-size: 10.5px;
+            color: #6b7385;
+            margin-top: 3px;
+            display: block;
+        }
+
+        .ui-drawer .error-text {
+            font-size: 10.5px;
+            color: #dc3545;
+            display: block;
+            margin-top: 2px;
+        }
+
+        #newOffboardingDrawer .hint-bar {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border-left: 3px solid var(--primary-mid, #1e3a8a);
+            margin-bottom: 14px;
+            font-size: 11px;
+            color: #475569;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .filter-row {
+                gap: 10px;
+            }
+
+            .filter-item {
+                flex: 1 1 calc(33.333% - 10px);
+                min-width: 120px;
+            }
+        }
+
         @media (max-width: 768px) {
+            .filter-wrapper {
+                padding: 12px;
+            }
+
             .filter-row {
                 flex-direction: column;
                 align-items: stretch;
@@ -415,59 +452,52 @@
                 width: 100%;
             }
 
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .stage-buttons {
-                flex-direction: column;
+            .table th,
+            .table td {
+                padding: 8px 10px;
             }
         }
     </style>
 @endsection
 
 @section('content-area')
-    @php
-        $userRole = auth()->user()->role ?? 'employee';
-        $isAdminOrHR = in_array($userRole, ['admin', 'hr']);
-    @endphp
+    <x-ui.page-header title="Offboarding Management">
+        <x-slot:actions>
+            <button type="button" class="ob-btn" data-bs-toggle="offcanvas" data-bs-target="#newOffboardingDrawer">
+                <i class="feather-plus"></i> New Offboarding Request
+            </button>
+        </x-slot:actions>
+    </x-ui.page-header>
 
-    <!-- Page Header -->
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Offboarding Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Offboarding</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <a href="{{ route('offboarding.create') }}" class="btn btn-primary btn-sm">
-                <i class="feather-user-minus me-1"></i>
-                <span>New Offboarding Request</span>
-            </a>
-        </div>
-    </div>
-
-    <!-- Main Content -->
     <div class="main-content" style="padding: 20px !important;">
+
+        @if (session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+        @if (session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
 
         <!-- Statistics Cards -->
         <div class="stats-grid">
             <div class="stats-card" data-status="all">
                 <div class="stats-info">
-                    <h3>{{ $stats['total'] ?? 0 }}</h3>
-                    <p>Total Requests</p>
+                    <h3>{{ $stats['total'] }}</h3>
+                    <p>Total</p>
                 </div>
                 <div class="stats-icon">
-                    <i class="feather-file-text"></i>
+                    <i class="feather-users"></i>
                 </div>
             </div>
             <div class="stats-card" data-status="pending_approval">
                 <div class="stats-info">
-                    <h3>{{ $stats['pending_approval'] ?? 0 }}</h3>
+                    <h3>{{ $stats['pending_approval'] }}</h3>
                     <p>Pending Approval</p>
                 </div>
                 <div class="stats-icon">
@@ -476,41 +506,50 @@
             </div>
             <div class="stats-card" data-status="approved">
                 <div class="stats-info">
-                    <h3>{{ $stats['approved'] ?? 0 }}</h3>
-                    <p>Approved</p>
+                    <h3>{{ $stats['in_progress'] }}</h3>
+                    <p>In Progress</p>
+                </div>
+                <div class="stats-icon">
+                    <i class="feather-loader"></i>
+                </div>
+            </div>
+            <div class="stats-card" data-status="completed">
+                <div class="stats-info">
+                    <h3>{{ $stats['completed'] }}</h3>
+                    <p>Completed</p>
                 </div>
                 <div class="stats-icon">
                     <i class="feather-check-circle"></i>
                 </div>
             </div>
-            <div class="stats-card" data-status="completed">
-                <div class="stats-info">
-                    <h3>{{ $stats['completed'] ?? 0 }}</h3>
-                    <p>Completed</p>
-                </div>
-                <div class="stats-icon">
-                    <i class="feather-check-square"></i>
-                </div>
-            </div>
             <div class="stats-card" data-status="rejected">
                 <div class="stats-info">
-                    <h3>{{ $stats['rejected'] ?? 0 }}</h3>
+                    <h3>{{ $stats['rejected'] }}</h3>
                     <p>Rejected</p>
                 </div>
                 <div class="stats-icon">
                     <i class="feather-x-circle"></i>
                 </div>
             </div>
+            <div class="stats-card" data-status="cancelled">
+                <div class="stats-info">
+                    <h3>{{ $stats['cancelled'] }}</h3>
+                    <p>Cancelled</p>
+                </div>
+                <div class="stats-icon">
+                    <i class="feather-slash"></i>
+                </div>
+            </div>
         </div>
 
-        <!-- Filter Section -->
+        <!-- Modern Filter Section -->
         <div class="filter-wrapper">
             <div class="filter-header">
                 <div class="filter-title">
                     <i class="feather-filter"></i>
-                    Filter Offboarding Requests
+                    Filter Requests
                     @php
-                        $activeFilterCount = collect(request()->only(['status', 'employee_id', 'search', 'stage']))
+                        $activeFilterCount = collect(request()->only(['status', 'stage', 'employee_id', 'search']))
                             ->filter()
                             ->count();
                     @endphp
@@ -518,7 +557,7 @@
                         <span>{{ $activeFilterCount }} active</span>
                     @endif
                 </div>
-                @if (request()->hasAny(['status', 'employee_id', 'search', 'stage']))
+                @if (request()->hasAny(['status', 'stage', 'employee_id', 'search']))
                     <a href="{{ route('offboarding.index') }}" class="clear-all-link">
                         <i class="feather-x"></i>
                         Clear All
@@ -529,23 +568,31 @@
             <form action="{{ route('offboarding.index') }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     <div class="filter-item">
-                        <select name="status" class="filter-select" onchange="this.form.submit()">
-                            <option value="">All Status</option>
-                            <option value="pending_approval" {{ request('status') == 'pending_approval' ? 'selected' : '' }}>Pending Approval</option>
-                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
-                            <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
-                            <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
-                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        <select name="status" class="filter-select" id="statusFilter">
+                            <option value="">All statuses</option>
+                            @foreach (\App\Models\OffboardingRequest::$statuses as $value => $label)
+                                <option value="{{ $value }}" {{ request('status') == $value ? 'selected' : '' }}>
+                                    {{ $label }}</option>
+                            @endforeach
                         </select>
                     </div>
-
                     <div class="filter-item">
+                        <select name="stage" class="filter-select">
+                            <option value="">All stages</option>
+                            @foreach (\App\Models\OffboardingRequest::$stages as $value => $label)
+                                <option value="{{ $value }}" {{ request('stage') == $value ? 'selected' : '' }}>
+                                    {{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-item" style="min-width: 220px;">
                         <div class="custom-employee-dropdown">
                             <button class="btn btn-light w-100 d-flex align-items-center justify-content-between"
                                 type="button" id="employeeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <span class="d-flex align-items-center gap-2" id="selectedEmployeeDisplay">
                                     @if (request('employee_id') && ($selectedEmployee = $employees->firstWhere('id', request('employee_id'))))
-                                        <span class="employee-initials">{{ strtoupper(substr($selectedEmployee->name, 0, 2)) }}</span>
+                                        <span
+                                            class="employee-initials-sm">{{ strtoupper(substr($selectedEmployee->name, 0, 2)) }}</span>
                                         <span class="employee-name">{{ $selectedEmployee->name }}</span>
                                     @else
                                         <span class="text-muted">All Employees</span>
@@ -553,7 +600,6 @@
                                 </span>
                                 <i class="feather-chevron-down text-muted"></i>
                             </button>
-
                             <ul class="dropdown-menu w-80 p-2" aria-labelledby="employeeDropdown">
                                 <li>
                                     <a class="dropdown-item rounded {{ !request('employee_id') ? 'active' : '' }}"
@@ -561,17 +607,16 @@
                                         <span>All Employees</span>
                                     </a>
                                 </li>
-                                @foreach ($employees as $user)
-                                    @php
-                                        $initials = strtoupper(substr($user->name, 0, 2));
-                                    @endphp
+                                @foreach ($employees as $emp)
                                     <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 {{ request('employee_id') == $user->id ? 'active' : '' }}"
-                                            href="{{ route('offboarding.index', array_merge(request()->except(['page']), ['employee_id' => $user->id])) }}">
-                                            <span class="employee-initials">{{ $initials }}</span>
+                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 {{ request('employee_id') == $emp->id ? 'active' : '' }}"
+                                            href="{{ route('offboarding.index', array_merge(request()->except(['page']), ['employee_id' => $emp->id])) }}">
+                                            <span
+                                                class="employee-initials">{{ strtoupper(substr($emp->name, 0, 2)) }}</span>
                                             <div class="d-flex flex-column">
-                                                <span>{{ $user->name }} (<small class="text-muted">{{ $user->employee_id ?? 'N/A' }}</small>)</span>
-                                                <small class="text-muted">{{ $user->email }}</small>
+                                                <span>{{ $emp->name }} <small
+                                                        class="text-muted">({{ $emp->employee_id }})</small></span>
+                                                <small class="text-muted">{{ $emp->email }}</small>
                                             </div>
                                         </a>
                                     </li>
@@ -579,591 +624,231 @@
                             </ul>
                         </div>
                     </div>
-
                     <div class="filter-item">
+                        <input type="text" name="search" class="filter-input" placeholder="Search name / ID / email"
+                            value="{{ request('search') }}">
+                    </div>
+                    <div class="filter-item" style="min-width: auto; flex: 0 0 auto;">
+                        <button type="submit" class="filter-submit-btn"><i class="feather-search"></i> Search</button>
+                    </div>
+                    <div class="filter-item" style="min-width: auto; flex: 0 0 auto;">
                         <a href="{{ route('offboarding.index') }}" class="reset-btn">
                             <i class="feather-refresh-cw"></i> Reset
                         </a>
                     </div>
                 </div>
             </form>
+
+            @if (request()->hasAny(['status', 'stage', 'employee_id', 'search']))
+                <div class="active-filters">
+                    <span class="active-filters-label">Active Filters:</span>
+
+                    @if (request('status'))
+                        <span class="filter-tag">
+                            <i class="feather-activity"></i>
+                            Status: {{ \App\Models\OffboardingRequest::$statuses[request('status')] ?? request('status') }}
+                            <a href="{{ route('offboarding.index', array_merge(request()->except(['status', 'page']))) }}"
+                                class="remove-tag"><i class="feather-x"></i></a>
+                        </span>
+                    @endif
+
+                    @if (request('stage'))
+                        <span class="filter-tag">
+                            <i class="feather-flag"></i>
+                            Stage: {{ \App\Models\OffboardingRequest::$stages[request('stage')] ?? request('stage') }}
+                            <a href="{{ route('offboarding.index', array_merge(request()->except(['stage', 'page']))) }}"
+                                class="remove-tag"><i class="feather-x"></i></a>
+                        </span>
+                    @endif
+
+                    @if (request('employee_id') && ($selectedEmployee = $employees->firstWhere('id', request('employee_id'))))
+                        <span class="filter-tag">
+                            <i class="feather-user"></i>
+                            Employee: {{ $selectedEmployee->name }}
+                            <a href="{{ route('offboarding.index', array_merge(request()->except(['employee_id', 'page']))) }}"
+                                class="remove-tag"><i class="feather-x"></i></a>
+                        </span>
+                    @endif
+
+                    @if (request('search'))
+                        <span class="filter-tag">
+                            <i class="feather-search"></i>
+                            "{{ request('search') }}"
+                            <a href="{{ route('offboarding.index', array_merge(request()->except(['search', 'page']))) }}"
+                                class="remove-tag"><i class="feather-x"></i></a>
+                        </span>
+                    @endif
+
+                    <a href="{{ route('offboarding.index') }}" class="filter-tag clear-all">
+                        <i class="feather-refresh-cw"></i> Clear All
+                    </a>
+                </div>
+            @endif
         </div>
 
-        <!-- Offboarding Table -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Offboarding Requests</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+        <div class="ob-table-card">
+            @if ($offboardings->isEmpty())
+                <x-ui.empty-state icon="user-minus" title="No offboarding requests"
+                    subtitle="Requests submitted by employees or HR will show up here." />
+            @else
+                <x-ui.data-table>
+                    <thead>
+                        <tr>
+                            <th width="50">#</th>
+                            <th>Employee</th>
+                            <th>Reason</th>
+                            <th>Last Working Date</th>
+                            <th>Status</th>
+                            <th>Stage</th>
+                            <th>Submitted</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($offboardings as $ob)
                             <tr>
-                                <th>#</th>
-                                <th>Code</th>
-                                <th>Employee</th>
-                                <th>Department</th>
-                                <th>Resignation Date</th>
-                                <th>Last Working Day</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <td>{{ $loop->iteration + ($offboardings->currentPage() - 1) * $offboardings->perPage() }}
+                                </td>
+                                <td>
+                                    <div class="employee-info">
+                                        <div class="employee-avatar">
+                                            {{ strtoupper(substr($ob->employee?->name, 0, 2)) }}
+                                        </div>
+
+                                        <div class="employee-details">
+                                            <div class="employee-name">
+                                                {{ $ob->employee?->name }} <small class="text-secondary fs-10">(
+                                                    {{ $ob->employee?->employee_id }} )</small>
+
+                                            </div>
+                                            <div class="employee-email">{{ $ob->employee?->email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ $ob->reason_label }}</td>
+                                <td>{{ optional($ob->last_working_date)->format('d M Y') }}</td>
+                                <td><x-ui.status-badge :status="$ob->badge_status" :label="$ob->status_label" /></td>
+                                <td><x-ui.status-badge :status="$ob->badge_status" :label="$ob->stage_label" /></td>
+                                <td>{{ $ob->created_at->format('d M Y') }}</td>
+                                <td class="text-center">
+                                    <a href="{{ route('offboarding.show', $ob->id) }}" class="action-btn" title="View"
+                                        data-bs-toggle="tooltip">
+                                        <i class="feather-eye"></i>
+                                    </a>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($offboardings as $index => $offboarding)
-                                @php
-                                    // Determine which actions to show based on status and review states (mirroring show blade logic)
-                                    $canApproveManager = $isAdminOrHR && 
-                                        $offboarding->manager_review_status == 'pending' && 
-                                        $offboarding->status == 'pending_approval';
-                                    
-                                    $canApproveHR = $isAdminOrHR && 
-                                        $offboarding->manager_review_status == 'approved' && 
-                                        $offboarding->hr_review_status == 'pending';
-                                    
-                                    $canReject = $isAdminOrHR && 
-                                        !in_array($offboarding->status, ['completed', 'cancelled', 'rejected']);
-                                    
-                                    $canStartKT = $isAdminOrHR && 
-                                        $offboarding->status == 'approved' && 
-                                        $offboarding->knowledge_transfer_status == 'not_started';
-                                    
-                                    $canCompleteKT = $isAdminOrHR && 
-                                        $offboarding->knowledge_transfer_status == 'in_progress';
-                                    
-                                    $canUpdateClearance = $isAdminOrHR && $offboarding->status == 'approved';
-                                    
-                                    $canProcessSettlement = $isAdminOrHR && 
-                                        $offboarding->asset_return_status == 'completed' && 
-                                        $offboarding->final_settlement_status == 'pending';
-                                    
-                                    $canMarkSettlementPaid = $isAdminOrHR && 
-                                        $offboarding->final_settlement_status == 'processing';
-                                    
-                                    $canComplete = $isAdminOrHR && 
-                                        $offboarding->knowledge_transfer_status == 'completed' && 
-                                        $offboarding->asset_return_status == 'completed' && 
-                                        $offboarding->final_settlement_status == 'paid' && 
-                                        $offboarding->status == 'approved';
-                                    
-                                    $canCancel = $isAdminOrHR && 
-                                        in_array($offboarding->status, ['pending_approval', 'approved']);
-                                    
-                                    // Determine current stage label
-                                    if ($offboarding->manager_review_status == 'pending') {
-                                        $currentStage = 'Manager Review';
-                                    } elseif ($offboarding->manager_review_status == 'approved' && $offboarding->hr_review_status == 'pending') {
-                                        $currentStage = 'HR Review';
-                                    } elseif ($offboarding->status == 'approved') {
-                                        $currentStage = 'Approved - In Progress';
-                                    } elseif ($offboarding->status == 'completed') {
-                                        $currentStage = 'Completed';
-                                    } elseif ($offboarding->status == 'rejected') {
-                                        $currentStage = 'Rejected';
-                                    } elseif ($offboarding->status == 'cancelled') {
-                                        $currentStage = 'Cancelled';
-                                    } else {
-                                        $currentStage = 'Initiated';
-                                    }
-                                @endphp
-                                <tr>
-                                    <td>{{ $offboardings->firstItem() + $index }}</td>
-                                    <td><strong class="text-primary">{{ $offboarding->request_code }}</strong></td>
-                                    <td>
-                                        <div class="employee-info">
-                                            <div class="employee-avatar">
-                                                {{ strtoupper(substr($offboarding->employee->name ?? 'U', 0, 2)) }}
-                                            </div>
-                                            <div class="employee-details">
-                                                <div class="employee-name">
-                                                    {{ $offboarding->employee->name }}
-                                                    <small class="text-muted">({{ $offboarding->employee->employee_id ?? 'N/A' }})</small>
-                                                </div>
-                                                <div class="employee-email">{{ $offboarding->employee->email ?? '' }}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>{{ $offboarding->employee->jobDetails->Department->name ?? 'N/A' }}</td>
-                                    <td>{{ $offboarding->resignation_date ? \Carbon\Carbon::parse($offboarding->resignation_date)->format('d M Y') : 'N/A' }}</td>
-                                    <td>{{ $offboarding->last_working_date ? \Carbon\Carbon::parse($offboarding->last_working_date)->format('d M Y') : 'N/A' }}</td>
-                                    <td>
-                                        <span class="offboarding-status status-{{ $offboarding->status }}">
-                                            {{ ucfirst(str_replace('_', ' ', $offboarding->status)) }}
-                                        </span>
-                                        {{-- <small class="d-block text-muted mt-1">{{ $currentStage }}</small> --}}
-                                    </td>
-                                    <td>
-                                        <div class="stage-buttons">
-                                            @if ($canApproveManager)
-                                                <button class="btn btn-success btn-xs" onclick="approveManager({{ $offboarding->id }})">
-                                                    <i class="feather-check"></i> Approve (Mgr)
-                                                </button>
-                                            @endif
-
-                                            @if ($canApproveHR)
-                                                <button class="btn btn-primary btn-xs" onclick="approveHR({{ $offboarding->id }})">
-                                                    <i class="feather-check-circle"></i> Approve (HR)
-                                                </button>
-                                            @endif
-
-                                            @if ($canReject)
-                                                <button class="btn btn-danger btn-xs" onclick="showRejectModal({{ $offboarding->id }})">
-                                                    <i class="feather-x"></i> Reject
-                                                </button>
-                                            @endif
-
-                                            @if ($canStartKT)
-                                                <button class="btn btn-info btn-xs" onclick="showStartKTModal({{ $offboarding->id }})">
-                                                    <i class="feather-upload"></i> Start KT
-                                                </button>
-                                            @endif
-
-                                            @if ($canCompleteKT)
-                                                <button class="btn btn-success btn-xs" onclick="showCompleteKTModal({{ $offboarding->id }})">
-                                                    <i class="feather-check-square"></i> Complete KT
-                                                </button>
-                                            @endif
-
-                                            @if ($canUpdateClearance)
-                                                <button class="btn btn-warning btn-xs" onclick="showClearanceModal({{ $offboarding->id }})">
-                                                    <i class="feather-shield"></i> Update Clearance
-                                                </button>
-                                            @endif
-
-                                            @if ($canProcessSettlement)
-                                                <button class="btn btn-info btn-xs" onclick="showSettlementModal({{ $offboarding->id }})">
-                                                    <i class="feather-dollar-sign"></i> Process Settlement
-                                                </button>
-                                            @endif
-
-                                            @if ($canMarkSettlementPaid)
-                                                <button class="btn btn-success btn-xs" onclick="showMarkPaidModal({{ $offboarding->id }})">
-                                                    <i class="feather-credit-card"></i> Mark Paid
-                                                </button>
-                                            @endif
-
-                                            @if ($canComplete)
-                                                <button class="btn btn-primary btn-xs" onclick="showCompleteModal({{ $offboarding->id }})">
-                                                    <i class="feather-check-square"></i> Complete
-                                                </button>
-                                            @endif
-
-                                            @if ($canCancel)
-                                                <button class="btn btn-secondary btn-xs" onclick="showCancelModal({{ $offboarding->id }})">
-                                                    <i class="feather-slash"></i> Cancel
-                                                </button>
-                                            @endif
-
-                                            <!-- View Details Button -->
-                                            <a href="{{ route('offboarding.show', $offboarding->id) }}" class="btn btn-outline-secondary btn-xs">
-                                                <i class="feather-eye fs-11"></i> 
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="text-center py-4">No offboarding requests found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                <div class="d-flex justify-content-center">
-                    {{ $offboardings->appends(request()->query())->links() }}
+                        @endforeach
+                    </tbody>
+                </x-ui.data-table>
+            @endif
+        </div>
+        @if (method_exists($ob, 'links') && $ob->hasPages())
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        Showing {{ $ob->firstItem() }} to {{ $ob->lastItem() }}
+                        of {{ $ob->total() }} entries
+                    </div>
+                    <div>
+                        {{ $ob->appends(request()->query())->links() }}
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
     </div>
 @endsection
 
 @section('create-modal')
-    <!-- ==================== MODAL 1: Approve Manager Modal ==================== -->
-    <div class="modal fade" id="approveManagerModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Approve — Manager Review</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- New Offboarding Request Drawer -->
+    <x-ui.drawer id="newOffboardingDrawer" title="New Offboarding Request" width="480px">
+        <form id="newOffboardingForm">
+            @csrf
+            <div id="newOffboardingError" class="alert alert-danger d-none"></div>
+
+            @if (count($employees) > 1)
+                <div class="form-group">
+                    <label for="ob_employee_id">Employee *</label>
+                    <select class="form-control" name="employee_id" id="ob_employee_id" required>
+                        <option value="" disabled selected>Select employee</option>
+                        @foreach ($employees as $emp)
+                            <option value="{{ $emp->id }}">{{ $emp->name }} ({{ $emp->employee_id }})</option>
+                        @endforeach
+                    </select>
+                    <small class="error-text employee_id_error"></small>
                 </div>
-                <form id="approveManagerForm" method="POST">
-                    @csrf
-                    <input type="hidden" name="action" value="approve">
-                    <div class="modal-body">
-                        <p>Approve this offboarding request at the Manager Review stage?</p>
-                        <div class="modal-form-group">
-                            <label>Comments (Optional)</label>
-                            <textarea name="comments" class="form-control form-control-sm" rows="2" placeholder="Add any comments..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success btn-sm">Approve</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+            @endif
 
-    <!-- ==================== MODAL 2: Approve HR Modal ==================== -->
-    <div class="modal fade" id="approveHRModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Approve — HR Review</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="form-group">
+                <label for="ob_reason">Reason *</label>
+                <select class="form-control" name="reason" id="ob_reason" required>
+                    <option value="" disabled selected>Select reason</option>
+                    @foreach ($reasons as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                <small class="error-text reason_error"></small>
+            </div>
+
+            <div class="hint-bar">
+                <i class="feather-info"></i>
+                <span id="obNoticeHint">Minimum notice period: {{ $noticeDays }} day(s). Last working date must be on or
+                    after that.</span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="ob_resignation_date">Request Date</label>
+                        <input type="date" class="form-control" id="ob_resignation_date" name="resignation_date"
+                            value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}">
+                    </div>
                 </div>
-                <form id="approveHRForm" method="POST">
-                    @csrf
-                    <input type="hidden" name="action" value="approve">
-                    <div class="modal-body">
-                        <div class="modal-form-group">
-                            <label>Last Working Date</label>
-                            <input type="date" name="last_working_date" class="form-control form-control-sm"
-                                value="{{ old('last_working_date') }}">
-                        </div>
-                        <div class="modal-form-group">
-                            <label>HR Comments</label>
-                            <textarea name="comments" class="form-control form-control-sm" rows="2" placeholder="Add HR comments..."></textarea>
-                        </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="ob_last_working_date">Last Working Date *</label>
+                        <input type="date" class="form-control" id="ob_last_working_date" name="last_working_date"
+                            required>
+                        <small class="form-hint" id="obMinDateHint"></small>
+                        <small class="error-text last_working_date_error"></small>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Approve</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== MODAL 3: Reject Modal ==================== -->
-    <div class="modal fade" id="rejectModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h6 class="modal-title"><i class="feather-x-circle me-2"></i>Reject Offboarding Request</h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="rejectForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="reject-stage-info">
-                            <strong><i class="feather-info"></i> Rejection Notice</strong>
-                            This will reject the offboarding request. The employee will be notified.
-                        </div>
-                        <div class="modal-form-group">
-                            <label class="required">Rejection Reason <span style="color:red">*</span></label>
-                            <textarea name="rejection_reason" class="form-control form-control-sm" rows="3"
-                                placeholder="Provide a clear reason for rejection..." required minlength="3"></textarea>
-                            <small class="text-muted">This reason will be visible to the employee.</small>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-danger btn-sm">Confirm Rejection</button>
-                    </div>
-                </form>
             </div>
-        </div>
-    </div>
 
-    <!-- ==================== MODAL 4: Start Knowledge Transfer Modal ==================== -->
-    <div class="modal fade" id="startKTModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Start Knowledge Transfer</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="startKTForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <p>Start the knowledge transfer process?</p>
-                        <div class="modal-form-group">
-                            <label>Notes (Optional)</label>
-                            <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Add any notes about KT..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Start KT</button>
-                    </div>
-                </form>
+            <div class="form-group">
+                <label for="ob_reason_detail">Details</label>
+                <textarea class="form-control" id="ob_reason_detail" name="reason_detail" rows="3" maxlength="2000"></textarea>
+                <small class="error-text reason_detail_error"></small>
             </div>
-        </div>
-    </div>
 
-    <!-- ==================== MODAL 5: Complete Knowledge Transfer Modal ==================== -->
-    <div class="modal fade" id="completeKTModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Complete Knowledge Transfer</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="completeKTForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <p>Mark knowledge transfer as completed?</p>
-                        <div class="modal-form-group">
-                            <label>Completion Notes</label>
-                            <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Add completion notes..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success btn-sm">Complete KT</button>
-                    </div>
-                </form>
+            <div class="form-group">
+                <label for="ob_feedback">Additional Feedback (optional)</label>
+                <textarea class="form-control" id="ob_feedback" name="feedback" rows="2" maxlength="2000"></textarea>
             </div>
-        </div>
-    </div>
 
-    <!-- ==================== MODAL 6: Update Clearance Modal ==================== -->
-    <div class="modal fade" id="clearanceModal" tabindex="-1">
-        <div class="modal-dialog modal-md">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Update Clearance Status</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="clearanceForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="alert alert-info mb-3">
-                            <i class="feather-info"></i> Update the clearance status for this offboarding request.
-                        </div>
-
-                        <div class="modal-form-group">
-                            <label class="required">Asset Return Status</label>
-                            <select name="asset_return_status" class="form-control form-control-sm" required>
-                                <option value="pending">Pending</option>
-                                <option value="partial">Partial</option>
-                                <option value="completed">Completed</option>
-                            </select>
-                        </div>
-
-                        <div class="modal-form-group">
-                            <label class="required">Document Return Status</label>
-                            <select name="document_return_status" class="form-control form-control-sm" required>
-                                <option value="pending">Pending</option>
-                                <option value="partial">Partial</option>
-                                <option value="completed">Completed</option>
-                            </select>
-                        </div>
-
-                        <div class="modal-form-group">
-                            <label class="required">Overall Clearance Status</label>
-                            <select name="clearance_status" class="form-control form-control-sm" required>
-                                <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                            </select>
-                        </div>
-
-                        <div class="modal-form-group">
-                            <label>Remarks (Optional)</label>
-                            <textarea name="clearance_remarks" class="form-control form-control-sm" rows="2"
-                                placeholder="Add any remarks about clearance..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Update Clearance</button>
-                    </div>
-                </form>
+            <div class="form-group form-check">
+                <input type="checkbox" class="form-check-input" id="ob_eligible_for_rehire" name="eligible_for_rehire"
+                    value="1" checked>
+                <label class="form-check-label" for="ob_eligible_for_rehire" style="display:inline;">Eligible for
+                    rehire</label>
             </div>
-        </div>
-    </div>
 
-    <!-- ==================== MODAL 7: Process Final Settlement Modal ==================== -->
-    <div class="modal fade" id="settlementModal" tabindex="-1">
-        <div class="modal-dialog modal-md">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Process Final Settlement</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="settlementForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="alert alert-warning mb-3">
-                            <i class="feather-alert-triangle"></i>
-                            <strong>Note:</strong> Asset clearance must be completed before processing settlement.
-                        </div>
-
-                        <div class="modal-form-group">
-                            <label class="required">Full & Final Settlement Amount (₹)</label>
-                            <input type="number" name="full_final_settlement" class="form-control form-control-sm"
-                                step="1000" placeholder="Enter settlement amount" required>
-                        </div>
-
-                        <div class="modal-form-group">
-                            <label>Settlement Notes</label>
-                            <textarea name="settlement_notes" class="form-control form-control-sm" rows="2"
-                                placeholder="Add any notes about the settlement..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-warning btn-sm">Process Settlement</button>
-                    </div>
-                </form>
+            <div class="d-flex gap-2 mt-3">
+                <button class="btn btn-primary" type="submit" id="newOffboardingSubmitBtn">Submit Request</button>
+                <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="offcanvas">Cancel</button>
             </div>
-        </div>
-    </div>
-
-    <!-- ==================== MODAL 8: Mark Settlement as Paid Modal ==================== -->
-    <div class="modal fade" id="markPaidModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Mark Settlement as Paid</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="markPaidForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <p>Mark the final settlement as paid?</p>
-                        <div class="modal-form-group">
-                            <label class="required">Payment Date</label>
-                            <input type="date" name="settlement_paid_date" class="form-control form-control-sm"
-                                value="{{ date('Y-m-d') }}" required>
-                        </div>
-                        <div class="modal-form-group">
-                            <label>Payment Reference / Transaction ID</label>
-                            <input type="text" name="payment_reference" class="form-control form-control-sm"
-                                placeholder="Transaction ID / Cheque No / UTR">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success btn-sm">Mark as Paid</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== MODAL 9: Complete Offboarding Modal ==================== -->
-    <div class="modal fade" id="completeModal" tabindex="-1">
-        <div class="modal-dialog modal-md">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Complete Offboarding Process</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="completeForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="alert alert-success mb-3">
-                            <i class="feather-check-circle"></i>
-                            <strong>Ready to complete offboarding!</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>✓ Knowledge Transfer: Completed</li>
-                                <li>✓ Asset Clearance: Completed</li>
-                                <li>✓ Final Settlement: Paid</li>
-                            </ul>
-                        </div>
-
-                        <div class="modal-form-group">
-                            <label>Completion Remarks</label>
-                            <textarea name="completion_remarks" class="form-control form-control-sm" rows="3"
-                                placeholder="Any final remarks about the offboarding process..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Complete Offboarding</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== MODAL 10: Cancel Request Modal ==================== -->
-    <div class="modal fade" id="cancelModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Cancel Offboarding Request</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="cancelForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <p>Are you sure you want to cancel this offboarding request? This action restores the employee to active status.</p>
-                        <div class="modal-form-group">
-                            <label>Cancellation Reason (Optional)</label>
-                            <textarea name="cancellation_reason" class="form-control form-control-sm" rows="2"
-                                placeholder="Enter reason..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-danger btn-sm">Cancel Request</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+        </form>
+    </x-ui.drawer>
 @endsection
 
 @section('script-area')
     <script>
-        // Modal functions with proper action URL setting
-        function approveManager(id) {
-            $('#approveManagerForm').attr('action', '/offboarding/' + id + '/manager-review');
-            $('#approveManagerModal').modal('show');
-        }
-
-        function approveHR(id) {
-            $('#approveHRForm').attr('action', '/offboarding/' + id + '/hr-review');
-            $('#approveHRModal').modal('show');
-        }
-
-        function showRejectModal(id) {
-            $('#rejectForm').attr('action', '/offboarding/' + id + '/reject');
-            $('#rejectModal').modal('show');
-        }
-
-        function showStartKTModal(id) {
-            $('#startKTForm').attr('action', '/offboarding/' + id + '/knowledge-transfer/start');
-            $('#startKTModal').modal('show');
-        }
-
-        function showCompleteKTModal(id) {
-            $('#completeKTForm').attr('action', '/offboarding/' + id + '/knowledge-transfer/complete');
-            $('#completeKTModal').modal('show');
-        }
-
-        function showClearanceModal(id) {
-            $('#clearanceForm').attr('action', '/offboarding/' + id + '/asset-clearance/update');
-            $('#clearanceModal').modal('show');
-        }
-
-        function showSettlementModal(id) {
-            $('#settlementForm').attr('action', '/offboarding/' + id + '/final-settlement/process');
-            $('#settlementModal').modal('show');
-        }
-
-        function showMarkPaidModal(id) {
-            $('#markPaidForm').attr('action', '/offboarding/' + id + '/final-settlement/paid');
-            $('#markPaidModal').modal('show');
-        }
-
-        function showCompleteModal(id) {
-            $('#completeForm').attr('action', '/offboarding/' + id + '/complete');
-            $('#completeModal').modal('show');
-        }
-
-        function showCancelModal(id) {
-            $('#cancelForm').attr('action', '/offboarding/' + id + '/cancel');
-            $('#cancelModal').modal('show');
-        }
-
-        // Stats card click filter
         $(document).ready(function() {
+            // Auto-submit on filter change
+            $('.filter-select').on('change', function() {
+                $('#filterForm').submit();
+            });
+
+            // Stats card click filter
             $('.stats-card').on('click', function() {
                 const status = $(this).data('status');
                 if (status && status !== 'all') {
@@ -1173,18 +858,94 @@
                 }
             });
 
-            // Auto-submit on filter change
-            $('.filter-select').on('change', function() {
-                $('#filterForm').submit();
-            });
-
-            // Highlight active stats card
             const currentStatus = '{{ request('status') }}';
             if (currentStatus) {
                 $(`.stats-card[data-status="${currentStatus}"]`).addClass('active');
             } else {
                 $('.stats-card[data-status="all"]').addClass('active');
             }
+
+            // Reset drawer on open
+            $('#newOffboardingDrawer').on('show.bs.offcanvas', function() {
+                $('#newOffboardingForm')[0].reset();
+                $('#newOffboardingForm .error-text').text('');
+                $('#newOffboardingError').addClass('d-none').text('');
+                syncNoticeHint();
+            });
+
+            const reasonRules = @json($reasonRules);
+            const noticeDays = {{ (int) $noticeDays }};
+
+            function todayPlus(days) {
+                var d = new Date();
+                d.setDate(d.getDate() + days);
+                return d.toISOString().split('T')[0];
+            }
+
+            function syncNoticeHint() {
+                const reason = $('#ob_reason').val();
+                const rules = reasonRules[reason];
+                const requiresNotice = !rules || rules.requires_notice;
+                const lastWorkingDate = $('#ob_last_working_date');
+
+                if (requiresNotice) {
+                    const minDate = todayPlus(noticeDays);
+                    lastWorkingDate.attr('min', minDate);
+                    $('#obMinDateHint').text('Earliest allowed: ' + minDate);
+                    $('#obNoticeHint').text('Minimum notice period: ' + noticeDays +
+                        ' day(s). Last working date must be on or after that.');
+                } else {
+                    lastWorkingDate.removeAttr('min');
+                    $('#obMinDateHint').text('');
+                    $('#obNoticeHint').text('This reason does not require a minimum notice period.');
+                }
+            }
+
+            $('#ob_reason').on('change', syncNoticeHint);
+
+            $('#newOffboardingForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const submitBtn = $('#newOffboardingSubmitBtn');
+                const originalText = submitBtn.html();
+                submitBtn.prop('disabled', true).html(
+                    '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...');
+                $('#newOffboardingForm .error-text').text('');
+                $('#newOffboardingError').addClass('d-none').text('');
+
+                $.ajax({
+                    url: '{{ route('offboarding.store') }}',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        submitBtn.prop('disabled', false).html(originalText);
+                        if (response.success) {
+                            bootstrap.Offcanvas.getInstance(document.getElementById(
+                                'newOffboardingDrawer'))?.hide();
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                            } else {
+                                window.location.reload();
+                            }
+                        } else {
+                            $('#newOffboardingError').removeClass('d-none').text(response
+                                .message || 'Failed to submit request');
+                        }
+                    },
+                    error: function(xhr) {
+                        submitBtn.prop('disabled', false).html(originalText);
+                        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            Object.keys(errors).forEach(function(field) {
+                                $('.' + field + '_error').text(errors[field][0]);
+                            });
+                        } else {
+                            $('#newOffboardingError').removeClass('d-none').text(xhr
+                                .responseJSON?.message || 'Failed to submit request');
+                        }
+                    }
+                });
+            });
         });
     </script>
 @endsection

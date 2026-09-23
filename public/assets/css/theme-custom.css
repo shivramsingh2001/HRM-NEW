@@ -340,6 +340,14 @@
     font-size: 9.5px; font-weight: 600; text-transform: uppercase;
     letter-spacing: .03em; color: #6b7385; margin-top: 2px;
 }
+/* Optional semantic color variants — <x-ui.stat-card color="success">, etc.
+   Default (no color prop) keeps the original primary-blue icon look. */
+.kpi5-card--success .kpi5-icon { background: #dcfce7; color: #15803d; }
+.kpi5-card--danger .kpi5-icon { background: #fee2e2; color: #b91c1c; }
+.kpi5-card--warning .kpi5-icon { background: #ffedd5; color: #c2410c; }
+.kpi5-card--info .kpi5-icon { background: #dbeafe; color: #1d4ed8; }
+.kpi5-card--purple .kpi5-icon { background: #ede9fe; color: #6d28d9; }
+.kpi5-card--gray .kpi5-icon { background: #f1f5f9; color: #475569; }
 .kpi5-divider { border-top: 1px dashed #eaeef5; margin: 0; }
 .kpi5-foot { display: flex; }
 .kpi5-stat { flex: 1; min-width: 0; }
@@ -531,6 +539,50 @@
 }
 
 /* ============================================
+   SIMPLE SETTINGS CARD — shared by the Biometric Terminals admin
+   pages (devices/enrollments/punches), previously duplicated
+   byte-for-byte as a local <style> block in each of those three
+   Blade files. api-clients.blade.php has its own identical local
+   copy, not yet centralized here.
+   ============================================ */
+.s-card { background: #fff; border: 1px solid #edf2f7; border-radius: 14px; margin-bottom: 20px; }
+.s-head { padding: 16px 20px; border-bottom: 1px solid #edf2f7; background: #fafbfc; }
+.s-head h5 { margin: 0; font-size: 15px; font-weight: 600; }
+.s-body { padding: 20px; }
+table.tbl { width: 100%; font-size: 12px; }
+table.tbl th, table.tbl td { padding: 6px 8px; border-bottom: 1px solid #eef2f7; text-align: left; vertical-align: top; }
+code.key { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; background: #eef1f5; color: #5b6472; }
+.muted { color: #8a94a6; }
+
+/* ============================================
+   ACTION BUTTON — small square icon button for table row actions.
+   Canonical source is view-user.blade.php's "View Employees" table
+   (still has its own local copy there); reused as-is by Biometric
+   Terminals so table actions look the same across both.
+   ============================================ */
+.action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    color: #64748b;
+    transition: all 0.2s;
+    border: 1px solid #e2e8f0;
+}
+.action-btn:hover {
+    background: white;
+    color: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(30, 58, 138, 0.1);
+}
+.action-btn i { font-size: 14px; }
+
+/* ============================================
    STATUS BADGE — one status→color mapping for the whole app.
    data-status accepts the union of every module's status
    vocabulary (leave/attendance/expense/overtime/loan/...).
@@ -565,7 +617,9 @@
 .status-badge[data-status="confirmed"],
 .status-badge[data-status="finalized"],
 .status-badge[data-status="success"],
-.status-badge[data-status="available"] {
+.status-badge[data-status="available"],
+.status-badge[data-status="synced"],
+.status-badge[data-status="processed"] {
     background: #d1fae5;
     color: #065f46;
 }
@@ -576,21 +630,86 @@
 .status-badge[data-status="declined"],
 .status-badge[data-status="inactive"],
 .status-badge[data-status="damaged"],
-.status-badge[data-status="lost"] {
+.status-badge[data-status="lost"],
+.status-badge[data-status="error"] {
     background: #fee2e2;
     color: #991b1b;
 }
 .status-badge[data-status="processing"],
 .status-badge[data-status="in_progress"],
 .status-badge[data-status="ongoing"],
-.status-badge[data-status="assigned"] {
+.status-badge[data-status="assigned"],
+.status-badge[data-status="removing"] {
     background: var(--primary-light);
     color: var(--primary);
+}
+.status-badge[data-status="skipped"] {
+    background: #fef3c7;
+    color: #92400e;
 }
 .status-badge[data-status="retired"],
 .status-badge[data-status="disposed"] {
     background: #e5e7eb;
     color: #374151;
+}
+.status-badge[data-status="submitted"] {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+.status-badge[data-status="acknowledged"] {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* ============================================
+   GRADE BADGE — one letter-grade->color mapping, used by
+   Performance (dashboard/individual/team report). Bands mirror
+   PerformanceScoreCalculator::grade()'s 10-band scale.
+   Use: <span class="grade-badge" data-grade="{{ $grade }}">{{ $grade }}</span>
+   ============================================ */
+.grade-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    line-height: 1.4;
+}
+.grade-badge[data-grade^="A"] { background: #d1fae5; color: #065f46; }
+.grade-badge[data-grade^="B"] { background: var(--primary-light); color: var(--primary); }
+.grade-badge[data-grade^="C"] { background: #fef3c7; color: #92400e; }
+.grade-badge[data-grade="D"],
+.grade-badge[data-grade="F"] { background: #fee2e2; color: #991b1b; }
+
+/* ============================================
+   PERIOD TOGGLE — Daily/Weekly/Monthly pill switch, styled
+   like Task's .filter-tag chips. Used on Performance's
+   dashboard/individual-report trend section (client-side only,
+   all three datasets are preloaded — no extra request on switch).
+   ============================================ */
+.period-toggle {
+    display: inline-flex;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 30px;
+    padding: 3px;
+    gap: 2px;
+}
+.period-toggle button {
+    border: none;
+    background: transparent;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #64748b;
+    padding: 5px 14px;
+    border-radius: 30px;
+    transition: all 0.15s;
+}
+.period-toggle button.active {
+    background: var(--primary);
+    color: #fff;
 }
 
 /* ============================================

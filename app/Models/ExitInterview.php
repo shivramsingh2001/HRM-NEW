@@ -15,6 +15,7 @@ class ExitInterview extends Model
         'employee_id',
         'interviewer_id',
         'interview_date',
+        'status',
         'work_environment_rating',
         'management_rating',
         'career_growth_rating',
@@ -27,6 +28,10 @@ class ExitInterview extends Model
         'suggestions',
         'created_by'
     ];
+
+    const STATUS_SCHEDULED = 'scheduled';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_DECLINED = 'declined';
 
     protected $casts = [
         'interview_date' => 'datetime',

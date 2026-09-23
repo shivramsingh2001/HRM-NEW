@@ -72,4 +72,17 @@ return [
     'retention_floor_days' => (int) env('LOCATION_RETENTION_FLOOR_DAYS', 30),
     'archive_before_prune' => (bool) env('LOCATION_ARCHIVE_BEFORE_PRUNE', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Late-point grace window
+    |--------------------------------------------------------------------------
+    |
+    | trackBatch still accepts points into a session closed within this many
+    | minutes of "now" (covers a buffered flush that lands just after clock-
+    | out) — a point whose own track_time is after that session's ended_at is
+    | still rejected regardless of this window.
+    |
+    */
+    'late_point_grace_minutes' => (int) env('LOCATION_LATE_POINT_GRACE_MINUTES', 15),
+
 ];

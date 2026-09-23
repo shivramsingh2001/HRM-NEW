@@ -247,7 +247,7 @@
                         <div class="col-md-6 mb-3">
                             <label for="monthly_ctc_display">Monthly CTC (₹)</label>
                             <input type="text" class="form-control" id="monthly_ctc_display" readonly tabindex="-1">
-                            <small class="text-muted" style="font-size:9px;">Annual CTC ÷ 12 — matches what the "Monthly Components" amounts below should add up to.</small>
+                            {{-- <small class="text-muted" style="font-size:9px;">Annual CTC ÷ 12 — matches what the "Monthly Components" amounts below should add up to.</small> --}}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="effective_from">Effective From *</label>

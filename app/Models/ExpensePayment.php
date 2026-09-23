@@ -8,11 +8,20 @@ use App\Traits\TenantTrait;
 class ExpensePayment extends Model
 {
      use TenantTrait;
+    public const STATUS_POSTED = 'posted';
+    public const STATUS_VOIDED = 'voided';
+
     protected $table = 'expense_payments';
 
     protected $fillable = [
         'tenant_id',
         'expense_id',
+        'batch_id',
+        'status',
+        'created_by',
+        'voided_by',
+        'voided_at',
+        'void_reason',
         'payment_date',
         'amount',
         'payment_mode',
@@ -20,13 +29,31 @@ class ExpensePayment extends Model
         'bank_name',
         'paid_to',
         'paid_by',
-        'remarks'
+        'remarks',
+        'idempotency_key',
     ];
 
     protected $casts = [
         'payment_date' => 'date',
-        'amount' => 'decimal:2'
+        'amount' => 'decimal:2',
+        'voided_at' => 'datetime',
     ];
+
+    /** Payments that count toward an expense's paid total (voided ones do not). */
+    public function scopePosted($query)
+    {
+        return $query->where($this->getTable() . '.status', self::STATUS_POSTED);
+    }
+
+    public function isVoided(): bool
+    {
+        return $this->status === self::STATUS_VOIDED;
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(ExpensePaymentBatch::class, 'batch_id');
+    }
 
     /**
      * Get the expense associated with this payment

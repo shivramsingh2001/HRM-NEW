@@ -342,42 +342,7 @@
         background: #dbeafe;
         color: #1e3a8a;
     }
-
-    /* ==================== EMPLOYEE INFO ==================== */
-    .employee-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .employee-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: var(--primary-light);
-        color: var(--primary-mid);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 12px;
-    }
-
-    .employee-details {
-        line-height: 1.3;
-    }
-
-    .employee-name {
-        font-weight: 600;
-        color: #1e293b;
-        font-size: 13px;
-    }
-
-    .employee-id {
-        font-size: 10px;
-        color: #64748b;
-    }
-
+    
     /* ==================== DATE RANGE ==================== */
     .date-range {
         display: inline;

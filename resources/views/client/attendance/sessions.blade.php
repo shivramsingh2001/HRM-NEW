@@ -5,65 +5,85 @@
     <style>
         .sessions-container {
             padding: 0;
+            font-size: 12px;
         }
 
+        .sessions-container h4 { font-size: 15px; }
+        .sessions-container h5 { font-size: 12.5px; }
+        .sessions-container h6 { font-size: 12px; }
+
         .sessions-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 20px 30px;
-            margin-bottom: 30px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
             color: white;
         }
 
         .summary-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
         }
 
         .summary-card {
             background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            padding: 8px 10px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            border-left: 3px solid var(--primary-mid);
             transition: transform 0.2s ease;
         }
 
         .summary-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+
+        .summary-card h5, .summary-card h6 { font-size: 12.5px; }
+
+        .summary-card .icon-circle {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            flex: none;
+        }
+
+        .summary-card .icon-circle i { font-size: 16px; }
 
         .info-card {
             background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
         }
 
         .info-card h6 {
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             color: #4a5568;
             font-weight: 600;
         }
 
         .track-list {
-            /* max-height: 500px; */
+            max-height: 320px;
             overflow-y: auto;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 6px;
         }
 
         .track-item {
             display: flex;
             align-items: flex-start;
-            gap: 15px;
-            padding: 15px;
+            gap: 8px;
+            padding: 6px 8px;
             border-bottom: 1px solid #e2e8f0;
             transition: background 0.2s ease;
+            font-size: 11.5px;
         }
 
         .track-item:hover {
@@ -71,20 +91,23 @@
         }
 
         .track-time {
-            min-width: 100px;
+            min-width: 66px;
             font-weight: 600;
             color: #2d3748;
+            font-size: 11px;
         }
 
         .track-icon {
-            width: 32px;
-            height: 32px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #e2e8f0;
-            color: #667eea;
+            background: var(--primary-light);
+            color: var(--primary-mid);
+            font-size: 10.5px;
+            flex: none;
         }
 
         .track-details {
@@ -93,11 +116,11 @@
 
         .track-address {
             color: #2d3748;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
         }
 
         .track-coords {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #9ca3af;
             font-family: monospace;
         }
@@ -106,33 +129,34 @@
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 2px 8px;
+            padding: 1px 7px;
             background: #e2e8f0;
-            border-radius: 12px;
-            font-size: 0.7rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
         }
 
         .location-map {
-            height: 400px;
-            border-radius: 8px;
-            margin-top: 15px;
+            height: 300px;
+            border-radius: 6px;
+            margin-bottom: 10px;
             background: #f1f5f9;
         }
 
         .task-card {
             background: white;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
             overflow: hidden;
         }
 
         .task-header {
-            padding: 15px 20px;
+            padding: 8px 12px;
             cursor: pointer;
             transition: all 0.3s ease;
             background: #fefce8;
-            border-left: 4px solid #f59e0b;
+            border-left: 3px solid #f59e0b;
+            font-size: 12px;
         }
 
         .task-header:hover {
@@ -140,9 +164,10 @@
         }
 
         .task-body {
-            padding: 20px;
+            padding: 12px;
             display: none;
             border-top: 1px solid #e2e8f0;
+            font-size: 12px;
         }
 
         .task-body.show {
@@ -150,9 +175,9 @@
         }
 
         .priority-badge {
-            padding: 4px 10px;
+            padding: 2px 8px;
             border-radius: 20px;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 600;
         }
 
@@ -176,18 +201,13 @@
             color: white;
         }
 
-        .btn-view-map {
-            margin-top: 15px;
-            padding: 8px 16px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .btn-view-map:hover {
-            background: #5a67d8;
+        .map-legend-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 3px;
+            vertical-align: middle;
         }
 
         .no-data {
@@ -262,8 +282,8 @@
                                     @endif
                                 </h5>
                             </div>
-                            <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                                <i class="feather-check-circle text-primary" style="font-size: 24px;"></i>
+                            <div class="icon-circle" style="background: var(--primary-light);">
+                                <i class="feather-check-circle" style="color: var(--primary);"></i>
                             </div>
                         </div>
                     </div>
@@ -274,8 +294,8 @@
                                 <div class="text-muted mb-1">Total Hours</div>
                                 <h5 class="mb-0">{{ $attendance->total_hours ?? '0:00:00' }}</h5>
                             </div>
-                            <div class="bg-success bg-opacity-10 rounded-circle p-3">
-                                <i class="feather-clock text-success" style="font-size: 24px;"></i>
+                            <div class="icon-circle" style="background: var(--primary-light);">
+                                <i class="feather-clock" style="color: var(--primary-mid);"></i>
                             </div>
                         </div>
                     </div>
@@ -286,8 +306,8 @@
                                 <div class="text-muted mb-1">Locations Tracked</div>
                                 <h5 class="mb-0">{{ $statistics['total_tracks'] ?? 0 }}</h5>
                             </div>
-                            <div class="bg-info bg-opacity-10 rounded-circle p-3">
-                                <i class="feather-map-pin text-info" style="font-size: 24px;"></i>
+                            <div class="icon-circle" style="background: var(--primary-light);">
+                                <i class="feather-map-pin" style="color: var(--primary-dark);"></i>
                             </div>
                         </div>
                     </div>
@@ -307,8 +327,8 @@
                                     @endif
                                 </h6>
                             </div>
-                            <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-                                <i class="feather-clock text-warning" style="font-size: 24px;"></i>
+                            <div class="icon-circle" style="background: var(--primary-light);">
+                                <i class="feather-clock" style="color: var(--primary);"></i>
                             </div>
                         </div>
                     </div>
@@ -431,35 +451,13 @@
                         <span class="badge bg-info ms-2">{{ count($locationTracks) }} Records</span>
                     </h6>
 
-                    {{-- @if ($statistics)
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4">
-                                <div class="stat-item text-center p-3 bg-light rounded">
-                                    <div class="stat-value">{{ $statistics['total_tracks'] }}</div>
-                                    <div class="stat-label text-muted">Total Tracks</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="stat-item text-center p-3 bg-light rounded">
-                                    <div class="stat-value">{{ $statistics['tracking_duration_hours'] }}h</div>
-                                    <div class="stat-label text-muted">Tracking Duration</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="stat-item text-center p-3 bg-light rounded">
-                                    <div class="stat-value">
-                                        {{ \Carbon\Carbon::parse($statistics['first_track_time'])->format('h:i A') }}
-                                    </div>
-                                    <div class="stat-label text-muted">First Track</div>
-                                </div>
-                            </div>
-                        </div>
-                    @endif --}}
-
-                    {{-- <!-- Map View Button -->
-                    <button class="btn-view-map" onclick="showLocationMap()">
-                        <i class="feather-map me-2"></i>View on Map
-                    </button> --}}
+                    <!-- Route Map (all points joined by a polyline, in chronological order) -->
+                    <div id="sessionLocationMap" class="location-map"></div>
+                    <div class="d-flex flex-wrap gap-3 mb-2" style="font-size: 10.5px; color: #64748b;">
+                        <span><span class="map-legend-dot" style="background:#22c55e;"></span> Start</span>
+                        <span><span class="map-legend-dot" style="background:#2563eb;"></span> Waypoint</span>
+                        <span><span class="map-legend-dot" style="background:#ef4444;"></span> End</span>
+                    </div>
 
                     <!-- Tracks List -->
                     <div class="track-list mt-3">
@@ -503,35 +501,10 @@
 
 
 @endsection
-@section('create-modal')
-    <!-- Map Modal -->
-    <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="mapModalLabel">
-                        <i class="feather-map-pin me-2"></i>
-                        Location Tracking Map - {{ \Carbon\Carbon::parse($date)->format('F j, Y') }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="locationMap" style="height: 500px;"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-@endsection
 
 @section('script-area')
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let currentMap = null;
-        let mapInitialized = false;
-
         function toggleTask(index) {
             const body = document.getElementById(`task-body-${index}`);
             const chevron = document.getElementById(`task-chevron-${index}`);
@@ -547,75 +520,73 @@
             }
         }
 
-        function showLocationMap() {
-            const tracks = @json($locationTracks);
-
-            if (!tracks || tracks.length === 0) {
-                showToast('No location tracks to display on map', 'warning');
-                return;
-            }
-
-            const modal = new bootstrap.Modal(document.getElementById('mapModal'));
-            modal.show();
-
-            setTimeout(() => {
-                initializeMap(tracks);
-            }, 500);
-        }
-
-        function initializeMap(tracks) {
-            const mapContainer = document.getElementById('locationMap');
-
+        // Renders the full route for this session in one shot: every tracked
+        // point joined chronologically by a single polyline, with a distinct
+        // start/end marker so the direction of travel is obvious at a glance.
+        function initSessionMap() {
+            const mapContainer = document.getElementById('sessionLocationMap');
             if (!mapContainer) return;
 
-            if (currentMap) {
-                currentMap.remove();
-                currentMap = null;
-            }
+            const tracks = @json($locationTracks);
 
-            // Filter out tracks with valid coordinates
-            const validTracks = tracks.filter(track =>
+            const validTracks = (tracks || []).filter(track =>
                 track.latitude && track.longitude &&
                 !isNaN(track.latitude) && !isNaN(track.longitude)
             );
 
             if (validTracks.length === 0) {
                 mapContainer.innerHTML =
-                '<div class="alert alert-warning">No valid coordinates found for map display</div>';
+                    '<div class="alert alert-warning mb-0">No valid coordinates found for map display</div>';
                 return;
             }
 
-            // Calculate bounds
-            const bounds = L.latLngBounds(validTracks.map(track => [track.latitude, track.longitude]));
-
-            currentMap = L.map('locationMap').fitBounds(bounds);
+            const map = L.map('sessionLocationMap');
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(currentMap);
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+            }).addTo(map);
 
-            // Add markers for each track
-            validTracks.forEach((track, index) => {
-                const marker = L.marker([track.latitude, track.longitude]).addTo(currentMap);
+            const latlngs = validTracks.map(track => [track.latitude, track.longitude]);
 
-                const popupContent = `
-                <strong>Track #${index + 1}</strong><br>
-                Time: ${moment(track.track_time).format('h:mm A')}<br>
-                ${track.address ? `Address: ${track.address}<br>` : ''}
-                ${track.battery_per ? `Battery: ${track.battery_per}%` : ''}
-            `;
+            // One continuous polyline through every point, in the order they
+            // were recorded — the full path the employee's location switched
+            // through during this session.
+            L.polyline(latlngs, {
+                color: '#2563eb',
+                weight: 4,
+                opacity: 0.85,
+                lineJoin: 'round',
+            }).addTo(map);
 
-                marker.bindPopup(popupContent);
+            const dotIcon = (color, size) => L.divIcon({
+                className: '',
+                html: `<span style="display:block;width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 1px ${color};"></span>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
             });
 
-            // Add polyline to show the path
-            if (validTracks.length > 1) {
-                const latlngs = validTracks.map(track => [track.latitude, track.longitude]);
-                const polyline = L.polyline(latlngs, {
-                    color: '#667eea',
-                    weight: 3
-                }).addTo(currentMap);
-            }
+            validTracks.forEach((track, index) => {
+                const isStart = index === 0;
+                const isEnd = index === validTracks.length - 1 && validTracks.length > 1;
+                const color = isStart ? '#22c55e' : (isEnd ? '#ef4444' : '#2563eb');
+                const size = (isStart || isEnd) ? 16 : 10;
+
+                const marker = L.marker([track.latitude, track.longitude], {
+                    icon: dotIcon(color, size),
+                    zIndexOffset: isStart || isEnd ? 1000 : 0,
+                }).addTo(map);
+
+                const label = isStart ? 'Start' : (isEnd ? 'End' : `Point #${index + 1}`);
+                marker.bindPopup(`
+                    <strong>${label}</strong><br>
+                    Time: ${moment(track.track_time).format('h:mm A')}<br>
+                    ${track.address ? `Address: ${track.address}<br>` : ''}
+                    ${track.battery_per ? `Battery: ${track.battery_per}%` : ''}
+                `);
+            });
+
+            map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
         }
 
         function showToast(message, type = 'success') {
@@ -640,5 +611,7 @@
                 toastContainer.remove();
             });
         }
+
+        document.addEventListener('DOMContentLoaded', initSessionMap);
     </script>
 @endsection

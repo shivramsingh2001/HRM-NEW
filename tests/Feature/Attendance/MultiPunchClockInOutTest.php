@@ -6,6 +6,8 @@ use App\Exceptions\NoOpenPunchSessionException;
 use App\Exceptions\OpenPunchSessionException;
 use App\Models\Attendance;
 use App\Models\AttendancePunch;
+use App\Models\AttendanceTrackingPoint;
+use App\Models\AttendanceTrackingSession;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Attendance\AttendancePunchService;
@@ -61,6 +63,18 @@ class MultiPunchClockInOutTest extends TestCase
     protected function tearDown(): void
     {
         $this->restoreSummary();
+
+        // AttendancePunchService::capture() opens an attendance_tracking_sessions
+        // row on every direction='in' punch (see TrackingSessionService) — a
+        // test that deliberately leaves a punch open (to assert an exception
+        // on the next capture) leaves one of these behind too.
+        $sessionIds = AttendanceTrackingSession::withoutGlobalScopes()
+            ->where('tenant_id', $this->tenantId)
+            ->where('user_id', $this->userId)
+            ->where('date', $this->date)
+            ->pluck('id');
+        AttendanceTrackingPoint::withoutGlobalScopes()->whereIn('session_id', $sessionIds)->delete();
+        AttendanceTrackingSession::withoutGlobalScopes()->whereIn('id', $sessionIds)->delete();
 
         AttendancePunch::withoutGlobalScopes()
             ->where('tenant_id', $this->tenantId)

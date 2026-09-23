@@ -5,6 +5,8 @@ namespace Tests\Feature\Attendance;
 use App\Http\Controllers\Api\Attendance\AttendanceController;
 use App\Models\Attendance;
 use App\Models\AttendancePunch;
+use App\Models\AttendanceTrackingPoint;
+use App\Models\AttendanceTrackingSession;
 use App\Models\Tenant;
 use App\Models\User;
 use Carbon\Carbon;
@@ -48,6 +50,12 @@ class MobileClockInOutControllerTest extends TestCase
     {
         Carbon::setTestNow();
         $this->restoreSummary();
+
+        $sessionIds = AttendanceTrackingSession::withoutGlobalScopes()
+            ->where('tenant_id', $this->tenantId)->where('user_id', $this->userId)->where('date', $this->date)
+            ->pluck('id');
+        AttendanceTrackingPoint::withoutGlobalScopes()->whereIn('session_id', $sessionIds)->delete();
+        AttendanceTrackingSession::withoutGlobalScopes()->whereIn('id', $sessionIds)->delete();
 
         AttendancePunch::withoutGlobalScopes()
             ->where('tenant_id', $this->tenantId)->where('user_id', $this->userId)->where('date', $this->date)

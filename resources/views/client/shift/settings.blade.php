@@ -513,6 +513,9 @@
 @section('content-area')
     @php
         $customEnabled = (bool) old('custom_shifts_enabled', $tenant->custom_shifts_enabled);
+        $canFixed = $canFixed ?? true;
+        $canCustom = $canCustom ?? false;
+        $bothModesAvailable = $canFixed && $canCustom;
     @endphp
 
     <x-ui.page-header title="Shift Settings">
@@ -635,35 +638,47 @@
                             @csrf
                             @method('PUT')
 
-                            {{-- Mode selector --}}
-                            <div class="mode-grid">
-                                <label class="mode-tile {{ $customEnabled ? '' : 'is-active' }}" data-mode="0">
-                                    <input type="radio" name="custom_shifts_enabled" value="0"
-                                        {{ $customEnabled ? '' : 'checked' }}>
-                                    <span class="mode-tile__check"></span>
-                                    <span class="mode-tile__icon"><i class="feather-users"></i></span>
-                                    <h6 class="mode-tile__name">Fixed Company Shift</h6>
-                                    <p class="mode-tile__text">Every employee works the same hours. Simple to set up — nothing to assign per person.</p>
-                                </label>
+                            @if ($bothModesAvailable)
+                                {{-- Mode selector --}}
+                                <div class="mode-grid">
+                                    <label class="mode-tile {{ $customEnabled ? '' : 'is-active' }}" data-mode="0">
+                                        <input type="radio" name="custom_shifts_enabled" value="0"
+                                            {{ $customEnabled ? '' : 'checked' }}>
+                                        <span class="mode-tile__check"></span>
+                                        <span class="mode-tile__icon"><i class="feather-users"></i></span>
+                                        <h6 class="mode-tile__name">Fixed Company Shift</h6>
+                                        <p class="mode-tile__text">Every employee works the same hours. Simple to set up — nothing to assign per person.</p>
+                                    </label>
 
-                                <label class="mode-tile {{ $customEnabled ? 'is-active' : '' }}" data-mode="1">
-                                    <input type="radio" name="custom_shifts_enabled" value="1"
-                                        {{ $customEnabled ? 'checked' : '' }}>
-                                    <span class="mode-tile__check"></span>
-                                    <span class="mode-tile__icon"><i class="feather-sliders"></i></span>
-                                    <h6 class="mode-tile__name">Custom Per-Employee Shifts</h6>
-                                    <p class="mode-tile__text">Assign Permanent (standing) or Flexible (day-specific) shifts per employee.</p>
-                                </label>
-                            </div>
+                                    <label class="mode-tile {{ $customEnabled ? 'is-active' : '' }}" data-mode="1">
+                                        <input type="radio" name="custom_shifts_enabled" value="1"
+                                            {{ $customEnabled ? 'checked' : '' }}>
+                                        <span class="mode-tile__check"></span>
+                                        <span class="mode-tile__icon"><i class="feather-sliders"></i></span>
+                                        <h6 class="mode-tile__name">Custom Per-Employee Shifts</h6>
+                                        <p class="mode-tile__text">Assign Permanent (standing) or Flexible (day-specific) shifts per employee.</p>
+                                    </label>
+                                </div>
 
-                            {{-- Hint --}}
-                            <div class="hint-bar">
-                                <i class="feather-info"></i>
-                                <span id="modeHintText"></span>
-                            </div>
+                                {{-- Hint --}}
+                                <div class="hint-bar">
+                                    <i class="feather-info"></i>
+                                    <span id="modeHintText"></span>
+                                </div>
+                            @else
+                                <input type="hidden" name="custom_shifts_enabled" value="{{ $canCustom ? '1' : '0' }}">
+                                <div class="hint-bar">
+                                    <i class="feather-lock"></i>
+                                    <span>
+                                        Your plan includes
+                                        <strong>{{ $canCustom ? 'Custom Per-Employee Shifts' : 'Fixed Company Shift' }}</strong>
+                                        only. Contact support to add the other mode.
+                                    </span>
+                                </div>
+                            @endif
 
                             {{-- Fixed shift fields --}}
-                            <div id="fixedShiftFields" class="fade-toggle">
+                            <div id="fixedShiftFields" class="fade-toggle" style="{{ $customEnabled ? 'display:none' : '' }}">
                                 <div class="section-label">
                                     <i class="feather-sun"></i>
                                     Fixed company shift
@@ -796,12 +811,14 @@
                 hintText.textContent = isCustom ? HINT_CUSTOM : HINT_FIXED;
             }
 
-            radios.forEach(function (radio) {
-                radio.addEventListener('change', sync);
-            });
+            if (radios.length) {
+                radios.forEach(function (radio) {
+                    radio.addEventListener('change', sync);
+                });
 
-            // Initial state
-            sync();
+                // Initial state
+                sync();
+            }
         })();
     </script>
 @endsection

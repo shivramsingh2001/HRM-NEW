@@ -57,7 +57,11 @@ class UserJobDetail extends Model
     }
      public function offboardingRequest()
     {
-        return $this->belongsTo(OffboardingRequest::class, 'user_id', 'user_id')
+        // Local key is UserJobDetail.user_id; the owner key on
+        // offboarding_requests is employee_id (that table has no user_id
+        // column at all) — this previously joined on a column that doesn't
+        // exist and never resolved.
+        return $this->belongsTo(OffboardingRequest::class, 'user_id', 'employee_id')
             ->where('status', 'completed');
     }
 

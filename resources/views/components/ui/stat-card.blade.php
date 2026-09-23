@@ -6,9 +6,9 @@
     markup variants of the same thing found across the app. This is the one
     canonical version, styled centrally in theme-custom.css (.kpi5-*).
 --}}
-@props(['icon' => 'bar-chart-2', 'label', 'value', 'pill' => null, 'valueId' => null])
+@props(['icon' => 'bar-chart-2', 'label', 'value', 'pill' => null, 'valueId' => null, 'color' => null])
 
-<div {{ $attributes->merge(['class' => 'kpi5-card']) }}>
+<div {{ $attributes->merge(['class' => 'kpi5-card' . ($color ? ' kpi5-card--' . $color : '')]) }}>
     <div class="kpi5-top">
         <span class="kpi5-icon"><i class="feather-{{ $icon }}"></i></span>
         @isset($pill)

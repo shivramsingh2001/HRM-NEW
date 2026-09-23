@@ -4,8 +4,21 @@
     <x-ui.page-header title="Asset Status &amp; Category Summary" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']" />
 
     <div class="main-content" style="padding: 20px !important;">
+        <div class="card mb-3"><div class="card-body">
+            <form method="GET" class="d-flex flex-wrap gap-2">
+                <select name="branch_id" class="form-control form-control-sm" style="width:auto;" onchange="this.form.submit()">
+                    <option value="">All Branches</option>
+                    @foreach ($branches as $b)
+                        <option value="{{ $b->id }}" {{ $branchId == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                    @endforeach
+                </select>
+                <a href="{{ route('report.asset.summary.index') }}" class="btn btn-light btn-sm">Reset</a>
+            </form>
+            <p class="text-muted mb-0 mt-1" style="font-size:10.5px;">Status and Category counts respect the Branch filter above; the By Branch breakdown always shows every branch.</p>
+        </div></div>
+
         <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="card"><div class="card-body">
                     <h6 class="fw-semibold mb-3" style="font-size:12px;">By Status</h6>
                     @forelse (\App\Models\Asset::STATUSES as $status)
@@ -17,7 +30,7 @@
                     @endforelse
                 </div></div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="card"><div class="card-body">
                     <h6 class="fw-semibold mb-3" style="font-size:12px;">By Category</h6>
                     @forelse ($byCategory as $row)
@@ -27,6 +40,19 @@
                         </div>
                     @empty
                         <x-ui.empty-state icon="pie-chart" title="No assets registered yet" />
+                    @endforelse
+                </div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card"><div class="card-body">
+                    <h6 class="fw-semibold mb-3" style="font-size:12px;">By Branch</h6>
+                    @forelse ($byBranch as $row)
+                        <div class="d-flex justify-content-between align-items-center mb-2" style="font-size:11.5px;">
+                            <span>{{ $row['name'] }}</span>
+                            <strong>{{ $row['total'] }}</strong>
+                        </div>
+                    @empty
+                        <x-ui.empty-state icon="map-pin" title="No assets registered yet" />
                     @endforelse
                 </div></div>
             </div>

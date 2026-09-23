@@ -462,19 +462,6 @@
            IS overridden below (matches the Monthly Payroll list's no-image
            initials style instead of the centralized photo-only version, since
            this column falls back to initials, not an external avatar image). */
-        .employee-avatar {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 13px;
-            flex-shrink: 0;
-        }
 
         /* ==================== TABLE STYLES ==================== */
         .table {
@@ -495,7 +482,7 @@
 
         .table td {
             vertical-align: middle;
-            font-size: 13px;
+            /* font-size: 13px; */
             padding: 12px 16px;
             border-bottom: 1px solid #f1f5f9;
         }
@@ -554,7 +541,7 @@
             background: #f1f5f9;
             color: #334155;
             border-radius: 20px;
-            font-size: 11px;
+            font-size: 9px;
             font-weight: 500;
             display: inline-block;
             white-space: nowrap;
@@ -749,7 +736,7 @@
             .table th,
             .table td {
                 padding: 8px 12px;
-                font-size: 12px;
+                /* font-size: 12px; */
             }
         }
 
@@ -1130,63 +1117,89 @@
     <!-- [ Main Content ] start -->
     <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
-
+        @php
+            $empBase = $totalEmployees ?? 0;
+            $pct = fn ($n) => $empBase > 0 ? round(($n / $empBase) * 100) : 0;
+            $notFaceRegistered = max(0, $empBase - ($faceRegisteredEmployees ?? 0));
+        @endphp
 
         <div class="stats-grid">
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="feather-users"></i>
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="feather-users"></i></span>
+                    <span class="kpi5-pill">{{ $pct($activeEmployees ?? 0) }}% Active</span>
                 </div>
-                <div class="stats-info">
-                    <h3>{{ $totalEmployees }}</h3>
-                    <p>Total Employees</p>
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="feather-check-circle"></i>
-                </div>
-                <div class="stats-info">
-                    <h3>{{ $activeEmployees }}</h3>
-                    <p>Active Employees</p>
+                <div class="kpi5-value">{{ $totalEmployees }}</div>
+                <div class="kpi5-label">Total Employees</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $activeEmployees }}</span><span class="l">Active</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $inactiveEmployees }}</span><span class="l">Inactive</span></div>
                 </div>
             </div>
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="feather-x-circle"></i>
+
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="feather-briefcase"></i></span>
+                    <span class="kpi5-pill">{{ $pct($officeEmployees ?? 0) }}%</span>
                 </div>
-                <div class="stats-info">
-                    <h3>{{ $inactiveEmployees }}</h3>
-                    <p>Inactive Employees</p>
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="feather-map-pin"></i>
-                </div>
-                <div class="stats-info">
-                    <h3>{{ $fieldEmployees }}</h3>
-                    <p>Field Employees</p>
+                <div class="kpi5-value">{{ $officeEmployees }}</div>
+                <div class="kpi5-label">Office Employees</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $fieldEmployees }}</span><span class="l">Field</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $totalEmployees }}</span><span class="l">Total</span></div>
                 </div>
             </div>
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="feather-briefcase"></i>
+
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="feather-camera"></i></span>
+                    <span class="kpi5-pill">{{ $pct($faceRegisteredEmployees ?? 0) }}%</span>
                 </div>
-                <div class="stats-info">
-                    <h3>{{ $officeEmployees }}</h3>
-                    <p>Office Employees</p>
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="feather-camera"></i>
-                </div>
-                <div class="stats-info">
-                    <h3>{{ $faceRegisteredEmployees }}</h3>
-                    <p>Face Registered</p>
+                <div class="kpi5-value">{{ $faceRegisteredEmployees }}</div>
+                <div class="kpi5-label">Face Registered</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $faceRegisteredEmployees }}</span><span class="l">Registered</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $notFaceRegistered }}</span><span class="l">Not Registered</span></div>
                 </div>
             </div>
+
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="feather-users"></i></span>
+                    <span class="kpi5-pill">{{ ($hrCount ?? 0) + ($managerCount ?? 0) + ($employeeCount ?? 0) }} Total</span>
+                </div>
+                <div class="kpi5-value">{{ $employeeCount ?? 0 }}</div>
+                <div class="kpi5-label">Employees by Role</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $hrCount ?? 0 }}</span><span class="l">HR</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $managerCount ?? 0 }}</span><span class="l">Manager</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $employeeCount ?? 0 }}</span><span class="l">Employee</span></div>
+                </div>
+            </div>
+
+            @if (!empty($fieldTrackingEnabled))
+                @php
+                    $ftAvailable = max(0, ($fieldTrackingSeats ?? 0) - ($fieldTrackingSeatsUsed ?? 0));
+                    $ftPct = ($fieldTrackingSeats ?? 0) > 0 ? round((($fieldTrackingSeatsUsed ?? 0) / $fieldTrackingSeats) * 100) : 0;
+                @endphp
+                <div class="kpi5-card">
+                    <div class="kpi5-top">
+                        <span class="kpi5-icon"><i class="feather-crosshair"></i></span>
+                        <span class="kpi5-pill">{{ $ftPct }}% Used</span>
+                    </div>
+                    <div class="kpi5-value" id="ltSeatsUsedKpi">{{ $fieldTrackingSeatsUsed }}</div>
+                    <div class="kpi5-label">Field Tracking Seats In Use</div>
+                    <div class="kpi5-divider"></div>
+                    <div class="kpi5-foot">
+                        <div class="kpi5-stat"><span class="n">{{ $fieldTrackingSeats }}</span><span class="l">Purchased</span></div>
+                        <div class="kpi5-stat"><span class="n">{{ $ftAvailable }}</span><span class="l">Available</span></div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <!-- Compact Filter Section -->
@@ -1412,12 +1425,22 @@
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        @if (!empty($fieldTrackingEnabled))
+                        @if (!empty($fieldTrackingEnabled) || $pushDevices->isNotEmpty())
                             <div id="ltBulkBar" class="d-none align-items-center gap-2 px-3 py-2"
                                  style="background:var(--primary-light);border-bottom:1px solid #c7d2fe;font-size:13px;">
                                 <span id="ltBulkCount" class="fw-semibold">0 selected</span>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="bulkLocationTracking(1)">Enable tracking</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkLocationTracking(0)">Disable tracking</button>
+                                @if (!empty($fieldTrackingEnabled))
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="bulkLocationTracking(1)">Enable tracking</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkLocationTracking(0)">Disable tracking</button>
+                                @endif
+                                @if ($pushDevices->isNotEmpty())
+                                    <select id="pushDeviceSelect" class="form-control form-control-sm" style="width:auto;display:inline-block;">
+                                        @foreach ($pushDevices as $dev)
+                                            <option value="{{ $dev->id }}">{{ $dev->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="bulkPushToDevice()">Push to device</button>
+                                @endif
                                 <button type="button" class="btn btn-sm btn-link" onclick="ltClearSelection()">Clear</button>
                             </div>
                         @endif
@@ -1425,7 +1448,7 @@
                             <table class="table" id="employeeList1">
                                 <thead>
                                     <tr>
-                                        @if (!empty($fieldTrackingEnabled))
+                                        @if (!empty($fieldTrackingEnabled) || $pushDevices->isNotEmpty())
                                             <th style="width:28px"><input type="checkbox" id="ltSelectAll"></th>
                                         @endif
                                         <th width="50">#</th>
@@ -1447,7 +1470,7 @@
                                 <tbody>
                                     @forelse($users as $user)
                                         <tr>
-                                            @if (!empty($fieldTrackingEnabled))
+                                            @if (!empty($fieldTrackingEnabled) || $pushDevices->isNotEmpty())
                                                 <td><input type="checkbox" class="lt-row-sel" value="{{ $user->id }}"></td>
                                             @endif
                                             <td>{{ $loop->iteration }}</td>
@@ -1463,11 +1486,11 @@
                                                         </div>
                                                     @endif
                                                     <div class="employee-details">
-                                                        <div class="employee-name">{{ ucfirst($user->name) }} <span
-                                                                class="text-muted"
-                                                                style="font-size: 11px;">({{ $user->employee_id ?? 'N/A' }})</span>
+                                                        <div class="employee-name-text">{{ ucfirst($user->name) }}
+                                                                <small class="employee-id-text">(
+                                                        {{ $user->employee_id ?? 'N/A' }} )</small>
                                                         </div>
-                                                        <div class="employee-email">{{ $user->email }}</div>
+                                                        <div class="employee-email-text">{{ $user->email }}</div>
                                                         
                                                     </div>
                                                 </div>
@@ -1516,18 +1539,27 @@
                                             </td>
                                             <!-- Attendance Type Column -->
                                             <td>
-                                               
-                                                <select class="form-select form-select-sm attendance-type-select" 
-                                                        style="width: 100%; min-width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc;"
-                                                        data-user-id="{{ $user->id }}"
-                                                        onchange="updateAttendanceType(this)">
-                                                    <option value="manual_attendance" {{ $user->attendance_type == 'manual_attendance' ? 'selected' : '' }}>
-                                                        📝 Manual
-                                                    </option>
-                                                    <option value="face_verification" {{ $user->attendance_type == 'face_verification' ? 'selected' : '' }}>
-                                                        👤 Face Verification
-                                                    </option>
-                                                </select>
+                                                @php
+                                                    $canManualAttendance = app(\App\Services\FeatureService::class)->enabledForCurrentTenant('attendance');
+                                                    $canFaceAttendance = app(\App\Services\FeatureService::class)->enabledForCurrentTenant('attendance_face');
+                                                @endphp
+                                                @if ($canManualAttendance && $canFaceAttendance)
+                                                    <select class="form-select form-select-sm attendance-type-select"
+                                                            style="width: 100%; min-width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc;"
+                                                            data-user-id="{{ $user->id }}"
+                                                            onchange="updateAttendanceType(this)">
+                                                        <option value="manual_attendance" {{ $user->attendance_type == 'manual_attendance' ? 'selected' : '' }}>
+                                                            📝 Manual
+                                                        </option>
+                                                        <option value="face_verification" {{ $user->attendance_type == 'face_verification' ? 'selected' : '' }}>
+                                                            👤 Face Verification
+                                                        </option>
+                                                    </select>
+                                                @elseif ($canFaceAttendance)
+                                                    <span class="badge bg-light text-dark">👤 Face Verification</span>
+                                                @else
+                                                    <span class="badge bg-light text-dark">📝 Manual</span>
+                                                @endif
                                             </td>
                                             @if (!empty($fieldTrackingEnabled))
                                                 <td>
@@ -1684,7 +1716,7 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        toastr.success(`Status updated successfully`);
+                        toastr.success('Status updated successfully');
 
                         // Update the toggle UI
                         if (toggle && statusLabel) {
@@ -1830,6 +1862,8 @@
                         if (typeof response.seats_used !== 'undefined') {
                             const el = document.getElementById('ltSeatsUsed');
                             if (el) el.textContent = response.seats_used;
+                            const kpiEl = document.getElementById('ltSeatsUsedKpi');
+                            if (kpiEl) kpiEl.textContent = response.seats_used;
                         }
                         toastr.success(response.message || 'Updated');
                     } else {
@@ -1876,6 +1910,8 @@
                         if (response.data && typeof response.data.seats_used !== 'undefined') {
                             const el = document.getElementById('ltSeatsUsed');
                             if (el) el.textContent = response.data.seats_used;
+                            const kpiEl = document.getElementById('ltSeatsUsedKpi');
+                            if (kpiEl) kpiEl.textContent = response.data.seats_used;
                         }
                         setTimeout(() => window.location.reload(), 900);
                     } else {
@@ -1886,6 +1922,22 @@
                     toastr.error('Bulk update failed. Please try again.');
                     console.error(xhr);
                 }
+            });
+        }
+        function bulkPushToDevice() {
+            const ids = ltSelectedIds();
+            if (!ids.length) { toastr.info('Select employees first'); return; }
+            const deviceId = document.getElementById('pushDeviceSelect')?.value;
+            if (!deviceId) { toastr.error('Choose a device'); return; }
+            $.ajax({
+                url: "{{ route('employee.bulk-push-to-device') }}",
+                type: "POST",
+                data: { user_ids: ids, device_id: deviceId, _token: "{{ csrf_token() }}" },
+                success: function (response) {
+                    if (response.status) { toastr.success(response.message); }
+                    else { toastr.error(response.message || 'Push failed'); }
+                },
+                error: function () { toastr.error('Push failed. Please try again.'); }
             });
         }
         document.addEventListener('DOMContentLoaded', function () {

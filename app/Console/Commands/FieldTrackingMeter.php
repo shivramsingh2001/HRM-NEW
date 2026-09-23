@@ -60,7 +60,7 @@ class FieldTrackingMeter extends Command
 
             $nowUsed = count($enabledIds);
             $trackRows = $enabledIds
-                ? DB::table('attendance_tracks')
+                ? DB::table('attendance_tracking_points')
                     ->where('tenant_id', $t->id)
                     ->whereIn('user_id', $enabledIds)
                     ->whereBetween('track_time', [$mStart, $mEnd])
@@ -106,7 +106,7 @@ class FieldTrackingMeter extends Command
                     $ids = $u->enabled_user_ids ?: [];
                     $u->update([
                         'track_rows_written' => $ids
-                            ? DB::table('attendance_tracks')->where('tenant_id', $u->tenant_id)
+                            ? DB::table('attendance_tracking_points')->where('tenant_id', $u->tenant_id)
                                 ->whereIn('user_id', $ids)->whereBetween('track_time', [$pStart, $pEnd])->count()
                             : 0,
                         'seats_purchased' => (int) (DB::table('tenants')->where('id', $u->tenant_id)->value('field_tracking_seats') ?? $u->seats_purchased),

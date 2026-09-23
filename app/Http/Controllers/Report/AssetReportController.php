@@ -40,7 +40,13 @@ class AssetReportController extends Controller
             $query
                 ->when($request->get('category_id'), fn ($q, $v) => $q->where('asset_category_id', $v))
                 ->when($request->get('status'), fn ($q, $v) => $q->where('status', $v))
-                ->when($request->get('branch_id'), fn ($q, $v) => $q->where('branch_id', $v));
+                ->when($request->get('branch_id'), fn ($q, $v) => $q->where('branch_id', $v))
+                ->when($request->get('search'), fn ($q, $v) => $q->where(function ($qq) use ($v) {
+                    $qq->where('asset_code', 'like', "%{$v}%")
+                        ->orWhere('name', 'like', "%{$v}%")
+                        ->orWhere('serial_number', 'like', "%{$v}%")
+                        ->orWhereHas('currentAssigneeUser', fn ($u) => $u->where('name', 'like', "%{$v}%")->orWhere('employee_id', 'like', "%{$v}%"));
+                }));
 
             $assets = $query->orderBy('asset_code')->paginate(25)->appends($request->query());
 
@@ -62,7 +68,13 @@ class AssetReportController extends Controller
         $query
             ->when($request->get('category_id'), fn ($q, $v) => $q->where('asset_category_id', $v))
             ->when($request->get('status'), fn ($q, $v) => $q->where('status', $v))
-            ->when($request->get('branch_id'), fn ($q, $v) => $q->where('branch_id', $v));
+            ->when($request->get('branch_id'), fn ($q, $v) => $q->where('branch_id', $v))
+            ->when($request->get('search'), fn ($q, $v) => $q->where(function ($qq) use ($v) {
+                $qq->where('asset_code', 'like', "%{$v}%")
+                    ->orWhere('name', 'like', "%{$v}%")
+                    ->orWhere('serial_number', 'like', "%{$v}%")
+                    ->orWhereHas('currentAssigneeUser', fn ($u) => $u->where('name', 'like', "%{$v}%")->orWhere('employee_id', 'like', "%{$v}%"));
+            }));
 
         $assets = $query->orderBy('asset_code')->get();
 
@@ -97,12 +109,18 @@ class AssetReportController extends Controller
                 ->whereHas('assetAssignments')
                 ->with(['assetAssignments' => function ($q) {
                     $q->with('asset.category')->orderByDesc('assigned_at');
-                }])
+                }, 'jobDetails.branch'])
+                ->when($request->get('branch_id'), fn ($q, $v) => $q->whereHas('jobDetails', fn ($j) => $j->where('branch_id', $v)))
+                ->when($request->get('search'), fn ($q, $v) => $q->where(function ($qq) use ($v) {
+                    $qq->where('name', 'like', "%{$v}%")->orWhere('employee_id', 'like', "%{$v}%");
+                }))
                 ->orderBy('name')
                 ->paginate(20)
                 ->appends($request->query());
 
-            return view('client.report.asset.employee-wise', compact('users'));
+            $branches = CompanyBranch::active()->orderBy('name')->get();
+
+            return view('client.report.asset.employee-wise', compact('users', 'branches'));
         } catch (Exception $e) {
             Log::error('Asset employee-wise report error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while generating the report.');
@@ -114,14 +132,25 @@ class AssetReportController extends Controller
         try {
             $this->authorizeReportAccess();
 
-            $byStatus = Asset::selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+            $branchId = $request->get('branch_id');
+
+            $byStatus = Asset::when($branchId, fn ($q, $v) => $q->where('branch_id', $v))
+                ->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
             $byCategory = Asset::with('category')
+                ->when($branchId, fn ($q, $v) => $q->where('branch_id', $v))
                 ->selectRaw('asset_category_id, count(*) as total')
                 ->groupBy('asset_category_id')
                 ->get()
                 ->map(fn ($row) => ['name' => $row->category->name ?? 'Uncategorized', 'total' => $row->total]);
+            $byBranch = Asset::with('branch')
+                ->selectRaw('branch_id, count(*) as total')
+                ->groupBy('branch_id')
+                ->get()
+                ->map(fn ($row) => ['name' => $row->branch->name ?? 'Unassigned', 'total' => $row->total]);
 
-            return view('client.report.asset.summary', compact('byStatus', 'byCategory'));
+            $branches = CompanyBranch::active()->orderBy('name')->get();
+
+            return view('client.report.asset.summary', compact('byStatus', 'byCategory', 'byBranch', 'branches', 'branchId'));
         } catch (Exception $e) {
             Log::error('Asset summary report error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while generating the report.');
@@ -135,14 +164,22 @@ class AssetReportController extends Controller
 
             $days = (int) $request->get('days', 90);
 
-            $assets = Asset::with(['category', 'currentAssigneeUser'])
+            $assets = Asset::with(['category', 'branch', 'currentAssigneeUser'])
                 ->whereNotNull('warranty_end_date')
                 ->where('warranty_end_date', '<=', now()->addDays($days))
+                ->when($request->get('branch_id'), fn ($q, $v) => $q->where('branch_id', $v))
+                ->when($request->get('search'), fn ($q, $v) => $q->where(function ($qq) use ($v) {
+                    $qq->where('asset_code', 'like', "%{$v}%")
+                        ->orWhere('name', 'like', "%{$v}%")
+                        ->orWhereHas('currentAssigneeUser', fn ($u) => $u->where('name', 'like', "%{$v}%")->orWhere('employee_id', 'like', "%{$v}%"));
+                }))
                 ->orderBy('warranty_end_date')
                 ->paginate(25)
                 ->appends($request->query());
 
-            return view('client.report.asset.warranty-expiry', compact('assets', 'days'));
+            $branches = CompanyBranch::active()->orderBy('name')->get();
+
+            return view('client.report.asset.warranty-expiry', compact('assets', 'days', 'branches'));
         } catch (Exception $e) {
             Log::error('Asset warranty-expiry report error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while generating the report.');

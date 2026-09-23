@@ -48,11 +48,36 @@ class AttendancePolicyController extends Controller
             ? Carbon::parse($request->input('effective_from'))->format('Y-m-d')
             : now()->format('Y-m-d');
 
+        // This form has no knowledge of the Late Arrival / Early Leaving card's
+        // fields (grace_mode, deduction toggles, etc.) — carry them all forward
+        // unchanged from the currently-effective policy so saving this form (or
+        // Day Classification) never silently resets them. The one exception:
+        // this form's own late_halfday_enabled checkbox is honored when
+        // explicitly checked (-> 'half_day'), but an unchecked box never
+        // silently downgrades an 'absent' choice made via the new card back to
+        // 'none' — that requires explicitly visiting the Late Arrival card.
+        $current = app(PolicyResolver::class)->forTenantDate($tenantId, $effectiveFrom);
+        $lateAttendanceAction = $data['late_halfday_enabled']
+            ? 'half_day'
+            : ($current->lateAttendanceAction === 'absent' ? 'absent' : 'none');
+
         AttendancePolicy::updateOrCreate(
             ['tenant_id' => $tenantId, 'effective_from' => $effectiveFrom],
-            array_merge(Arr::except($data, ['allow_multiple_punches']), [
-                'created_by' => Auth::id(),
-            ])
+            array_merge(
+                Arr::except($data, ['allow_multiple_punches']),
+                Arr::only($current->toPersistableArray(), [
+                    'grace_mode', 'fixed_grace_minutes',
+                    'late_deduction_enabled', 'late_deduction_multiplier',
+                    'late_deduction_mode', 'late_deduction_amount',
+                    'monthly_early_allowance', 'early_attendance_action',
+                    'early_deduction_enabled', 'early_deduction_multiplier',
+                    'early_deduction_mode', 'early_deduction_amount',
+                ]),
+                [
+                    'late_attendance_action' => $lateAttendanceAction,
+                    'created_by' => Auth::id(),
+                ]
+            )
         );
 
         Tenant::whereKey($tenantId)->update([

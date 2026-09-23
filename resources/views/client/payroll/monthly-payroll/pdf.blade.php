@@ -52,7 +52,7 @@
                             @endif
                         </td>
                         <td style="padding: 8px; width: 80%;">
-                            <h3 style="text-align: center; padding-right: 80px; font-size: 20px; color: #1e3a8a; margin-bottom: 2px;">{{ $company->company_name ?? 'Company Name' }}</h3>
+                            <h3 style="text-align: center; padding-right: 80px; font-size: 30px; color: #1e3a8a; margin-bottom: 2px;">{{ $company->company_name ?? 'Company Name' }}</h3>
                             <h5 style="text-align: center; padding-right: 80px; font-size: 11px; font-weight: 400; color: #475569;">{{ $company->address ?? 'Company Address' }}</h5>
                         </td>
                     </tr>

@@ -1170,29 +1170,22 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                @if (!empty($expense->file))
-                                                    @php
-                                                        $filePath = $expense->file;
-                                                        $extension = strtolower(
-                                                            pathinfo($filePath, PATHINFO_EXTENSION),
-                                                        );
-                                                        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                                                    @endphp
-
-                                                    @if (in_array($extension, $imageExtensions))
-                                                        <a href="{{ asset($filePath) }}" target="_blank">
-                                                            <img src="{{ asset($filePath) }}" alt="Expense File"
+                                                {{-- Every receipt: the primary one plus any extras (signed URLs). --}}
+                                                @forelse ($expense->receipt_list ?? [] as $receipt)
+                                                    @if ($receipt['is_image'])
+                                                        <a href="{{ $receipt['url'] }}" target="_blank" title="{{ $receipt['name'] }}">
+                                                            <img src="{{ $receipt['url'] }}" alt="{{ $receipt['name'] }}"
                                                                 style="width:30px; height:30px; border-radius:50%; object-fit: cover;">
                                                         </a>
                                                     @else
-                                                        <a href="{{ asset($filePath) }}" class="btn btn-sm btn-light"
-                                                            download>
+                                                        <a href="{{ $receipt['url'] }}" class="btn btn-sm btn-light" download
+                                                            title="{{ $receipt['name'] }}">
                                                             <i class="fa fa-download"></i>
                                                         </a>
                                                     @endif
-                                                @else
+                                                @empty
                                                     <span class="text-muted">—</span>
-                                                @endif
+                                                @endforelse
                                             </td>
                                             <td>
                                                 @php
@@ -1213,8 +1206,19 @@
                                                         ][$expense->status] ?? ucfirst($expense->status);
                                                 @endphp
                                                 <span class="badge {{ $statusClass }}">
-                                                    {{ $statusText }}
+                                                    {{ $expense->withdrawn_at ? 'Withdrawn' : $statusText }}
                                                 </span>
+                                                @if ($expense->withdrawn_at && $expense->withdrawn_reason)
+                                                    <div class="small text-muted" style="font-size:10px;max-width:140px"
+                                                        title="{{ $expense->withdrawn_reason }}">
+                                                        {{ \Illuminate\Support\Str::limit($expense->withdrawn_reason, 40) }}</div>
+                                                @endif
+                                                @if ($expense->parent_expense_id)
+                                                    <div class="small text-muted" style="font-size:10px">Split from a settlement</div>
+                                                @endif
+                                                @if ($expense->payout_channel === 'payroll')
+                                                    <div class="small text-info" style="font-size:10px">Paid through payroll ({{ $expense->payroll_target_month }})</div>
+                                                @endif
                                             </td>
                                             <td>
                                                 @if ($expense->status == 'complete' && $expense->payments && $expense->payments->count() > 0)
@@ -1242,13 +1246,32 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @if ($expense->status == 'pending')
+                                                @php
+                                                    // Approved but completely unpaid advances / reimbursements can be withdrawn too
+                                                    // ("I no longer need it"); a settlement (already deducted) or a split-off
+                                                    // reimbursement cannot.
+                                                    $canWithdrawApproved =
+                                                        $expense->status == 'approved' &&
+                                                        $expense->requirement_type !== 'settlement' &&
+                                                        !$expense->parent_expense_id &&
+                                                        (float) $expense->paid_amount === 0.0;
+                                                @endphp
+                                                @if ($expense->status == 'pending' || $canWithdrawApproved)
                                                     <div class="dropdown">
                                                         <a href="#" class="action-btn" data-bs-toggle="dropdown"
                                                             data-bs-offset="0,5">
                                                             <i class="feather-more-vertical"></i>
                                                         </a>
                                                         <ul class="dropdown-menu dropdown-menu-end">
+                                                            <li>
+                                                                <a class="dropdown-item withdraw-expense" href="#"
+                                                                    data-id="{{ $expense->id }}"
+                                                                    data-number="{{ $expense->expense_number }}">
+                                                                    <i class="feather-corner-up-left"></i>
+                                                                    <span>Withdraw</span>
+                                                                </a>
+                                                            </li>
+                                                            @if ($expense->status == 'pending')
                                                             <li>
                                                                 <a class="dropdown-item edit-expense" href="#"
                                                                     data-id="{{ $expense->id }}"
@@ -1257,7 +1280,8 @@
                                                                     data-project_id="{{ $expense->project_id }}"
                                                                     data-date="{{ $expense->date }}"
                                                                     data-amount="{{ $expense->amount }}"
-                                                                    data-description="{{ $expense->description }}">
+                                                                    data-description="{{ $expense->description }}"
+                                                                    data-receipts="{{ json_encode($expense->receipt_list ?? []) }}">
                                                                     <i class="feather-edit-3"></i>
                                                                     <span>Edit</span>
                                                                 </a>
@@ -1269,6 +1293,7 @@
                                                                     <span>Delete</span>
                                                                 </a>
                                                             </li>
+                                                            @endif
                                                         </ul>
                                                     </div>
                                                 @else
@@ -1378,9 +1403,11 @@
                                     </div>
                                     <div class="col-12 mb-3">
                                         <div class="form-group">
-                                            <label class="fw-semibold" for="file">Attachment</label>
-                                            <input type="file" class="form-control" name="file" id="file"
-                                                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
+                                            <label class="fw-semibold" for="file">Receipts</label>
+                                            <input type="file" class="form-control" name="files[]" id="file" multiple
+                                                accept=".jpg,.jpeg,.png,.pdf">
+                                            <small class="text-muted">Up to 5 files — JPG, PNG or PDF, 5 MB each.</small>
+                                            <small class="text-danger error-text files_error d-block"></small>
                                             <small class="text-danger error-text file_error"></small>
                                         </div>
                                     </div>
@@ -1503,11 +1530,13 @@
                                     </div>
                                     <div class="col-12 mb-3">
                                         <div class="form-group">
-                                            <label class="fw-semibold" for="edit_file">Attachment</label>
-                                            <input type="file" class="form-control" name="file" id="edit_file"
-                                                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
+                                            <label class="fw-semibold" for="edit_file">Receipts</label>
+                                            <div id="currentFile" class="mb-2"></div>
+                                            <input type="file" class="form-control" name="files[]" id="edit_file" multiple
+                                                accept=".jpg,.jpeg,.png,.pdf">
+                                            <small class="text-muted">New files are ADDED to the ones above (5 in total).</small>
+                                            <small class="text-danger error-text edit_files_error d-block"></small>
                                             <small class="text-danger error-text edit_file_error"></small>
-                                            <div id="currentFile" class="mt-2"></div>
                                         </div>
                                     </div>
                                     <div class="col-12 mb-3">
@@ -1547,7 +1576,7 @@
                 <div class="modal-body text-center">
                     <i class="feather-alert-triangle text-danger" style="font-size: 48px;"></i>
                     <p class="mt-3">Are you sure you want to delete this expense?</p>
-                    <p class="text-muted small">This action cannot be undone.</p>
+                    <p class="text-muted small">The claim is removed from your list. (Its receipts are kept for audit for a while.)</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -1556,6 +1585,28 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Withdraw Modal: keeps a visible record (unlike Delete) and also works for an approved but unpaid advance/reimbursement -->
+    <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Withdraw <span id="withdrawNumber"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-2">You are pulling this claim back. It stays in your list marked
+                        <b>Withdrawn</b>, and nothing more will be paid against it. It cannot be undone.</p>
+                    <textarea id="withdrawReason" class="form-control" rows="3" maxlength="500"
+                        placeholder="Reason (required, min 3 characters)"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="confirmWithdraw">Withdraw claim</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
@@ -1781,8 +1832,94 @@
                 $('#edit_date').val($(this).data('date'));
                 $('#edit_amount').val($(this).data('amount'));
                 $('#edit_description').val($(this).data('description'));
+                renderReceipts($(this).data('id'), $(this).data('receipts') || []);
 
                 $('#editexpenseModal').modal('show');
+            });
+
+            // Current receipts of the claim being edited, each with a remove button.
+            function esc(s) {
+                return String(s ?? '').replace(/[&<>"']/g, c => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                } [c]));
+            }
+
+            function renderReceipts(expenseId, receipts) {
+                if (!receipts.length) {
+                    $('#currentFile').html('<span class="small text-muted">No receipts attached yet.</span>');
+                    return;
+                }
+                $('#currentFile').html(receipts.map(r => `
+                    <div class="d-flex align-items-center gap-2 mb-1 small" data-receipt="${r.primary ? 'primary' : r.id}">
+                        <a href="${esc(r.url)}" target="_blank" class="flex-grow-1 text-truncate">${esc(r.name)}</a>
+                        <button type="button" class="btn btn-sm btn-light text-danger remove-receipt py-0"
+                            data-expense="${expenseId}" data-which="${r.primary ? 'primary' : r.id}" title="Remove this receipt">&times;</button>
+                    </div>`).join(''));
+            }
+
+            $(document).on('click', '.remove-receipt', function() {
+                const btn = $(this).prop('disabled', true);
+                $.ajax({
+                    url: "{{ url('expense') }}/" + btn.data('expense') + "/receipts/" + btn.data('which'),
+                    type: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(res) {
+                        toastr.success(res.message);
+                        btn.closest('[data-receipt]').remove();
+                        if (!$('#currentFile [data-receipt]').length) renderReceipts(0, []);
+                    },
+                    error: function(xhr) {
+                        toastr.error(xhr.responseJSON?.message || 'Could not remove the receipt.');
+                        btn.prop('disabled', false);
+                    }
+                });
+            });
+
+            // ==================== WITHDRAW ====================
+            let withdrawId = null;
+
+            $(document).on('click', '.withdraw-expense', function(e) {
+                e.preventDefault();
+                withdrawId = $(this).data('id');
+                $('#withdrawNumber').text($(this).data('number') || '');
+                $('#withdrawReason').val('');
+                $('#withdrawModal').modal('show');
+            });
+
+            $('#confirmWithdraw').on('click', function() {
+                const reason = ($('#withdrawReason').val() || '').trim();
+                if (!withdrawId) return;
+                if (reason.length < 3) {
+                    toastr.error('Please give a reason (at least 3 characters).');
+                    return;
+                }
+                const btn = $(this).prop('disabled', true);
+
+                $.ajax({
+                    url: "{{ url('expense/withdraw') }}/" + withdrawId,
+                    type: 'POST',
+                    data: {
+                        reason: reason
+                    },
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(res) {
+                        toastr.success(res.message);
+                        $('#withdrawModal').modal('hide');
+                        setTimeout(() => location.reload(), 1000);
+                    },
+                    error: function(xhr) {
+                        toastr.error(xhr.responseJSON?.message || 'Could not withdraw the claim.');
+                        btn.prop('disabled', false);
+                    }
+                });
             });
 
             // Edit Expense Form Submission
@@ -1816,10 +1953,15 @@
                     },
                     error: function(xhr) {
                         if (xhr.status === 422) {
-                            let errors = xhr.responseJSON.errors;
-                            $.each(errors, function(key, value) {
-                                $('.edit_' + key + '_error').text(value[0]);
-                            });
+                            let errors = xhr.responseJSON?.errors;
+                            if (errors) {
+                                $.each(errors, function(key, value) {
+                                    const el = $('.edit_' + key.split('.')[0] + '_error');
+                                    el.length ? el.text(value[0]) : toastr.error(value[0]);
+                                });
+                            } else {
+                                toastr.error(xhr.responseJSON?.message || 'Please check your entries.');
+                            }
                         } else if (xhr.status === 400) {
                             toastr.error(xhr.responseJSON.message);
                         } else {
@@ -1891,10 +2033,17 @@
                     },
                     error: function(xhr) {
                         if (xhr.status === 422) {
-                            let errors = xhr.responseJSON.errors;
-                            $.each(errors, function(key, value) {
-                                $('.' + key + '_error').text(value[0]);
-                            });
+                            // Field errors (validation) come as `errors`; company-policy rules (limit, receipt
+                            // required, back-dating) come as a plain `message` — show whichever we got.
+                            let errors = xhr.responseJSON?.errors;
+                            if (errors) {
+                                $.each(errors, function(key, value) {
+                                    const el = $('.' + key.split('.')[0] + '_error');
+                                    el.length ? el.text(value[0]) : toastr.error(value[0]);
+                                });
+                            } else {
+                                toastr.error(xhr.responseJSON?.message || 'Please check your entries.');
+                            }
                         } else if (xhr.status === 400) {
                             toastr.error(xhr.responseJSON.message);
                         } else {

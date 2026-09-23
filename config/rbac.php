@@ -144,6 +144,12 @@ return [
             // assigned to the manager's own direct reports (getTeamMembers()
             // -style reporting_head scoping), no create/edit/manage.
             'assets' => ['view' => 'team'],
+            // offboarding => team: a manager needs to see their direct
+            // reports' exit status and act as the level-1 (manager) approver
+            // in the offboarding ApprovalService workflow — never
+            // company-wide, never create-on-behalf, never the clearance/
+            // settlement 'edit' actions (those stay HR/Finance-only below).
+            'offboarding' => ['view' => 'team', 'approve' => 'team'],
         ]],
         'employee' => ['Employee', true, [
             'employee' => ['view' => 'own'],
@@ -176,6 +182,13 @@ return [
             // allowed regardless of this grant (ownership-checked in the
             // controller, matching Loans/Requests).
             'assets' => ['view' => 'own'],
+            // offboarding => own: an employee can see and create their own
+            // resignation/retirement request. Which reasons they may
+            // actually select (e.g. never "Termination") is a business rule
+            // enforced by config('offboarding.reason_rules') inside
+            // StoreOffboardingRequest, not by this scope — RBAC only proves
+            // "can touch the offboarding module at all".
+            'offboarding' => ['view' => 'own', 'create' => 'own'],
         ]],
     ],
 ];

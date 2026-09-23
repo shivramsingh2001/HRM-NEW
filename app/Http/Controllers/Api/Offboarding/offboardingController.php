@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OffboardingRequest;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Offboarding\OffboardingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,14 +15,19 @@ use Illuminate\Support\Facades\Validator;
 
 class OffboardingController extends Controller
 {
+    public function __construct(protected OffboardingService $offboarding)
+    {
+    }
+
     /**
      * Get notice period information for the authenticated employee
      */
     public function noticePeriode(Request $request)
     {
         try {
-            $tenant = Tenant::where('id', session('tenant_id'))->first();
+            $tenantId = (int) session('tenant_id');
             $employee_id = Auth::id();
+            $noticeDays = $this->offboarding->requiredNoticeDays($tenantId);
 
             $existingRequest = OffboardingRequest::where('employee_id', $employee_id)
                 ->whereIn('status', ['pending_approval', 'approved', 'completed'])
@@ -31,9 +37,9 @@ class OffboardingController extends Controller
                 'success' => true,
                 'message' => "Notice period information retrieved successfully",
                 'data' => [
-                    'notice_period_days' => $tenant->notice_period ?? 30,
+                    'notice_period_days' => $noticeDays,
                     'is_applied' => $existingRequest,
-                    'min_last_working_date' => now()->addDays($tenant->notice_period ?? 30)->format('Y-m-d')
+                    'min_last_working_date' => now()->addDays($noticeDays)->format('Y-m-d')
                 ]
             ], 200);
         } catch (\Exception $e) {
@@ -46,106 +52,55 @@ class OffboardingController extends Controller
     }
 
     /**
-     * Create a new offboarding request (Resignation only for employees)
+     * Create a new offboarding request (Resignation only for employees —
+     * mirrors config('offboarding.reason_rules') on the web side, which also
+     * restricts 'resignation'/'retirement' to employee-creatable reasons).
      */
     public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'last_working_date' => 'required|date|after_or_equal:today',
+            'resignation_date' => 'nullable|date|before_or_equal:today',
+            'reason_detail' => 'required|string|min:10|max:500',
+            'feedback' => 'nullable|string|max:1000'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 200);
+        }
+
         try {
-            DB::beginTransaction();
-
-            $validator = Validator::make($request->all(), [
-                'last_working_date' => 'required|date|after_or_equal:today',
-                'resignation_date' => 'nullable|date|before_or_equal:today',
-                'reason_detail' => 'required|string|min:10|max:500',
-                'feedback' => 'nullable|string|max:1000'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $validator->errors()->first(),
-
-                ], 200);
-            }
-
-            $employee_id = Auth::id();
-
-            // Check if employee exists and is active
-            $employee = User::where('id', $employee_id)->where('status', '1')->first();
-            if (!$employee) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Employee not found or inactive."
-                ], 200);
-            }
-
-            // Check if employee already has pending offboarding
-            $existingRequest = OffboardingRequest::where('employee_id', $employee_id)
-                ->whereIn('status', ['pending_approval', 'approved'])
-                ->first();
-
-            if ($existingRequest) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "You already have an active offboarding request. Request Code: " . $existingRequest->request_code,
-                    'data' => [
-                        'request_code' => $existingRequest->request_code,
-                        'status' => $existingRequest->status,
-                        'last_working_date' => $existingRequest->last_working_date
-                    ]
-                ], 200);
-            }
-
-            // Get tenant notice period for validation
-            $tenant = Tenant::where('id', session('tenant_id'))->first();
-            $minNoticeDays = $tenant->notice_period ?? 15;
-            $minDate = now()->addDays($minNoticeDays)->format('Y-m-d');
-
-            if ($request->last_working_date < $minDate) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Last working date must be at least {$minNoticeDays} days from today."
-                ], 200);
-            }
-
-            $offboarding = OffboardingRequest::create([
-                'tenant_id' => session('tenant_id'),
-                'employee_id' => $employee_id,
-                'request_date' => now()->format('Y-m-d'),
-                'last_working_date' => $request->last_working_date,
-                'resignation_date' => $request->resignation_date ?? now()->format('Y-m-d'),
+            $offboarding = $this->offboarding->submit([
                 'reason' => 'resignation',
+                'last_working_date' => $request->last_working_date,
+                'resignation_date' => $request->resignation_date,
                 'reason_detail' => $request->reason_detail,
                 'feedback' => $request->feedback,
-                'eligible_for_rehire' => 1,
-                'status' => 'pending_approval',
-                'manager_review_status' => 'pending',
-                'hr_review_status' => 'pending',
-                'knowledge_transfer_status' => 'not_started',
-                'exit_interview_status' => 'not_scheduled',
-                'final_settlement_status' => 'pending',
-                'created_by' => $employee_id
-            ]);
-
-            DB::commit();
+            ], Auth::user());
 
             return response()->json([
                 'success' => true,
                 'message' => "Offboarding request submitted successfully!",
-                // 'data' => [
-                //     'id' => $offboarding->id,
-                //     'request_code' => $offboarding->request_code,
-                //     'status' => $offboarding->status,
-                //     'last_working_date' => $offboarding->last_working_date,
-                //     'created_at' => $offboarding->created_at
-                // ]
+                'data' => [
+                    'id' => $offboarding->id,
+                    'request_code' => $offboarding->request_code,
+                    'status' => $offboarding->status,
+                    'last_working_date' => $offboarding->last_working_date,
+                ]
+            ], 200);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
             ], 200);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Failed to create offboarding request: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => "Failed to create offboarding request: " . $e->getMessage()
+                'message' => "Failed to create offboarding request."
             ], 500);
         }
     }
@@ -508,38 +463,28 @@ class OffboardingController extends Controller
 
     public function cancel($id, Request $request)
     {
+        $offboarding = OffboardingRequest::where('employee_id', Auth::id())
+            ->where('id', $id)
+            ->whereIn('status', ['pending_approval', 'approved'])
+            ->first();
+
+        if (!$offboarding) {
+            return response()->json([
+                'success' => false,
+                'message' => "Offboarding request not found or cannot be cancelled."
+            ], 404);
+        }
+
         try {
-            DB::beginTransaction();
-
-            $validator = Validator::make($request->all(), [
-                'cancellation_reason' => 'nullable|string|max:500'
-            ]);
-
-            $offboarding = OffboardingRequest::where('employee_id', Auth::id())
-                ->where('id', $id)
-                ->whereIn('status', ['pending_approval', 'approved'])
-                ->first();
-
-            if (!$offboarding) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Offboarding request not found or cannot be cancelled."
-                ], 404);
-            }
-
-            $offboarding->update([
-                'status' => 'cancelled',
-                'feedback' => $request->cancellation_reason ?? 'Request cancelled by employee'
-            ]);
-
-            DB::commit();
+            $this->offboarding->cancel($offboarding, Auth::user(), $request->input('cancellation_reason') ?? 'Cancelled by employee');
 
             return response()->json([
                 'success' => true,
                 'message' => "Offboarding request cancelled successfully."
             ], 200);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 200);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Failed to cancel offboarding: ' . $e->getMessage());
             return response()->json([
                 'success' => false,

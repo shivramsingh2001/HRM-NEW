@@ -32,18 +32,67 @@
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
             color: white;
             border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 14px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
             box-shadow: var(--shadow-md);
         }
 
         .profile-avatar {
-            width: 90px;
-            height: 90px;
+            width: 62px;
+            height: 62px;
             border-radius: 50%;
-            border: 3px solid white;
+            border: 2px solid white;
             object-fit: cover;
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+        }
+
+        .profile-header h4 {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+
+        .profile-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            line-height: 1.3;
+            background: rgba(255, 255, 255, .15);
+            padding: 3px 9px;
+            border-radius: 20px;
+        }
+
+        .profile-meta-item i {
+            font-size: 10.5px;
+        }
+
+        /* Attendance Stats — a touch more compact than the shared default,
+           matching this page's overall smaller-density layout. */
+        .member-stats-grid {
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .member-stats-grid .stats-card {
+            padding: 8px 10px;
+            gap: 8px;
+        }
+
+        .member-stats-grid .stats-icon-wrapper {
+            width: 28px;
+            height: 28px;
+        }
+
+        .member-stats-grid .stats-amount-main {
+            font-size: 14px;
+        }
+
+        @media (max-width: 767px) {
+            .member-stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
         /* Tabs */
@@ -141,28 +190,28 @@
         }
 
         .badge-present {
-            background: #10b981;
-            color: white;
+            background: #2563eb;
+            color: #ffffff;
         }
 
         .badge-absent {
-            background: #ef4444;
-            color: white;
+            background: #1e3a8a;
+            color: #ffffff;
         }
 
         .badge-leave {
-            background: var(--primary-mid);
-            color: white;
+            background: #dbeafe;
+            color: #1d4ed8;
         }
 
         .badge-holiday {
-            background: #8b5cf6;
-            color: white;
+            background: #bfdbfe;
+            color: #1d4ed8;
         }
 
         .badge-week-off {
-            background: #6c757d;
-            color: white;
+            background: #eff6ff;
+            color: #475569;
         }
 
         /* Task count badge on calendar events */
@@ -228,10 +277,10 @@
 
         .fc-daygrid-event {
             border-radius: 4px;
-            border: none !important;
+            border: 1px solid !important;
             padding: 2px 6px !important;
             font-size: 11px !important;
-            font-weight: 500;
+            font-weight: 600;
             margin: 1px 0;
         }
 
@@ -299,6 +348,7 @@
             width: 12px;
             height: 12px;
             border-radius: 3px;
+            border: 1px solid transparent;
         }
 
         /* Loading state */
@@ -388,36 +438,31 @@
                 <div class="col-lg-2 col-md-3 text-center text-md-start">
                     <img src="{{ $profileImage }}" alt="{{ $userInfo->name }}" class="profile-avatar">
                 </div>
-                <div class="col-lg-10 col-md-9 mt-3 mt-md-0">
-                    <div class="d-flex justify-content-between align-items-start">
+                <div class="col-lg-10 col-md-9 mt-2 mt-md-0">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                         <div>
                             <h4 class="mb-1">{{ strtoupper($userInfo->name) }}</h4>
-                            <div class="d-flex flex-wrap gap-3 mb-2">
-                                <div class="d-flex align-items-center">
-                                    <i class="feather-briefcase me-2 fs-12"></i>
-                                    <span class="fs-13">{{ $userInfo->designation ?? 'Not Assigned' }}</span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <i class="feather-hash me-2 fs-12"></i>
-                                    <span class="fs-13">ID: {{ $userInfo->employee_id ?? 'N/A' }}</span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <i class="feather-mail me-2 fs-12"></i>
-                                    <span class="fs-13">{{ $userInfo->email }}</span>
-                                </div>
+                            <div class="d-flex flex-wrap gap-2 mb-1">
+                                <span class="profile-meta-item">
+                                    <i class="feather-briefcase"></i>{{ $userInfo->designation ?? 'Not Assigned' }}
+                                </span>
+                                <span class="profile-meta-item">
+                                    <i class="feather-hash"></i>ID: {{ $userInfo->employee_id ?? 'N/A' }}
+                                </span>
+                                <span class="profile-meta-item">
+                                    <i class="feather-mail"></i>{{ $userInfo->email }}
+                                </span>
                             </div>
-                            <div class="d-flex flex-wrap gap-3">
+                            <div class="d-flex flex-wrap gap-2">
                                 @if ($userInfo->contact)
-                                    <div class="d-flex align-items-center">
-                                        <i class="feather-phone me-2 fs-12"></i>
-                                        <span class="fs-13">{{ $userInfo->contact }}</span>
-                                    </div>
+                                    <span class="profile-meta-item">
+                                        <i class="feather-phone"></i>{{ $userInfo->contact }}
+                                    </span>
                                 @endif
                                 @if ($userInfo->department)
-                                    <div class="d-flex align-items-center">
-                                        <i class="feather-layers me-2 fs-12"></i>
-                                        <span class="fs-13">{{ $userInfo->department }}</span>
-                                    </div>
+                                    <span class="profile-meta-item">
+                                        <i class="feather-layers"></i>{{ $userInfo->department }}
+                                    </span>
                                 @endif
                             </div>
                         </div>
@@ -434,25 +479,51 @@
             </div>
         </div>
 
-        <!-- Attendance Stats -->
-        <div class="row stats-grid g-2">
-            <div class="col-md-2 col-sm-4 col-6">
-                <x-ui.stat-card icon="check-circle" label="Present" value="{{ $attendanceSummary['present'] ?? 0 }}" valueId="stat-present" />
+        <!-- Attendance Stats — same .stats-grid/.stats-card family as the
+             Team Attendance page (theme-custom.css centralizes it to the
+             app's single blue-only look). -->
+        <div class="stats-grid member-stats-grid">
+            <div class="stats-card present-card">
+                <div class="stats-icon-wrapper"><i class="feather-check-circle"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-present">{{ $attendanceSummary['present'] ?? 0 }}</div>
+                    <div class="stats-label">Present</div>
+                </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <x-ui.stat-card icon="x-circle" label="Absent" value="{{ $attendanceSummary['absent'] ?? 0 }}" valueId="stat-absent" />
+            <div class="stats-card absent-card">
+                <div class="stats-icon-wrapper"><i class="feather-x-circle"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-absent">{{ $attendanceSummary['absent'] ?? 0 }}</div>
+                    <div class="stats-label">Absent</div>
+                </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <x-ui.stat-card icon="calendar" label="On Leave" value="{{ $attendanceSummary['on_leave'] ?? 0 }}" valueId="stat-leave" />
+            <div class="stats-card leave-card">
+                <div class="stats-icon-wrapper"><i class="feather-calendar"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-leave">{{ $attendanceSummary['on_leave'] ?? 0 }}</div>
+                    <div class="stats-label">On Leave</div>
+                </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <x-ui.stat-card icon="star" label="Holidays" value="{{ $attendanceSummary['holiday'] ?? 0 }}" valueId="stat-holiday" />
+            <div class="stats-card holiday-card">
+                <div class="stats-icon-wrapper"><i class="feather-star"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-holiday">{{ $attendanceSummary['holiday'] ?? 0 }}</div>
+                    <div class="stats-label">Holidays</div>
+                </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <x-ui.stat-card icon="coffee" label="Week Off" value="{{ $attendanceSummary['week_off'] ?? 0 }}" valueId="stat-weekoff" />
+            <div class="stats-card weekoff-card">
+                <div class="stats-icon-wrapper"><i class="feather-coffee"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-weekoff">{{ $attendanceSummary['week_off'] ?? 0 }}</div>
+                    <div class="stats-label">Week Off</div>
+                </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6">
-                <x-ui.stat-card icon="briefcase" label="Work Days" value="{{ $attendanceSummary['work_days'] ?? 0 }}" valueId="stat-workdays" />
+            <div class="stats-card total-card">
+                <div class="stats-icon-wrapper"><i class="feather-briefcase"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-workdays">{{ $attendanceSummary['work_days'] ?? 0 }}</div>
+                    <div class="stats-label">Work Days</div>
+                </div>
             </div>
         </div>
 
@@ -632,25 +703,25 @@
                     <!-- Legend -->
                     <div class="calendar-legend">
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #28a745;"></div><span>Present</span>
+                            <div class="legend-color" style="background: #2563eb; border-color: #1d4ed8;"></div><span>Present</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #dc3545;"></div><span>Absent</span>
+                            <div class="legend-color" style="background: #1e3a8a; border-color: #1e293b;"></div><span>Absent</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #fd7e14;"></div><span>Leave</span>
+                            <div class="legend-color" style="background: #dbeafe; border-color: #93c5fd;"></div><span>Leave</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #0d6efd;"></div><span>Holiday</span>
+                            <div class="legend-color" style="background: #bfdbfe; border-color: #93c5fd;"></div><span>Holiday</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #6c757d;"></div><span>Week Off</span>
+                            <div class="legend-color" style="background: #eff6ff; border-color: #dbeafe;"></div><span>Week Off</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #ffc107;"></div><span>Checked In Only</span>
+                            <div class="legend-color" style="background: #93c5fd; border-color: #60a5fa;"></div><span>Checked In Only</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #6f42c1;"></div><span>Upcoming</span>
+                            <div class="legend-color" style="background: #f8fafc; border-color: #cbd5e1;"></div><span>Upcoming</span>
                         </div>
                         <!--<div class="legend-item">-->
                         <!--    <div class="legend-color" style="background: rgba(255,255,255,0.3);"></div><span>Has Tasks</span>-->
@@ -883,7 +954,7 @@
 
                 $('#calendarView').addClass('opacity-50');
                 $('#tableView').addClass('opacity-50');
-                $('.stats-grid').addClass('opacity-50');
+                $('.member-stats-grid').addClass('opacity-50');
 
                 updateAttendanceStats(selectedMonth, encryptedId);
             };
@@ -911,50 +982,67 @@
 
                 if (!dateStr || !status) return;
 
-                let bgColor, title, borderColor;
+                // Single-color (blue) theme, matching the app's blue-only
+                // convention (see the Team Attendance .stats-card family) —
+                // statuses are distinguished by shade/fill intensity, not hue.
+                let bgColor, title, borderColor, textColor;
                 const statusLower = status.toLowerCase();
 
                 switch (statusLower) {
                     case 'present':
-                        bgColor = '#28a745';
-                        borderColor = '#28a745';
+                        bgColor = '#2563eb';
+                        borderColor = '#1d4ed8';
+                        textColor = '#ffffff';
                         title = 'Present';
                         break;
+                    case 'halfday':
+                        bgColor = '#60a5fa';
+                        borderColor = '#3b82f6';
+                        textColor = '#ffffff';
+                        title = 'Half Day';
+                        break;
                     case 'absent':
-                        bgColor = '#dc3545';
-                        borderColor = '#dc3545';
+                        bgColor = '#1e3a8a';
+                        borderColor = '#1e293b';
+                        textColor = '#ffffff';
                         title = 'Absent';
                         break;
                     case 'first half leave':
                     case 'second half leave':
                     case 'full day leave':
-                        bgColor = '#fd7e14';
-                        borderColor = '#fd7e14';
+                        bgColor = '#dbeafe';
+                        borderColor = '#93c5fd';
+                        textColor = '#1d4ed8';
                         title = 'Leave';
                         break;
                     case 'holiday':
-                        bgColor = '#0d6efd';
-                        borderColor = '#0d6efd';
+                        bgColor = '#bfdbfe';
+                        borderColor = '#93c5fd';
+                        textColor = '#1d4ed8';
                         title = record.holiday_name || 'Holiday';
                         break;
                     case 'week off':
-                        bgColor = '#6c757d';
-                        borderColor = '#6c757d';
+                        bgColor = '#eff6ff';
+                        borderColor = '#dbeafe';
+                        textColor = '#475569';
                         title = 'Week Off';
                         break;
                     case 'checked in only':
-                        bgColor = '#ffc107';
-                        borderColor = '#ffc107';
+                        bgColor = '#93c5fd';
+                        borderColor = '#60a5fa';
+                        textColor = '#1e3a8a';
                         title = 'Checked In Only';
                         break;
                     case 'upcoming':
-                        bgColor = '#6f42c1';
-                        borderColor = '#6f42c1';
+                        bgColor = '#f8fafc';
+                        borderColor = '#cbd5e1';
+                        textColor = '#64748b';
                         title = 'Upcoming';
                         break;
                     default:
-                        bgColor = '#9ca3af';
-                        borderColor = '#9ca3af';
+                        bgColor = '#eff6ff';
+                        borderColor = '#dbeafe';
+                        textColor = '#475569';
                         title = status;
                 }
 
@@ -983,7 +1071,7 @@
                     allDay: true,
                     backgroundColor: bgColor,
                     borderColor: borderColor,
-                    textColor: '#ffffff',
+                    textColor: textColor,
                     extendedProps: {
                         date: dateStr,
                         day_name: record.day_name,
@@ -1034,16 +1122,22 @@
                 eventContent: function(arg) {
                     let taskCount = arg.event.extendedProps.task_count || 0;
                     let taskBadge = '';
-                    
+
+                    // Custom HTML replaces FullCalendar's own title element, so it
+                    // no longer reliably inherits the per-event textColor — set it
+                    // explicitly or a light-bg event (e.g. Week Off, Upcoming) can
+                    // render with unreadable (white-on-white) text.
+                    const txtColor = arg.event.textColor || '#1a2236';
+
                     if (taskCount > 0) {
-                        taskBadge = `<span class="task-count-badge">Tasks ${taskCount}</span>`;
+                        taskBadge = `<span class="task-count-badge" style="color:${txtColor};">Tasks ${taskCount}</span>`;
                     }
-                    
+
                     let cleanTitle = arg.event.title.replace(/📋 \d+/, '').trim();
-                    
+
                     return {
-                        html: `<div class="fc-event-main" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px;">
-                                    <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cleanTitle}</span>
+                        html: `<div class="fc-event-main" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; color: ${txtColor};">
+                                    <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${txtColor};">${cleanTitle}</span>
                                     ${taskBadge}
                                </div>`
                     };
@@ -1110,7 +1204,7 @@
                 complete: function() {
                     $('#calendarView').removeClass('opacity-50');
                     $('#tableView').removeClass('opacity-50');
-                    $('.stats-grid').removeClass('opacity-50');
+                    $('.member-stats-grid').removeClass('opacity-50');
                     $('.fc-prev-button, .fc-next-button, .fc-today-button').prop('disabled', false);
                 }
             });
@@ -1182,7 +1276,7 @@
                             allDay: true,
                             backgroundColor: event.bgColor,
                             borderColor: event.borderColor,
-                            textColor: event.color || '#ffffff',
+                            textColor: event.color || '#1a2236',
                             extendedProps: {
                                 date: event.start,
                                 day_name: event.day_status,

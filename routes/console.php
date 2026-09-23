@@ -96,9 +96,21 @@ Schedule::call(function () {
     ]);
 })->monthlyOn(1, '02:00')->name('attendance-summaries-prev-month')->withoutOverlapping();
     
-Schedule::command('performance:calculate')
-->monthlyOn(1, '02:00')
-->appendOutputTo(storage_path('logs/performance-calculation.log'));
+// Daily performance scoring — 90 min after attendance:update-summaries'
+// 01:00 run, so yesterday's attendance data has settled. Monthly rollup runs
+// after a full month of daily rows exists (replaces the old, from-scratch
+// performance:calculate command).
+Schedule::command('performance:calculate-daily')
+->dailyAt('02:30')
+->withoutOverlapping()
+->runInBackground()
+->appendOutputTo(storage_path('logs/performance-daily.log'));
+
+Schedule::command('performance:rollup-monthly --notify')
+->monthlyOn(1, '03:00')
+->withoutOverlapping()
+->runInBackground()
+->appendOutputTo(storage_path('logs/performance-monthly.log'));
 
 // Field GPS tracking — meter seat usage for billing, then prune old breadcrumbs.
 Schedule::command('field-tracking:meter')
@@ -112,6 +124,13 @@ Schedule::command('field-tracking:prune')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/field-tracking-prune.log'));
+
+// Two-table GPS tracking (sessions + points) — stale-session close + prune.
+Schedule::command('field-tracking:sweep-sessions')
+    ->dailyAt('03:45')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/field-tracking-sweep-sessions.log'));
 
 // Biometric-terminal integration — retry stuck punches; prune settled ones.
 Schedule::command('biometric:reprocess --remap')
@@ -132,3 +151,17 @@ Schedule::command('biometric:sync-roster')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/biometric-sync-roster.log'));
+// Expense — nudge employees who still hold an UNSPENT advance older than 30 days. Idempotent (an employee
+// reminded in the last 7 days is skipped), so a daily run yields at most one reminder a week per person.
+Schedule::command('expense:advance-reminders')
+    ->dailyAt('09:30')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/expense-advance-reminders.log'));
+
+// Expense — permanently remove claims that were soft-deleted more than 90 days ago (and their receipts).
+Schedule::command('expense:purge-deleted')
+    ->weeklyOn(0, '03:30')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/expense-purge-deleted.log'));

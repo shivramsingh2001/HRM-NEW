@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Attendance;
-use App\Models\AttendanceTrack;
+use App\Models\AttendanceTrackingPoint;
 use App\Models\Leave;
 use App\Models\Holiday;
 use App\Models\UserWeekoffs;
@@ -671,9 +671,7 @@ class AttendanceContoller extends Controller
             }
 
             // Get location tracks
-            $locationTracks = AttendanceTrack::where('attendance_id', $attendance->id)
-                ->whereDate('track_time', $date)
-                ->orderBy('track_time', 'asc')
+            $locationTracks = AttendanceTrackingPoint::forAttendanceId($attendance->id, $date)
                 ->get()
                 ->map(function ($track) {
                     return [

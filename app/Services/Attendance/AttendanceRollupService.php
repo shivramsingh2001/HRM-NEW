@@ -114,6 +114,13 @@ class AttendanceRollupService
             ->where('date', $date)
             ->update(['attendance_id' => $row->id]);
 
+        \App\Models\AttendanceTrackingSession::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->where('date', $date)
+            ->whereNull('attendance_id')
+            ->update(['attendance_id' => $row->id]);
+
         return $row;
     }
 

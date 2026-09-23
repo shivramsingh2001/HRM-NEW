@@ -231,14 +231,14 @@
                                 <a href="{{ route('shift.roster', ['view' => $view]) }}" class="btn-reset">Reset</a>
                             </form>
 
-                            <div class="legend">
+                            {{-- <div class="legend">
                                 @foreach ($shifts as $s)
                                     <span><span class="sw" style="background: {{ $s->color_code ?: '#4f46e5' }}"></span>{{ $s->name }}</span>
                                 @endforeach
                                 <span><span class="sw" style="background:#f1f5f9"></span>Week Off</span>
                                 <span><span class="sw" style="background:#e2e8f0"></span>Unassigned</span>
                                 <span><span class="clockdot"></span>Clocked in</span>
-                            </div>
+                            </div> --}}
 
                             <div class="roster-wrap">
                                 <table class="roster-table">

@@ -12,10 +12,27 @@
     <x-ui.page-header title="Employee-wise Assets" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']" />
 
     <div class="main-content" style="padding: 20px !important;">
+        <div class="card mb-3"><div class="card-body">
+            <form method="GET" class="d-flex flex-wrap gap-2">
+                <select name="branch_id" class="form-control form-control-sm" style="width:auto;" onchange="this.form.submit()">
+                    <option value="">All Branches</option>
+                    @foreach ($branches as $b)
+                        <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                    @endforeach
+                </select>
+                <input type="text" name="search" class="form-control form-control-sm" style="width:auto;" placeholder="Search employee or ID…" value="{{ request('search') }}">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="feather-search"></i></button>
+                <a href="{{ route('report.asset.employee-wise.index') }}" class="btn btn-light btn-sm">Reset</a>
+            </form>
+        </div></div>
+
         @forelse ($users as $user)
             <div class="card mb-2">
                 <div class="card-body">
-                    <h6 class="fw-semibold mb-2" style="font-size:12px;">{{ $user->name }} <small class="text-muted">({{ $user->employee_id }})</small></h6>
+                    <h6 class="fw-semibold mb-2" style="font-size:12px;">
+                        {{ $user->name }} <small class="text-muted">({{ $user->employee_id }})</small>
+                        <small class="text-muted">&middot; {{ $user->jobDetails->branch->name ?? 'No branch' }}</small>
+                    </h6>
                     @foreach ($user->assetAssignments as $a)
                         <div class="fs-card">
                             <div class="fs-meta">{{ $a->assigned_at?->format('d M Y') }}</div>

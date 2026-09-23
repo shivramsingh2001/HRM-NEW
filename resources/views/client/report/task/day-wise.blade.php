@@ -362,6 +362,8 @@
                         if(request('user_id') && request('user_id') != 'all') $activeFilters++;
                         if(request('project_id') && request('project_id') != 'all') $activeFilters++;
                         if(request('status') && request('status') != 'all') $activeFilters++;
+                        if(request('branch_id') && request('branch_id') != 'all') $activeFilters++;
+                        if(request('search')) $activeFilters++;
                     @endphp
                     @if($activeFilters > 0)
                         <span class="badge-count">{{ $activeFilters }} active</span>
@@ -412,6 +414,26 @@
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+
+                    <div class="filter-item grow">
+                        <select name="branch_id" class="filter-select auto-submit">
+                            <option value="all">All Branches</option>
+                            @foreach($branchList as $b)
+                                <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>
+                                    {{ $b->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="filter-item grow">
+                        <input type="text" name="search" class="filter-input" placeholder="Search employee, ID or email…"
+                               value="{{ request('search') }}">
+                    </div>
+
+                    <div class="filter-item">
+                        <button type="submit" class="btn-sm-custom-outline"><i class="feather-search"></i> Search</button>
                     </div>
 
                     <div class="filter-item">

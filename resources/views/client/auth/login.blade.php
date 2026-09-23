@@ -60,7 +60,13 @@
                                 name="employee_id" required>
                         </div>
                         <div class="mb-3">
-                            <input type="password" class="form-control" placeholder="Password" name="password" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" placeholder="Password" name="password"
+                                    id="password" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="feather-eye"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
@@ -116,6 +122,15 @@
     <!--! BEGIN: Theme Customizer  !-->
     <script src="{{ asset('assets/js/theme-customizer-init.min.js') }}"></script>
     <!--! END: Theme Customizer !-->
+    <script>
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const passwordInput = document.getElementById('password');
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('feather-eye');
+            this.querySelector('i').classList.toggle('feather-eye-off');
+        });
+    </script>
 </body>
 
 </html>

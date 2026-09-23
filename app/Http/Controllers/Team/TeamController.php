@@ -1144,10 +1144,13 @@ class TeamController extends Controller
 
                 if (!$dateStr || !$status) continue;
 
-                $bgColor = '#9ca3af';
-                $borderColor = '#9ca3af';
+                // Single-color (blue) theme, matching the app's blue-only
+                // convention (see the Team Attendance .stats-card family) —
+                // statuses are distinguished by shade/fill intensity, not hue.
+                $bgColor = '#eff6ff';
+                $borderColor = '#dbeafe';
                 $title = $status;
-                $color = '#ffffff';
+                $color = '#475569';
 
                 // Add hours to title for Present and halfday
                 $hoursText = '';
@@ -1158,47 +1161,53 @@ class TeamController extends Controller
                 $statusLower = strtolower($status);
                 switch ($statusLower) {
                     case 'present':
-                        $bgColor = '#28a745';
-                        $borderColor = '#28a745';
+                        $bgColor = '#2563eb';
+                        $borderColor = '#1d4ed8';
+                        $color = '#ffffff';
                         $title = 'Present' . $hoursText;
                         break;
                     case 'halfday':
-                        $bgColor = '#ffc107';
-                        $borderColor = '#ffc107';
+                        $bgColor = '#60a5fa';
+                        $borderColor = '#3b82f6';
+                        $color = '#ffffff';
                         $title = 'halfday' . $hoursText;
-                        $color = '#000000';
                         break;
                     case 'absent':
-                        $bgColor = '#dc3545';
-                        $borderColor = '#dc3545';
+                        $bgColor = '#1e3a8a';
+                        $borderColor = '#1e293b';
+                        $color = '#ffffff';
                         $title = 'Absent';
                         break;
                     case 'first half leave':
                     case 'second half leave':
                     case 'full day leave':
-                        $bgColor = '#fd7e14';
-                        $borderColor = '#fd7e14';
+                        $bgColor = '#dbeafe';
+                        $borderColor = '#93c5fd';
+                        $color = '#1d4ed8';
                         $title = 'Leave';
                         break;
                     case 'holiday':
-                        $bgColor = '#0d6efd';
-                        $borderColor = '#0d6efd';
+                        $bgColor = '#bfdbfe';
+                        $borderColor = '#93c5fd';
+                        $color = '#1d4ed8';
                         $title = $record->holiday_name ?? 'Holiday';
                         break;
                     case 'week off':
-                        $bgColor = '#6c757d';
-                        $borderColor = '#6c757d';
+                        $bgColor = '#eff6ff';
+                        $borderColor = '#dbeafe';
+                        $color = '#475569';
                         $title = 'Week Off';
                         break;
                     case 'checked in only':
-                        $bgColor = '#ffc107';
-                        $borderColor = '#ffc107';
+                        $bgColor = '#93c5fd';
+                        $borderColor = '#60a5fa';
+                        $color = '#1e3a8a';
                         $title = 'Checked In Only';
-                        $color = '#000000';
                         break;
                     case 'upcoming':
-                        $bgColor = '#6f42c1';
-                        $borderColor = '#6f42c1';
+                        $bgColor = '#f8fafc';
+                        $borderColor = '#cbd5e1';
+                        $color = '#64748b';
                         $title = 'Upcoming';
                         break;
                 }

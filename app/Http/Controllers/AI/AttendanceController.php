@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use App\Models\AttendanceTrackingPoint;
 use App\Services\RbacService;
 use Exception;
 
@@ -145,7 +146,9 @@ class AttendanceController extends Controller
             a.clock_out_address,
             a.id as attendance_id,
             wo.id as weekoff_id,
-            (SELECT COUNT(*) FROM attendance_tracks at WHERE at.attendance_id = a.id) as track_count
+            (SELECT COUNT(*) FROM attendance_tracking_points atp
+                INNER JOIN attendance_tracking_sessions ats ON ats.id = atp.session_id
+                WHERE ats.attendance_id = a.id) as track_count
         FROM dates d
         CROSS JOIN users u
         LEFT JOIN attendances a ON u.id = a.user_id AND a.date = d.date AND a.tenant_id = ?
@@ -230,12 +233,8 @@ class AttendanceController extends Controller
      */
     private function getLocationTracks($attendanceId)
     {
-        $tracks = DB::table('attendance_tracks')
-            ->where('attendance_id', $attendanceId)
-            ->orderBy('track_time')
+        return AttendanceTrackingPoint::forAttendanceId($attendanceId)
             ->get(['track_time', 'lat', 'long', 'address', 'battery_per']);
-            
-        return $tracks;
     }
 
     /**

@@ -180,6 +180,19 @@ class TaskReportController extends Controller
     }
 
     /**
+     * Branches dropdown (tenant-scoped, active only) for the Branch filter.
+     */
+    private function getBranchList($authUser)
+    {
+        return DB::table('company_branches')
+            ->where('tenant_id', $authUser->tenant_id)
+            ->where('status', 1)
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
      * Users dropdown (role-aware).
      */
     private function getAllUsersForFilter($authUser)
@@ -206,20 +219,31 @@ class TaskReportController extends Controller
         [$from, $to] = $this->resolveDateRange($request);
         $visibleUserIds = $this->getVisibleUserIds($authUser);
 
-        $filterUserId  = $request->filled('user_id')    && $request->user_id    != 'all' ? $request->user_id    : null;
-        $filterProject = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+        $filterUserId   = $request->filled('user_id')    && $request->user_id    != 'all' ? $request->user_id    : null;
+        $filterProject  = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+        $filterBranchId = $request->filled('branch_id')  && $request->branch_id  != 'all' ? $request->branch_id  : null;
+        $search         = trim((string) $request->get('search', ''));
 
         $users = User::join('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
+            ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id')
+            ->leftJoin('company_branches', 'user_job_details.branch_id', '=', 'company_branches.id')
             ->select(
                 'users.id',
                 'users.name',
                 'users.email',
                 'users.employee_id',
-                'user_basic_details.profile_image'
+                'user_basic_details.profile_image',
+                'company_branches.name as branch_name'
             )
             ->whereIn('users.id', $visibleUserIds)
             ->where('users.status', 1)
             ->when($filterUserId, fn ($q) => $q->where('users.id', $filterUserId))
+            ->when($filterBranchId, fn ($q) => $q->where('user_job_details.branch_id', $filterBranchId))
+            ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search) {
+                $qq->where('users.name', 'like', "%{$search}%")
+                    ->orWhere('users.employee_id', 'like', "%{$search}%")
+                    ->orWhere('users.email', 'like', "%{$search}%");
+            }))
             ->orderBy('users.name')
             ->get();
 
@@ -285,9 +309,32 @@ class TaskReportController extends Controller
         [$from, $to] = $this->resolveDateRange($request);
         $visibleUserIds = $this->getVisibleUserIds($authUser);
 
-        $filterUserId  = $request->filled('user_id')    && $request->user_id    != 'all' ? $request->user_id    : null;
-        $filterProject = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
-        $filterStatus  = $request->filled('status')     && $request->status     != 'all' ? $request->status     : null;
+        $filterUserId   = $request->filled('user_id')    && $request->user_id    != 'all' ? $request->user_id    : null;
+        $filterProject  = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+        $filterStatus   = $request->filled('status')     && $request->status     != 'all' ? $request->status     : null;
+        $filterBranchId = $request->filled('branch_id')  && $request->branch_id  != 'all' ? $request->branch_id  : null;
+        $search         = trim((string) $request->get('search', ''));
+
+        // Search / branch narrow the pool of assignees whose tasks count towards each day.
+        if ($search !== '' || $filterBranchId) {
+            $visibleUserIds = User::whereIn('id', $visibleUserIds)
+                ->when($filterBranchId, function ($q) use ($filterBranchId) {
+                    $q->whereExists(function ($sub) use ($filterBranchId) {
+                        $sub->select(DB::raw(1))->from('user_job_details')
+                            ->whereColumn('user_job_details.user_id', 'users.id')
+                            ->where('user_job_details.branch_id', $filterBranchId);
+                    });
+                })
+                ->when($search !== '', function ($q) use ($search) {
+                    $q->where(function ($qq) use ($search) {
+                        $qq->where('name', 'like', "%{$search}%")
+                            ->orWhere('employee_id', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+                })
+                ->pluck('id')
+                ->toArray();
+        }
 
         $rows = DB::table('task_assigns')
             ->join('tasks', 'task_assigns.task_id', '=', 'tasks.id')
@@ -420,6 +467,31 @@ class TaskReportController extends Controller
                     ->where('task_assigns.assigned_by', $request->assigned_by);
             });
         }
+        if ($request->filled('branch_id') && $request->branch_id != 'all') {
+            $branchId = $request->branch_id;
+            $query->whereExists(function ($q) use ($branchId) {
+                $q->select(DB::raw(1))->from('task_assigns')
+                    ->join('user_job_details', 'task_assigns.assigned_to', '=', 'user_job_details.user_id')
+                    ->whereColumn('task_assigns.task_id', 'tasks.id')
+                    ->where('user_job_details.branch_id', $branchId);
+            });
+        }
+        $search = trim((string) $request->get('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('tasks.task_code', 'like', "%{$search}%")
+                    ->orWhere('tasks.title', 'like', "%{$search}%")
+                    ->orWhereExists(function ($sub) use ($search) {
+                        $sub->select(DB::raw(1))->from('task_assigns')
+                            ->join('users', 'task_assigns.assigned_to', '=', 'users.id')
+                            ->whereColumn('task_assigns.task_id', 'tasks.id')
+                            ->where(function ($u) use ($search) {
+                                $u->where('users.name', 'like', "%{$search}%")
+                                    ->orWhere('users.employee_id', 'like', "%{$search}%");
+                            });
+                    });
+            });
+        }
 
         $query->orderBy('tasks.task_date', 'desc')->orderBy('tasks.id', 'desc');
 
@@ -450,6 +522,8 @@ class TaskReportController extends Controller
         $assigneesMap = DB::table('task_assigns')
             ->leftJoin('users', 'task_assigns.assigned_to', '=', 'users.id')
             ->leftJoin('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
+            ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id')
+            ->leftJoin('company_branches', 'user_job_details.branch_id', '=', 'company_branches.id')
             ->whereIn('task_assigns.task_id', $taskIds)
             ->select(
                 'task_assigns.task_id',
@@ -462,7 +536,8 @@ class TaskReportController extends Controller
                 'users.name',
                 'users.email',
                 'users.employee_id',
-                'user_basic_details.profile_image'
+                'user_basic_details.profile_image',
+                'company_branches.name as branch_name'
             )
             ->get()
             ->groupBy('task_id');
@@ -529,21 +604,32 @@ class TaskReportController extends Controller
 
             $visibleUserIds = $this->getVisibleUserIds($authUser);
 
-            $filterUserId  = $request->filled('user_id') && $request->user_id != 'all' ? $request->user_id : null;
-            $filterProject = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+            $filterUserId   = $request->filled('user_id') && $request->user_id != 'all' ? $request->user_id : null;
+            $filterProject  = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+            $filterBranchId = $request->filled('branch_id') && $request->branch_id != 'all' ? $request->branch_id : null;
+            $search         = trim((string) $request->get('search', ''));
 
             // ---- PAGINATED USERS ----
             $users = User::join('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
+                ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id')
+                ->leftJoin('company_branches', 'user_job_details.branch_id', '=', 'company_branches.id')
                 ->select(
                     'users.id',
                     'users.name',
                     'users.email',
                     'users.employee_id',
-                    'user_basic_details.profile_image'
+                    'user_basic_details.profile_image',
+                    'company_branches.name as branch_name'
                 )
                 ->whereIn('users.id', $visibleUserIds)
                 ->where('users.status', 1)
                 ->when($filterUserId, fn ($q) => $q->where('users.id', $filterUserId))
+                ->when($filterBranchId, fn ($q) => $q->where('user_job_details.branch_id', $filterBranchId))
+                ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search) {
+                    $qq->where('users.name', 'like', "%{$search}%")
+                        ->orWhere('users.employee_id', 'like', "%{$search}%")
+                        ->orWhere('users.email', 'like', "%{$search}%");
+                }))
                 ->orderBy('users.name')
                 ->paginate(20)
                 ->appends($request->query());
@@ -612,6 +698,7 @@ class TaskReportController extends Controller
 
             $projectList = $this->getProjectList($authUser);
             $allUsers    = $this->getAllUsersForFilter($authUser);
+            $branchList  = $this->getBranchList($authUser);
 
             return view('client.report.task.employee-monthly', compact(
                 'users',
@@ -620,7 +707,8 @@ class TaskReportController extends Controller
                 'to',
                 'authUser',
                 'projectList',
-                'allUsers'
+                'allUsers',
+                'branchList'
             ));
         } catch (Exception $e) {
             Log::error('employeeMonthlyReport error: ' . $e->getMessage());
@@ -649,7 +737,7 @@ class TaskReportController extends Controller
                 fputs($out, "\xEF\xBB\xBF");
 
                 fputcsv($out, [
-                    'Employee', 'Employee ID', 'Email',
+                    'Employee', 'Employee ID', 'Email', 'Branch',
                     'Total', 'Pending', 'In Progress', 'Hold',
                     'Completed', 'Approved', 'Rejected', 'Cancelled',
                 ]);
@@ -660,6 +748,7 @@ class TaskReportController extends Controller
                         $u->name,
                         $u->employee_id,
                         $u->email,
+                        $u->branch_name ?? '—',
                         $r['total'],
                         $r['pending'],
                         $r['in_progress'],
@@ -694,6 +783,7 @@ class TaskReportController extends Controller
 
             $projectList = $this->getProjectList($authUser);
             $allUsers    = $this->getAllUsersForFilter($authUser);
+            $branchList  = $this->getBranchList($authUser);
 
             return view('client.report.task.monthly-task-detail', compact(
                 'tasks',
@@ -701,7 +791,8 @@ class TaskReportController extends Controller
                 'to',
                 'authUser',
                 'projectList',
-                'allUsers'
+                'allUsers',
+                'branchList'
             ));
         } catch (Exception $e) {
             Log::error('monthlyTaskDetailReport error: ' . $e->getMessage());
@@ -730,7 +821,7 @@ class TaskReportController extends Controller
                 fputcsv($out, [
                     'Task Code', 'Title', 'Description', 'Project', 'Project Code',
                     'Priority', 'Status', 'Task Mode', 'Task Date', 'Deadline',
-                    'Assigned By', 'Assigned To', 'Member Statuses', 'Update Count',
+                    'Assigned By', 'Assigned To', 'Branch(es)', 'Member Statuses', 'Update Count',
                     'Last Update Status', 'Last Update Remarks', 'Last Update By', 'Last Update At',
                     'Approval Status', 'Approval Remarks', 'Approved By',
                     'Document File URL', 'Voice File URL',
@@ -739,6 +830,7 @@ class TaskReportController extends Controller
                 foreach ($tasks as $t) {
                     $assignedBy = $t->assigners->pluck('name')->unique()->filter()->implode(', ') ?: '-';
                     $assignedTo = $t->assignees->pluck('name')->unique()->filter()->implode(', ') ?: '-';
+                    $branches   = $t->assignees->pluck('branch_name')->unique()->filter()->implode(', ') ?: '-';
 
                     $memberStatuses = $t->assignees
                         ->map(fn ($a) => ($a->name ?? '-') . ': ' . ucfirst(str_replace('_', ' ', $a->individual_status ?? '-')))
@@ -763,6 +855,7 @@ class TaskReportController extends Controller
                         $t->deadline_date,
                         $assignedBy,
                         $assignedTo,
+                        $branches,
                         $memberStatuses,
                         $t->update_count,
                         $lastUpdate->status ?? '-',
@@ -815,6 +908,7 @@ class TaskReportController extends Controller
 
             $projectList = $this->getProjectList($authUser);
             $allUsers    = $this->getAllUsersForFilter($authUser);
+            $branchList  = $this->getBranchList($authUser);
 
             return view('client.report.task.day-wise', compact(
                 'report',
@@ -823,7 +917,8 @@ class TaskReportController extends Controller
                 'to',
                 'authUser',
                 'projectList',
-                'allUsers'
+                'allUsers',
+                'branchList'
             ));
         } catch (Exception $e) {
             Log::error('dayWiseTaskReport error: ' . $e->getMessage());
@@ -905,21 +1000,32 @@ class TaskReportController extends Controller
 
             $visibleUserIds = $this->getVisibleUserIds($authUser);
 
-            $filterUserId  = $request->filled('user_id')    && $request->user_id    != 'all' ? $request->user_id    : null;
-            $filterProject = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+            $filterUserId   = $request->filled('user_id')    && $request->user_id    != 'all' ? $request->user_id    : null;
+            $filterProject  = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+            $filterBranchId = $request->filled('branch_id')  && $request->branch_id  != 'all' ? $request->branch_id  : null;
+            $search         = trim((string) $request->get('search', ''));
 
             // ---- PAGINATED USERS ----
             $users = User::join('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
+                ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id')
+                ->leftJoin('company_branches', 'user_job_details.branch_id', '=', 'company_branches.id')
                 ->select(
                     'users.id',
                     'users.name',
                     'users.email',
                     'users.employee_id',
-                    'user_basic_details.profile_image'
+                    'user_basic_details.profile_image',
+                    'company_branches.name as branch_name'
                 )
                 ->whereIn('users.id', $visibleUserIds)
                 ->where('users.status', 1)
                 ->when($filterUserId, fn ($q) => $q->where('users.id', $filterUserId))
+                ->when($filterBranchId, fn ($q) => $q->where('user_job_details.branch_id', $filterBranchId))
+                ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search) {
+                    $qq->where('users.name', 'like', "%{$search}%")
+                        ->orWhere('users.employee_id', 'like', "%{$search}%")
+                        ->orWhere('users.email', 'like', "%{$search}%");
+                }))
                 ->orderBy('users.name')
                 ->paginate(20)
                 ->appends($request->query());
@@ -987,6 +1093,7 @@ class TaskReportController extends Controller
 
             $projectList = $this->getProjectList($authUser);
             $allUsers    = $this->getAllUsersForFilter($authUser);
+            $branchList  = $this->getBranchList($authUser);
 
             // Reuse $from/$to variables so shared partials still work if any
             $from = Carbon::parse($selectedDate);
@@ -1000,7 +1107,8 @@ class TaskReportController extends Controller
                 'to',
                 'authUser',
                 'projectList',
-                'allUsers'
+                'allUsers',
+                'branchList'
             ));
         } catch (Exception $e) {
             Log::error('employeeDateWiseReport error: ' . $e->getMessage());
@@ -1022,19 +1130,30 @@ class TaskReportController extends Controller
 
             $visibleUserIds = $this->getVisibleUserIds($authUser);
 
-            $filterUserId  = $request->filled('user_id')    && $request->user_id    != 'all' ? $request->user_id    : null;
-            $filterProject = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+            $filterUserId   = $request->filled('user_id')    && $request->user_id    != 'all' ? $request->user_id    : null;
+            $filterProject  = $request->filled('project_id') && $request->project_id != 'all' ? $request->project_id : null;
+            $filterBranchId = $request->filled('branch_id')  && $request->branch_id  != 'all' ? $request->branch_id  : null;
+            $search         = trim((string) $request->get('search', ''));
 
             $users = User::join('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
+                ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id')
+                ->leftJoin('company_branches', 'user_job_details.branch_id', '=', 'company_branches.id')
                 ->select(
                     'users.id',
                     'users.name',
                     'users.email',
-                    'users.employee_id'
+                    'users.employee_id',
+                    'company_branches.name as branch_name'
                 )
                 ->whereIn('users.id', $visibleUserIds)
                 ->where('users.status', 1)
                 ->when($filterUserId, fn ($q) => $q->where('users.id', $filterUserId))
+                ->when($filterBranchId, fn ($q) => $q->where('user_job_details.branch_id', $filterBranchId))
+                ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search) {
+                    $qq->where('users.name', 'like', "%{$search}%")
+                        ->orWhere('users.employee_id', 'like', "%{$search}%")
+                        ->orWhere('users.email', 'like', "%{$search}%");
+                }))
                 ->orderBy('users.name')
                 ->get();
 
@@ -1071,7 +1190,7 @@ class TaskReportController extends Controller
                 fputs($out, "\xEF\xBB\xBF");
 
                 fputcsv($out, [
-                    'Date', 'Employee', 'Employee ID', 'Email',
+                    'Date', 'Employee', 'Employee ID', 'Email', 'Branch',
                     'Total', 'Pending', 'In Progress', 'Hold',
                     'Completed', 'Approved', 'Rejected', 'Cancelled',
                 ]);
@@ -1083,6 +1202,7 @@ class TaskReportController extends Controller
                         $u->name,
                         $u->employee_id,
                         $u->email,
+                        $u->branch_name ?? '—',
                         $s['total']       ?? 0,
                         $s['pending']     ?? 0,
                         $s['in_progress'] ?? 0,

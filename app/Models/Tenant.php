@@ -37,6 +37,7 @@ class Tenant extends Model
         'settings',
         'leaves',
         'notice_period',
+        'employee_id_prefix',
         'late_halfday_enabled',
         'monthly_late_allowance',
         'custom_shifts_enabled',

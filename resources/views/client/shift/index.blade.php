@@ -65,7 +65,7 @@
         .stat-tile__value {
             font-size: 16px;
             font-weight: 700;
-            color: #1e293b;
+            color: var(--primary, #1e3a8a);
             line-height: 1.2;
         }
 
@@ -212,14 +212,14 @@
                     <div class="stat-tile__icon"><i class="feather-check-circle"></i></div>
                     <div class="stat-tile__body">
                         <span class="stat-tile__label">Active</span>
-                        <span class="stat-tile__value text-success">{{ $activeShifts }}</span>
+                        <span class="stat-tile__value">{{ $activeShifts }}</span>
                     </div>
                 </div>
                 <div class="stat-tile">
                     <div class="stat-tile__icon"><i class="feather-slash"></i></div>
                     <div class="stat-tile__body">
                         <span class="stat-tile__label">Inactive</span>
-                        <span class="stat-tile__value text-danger">{{ $inactiveShifts }}</span>
+                        <span class="stat-tile__value">{{ $inactiveShifts }}</span>
                     </div>
                 </div>
                 <div class="stat-tile">

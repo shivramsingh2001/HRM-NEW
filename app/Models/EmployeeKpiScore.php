@@ -63,21 +63,36 @@ class EmployeeKpiScore extends Model
         'manager_feedback',
         'manager_rated_by',
         'manager_rated_at',
-        
+        'manager_rating_included',
+
+        // Project participation (added for the daily-scoring redesign)
+        'project_participation_score',
+        'project_assigned_tasks',
+        'project_completed_tasks',
+        'project_on_time_tasks',
+        'overdue_tasks',
+
+        // Rollup completeness / policy audit
+        'working_days_in_period',
+        'days_calculated',
+        'days_expected',
+        'policy_effective_from',
+
         // JSON details
         'attendance_details',
         'leave_details',
         'task_details',
         'regularization_details',
         'calculation_audit',
-        
+        'weights_snapshot',
+
         // Remarks & Status
         'remarks',
         'status',
         'calculated_at',
         'reviewed_at',
         'approved_at',
-        
+
         // Legacy fields (if still needed)
         'quality_score',
         'collaboration_score',
@@ -122,90 +137,22 @@ class EmployeeKpiScore extends Model
         'task_details' => 'array',
         'regularization_details' => 'array',
         'calculation_audit' => 'array',
+        'weights_snapshot' => 'array',
+        'project_participation_score' => 'decimal:2',
+        'project_assigned_tasks' => 'integer',
+        'project_completed_tasks' => 'integer',
+        'project_on_time_tasks' => 'integer',
+        'overdue_tasks' => 'integer',
+        'working_days_in_period' => 'integer',
+        'days_calculated' => 'integer',
+        'days_expected' => 'integer',
+        'policy_effective_from' => 'date',
+        'manager_rating_included' => 'boolean',
     ];
     
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-    
-    /**
-     * Calculate overall score using weighted average
-     */
-    public function getOverallScoreAttribute(): float
-    {
-        // Use stored overall score if available
-        if ($this->attributes['overall_score'] ?? null) {
-            return (float) $this->attributes['overall_score'];
-        }
-        
-        // Calculate based on available scores
-        $weights = [
-            'attendance' => 35,
-            'task_completion' => 35,
-            'deadline_met' => 15,
-            'regularization' => 5,
-            'manager_rating' => 10,
-        ];
-        
-        $totalWeight = 0;
-        $weightedSum = 0;
-        
-        if ($this->attendance_score) {
-            $totalWeight += $weights['attendance'];
-            $weightedSum += $this->attendance_score * ($weights['attendance'] / 100);
-        }
-        
-        if ($this->task_completion_score) {
-            $totalWeight += $weights['task_completion'];
-            $weightedSum += $this->task_completion_score * ($weights['task_completion'] / 100);
-        }
-        
-        if ($this->deadline_met_score) {
-            $totalWeight += $weights['deadline_met'];
-            $weightedSum += $this->deadline_met_score * ($weights['deadline_met'] / 100);
-        }
-        
-        if ($this->regularization_score && $this->regularization_score > 0) {
-            $totalWeight += $weights['regularization'];
-            $weightedSum += $this->regularization_score * ($weights['regularization'] / 100);
-        }
-        
-        if ($this->manager_rating_score && $this->manager_rating_score > 0) {
-            $totalWeight += $weights['manager_rating'];
-            $weightedSum += $this->manager_rating_score * ($weights['manager_rating'] / 100);
-        }
-        
-        if ($totalWeight == 0) {
-            return 0;
-        }
-        
-        return round(($weightedSum / ($totalWeight / 100)), 2);
-    }
-    
-    /**
-     * Get grade based on overall score
-     */
-    public function getGradeAttribute(): string
-    {
-        // Use stored grade if available
-        if ($this->attributes['grade'] ?? null) {
-            return $this->attributes['grade'];
-        }
-        
-        $score = $this->overall_score;
-        
-        if ($score >= 90) return 'A+';
-        if ($score >= 85) return 'A';
-        if ($score >= 80) return 'A-';
-        if ($score >= 75) return 'B+';
-        if ($score >= 70) return 'B';
-        if ($score >= 65) return 'B-';
-        if ($score >= 60) return 'C+';
-        if ($score >= 55) return 'C';
-        if ($score >= 50) return 'C-';
-        if ($score >= 45) return 'D';
-        return 'F';
     }
     
     /**

@@ -1127,7 +1127,7 @@
                     <i class="feather-filter"></i>
                     Filter Report
                     @php
-                        $activeFilterCount = collect(request()->only(['date', 'user_id', 'status', 'search']))
+                        $activeFilterCount = collect(request()->only(['date', 'user_id', 'status', 'search', 'branch_id']))
                             ->filter()
                             ->count();
                     @endphp
@@ -1135,7 +1135,7 @@
                         <span>{{ $activeFilterCount }} active</span>
                     @endif
                 </div>
-                @if (request()->hasAny(['date', 'user_id', 'status', 'search']))
+                @if (request()->hasAny(['date', 'user_id', 'status', 'search', 'branch_id']))
                     <a href="{{ route('report.attendance.day.index') }}" class="clear-all-link">
                         <i class="feather-x"></i>
                         Clear All
@@ -1219,16 +1219,26 @@
                         </select>
                     </div>
 
-                    <!-- Search Filter -->
-                    {{-- <div class="filter-item search-filter">
-                    <div class="search-wrapper">
-                        <i class="feather-search"></i>
-                        <input type="text" class="form-control" name="search" 
-                               placeholder="Search employee by name or ID..." 
-                               value="{{ request('search') }}"
-                               onkeyup="if(event.keyCode==13) this.form.submit();">
+                    <!-- Branch Filter -->
+                    <div class="filter-item">
+                        <select class="filter-select" name="branch_id" onchange="this.form.submit()">
+                            <option value="">All Branches</option>
+                            @foreach ($branches ?? [] as $b)
+                                <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                </div> --}}
+
+                    <!-- Search Filter -->
+                    <div class="filter-item search-filter">
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" class="form-control" name="search"
+                                   placeholder="Search employee by name or ID..."
+                                   value="{{ request('search') }}"
+                                   onkeyup="if(event.keyCode==13) this.form.submit();">
+                        </div>
+                    </div>
 
                     <div class="filter-item" style="min-width: auto;">
                         <a href="{{ route('report.attendance.day.index') }}" class="reset-btn">
@@ -1240,7 +1250,7 @@
             </form>
 
             <!-- Active Filter Tags -->
-            @if (request()->hasAny(['date', 'user_id', 'status', 'search']))
+            @if (request()->hasAny(['date', 'user_id', 'status', 'search', 'branch_id']))
                 <div class="active-filters">
                     <span class="active-filters-label">Active:</span>
 
@@ -1288,6 +1298,17 @@
                         </span>
                     @endif
 
+                    @if (request('branch_id') && isset($branches) && ($selectedBranch = $branches->firstWhere('id', (int) request('branch_id'))))
+                        <span class="filter-tag">
+                            <i class="feather-map-pin"></i>
+                            {{ $selectedBranch->name }}
+                            <a href="{{ route('report.attendance.day.index', array_merge(request()->except(['branch_id', 'page']))) }}"
+                                class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
                     <a href="{{ route('report.attendance.day.index') }}" class="filter-tag clear-all">
                         <i class="feather-refresh-cw"></i>
                         Clear All
@@ -1321,6 +1342,7 @@
                                     <tr>
                                         <th width="40">#</th>
                                         <th>Employee</th>
+                                        <th>Branch</th>
                                         <th>Date</th>
                                         <th>Day</th>
                                         <th>Status</th>
@@ -1388,6 +1410,7 @@
                                                     </div>
                                                 </div>
                                             </td>
+                                            <td>{{ $record['branch'] ?? '—' }}</td>
                                             <td>{{ \Carbon\Carbon::parse($record['date'])->format('d M Y') }}</td>
                                             <td>{{ \Carbon\Carbon::parse($record['date'])->format('D') }}</td>
                                             <td>
@@ -1502,7 +1525,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="15" class="text-center py-5">
+                                            <td colspan="16" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="feather-calendar"></i>
                                                     <h4>No Attendance Records Found</h4>

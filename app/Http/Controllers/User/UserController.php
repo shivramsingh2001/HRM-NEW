@@ -29,10 +29,6 @@ use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-    private function generateEmployeeId($userId)
-    {
-        return 'SH' . str_pad($userId, 6, '0', STR_PAD_LEFT);
-    }
     /**
      * Display a listing of employees
      */
@@ -182,6 +178,10 @@ class UserController extends Controller
                 ->whereHas('jobDetails', fn ($q) => $q->where('face_register', 1))
                 ->count();
 
+            $hrCount = User::where('role', 'hr')->count();
+            $managerCount = User::where('role', 'manager')->count();
+            $employeeCount = User::where('role', 'employee')->count();
+
             $allEmployees = User::where('role', '!=', 'admin')
                 ->select('id', 'name', 'email', 'employee_id')
                 ->orderBy('name')
@@ -202,6 +202,14 @@ class UserController extends Controller
                 ? app(\App\Services\FieldTracking\FieldTrackingService::class)->seatsUsed((int) auth()->user()->tenant_id)
                 : 0;
 
+            // Biometric terminals to offer in the "Push to device" bulk action
+            // (only shown when the tenant has the add-on and has ≥1 active device).
+            $tenantId = (int) auth()->user()->tenant_id;
+            $biometricEnabled = app(\App\Services\FeatureService::class)->enabledForCurrentTenant('attendance_biometric');
+            $pushDevices = $biometricEnabled
+                ? \App\Models\BiometricDevice::where('tenant_id', $tenantId)->where('is_active', true)->orderBy('name')->get(['id', 'name'])
+                : collect();
+
             // Dropdown data for the Add/Edit Employee drawer (embedded on this
             // page so the wizard never has to navigate away from the list).
             $reportingHeads = User::where('status', 1)->where('role', '!=', 'employee')->get();
@@ -213,7 +221,7 @@ class UserController extends Controller
             $payrollStructures = PayrollStructure::where('status', 1)->with('components.component')->orderBy('name')->get();
             $countries = Country::where('status', 1)->get();
 
-            return view('client.user.view-user', compact('designations', 'users', 'totalEmployees', 'activeEmployees', 'inactiveEmployees', 'fieldEmployees', 'officeEmployees', 'faceRegisteredEmployees', 'departments', 'allEmployees', 'selectedEmployeeData', 'fieldTrackingEnabled', 'fieldTrackingSeats', 'fieldTrackingSeatsUsed', 'reportingHeads', 'employementTypes', 'languages', 'branches', 'companyBranches', 'leave_types', 'payrollStructures', 'countries'));
+            return view('client.user.view-user', compact('designations', 'users', 'totalEmployees', 'activeEmployees', 'inactiveEmployees', 'fieldEmployees', 'officeEmployees', 'faceRegisteredEmployees', 'hrCount', 'managerCount', 'employeeCount', 'departments', 'allEmployees', 'selectedEmployeeData', 'fieldTrackingEnabled', 'fieldTrackingSeats', 'fieldTrackingSeatsUsed', 'pushDevices', 'reportingHeads', 'employementTypes', 'languages', 'branches', 'companyBranches', 'leave_types', 'payrollStructures', 'countries'));
         } catch (\Exception $e) {
             Log::error('Error fetching employees: ' . $e->getMessage());
 
@@ -673,7 +681,7 @@ class UserController extends Controller
                 'status' => 0,
                 'role' => $validated['role'],
             ]);
-            $employeeId = $this->generateEmployeeId($user->id);
+            $employeeId = \App\Services\User\EmployeeIdService::generate($user->tenant_id, $user->id);
             $user->employee_id = $employeeId;
             $user->save();
         }
@@ -1806,6 +1814,17 @@ class UserController extends Controller
                 'attendance_type' => 'required|in:manual_attendance,face_verification'
             ]);
 
+            // Re-check server-side: the dropdown already hides a method the
+            // plan doesn't include, but the endpoint must not trust the client.
+            $features = app(\App\Services\FeatureService::class);
+            $requiredFeature = $request->attendance_type === 'face_verification' ? 'attendance_face' : 'attendance';
+            if (! $features->enabledForCurrentTenant($requiredFeature)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'That attendance method is not included in your current plan.'
+                ], 403);
+            }
+
             $user = UserJobDetail::where('user_id', $request->id)->first();
             $user->attendance_type = $request->attendance_type;
             $user->save();
@@ -1936,6 +1955,48 @@ class UserController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Error updating field tracking. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Explicitly queue selected employees for push to a chosen biometric
+     * device, regardless of that device's auto_provision setting — bypasses
+     * waiting for the background roster sync. The bridge still only applies
+     * it on its next poll cycle (no on-demand device write exists).
+     */
+    public function bulkPushToDevice(Request $request, \App\Services\Biometric\BiometricRosterService $roster)
+    {
+        $data = $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'integer|exists:users,id',
+            'device_id' => 'required|integer',
+        ]);
+
+        try {
+            $tenantId = (int) auth()->user()->tenant_id;
+
+            $device = \App\Models\BiometricDevice::where('id', $data['device_id'])
+                ->where('tenant_id', $tenantId)
+                ->first();
+            if (! $device) {
+                return response()->json(['status' => false, 'message' => 'Device not found.']);
+            }
+
+            $users = User::where('tenant_id', $tenantId)->whereIn('id', $data['user_ids'])->get();
+            $result = DB::transaction(fn () => $roster->pushToDevice($device, $users));
+
+            return response()->json([
+                'status' => true,
+                'message' => "{$result['queued']} employee(s) queued for push to {$device->name} — applied within ~1 min once the bridge polls."
+                    . ($result['skipped'] ? " {$result['skipped']} skipped." : ''),
+                'data' => $result,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('bulkPushToDevice failed: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Error pushing employees to device. Please try again.',
             ], 500);
         }
     }

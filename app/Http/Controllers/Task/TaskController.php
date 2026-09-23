@@ -417,6 +417,17 @@ class TaskController extends Controller
             ], 422);
         }
 
+        // Re-check server-side: the drawer already hides an assignment type the
+        // plan doesn't include, but the endpoint must not trust the client.
+        $features = app(\App\Services\FeatureService::class);
+        $requiredFeature = $request->self_assigned == 2 ? 'task_group' : 'task_single';
+        if (! $features->enabledForCurrentTenant($requiredFeature)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That task assignment type is not included in your current plan.',
+            ], 403);
+        }
+
         DB::beginTransaction();
         try {
             $taskCode = $this->generateUniqueTaskCode();

@@ -36,6 +36,8 @@
                         <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
                     @endforeach
                 </select>
+                <input type="text" name="search" class="form-control form-control-sm" style="width:auto;" placeholder="Search code, name, serial or assignee…" value="{{ request('search') }}">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="feather-search"></i></button>
                 <a href="{{ route('report.asset.register.index') }}" class="btn btn-light btn-sm">Reset</a>
             </form>
         </div></div>

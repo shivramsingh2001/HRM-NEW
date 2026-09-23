@@ -29,54 +29,162 @@ class LatePolicyService
      */
     public function recalculateMonth(int $userId, int $tenantId, string $yearMonth): void
     {
-        $start = Carbon::parse($yearMonth . '-01')->startOfMonth()->format('Y-m-d');
-        $end = Carbon::parse($yearMonth . '-01')->endOfMonth()->format('Y-m-d');
-
         // Anchor to the policy in force on the 1st of the month so a later-dated
         // policy change never retroactively re-grades a closed month.
         $policy = $this->policies->forTenantMonth($tenantId, $yearMonth);
-        $enabled = $policy->lateHalfdayEnabled;
-        $allowance = $policy->monthlyLateAllowance;
+        $rows = $this->monthRows($tenantId, $userId, $yearMonth);
 
-        $rows = DB::table('attendances')
+        DB::transaction(function () use ($rows, $policy) {
+            $this->applyRows($rows, $policy);
+        });
+    }
+
+    /**
+     * Pure, side-effect-free: how many late/early days this user-month
+     * exceeded its allowance by — independent of whether either
+     * attendance-action is even enabled. Safe to call from payroll
+     * regardless (zero writes to `attendances`), which is what lets the
+     * payroll deduction and the attendance-status action stay fully
+     * independent by construction.
+     *
+     * @return array{lateSeen:int, earlySeen:int, lateExcess:int, earlyExcess:int}
+     */
+    public function excessCounts(int $userId, int $tenantId, string $yearMonth): array
+    {
+        $policy = $this->policies->forTenantMonth($tenantId, $yearMonth);
+        $rows = $this->monthRows($tenantId, $userId, $yearMonth);
+        $classified = $this->classifyRows($rows, $policy);
+
+        $lateSeen = 0;
+        $earlySeen = 0;
+        $lateExcess = 0;
+        $earlyExcess = 0;
+
+        foreach ($classified as $c) {
+            if ($c['is_late']) {
+                $lateSeen++;
+                if ($lateSeen > $policy->monthlyLateAllowance) {
+                    $lateExcess++;
+                }
+            }
+            if ($c['is_early']) {
+                $earlySeen++;
+                if ($earlySeen > $policy->monthlyEarlyAllowance) {
+                    $earlyExcess++;
+                }
+            }
+        }
+
+        return compact('lateSeen', 'earlySeen', 'lateExcess', 'earlyExcess');
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection
+     */
+    private function monthRows(int $tenantId, int $userId, string $yearMonth)
+    {
+        $start = Carbon::parse($yearMonth . '-01')->startOfMonth()->format('Y-m-d');
+        $end = Carbon::parse($yearMonth . '-01')->endOfMonth()->format('Y-m-d');
+
+        return DB::table('attendances')
             ->where('tenant_id', $tenantId)
             ->where('user_id', $userId)
             ->whereBetween('date', [$start, $end])
             ->orderBy('date')
             ->orderBy('clock_in')
             ->get();
+    }
 
-        DB::transaction(function () use ($rows, $enabled, $allowance, $policy) {
-            $this->applyRows($rows, $enabled, $allowance, $policy);
-        });
+    /**
+     * Per-row late/early classification, shared by applyRows() (writes
+     * attendance-status side effects) and excessCounts() (read-only, for
+     * payroll) — the single source of truth for "which days count, and
+     * which of those exceed the monthly allowance," so the two toggles can
+     * never disagree about which days are in excess.
+     *
+     * Reuses the existing attendances.late_minutes/early_departure_minutes
+     * columns (already computed once, correctly, against the shift's own
+     * grace at punch time) re-checked against the tenant policy's second
+     * grace gate — exactly how isLate() already works today, just with a
+     * swappable second-gate value (graceMinutesFor()).
+     *
+     * @param  \Illuminate\Support\Collection  $rows
+     * @return array<int, array{row:object, base:string, fraction:float, is_late:bool, is_early:bool}>
+     */
+    private function classifyRows($rows, AttendancePolicySnapshot $policy): array
+    {
+        $shiftGrace = DB::table('shifts')
+            ->whereIn('id', $rows->pluck('shift_id')->filter()->unique())
+            ->pluck('grace_minutes', 'id');
+
+        return $rows->mapWithKeys(function ($row) use ($policy, $shiftGrace) {
+            [$base, $fraction] = $this->baseStatus($row, $policy);
+
+            // A row baseStatus() already resolved to something other than
+            // present/late/overtime (manual, leave, holiday, weekoff,
+            // absent, half_day) never gets late/early evaluated — matches
+            // today's exact pass-through behaviour.
+            $isPassthrough = ! in_array($base, ['present', 'late', 'overtime'], true);
+            $grace = $isPassthrough ? null : $policy->graceMinutesFor($shiftGrace[$row->shift_id] ?? null);
+
+            $isLate = ! $isPassthrough && (($base === 'late') || ((int) ($row->late_minutes ?? 0)) > $grace);
+            $isEarly = ! $isPassthrough && ((int) ($row->early_departure_minutes ?? 0)) > $grace;
+
+            return [$row->id => [
+                'row' => $row,
+                'base' => $base,
+                'fraction' => $fraction,
+                'is_late' => $isLate && ! $row->is_regularized,
+                'is_early' => $isEarly && ! $row->is_regularized,
+            ]];
+        })->all();
     }
 
     /**
      * @param  \Illuminate\Support\Collection  $rows
      */
-    private function applyRows($rows, bool $enabled, int $allowance, AttendancePolicySnapshot $policy): void
+    private function applyRows($rows, AttendancePolicySnapshot $policy): void
     {
+        $classified = $this->classifyRows($rows, $policy);
         $lateSeen = 0;
+        $earlySeen = 0;
 
-        foreach ($rows as $row) {
-            [$base, $fraction] = $this->baseStatus($row, $policy);
-
-            $effective = $base;
+        foreach ($classified as $c) {
+            $row = $c['row'];
+            $effective = $c['base'];
+            $fraction = $c['fraction'];
             $note = null;
 
-            $isLate = ($base === 'late');
-
-            // A regularized row is no longer "late" — it does not consume the
-            // allowance and is never downgraded.
-            if ($isLate && !$row->is_regularized) {
+            // A regularized row is no longer late/early — it does not
+            // consume either allowance and is never downgraded (already
+            // reflected in is_late/is_early via classifyRows()).
+            if ($c['is_late']) {
                 $lateSeen++;
 
-                if ($enabled && $lateSeen > $allowance) {
-                    $effective = 'half_day';
-                    $fraction = 0.50;
-                    $note = "late #{$lateSeen} exceeds monthly allowance of {$allowance} → half day";
-                } elseif ($enabled) {
-                    $note = "late #{$lateSeen} within monthly allowance of {$allowance}";
+                if ($policy->lateAttendanceAction !== 'none' && $lateSeen > $policy->monthlyLateAllowance) {
+                    [$effective, $fraction] = $this->outcomeFor($policy->lateAttendanceAction);
+                    $note = "late #{$lateSeen} exceeds monthly allowance of {$policy->monthlyLateAllowance} → {$policy->lateAttendanceAction}";
+                } elseif ($policy->lateAttendanceAction !== 'none') {
+                    $note = "late #{$lateSeen} within monthly allowance of {$policy->monthlyLateAllowance}";
+                }
+            }
+
+            // Early check only changes attendance-status if the day wasn't
+            // already downgraded by the late rule above (a day has one
+            // effective_status; late wins on a same-day conflict — a day
+            // that's in excess on both rules converges to the more severe
+            // outcome naturally, since downgrade only ever moves
+            // present→half_day→absent, never back). The early EXCESS COUNT
+            // is still tracked independently either way in excessCounts() —
+            // the payroll deduction never consults $effective.
+            if ($c['is_early']) {
+                $earlySeen++;
+
+                if ($effective === $c['base'] && $policy->earlyAttendanceAction !== 'none' && $earlySeen > $policy->monthlyEarlyAllowance) {
+                    [$effective, $fraction] = $this->outcomeFor($policy->earlyAttendanceAction);
+                    $note = ($note ? $note.' | ' : '')."early-leaving #{$earlySeen} exceeds monthly allowance of {$policy->monthlyEarlyAllowance} → {$policy->earlyAttendanceAction}";
+                } elseif ($policy->earlyAttendanceAction !== 'none') {
+                    $note = ($note ? $note.' | ' : '')."early-leaving #{$earlySeen} within monthly allowance of {$policy->monthlyEarlyAllowance}";
                 }
             }
 
@@ -89,6 +197,16 @@ class LatePolicyService
                     'updated_at' => now(),
                 ]);
         }
+    }
+
+    /** @return array{0:string,1:float} */
+    private function outcomeFor(string $action): array
+    {
+        return match ($action) {
+            'half_day' => ['half_day', 0.50],
+            'absent' => ['absent', 0.00],
+            default => ['present', 1.00],
+        };
     }
 
     /**

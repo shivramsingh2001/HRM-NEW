@@ -86,7 +86,7 @@ class EmployeeProvisioningService
                 'status' => 1,
                 'role' => $extra['role'] ?? 'employee',
             ]);
-            $user->employee_id = 'SH' . str_pad($user->id, 6, '0', STR_PAD_LEFT);
+            $user->employee_id = \App\Services\User\EmployeeIdService::generate($user->tenant_id, $user->id);
             $user->save();
 
             UserBasicDetail::create([
