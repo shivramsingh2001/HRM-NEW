@@ -582,7 +582,6 @@
                                             <option value="{{ $employee->id }}">{{ $employee->name }}</option>
                                         @endforeach
                                     </select>
-                                    <small class="form-text text-muted">First selected is treated as the primary reporting head.</small>
                                 </div>
 
                                 <div class="form-group">
@@ -642,7 +641,6 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    <small class="text-muted">Select multiple leave types that this employee is eligible for</small>
                                     @error('leave_type_assigned')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

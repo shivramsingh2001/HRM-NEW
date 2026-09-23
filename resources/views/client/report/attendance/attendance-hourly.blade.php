@@ -504,26 +504,38 @@
                         <select name="department" class="filter-select" onchange="this.form.submit()">
                             <option value="">All Departments</option>
                             @foreach($departments as $dept)
-                                <option value="{{ $dept->id }}" 
+                                <option value="{{ $dept->id }}"
                                     {{ request('department') == $dept->id ? 'selected' : '' }}>
                                     {{ $dept->name }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
-{{-- 
+
+                    <div class="filter-item">
+                        <select name="branch_id" class="filter-select" onchange="this.form.submit()">
+                            <option value="">All Branches</option>
+                            @foreach($branches ?? [] as $b)
+                                <option value="{{ $b->id }}"
+                                    {{ request('branch_id') == $b->id ? 'selected' : '' }}>
+                                    {{ $b->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <div class="filter-item search-filter">
-                        <input type="text" name="search" class="filter-input" 
-                               placeholder="Search employee..." 
+                        <input type="text" name="search" class="filter-input"
+                               placeholder="Search employee..."
                                value="{{ request('search') }}"
                                onkeyup="if(event.keyCode==13) this.form.submit();">
-                    </div> --}}
+                    </div>
 
-                    {{-- <div class="filter-item" style="min-width: auto;">
+                    <div class="filter-item" style="min-width: auto;">
                         <button type="submit" class="apply-btn">
                             <i class="feather-search"></i> Filter
                         </button>
-                    </div> --}}
+                    </div>
 
                     <div class="filter-item" style="min-width: auto;">
                         <a href="{{ route('report.attendance.hourly.index') }}" class="reset-btn">
@@ -575,6 +587,7 @@
                             <th>Name</th>
                             <th>Designation</th>
                             <th>Department</th>
+                            <th>Branch</th>
                             @foreach ($dayNames as $day => $name)
                                 <th class="{{ in_array($name, ['Sat', 'Sun']) ? 'weekend-header' : '' }}">
                                     <span>{{ $name }}</span>
@@ -592,6 +605,7 @@
                                 <td style="text-align: left; font-weight: 600;">{{ $row['name'] }}</td>
                                 <td style="text-align: left;">{{ $row['designation'] }}</td>
                                 <td style="text-align: left;">{{ $row['department'] }}</td>
+                                <td style="text-align: left;">{{ $row['branch'] ?? '—' }}</td>
                                 
                                 @foreach ($row['days'] as $dayData)
                                     <td class="
@@ -611,7 +625,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ $daysInMonth + 7 }}" class="text-center py-5">
+                                <td colspan="{{ $daysInMonth + 8 }}" class="text-center py-5">
                                     <div class="empty-state">
                                         <i class="feather-calendar"></i>
                                         <h5 class="mt-3">No Data Found</h5>

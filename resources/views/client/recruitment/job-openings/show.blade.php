@@ -33,44 +33,44 @@
         .detail-card {
             background: #fff;
             border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 12px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
             border: 1px solid #eef2f6;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
         }
 
         .detail-card-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
             border-bottom: 1px solid #eef2f6;
             color: #1e293b;
         }
 
         .detail-card-title i {
             margin-right: 6px;
-            font-size: 13px;
-            color: #4f46e5;
+            font-size: 12px;
+            color: #1e3a8a;
         }
 
         /* Info Grid */
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 8px;
         }
 
         .info-item {
             display: flex;
             align-items: flex-start;
             gap: 8px;
-            padding: 6px 0;
+            padding: 4px 0;
         }
 
         .info-label {
-            min-width: 100px;
-            font-size: 11px;
+            min-width: 95px;
+            font-size: 10px;
             font-weight: 600;
             color: #64748b;
             text-transform: uppercase;
@@ -79,7 +79,7 @@
 
         .info-value {
             flex: 1;
-            font-size: 12px;
+            font-size: 11.5px;
             color: #1e293b;
             word-break: break-word;
         }
@@ -116,8 +116,8 @@
         }
 
         .status-on-hold {
-            background-color: #f3e8ff;
-            color: #5b21b6;
+            background-color: #dbeafe;
+            color: #1e40af;
         }
 
         /* Employment Type Badges */
@@ -169,28 +169,25 @@
         .stat-mini-card {
             background: #f8fafc;
             border-radius: 8px;
-            padding: 8px 12px;
+            padding: 6px 10px;
             text-align: center;
             border: 1px solid #eef2f6;
         }
 
         .stat-mini-number {
-            font-size: 20px;
+            font-size: 17px;
             font-weight: 700;
             color: #1e293b;
             line-height: 1.2;
         }
 
         .stat-mini-number.text-success {
-            color: #10b981;
+            color: #059669;
         }
 
-        .stat-mini-number.text-info {
-            color: #3b82f6;
-        }
-
+        .stat-mini-number.text-info,
         .stat-mini-number.text-primary {
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .stat-mini-label {
@@ -212,7 +209,7 @@
 
         .progress-bar-custom {
             height: 100%;
-            background: #4f46e5;
+            background: #1e3a8a;
             border-radius: 3px;
             transition: width 0.3s;
         }
@@ -225,8 +222,8 @@
         }
 
         .btn-sm-custom {
-            padding: 4px 12px;
-            font-size: 11px;
+            padding: 4px 10px;
+            font-size: 10.5px;
             border-radius: 6px;
             font-weight: 500;
             text-decoration: none;
@@ -238,21 +235,21 @@
         }
 
         .btn-primary {
-            background: #4f46e5;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #4338ca;
+            background: #1e40af;
         }
 
         .btn-info {
-            background: #0ea5e9;
+            background: #1e3a8a;
             color: white;
         }
 
         .btn-info:hover {
-            background: #0284c7;
+            background: #1e40af;
         }
 
         .btn-success {
@@ -300,7 +297,7 @@
             font-family: monospace;
             font-size: 12px;
             font-weight: 600;
-            color: #4f46e5;
+            color: #1e3a8a;
             display: inline-block;
         }
 
@@ -383,14 +380,14 @@
         <div class="detail-card" style="padding: 10px 16px;">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="action-buttons">
-                    <a href="{{ route('job-openings.edit', $jobOpening->id) }}" class="btn-sm-custom btn-primary">
+                    <a href="{{ route('job-openings.index', ['edit' => $jobOpening->id]) }}" class="btn-sm-custom btn-primary">
                         <i class="feather-edit"></i> Edit
                     </a>
                     <a href="{{ route('job-openings.applications', $jobOpening->id) }}" class="btn-sm-custom btn-info">
                         <i class="feather-users"></i> Applications ({{ $applicationStats['total_applications'] ?? 0 }})
                     </a>
                     @if ($jobOpening->status == 'draft')
-                        <button type="button" class="btn-sm-custom btn-success" onclick="publishJob()">
+                        <button type="button" class="btn-sm-custom btn-info" onclick="publishJob()">
                             <i class="feather-paper-plane"></i> Publish
                         </button>
                     @endif
@@ -399,7 +396,7 @@
                             <i class="feather-x-circle"></i> Close
                         </button>
                     @endif
-                    <button type="button" class="btn-sm-custom btn-secondary" onclick="duplicateJob()">
+                    <button type="button" class="btn-sm-custom btn-info" onclick="duplicateJob()">
                         <i class="feather-copy"></i> Duplicate
                     </button>
                 </div>

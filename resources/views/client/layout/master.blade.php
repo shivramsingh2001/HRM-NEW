@@ -19,6 +19,7 @@
 
 <body>
     @includeWhen(session()->has('impersonation'), 'client.layout.impersonation-banner')
+    @includeWhen(app()->bound('current_tenant'), 'client.layout.subscription-banner')
     @include('client.layout.sidebar')
     <!--! ================================================================ !-->
     <!--! [Start] Header !-->

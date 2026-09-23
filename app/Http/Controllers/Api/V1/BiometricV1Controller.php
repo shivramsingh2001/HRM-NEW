@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Exceptions\ApiException;
+use App\Exceptions\DirectOnboardingBlockedException;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessBiometricPunch;
@@ -10,6 +11,7 @@ use App\Models\BiometricDevice;
 use App\Models\BiometricEnrollment;
 use App\Models\BiometricPunch;
 use App\Models\User;
+use App\Services\Biometric\BiometricEmployeeProvisioningService;
 use App\Services\Biometric\BiometricRosterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -145,6 +147,33 @@ class BiometricV1Controller extends Controller
             $selfUserId = $this->userIdFromEnroll($device, (string) $e['enroll_no']);
 
             if (! $row->exists) {
+                if (! $selfUserId && $device->allow_direct_onboarding) {
+                    $row->tenant_id = $device->tenant_id;
+                    $row->name_on_device = $e['name'] ?? null;
+                    $row->source = 'manual';
+                    $row->sync_state = 'synced';
+
+                    try {
+                        $provisioning = app(BiometricEmployeeProvisioningService::class);
+                        $newUser = $provisioning->createFromDeviceEnrollment($device, (string) $e['enroll_no'], $e['name'] ?? null);
+                        $row->user_id = $newUser->id;
+                        $row->device_user_id = $newUser->id;
+                        $row->save();
+
+                        // Now that this row is linked, let the roster service
+                        // pick the new employee up for any OTHER auto_provision
+                        // devices in the tenant (this device is already covered).
+                        app(BiometricRosterService::class)->syncUser($newUser);
+                    } catch (DirectOnboardingBlockedException $ex) {
+                        $row->last_error = $ex->getMessage();
+                        $row->save();
+                    }
+
+                    $added++;
+
+                    continue;
+                }
+
                 $row->tenant_id = $device->tenant_id;
                 $row->name_on_device = $e['name'] ?? null;
                 $row->user_id = $selfUserId;

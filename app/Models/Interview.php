@@ -257,9 +257,16 @@ class Interview extends Model
     {
         $newInterview = $this->replicate();
         $newInterview->fill([
+            // replicate() would otherwise carry over the unique interview_code
+            // from $this, which the DB rejects as a duplicate.
+            'interview_code' => $this->generateRescheduleCode(),
             'scheduled_date' => $newDate,
             'scheduled_time' => $newTime,
             'status' => self::STATUS_SCHEDULED,
+            'outcome' => null,
+            'feedback' => null,
+            'rating' => null,
+            'completed_at' => null,
             'rescheduled_from' => $this->id,
             'reschedule_reason' => $reason,
             'created_by' => auth()->id()
@@ -280,5 +287,17 @@ class Interview extends Model
             // Send reminder logic here
             $this->update(['reminder_sent' => true]);
         }
+    }
+
+    protected function generateRescheduleCode(): string
+    {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $nextId = (self::max('id') ?? 0) + 1 + $attempt;
+            $code = 'INT' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+            if (!self::where('interview_code', $code)->exists()) {
+                return $code;
+            }
+        }
+        return 'INT' . date('YmdHis') . rand(100, 999);
     }
 }

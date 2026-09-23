@@ -2,22 +2,34 @@
 
 namespace App\Services\Biometric;
 
+use App\Exceptions\NoOpenPunchSessionException;
+use App\Exceptions\OpenPunchSessionException;
 use App\Models\Attendance;
+use App\Models\AttendancePunch;
 use App\Models\BiometricDevice;
 use App\Models\BiometricPunch;
 use App\Models\User;
 use App\Models\UserJobDetail;
 use App\Services\Attendance\AttendanceCalculator;
 use App\Services\Attendance\AttendanceEntryService;
+use App\Services\Attendance\AttendancePunchService;
 use App\Services\Attendance\AuditContext;
+use App\Services\Attendance\PunchInput;
 use App\Services\Attendance\TenantShiftResolver;
 use App\Services\Attendance\TimezoneResolver;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Turns one biometric_punches row into an attendances write, routed through the
  * AttendanceEntryService funnel (period lock + audit + domain event + summary
  * refresh). Clock math is a straight lift of the retired ProcessFingerprintPunch.
+ *
+ * For a tenant with allow_multiple_punches = 1, punches are routed instead
+ * through AttendancePunchService — the same funnel mobile/web/manual punches
+ * use — so a 3rd+ punch in a day opens a new session instead of being
+ * discarded. For allow_multiple_punches = 0 (the default), behaviour here is
+ * completely unchanged.
  */
 class BiometricAttendanceService
 {
@@ -42,6 +54,12 @@ class BiometricAttendanceService
 
         $device = BiometricDevice::find($punch->biometric_device_id);
         $tenantId = (int) $punch->tenant_id;
+
+        if ((bool) DB::table('tenants')->where('id', $tenantId)->value('allow_multiple_punches')) {
+            $this->applyViaPunchPipeline($punch, $user, $device, $tenantId);
+
+            return;
+        }
 
         // Resolve the true instant + attendance date in the employee's zone.
         $tz = $device?->site_timezone
@@ -126,6 +144,109 @@ class BiometricAttendanceService
     private string $skipReason = 'skipped';
 
     // ------------------------------------------------------------------
+
+    /**
+     * allow_multiple_punches = 1 path: hand the raw punch to the same funnel
+     * mobile/web/manual punches use, instead of folding it into a single
+     * clock_in/clock_out pair. A 3rd+ punch opens a new session instead of
+     * being discarded.
+     */
+    private function applyViaPunchPipeline(BiometricPunch $punch, User $user, ?BiometricDevice $device, int $tenantId): void
+    {
+        $tz = $device?->site_timezone ?: app(TimezoneResolver::class)->forUser($user->id, $tenantId);
+        $punchLocal = Carbon::parse($punch->punched_at);
+        $punchUtc = $this->calc->toUtc($punchLocal->format('Y-m-d H:i:s'), $tz);
+        $direction = $this->resolveDirectionForPunchPipeline($punch, $device, $tenantId, $user->id);
+        $label = $device?->name ?: $punch->serial_number;
+
+        try {
+            $recorded = app(AttendancePunchService::class)->capture(new PunchInput(
+                userId: $user->id,
+                tenantId: $tenantId,
+                direction: $direction,
+                punchedAt: $punchLocal,
+                source: 'biometric',
+                method: $punch->method,
+                biometricDeviceId: $device?->id,
+                audit: new AuditContext(
+                    actorId: null,
+                    actorRole: 'device',
+                    source: 'biometric',
+                    reason: "Biometric punch · {$label} · enroll {$punch->enroll_no}",
+                ),
+                metadata: array_filter([
+                    'temperature' => $punch->temperature,
+                    'raw_verify_mode' => $punch->raw_verify_mode,
+                ], fn ($v) => $v !== null),
+            ));
+        } catch (OpenPunchSessionException|NoOpenPunchSessionException $e) {
+            $punch->update(['status' => 'skipped', 'error' => $e->getMessage(), 'punched_at_utc' => $punchUtc]);
+
+            return;
+        } catch (\Throwable $e) {
+            $punch->update(['status' => 'error', 'error' => mb_substr($e->getMessage(), 0, 500), 'punched_at_utc' => $punchUtc]);
+            throw $e;
+        }
+
+        $punch->update([
+            'status' => 'processed',
+            'user_id' => $user->id,
+            'direction' => $direction,
+            'attendance_id' => $recorded->attendance_id,
+            'punched_at_utc' => $punchUtc,
+            'processed_at' => now(),
+            'error' => null,
+        ]);
+
+        try {
+            event(new \App\Events\AttendanceDomainEvent('biometric.punch_recorded', $tenantId, [
+                'device_id' => $device?->id,
+                'serial_number' => $punch->serial_number,
+                'enroll_no' => $punch->enroll_no,
+                'user_id' => $user->id,
+                'direction' => $direction,
+                'attendance_id' => $recorded->attendance_id,
+            ]));
+        } catch (\Throwable $e) {
+            // never block on the event
+        }
+    }
+
+    /** Same priority order as resolveDirection(), but 'auto' reads open-session state from attendance_punches. */
+    private function resolveDirectionForPunchPipeline(BiometricPunch $punch, ?BiometricDevice $device, int $tenantId, int $userId): string
+    {
+        foreach (config('biometric.direction_priority', ['payload', 'device_mode', 'verify_mode', 'auto']) as $src) {
+            $d = match ($src) {
+                'payload' => in_array($punch->direction, ['in', 'out'], true) ? $punch->direction : null,
+                'device_mode' => match ($device?->direction_mode) {
+                    'in' => 'in',
+                    'out' => 'out',
+                    'by_verify_mode' => $this->fromVerifyMode($punch->raw_verify_mode),
+                    default => null,
+                },
+                'verify_mode' => $this->fromVerifyMode($punch->raw_verify_mode),
+                'auto' => $this->fromPunchState($tenantId, $userId),
+                default => null,
+            };
+            if ($d) {
+                return $d;
+            }
+        }
+
+        return 'in';
+    }
+
+    private function fromPunchState(int $tenantId, int $userId): string
+    {
+        $open = AttendancePunch::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->where('status', 'active')
+            ->orderByDesc('punched_at')
+            ->first();
+
+        return ($open && $open->direction === 'in') ? 'out' : 'in';
+    }
 
     private function resolveDirection(BiometricPunch $punch, ?BiometricDevice $device, int $tenantId, int $userId, string $date): string
     {

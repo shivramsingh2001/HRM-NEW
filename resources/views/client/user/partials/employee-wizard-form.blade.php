@@ -254,7 +254,6 @@
                             <option value="{{ $employee->id }}">{{ $employee->name }}</option>
                         @endforeach
                     </select>
-                    <small class="form-text text-muted">First selected is treated as the primary reporting head.</small>
                 </div>
 
                 <div class="form-group">
@@ -285,7 +284,6 @@
                             <option value="{{ $branch->id }}">{{ $branch->name }}</option>
                         @endforeach
                     </select>
-                    <small class="form-text text-muted">Where this employee is allowed to check in from.</small>
                 </div>
 
                 <div class="form-group">
@@ -296,8 +294,6 @@
                             <option value="{{ $companyBranch->id }}">{{ $companyBranch->name }}</option>
                         @endforeach
                     </select>
-                    <small class="form-text text-muted">Optional — only needed for companies with multiple physical
-                        branches.</small>
                 </div>
             </div>
 
@@ -316,7 +312,6 @@
                             </option>
                         @endforeach
                     </select>
-                    <small class="text-muted">Select multiple leave types that this employee is eligible for</small>
                 </div>
             </div>
         </div>

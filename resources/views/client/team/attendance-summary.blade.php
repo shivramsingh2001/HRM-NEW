@@ -377,7 +377,7 @@
                     <tr>
                         <td colspan="12" class="text-center py-5">
                             <div class="empty-state">
-                                <i class="feather-file-text" style="font-size: 48px; color: #cbd5e1;"></i>
+                                <i class="feather-file-text" style="font-size: 48px;"></i>
                                 <h4 class="mt-3">No Data Found</h4>
                                 <p class="text-muted">No attendance records available for the selected month.</p>
                             </div>

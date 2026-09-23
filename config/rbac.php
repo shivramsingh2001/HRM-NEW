@@ -11,7 +11,7 @@ return [
         'employee', 'attendance', 'leave', 'payroll', 'tasks', 'projects', 'recruitment',
         'onboarding', 'offboarding', 'expenses', 'loans', 'meetings',
         'announcements', 'reports', 'settings', 'performance', 'performance_reviews', 'overtime', 'team',
-        'requests', 'branches',
+        'requests', 'branches', 'assets',
     ],
 
     'actions' => ['view', 'create', 'edit', 'delete', 'approve', 'export', 'manage'],
@@ -35,7 +35,7 @@ return [
             'projects' => 'all', 'recruitment' => 'all', 'onboarding' => 'all', 'offboarding' => 'all',
             'expenses' => 'all', 'loans' => 'all', 'meetings' => 'all', 'announcements' => 'all',
             'reports' => 'all', 'settings' => 'all', 'performance' => 'all', 'performance_reviews' => 'all',
-            'overtime' => 'all', 'team' => 'all', 'requests' => 'all', 'branches' => 'all',
+            'overtime' => 'all', 'team' => 'all', 'requests' => 'all', 'branches' => 'all', 'assets' => 'all',
         ]],
         'hr' => ['HR', true, [
             // tasks/projects => 'all': matches the pre-RBAC
@@ -70,6 +70,10 @@ return [
             // branches => 'all': hr manages the new organizational Branch
             // module the same as Department/Designation-adjacent org setup.
             'branches' => 'all',
+            // assets => 'all': HR/IT typically owns the company asset
+            // inventory (registration, assignment, disposal) the same way
+            // they own Branch org-setup data.
+            'assets' => 'all',
         ]],
         'manager' => ['Manager', true, [
             'employee' => ['view' => 'team'],
@@ -136,6 +140,16 @@ return [
             // visible read-only to every role — same spirit as Department/
             // Designation dropdowns being populated for all roles.
             'branches' => ['view' => 'company'],
+            // assets => team: read-only visibility into assets currently
+            // assigned to the manager's own direct reports (getTeamMembers()
+            // -style reporting_head scoping), no create/edit/manage.
+            'assets' => ['view' => 'team'],
+            // offboarding => team: a manager needs to see their direct
+            // reports' exit status and act as the level-1 (manager) approver
+            // in the offboarding ApprovalService workflow — never
+            // company-wide, never create-on-behalf, never the clearance/
+            // settlement 'edit' actions (those stay HR/Finance-only below).
+            'offboarding' => ['view' => 'team', 'approve' => 'team'],
         ]],
         'employee' => ['Employee', true, [
             'employee' => ['view' => 'own'],
@@ -162,6 +176,19 @@ return [
             'overtime' => ['view' => 'own'],
             'requests' => ['view' => 'own'],
             'branches' => ['view' => 'company'],
+            // assets => own: an employee only sees assets currently or
+            // previously assigned to them (My Assets self-service page).
+            // Accept/return of an asset already assigned to them is always
+            // allowed regardless of this grant (ownership-checked in the
+            // controller, matching Loans/Requests).
+            'assets' => ['view' => 'own'],
+            // offboarding => own: an employee can see and create their own
+            // resignation/retirement request. Which reasons they may
+            // actually select (e.g. never "Termination") is a business rule
+            // enforced by config('offboarding.reason_rules') inside
+            // StoreOffboardingRequest, not by this scope — RBAC only proves
+            // "can touch the offboarding module at all".
+            'offboarding' => ['view' => 'own', 'create' => 'own'],
         ]],
     ],
 ];

@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\TenantTrait;
 
 class RecruitmentWorkflowLog extends Model
 {
-   
+    use TenantTrait;
+
     protected $table = 'recruitment_workflow_logs';
 
     protected $fillable = [

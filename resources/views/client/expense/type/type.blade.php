@@ -188,6 +188,19 @@
                             <p class="et-description text-truncate-3-line mb-0">
                                 {{ $expenseType->description ?? 'No description provided.' }}
                             </p>
+                            @if ($expenseType->hasPolicy())
+                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                    @if ($expenseType->max_amount !== null)
+                                        <span class="badge bg-soft-primary text-primary">Max ₹{{ number_format($expenseType->max_amount, 2) }}</span>
+                                    @endif
+                                    @if ($expenseType->receipt_required_above !== null)
+                                        <span class="badge bg-soft-warning text-warning">Receipt {{ (float) $expenseType->receipt_required_above > 0 ? 'above ₹' . number_format($expenseType->receipt_required_above, 2) : 'always' }}</span>
+                                    @endif
+                                    @if ($expenseType->max_backdate_days !== null)
+                                        <span class="badge bg-soft-info text-info">Within {{ $expenseType->max_backdate_days }} day(s)</span>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
 
                         <div class="et-card-footer">
@@ -196,6 +209,9 @@
                                 data-id="{{ $expenseType->id }}"
                                 data-name="{{ $expenseType->name }}"
                                 data-description="{{ $expenseType->description }}"
+                                data-max_amount="{{ $expenseType->max_amount }}"
+                                data-receipt_required_above="{{ $expenseType->receipt_required_above }}"
+                                data-max_backdate_days="{{ $expenseType->max_backdate_days }}"
                                 data-status="{{ $expenseType->status }}">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
@@ -252,6 +268,24 @@
                                             <small class="text-danger error-text description_error"></small>
                                         </div>
                                     </div>
+                                    <div class="col-12 mb-2">
+                                        <div class="fw-semibold small mb-1">Claim rules <span class="text-muted fw-normal">(optional — leave blank for no rule)</span></div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="fw-semibold" for="max_amount">Max per claim (₹)</label>
+                                        <input type="number" class="form-control" name="max_amount" id="max_amount" min="0.01" step="0.01" placeholder="No limit">
+                                        <small class="text-danger error-text max_amount_error"></small>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="fw-semibold" for="receipt_required_above">Receipt needed above (₹)</label>
+                                        <input type="number" class="form-control" name="receipt_required_above" id="receipt_required_above" min="0" step="0.01" placeholder="Never (0 = always)">
+                                        <small class="text-danger error-text receipt_required_above_error"></small>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="fw-semibold" for="max_backdate_days">File within (days of the expense)</label>
+                                        <input type="number" class="form-control" name="max_backdate_days" id="max_backdate_days" min="0" step="1" placeholder="No limit">
+                                        <small class="text-danger error-text max_backdate_days_error"></small>
+                                    </div>
                                     <div class="col-6">
                                         <button class="btn btn-primary" type="submit">
                                             <i class="feather-save me-2"></i>Save
@@ -307,6 +341,24 @@
                                                 placeholder="Enter Expense Type Description..."></textarea>
                                             <small class="text-danger error-text edit_description_error"></small>
                                         </div>
+                                    </div>
+                                    <div class="col-12 mb-2">
+                                        <div class="fw-semibold small mb-1">Claim rules <span class="text-muted fw-normal">(optional — leave blank for no rule)</span></div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="fw-semibold" for="edit_max_amount">Max per claim (₹)</label>
+                                        <input type="number" class="form-control" name="max_amount" id="edit_max_amount" min="0.01" step="0.01" placeholder="No limit">
+                                        <small class="text-danger error-text edit_max_amount_error"></small>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="fw-semibold" for="edit_receipt_required_above">Receipt needed above (₹)</label>
+                                        <input type="number" class="form-control" name="receipt_required_above" id="edit_receipt_required_above" min="0" step="0.01" placeholder="Never (0 = always)">
+                                        <small class="text-danger error-text edit_receipt_required_above_error"></small>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="fw-semibold" for="edit_max_backdate_days">File within (days of the expense)</label>
+                                        <input type="number" class="form-control" name="max_backdate_days" id="edit_max_backdate_days" min="0" step="1" placeholder="No limit">
+                                        <small class="text-danger error-text edit_max_backdate_days_error"></small>
                                     </div>
                                     <div class="col-12 mb-3">
                                         <div class="form-group">
@@ -398,6 +450,9 @@
                 $('#edit_name').val(name);
                 $('#edit_description').val(description);
                 $('#edit_status').val(status);
+                $('#edit_max_amount').val($(this).attr('data-max_amount'));
+                $('#edit_receipt_required_above').val($(this).attr('data-receipt_required_above'));
+                $('#edit_max_backdate_days').val($(this).attr('data-max_backdate_days'));
 
                 // Clear previous errors
                 $('.error-text').text('');

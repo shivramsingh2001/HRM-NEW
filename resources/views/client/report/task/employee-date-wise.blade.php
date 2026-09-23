@@ -403,6 +403,8 @@
                         if(request('report_date') && request('report_date') != now()->toDateString()) $activeFilters++;
                         if(request('user_id') && request('user_id') != 'all') $activeFilters++;
                         if(request('project_id') && request('project_id') != 'all') $activeFilters++;
+                        if(request('branch_id') && request('branch_id') != 'all') $activeFilters++;
+                        if(request('search')) $activeFilters++;
                     @endphp
                     @if($activeFilters > 0)
                         <span class="badge-count">{{ $activeFilters }} active</span>
@@ -438,6 +440,26 @@
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+
+                    <div class="filter-item grow">
+                        <select name="branch_id" class="filter-select auto-submit">
+                            <option value="all">All Branches</option>
+                            @foreach($branchList as $b)
+                                <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>
+                                    {{ $b->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="filter-item grow">
+                        <input type="text" name="search" class="filter-input" placeholder="Search employee, ID or email…"
+                               value="{{ request('search') }}">
+                    </div>
+
+                    <div class="filter-item">
+                        <button type="submit" class="btn-sm-custom-outline"><i class="feather-search"></i> Search</button>
                     </div>
 
                     <div class="filter-item">
@@ -524,6 +546,7 @@
                         <th style="width: 44px;">#</th>
                         <th style="min-width: 130px;">Date</th>
                         <th style="min-width: 200px;">Employee</th>
+                        <th style="min-width: 110px;">Branch</th>
                         <th class="text-center" style="width: 60px;">Total</th>
                         <th class="text-center" style="width: 70px;">Pending</th>
                         <th class="text-center" style="width: 85px;">In Progress</th>
@@ -562,6 +585,7 @@
                                     </div>
                                 </div>
                             </td>
+                            <td>{{ $u->branch_name ?? '—' }}</td>
                             <td class="text-center"><span class="badge badge-primary">{{ $u->stat_total }}</span></td>
                             <td class="text-center"><span class="badge badge-warning">{{ $u->stat_pending }}</span></td>
                             <td class="text-center"><span class="badge badge-info">{{ $u->stat_in_progress }}</span></td>
@@ -573,7 +597,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="text-center py-5">
+                            <td colspan="12" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="feather-file-text"></i>
                                     <h4>No Data Found</h4>
@@ -586,7 +610,7 @@
                 @if($users->count() > 0)
                     <tfoot>
                         <tr>
-                            <td colspan="3" class="text-end"><strong>Grand Total (All)</strong></td>
+                            <td colspan="4" class="text-end"><strong>Grand Total (All)</strong></td>
                             <td class="text-center"><strong>{{ $grandTotal['total'] }}</strong></td>
                             <td class="text-center"><strong>{{ $grandTotal['pending'] }}</strong></td>
                             <td class="text-center"><strong>{{ $grandTotal['in_progress'] }}</strong></td>

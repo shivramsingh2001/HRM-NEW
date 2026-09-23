@@ -266,13 +266,15 @@ class AttendanceReportController extends Controller
             $search = $request->get('search');
             $statusFilter = $request->get('status');
             $userIdFilter = $request->get('user_id');
-    
+            $branchFilter = $request->get('branch_id');
+
             // Fetch all active employees (non-admin) with tenant filter
             $users = DB::table('users as u')
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
                 ->leftJoin('user_basic_details as ub', 'u.id', '=', 'ub.user_id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
@@ -282,19 +284,26 @@ class AttendanceReportController extends Controller
                     'd.name as department_name',
                     'ds.name as designation_name',
                     'uj.reporting_head',
+                    'uj.branch_id',
+                    'cb.name as branch_name',
                     'ub.profile_image'
                 )
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
                 ->where('u.role', '!=', 'admin')
+                ->when($branchFilter, fn ($q) => $q->where('uj.branch_id', (int) $branchFilter))
+                ->when($search, fn ($q) => $q->where(function ($qq) use ($search) {
+                    $qq->where('u.name', 'LIKE', '%' . $search . '%')->orWhere('u.employee_id', 'LIKE', '%' . $search . '%');
+                }))
                 ->get();
-    
+
             // Fetch attendance records for the month with tenant filter
             $attendanceRows = DB::table('attendances as a')
                 ->leftJoin('users as u', 'a.user_id', '=', 'u.id')
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'a.user_id',
                     'a.date',
@@ -322,7 +331,8 @@ class AttendanceReportController extends Controller
                     'u.employee_id',
                     'u.email',
                     'd.name as department_name',
-                    'ds.name as designation_name'
+                    'ds.name as designation_name',
+                    'cb.name as branch_name'
                 )
                 ->where('a.tenant_id', $tenantId)
                 ->whereBetween('a.date', [$monthStart, $monthEnd])
@@ -471,6 +481,7 @@ class AttendanceReportController extends Controller
                         'email' => $user->email,
                         'department' => $user->department_name,
                         'designation' => $user->designation_name,
+                        'branch' => $user->branch_name,
                         'date' => $dateStr,
                         'status' => $status,
                         'clock_in' => $attendance->clock_in ?? null,
@@ -568,7 +579,11 @@ class AttendanceReportController extends Controller
                 ->where('status', 1)
                 ->where('role', '!=', 'admin')
                 ->get();
-    
+
+            $branches = DB::table('company_branches')
+                ->where('tenant_id', $tenantId)->where('status', 1)
+                ->select('id', 'name')->orderBy('name')->get();
+
             return view('client.report.attendance.attendance-detail', [
                 'reportData' => new \Illuminate\Pagination\LengthAwarePaginator(
                     $paginated,
@@ -579,6 +594,7 @@ class AttendanceReportController extends Controller
                 ),
                 'stats' => $stats,
                 'employees' => $employees,
+                'branches' => $branches,
                 'monthStart' => $monthStart,
                 'monthEnd' => $monthEnd,
             ]);
@@ -611,25 +627,29 @@ class AttendanceReportController extends Controller
             $search = $request->get('search');
             $statusFilter = $request->get('status');
             $userIdFilter = $request->get('user_id');
-    
+            $branchFilter = $request->get('branch_id');
+
             // Fetch all active employees (non-admin) with tenant filter
             $users = DB::table('users as u')
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
                     'u.employee_id',
                     'u.email',
                     'd.name as department_name',
-                    'ds.name as designation_name'
+                    'ds.name as designation_name',
+                    'cb.name as branch_name'
                 )
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
                 ->where('u.role', '!=', 'admin')
+                ->when($branchFilter, fn ($q) => $q->where('uj.branch_id', (int) $branchFilter))
                 ->get();
-    
+
             // Fetch attendance records for the month with tenant filter
             $attendanceRows = DB::table('attendances as a')
                 ->where('a.tenant_id', $tenantId)
@@ -766,6 +786,7 @@ class AttendanceReportController extends Controller
                         'employee_id' => $user->employee_id ?? 'N/A',
                         'department' => $user->department_name ?? 'N/A',
                         'designation' => $user->designation_name ?? 'N/A',
+                        'branch' => $user->branch_name ?? 'N/A',
                         'date' => $dateStr,
                         'day' => Carbon::parse($dateStr)->format('D'),
                         'status' => $status,
@@ -789,7 +810,7 @@ class AttendanceReportController extends Controller
                     ];
                 }
             }
-    
+
             // Convert to collection for filtering
             $reportCollection = collect($reportData);
     
@@ -847,6 +868,7 @@ class AttendanceReportController extends Controller
                 'Employee ID',
                 'Department',
                 'Designation',
+                'Branch',
                 'Date',
                 'Day',
                 'Status',
@@ -863,7 +885,7 @@ class AttendanceReportController extends Controller
                 'OT Reason',
                 'Remarks'
             ]);
-    
+
             // Data rows - use filtered collection
             $srNo = 1;
             foreach ($reportCollection as $row) {
@@ -918,6 +940,7 @@ class AttendanceReportController extends Controller
                     $row['employee_id'],
                     $row['department'],
                     $row['designation'],
+                    $row['branch'],
                     Carbon::parse($row['date'])->format('d M Y'),
                     $row['day'],
                     $statusLabel,
@@ -983,6 +1006,7 @@ class AttendanceReportController extends Controller
             $search = $request->get('search');
             $statusFilter = $request->get('status');
             $userIdFilter = $request->get('user_id');
+            $branchFilter = $request->get('branch_id');
 
             // Fetch all active employees (non-admin) with tenant filter
             $users = DB::table('users as u')
@@ -990,6 +1014,7 @@ class AttendanceReportController extends Controller
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
                 ->leftJoin('user_basic_details as ub', 'u.id', '=', 'ub.user_id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
@@ -999,6 +1024,8 @@ class AttendanceReportController extends Controller
                     'd.name as department_name',
                     'ds.name as designation_name',
                     'uj.reporting_head',
+                    'uj.branch_id',
+                    'cb.name as branch_name',
                     'ub.profile_image'
                 )
                 ->where('u.tenant_id', $tenantId)
@@ -1009,6 +1036,11 @@ class AttendanceReportController extends Controller
             // Apply user filter if provided
             if ($userIdFilter) {
                 $users = $users->where('id', (int)$userIdFilter);
+            }
+
+            // Apply branch filter
+            if ($branchFilter) {
+                $users = $users->where('branch_id', (int) $branchFilter);
             }
 
             // Apply search filter to users first
@@ -1159,6 +1191,7 @@ class AttendanceReportController extends Controller
                     'email' => $user->email,
                     'department' => $user->department_name,
                     'designation' => $user->designation_name,
+                    'branch' => $user->branch_name,
                     'date' => $dayStart,
                     'day' => $dateObj->format('D'),
                     'status' => $status,
@@ -1240,6 +1273,10 @@ class AttendanceReportController extends Controller
                 ->orderBy('name')
                 ->get();
 
+            $branches = DB::table('company_branches')
+                ->where('tenant_id', $tenantId)->where('status', 1)
+                ->select('id', 'name')->orderBy('name')->get();
+
             return view('client.report.attendance.attendance-daily', [
                 'reportData' => new \Illuminate\Pagination\LengthAwarePaginator(
                     $paginated,
@@ -1250,6 +1287,7 @@ class AttendanceReportController extends Controller
                 ),
                 'stats' => $stats,
                 'employees' => $employees,
+                'branches' => $branches,
                 'selectedDate' => $dayStart,
                 'selectedDateObj' => $dateObj,
                 'monthStart' => $dayStart,
@@ -1285,19 +1323,23 @@ class AttendanceReportController extends Controller
             $search = $request->get('search');
             $statusFilter = $request->get('status');
             $userIdFilter = $request->get('user_id');
+            $branchFilter = $request->get('branch_id');
 
             // Fetch all active employees (non-admin) with tenant filter
             $users = DB::table('users as u')
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
                     'u.employee_id',
                     'u.email',
                     'd.name as department_name',
-                    'ds.name as designation_name'
+                    'ds.name as designation_name',
+                    'uj.branch_id',
+                    'cb.name as branch_name'
                 )
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
@@ -1307,6 +1349,11 @@ class AttendanceReportController extends Controller
             // Apply user filter if provided
             if ($userIdFilter) {
                 $users = $users->where('id', (int)$userIdFilter);
+            }
+
+            // Apply branch filter
+            if ($branchFilter) {
+                $users = $users->where('branch_id', (int) $branchFilter);
             }
 
             // Apply search filter to users
@@ -1443,6 +1490,7 @@ class AttendanceReportController extends Controller
                     'employee_id' => $user->employee_id ?? 'N/A',
                     'department' => $user->department_name ?? 'N/A',
                     'designation' => $user->designation_name ?? 'N/A',
+                    'branch' => $user->branch_name ?? 'N/A',
                     'date' => $dayStart,
                     'day' => $dateObj->format('D'),
                     'status' => $status,
@@ -1484,6 +1532,7 @@ class AttendanceReportController extends Controller
                 'Employee ID',
                 'Department',
                 'Designation',
+                'Branch',
                 'Date',
                 'Day',
                 'Status',
@@ -1547,6 +1596,7 @@ class AttendanceReportController extends Controller
                     $row['employee_id'],
                     $row['department'],
                     $row['designation'],
+                    $row['branch'],
                     Carbon::parse($row['date'])->format('d M Y'),
                     $row['day'],
                     $statusLabel,
@@ -1604,12 +1654,14 @@ class AttendanceReportController extends Controller
             // Get filter values
             $search = $request->get('search');
             $departmentFilter = $request->get('department');
+            $branchFilter = $request->get('branch_id');
 
             // Fetch all active employees
             $employees = DB::table('users as u')
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
@@ -1617,7 +1669,9 @@ class AttendanceReportController extends Controller
                     'u.email',
                     'd.name as department_name',
                     'ds.name as designation_name',
-                    'uj.department as department_id'
+                    'uj.department as department_id',
+                    'uj.branch_id',
+                    'cb.name as branch_name'
                 )
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
@@ -1628,6 +1682,11 @@ class AttendanceReportController extends Controller
             // Apply department filter
             if ($departmentFilter) {
                 $employees = $employees->where('department_id', (int)$departmentFilter);
+            }
+
+            // Apply branch filter
+            if ($branchFilter) {
+                $employees = $employees->where('branch_id', (int) $branchFilter);
             }
 
             // Apply search filter
@@ -1704,6 +1763,7 @@ class AttendanceReportController extends Controller
                     'name' => $employee->name,
                     'designation' => $employee->designation_name ?? '--',
                     'department' => $employee->department_name ?? '--',
+                    'branch' => $employee->branch_name ?? '--',
                     'days' => [],
                     'total_hours' => '00:00',
                     'total_hours_decimal' => 0,
@@ -1826,6 +1886,10 @@ class AttendanceReportController extends Controller
                 ->orderBy('name')
                 ->get();
 
+            $branches = DB::table('company_branches')
+                ->where('tenant_id', $tenantId)->where('status', 1)
+                ->select('id', 'name')->orderBy('name')->get();
+
             // Paginate the report data
             $perPage = $request->get('per_page', 50);
             $currentPage = $request->get('page', 1);
@@ -1842,6 +1906,7 @@ class AttendanceReportController extends Controller
                 'stats' => $stats,
                 'employees' => $employees,
                 'departments' => $departments,
+                'branches' => $branches,
                 'paginator' => new \Illuminate\Pagination\LengthAwarePaginator(
                     $paginatedData,
                     $total,
@@ -1880,13 +1945,16 @@ class AttendanceReportController extends Controller
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
                     'u.employee_id',
                     'd.name as department_name',
                     'ds.name as designation_name',
-                    'uj.department as department_id'
+                    'uj.department as department_id',
+                    'uj.branch_id',
+                    'cb.name as branch_name'
                 )
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
@@ -1897,6 +1965,10 @@ class AttendanceReportController extends Controller
             // Apply filters
             if ($request->get('department')) {
                 $employees = $employees->where('department_id', (int)$request->get('department'));
+            }
+
+            if ($request->get('branch_id')) {
+                $employees = $employees->where('branch_id', (int) $request->get('branch_id'));
             }
 
             if ($request->get('search')) {
@@ -1959,7 +2031,7 @@ class AttendanceReportController extends Controller
             $csvData[] = [];
 
             // Add header row
-            $header = ['S.No', 'Emp Code', 'Name', 'Designation', 'Department'];
+            $header = ['S.No', 'Emp Code', 'Name', 'Designation', 'Department', 'Branch'];
             for ($i = 1; $i <= $daysInMonth; $i++) {
                 $date = Carbon::createFromFormat('Y-m-d', $monthStart)->addDays($i - 1);
                 $header[] =  $date->format('d-m-y') . ' (' . $date->format('D') . ')';
@@ -1978,7 +2050,8 @@ class AttendanceReportController extends Controller
                     $employee->employee_id ?? '--',
                     $employee->name,
                     $employee->designation_name ?? '--',
-                    $employee->department_name ?? '--'
+                    $employee->department_name ?? '--',
+                    $employee->branch_name ?? '--'
                 ];
 
                 $totalMinutes = 0;
@@ -2095,31 +2168,41 @@ class AttendanceReportController extends Controller
             // Get filter values
             $search = $request->get('search');
             $departmentFilter = $request->get('department');
-    
+            $branchFilter = $request->get('branch_id');
+
             // Fetch employees with details
             $employees = DB::table('users as u')
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
                     'u.employee_id',
+                    'u.email',
                     'd.name as department_name',
                     'ds.name as designation_name',
-                    'uj.department as department_id'
+                    'uj.department as department_id',
+                    'uj.branch_id',
+                    'cb.name as branch_name'
                 )
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
                 ->where('u.role', '!=', 'admin')
                 ->orderBy('u.name')
                 ->get();
-    
+
             // Apply department filter
             if ($departmentFilter) {
                 $employees = $employees->where('department_id', (int)$departmentFilter);
             }
-    
+
+            // Apply branch filter
+            if ($branchFilter) {
+                $employees = $employees->where('branch_id', (int) $branchFilter);
+            }
+
             // Apply search filter
             if ($search) {
                 $employees = $employees->filter(function ($employee) use ($search) {
@@ -2127,14 +2210,14 @@ class AttendanceReportController extends Controller
                         stripos($employee->employee_id, $search) !== false;
                 });
             }
-    
+
             // Fetch attendance records
             $attendances = DB::table('attendances')
                 ->where('tenant_id', $tenantId)
                 ->whereBetween('date', [$monthStart, $monthEnd])
                 ->get()
                 ->groupBy('user_id');
-    
+
             // Fetch approved leaves
             $leaves = DB::table('leaves')
                 ->where('tenant_id', $tenantId)
@@ -2149,7 +2232,7 @@ class AttendanceReportController extends Controller
                 })
                 ->get()
                 ->groupBy('user_id');
-    
+
             // Fetch holidays
             $holidays = DB::table('holidays')
                 ->where('tenant_id', $tenantId)
@@ -2162,14 +2245,14 @@ class AttendanceReportController extends Controller
                         });
                 })
                 ->get();
-    
+
             // Fetch user weekoffs
             $weekoffs = DB::table('user_weekoffs')
                 ->where('tenant_id', $tenantId)
                 ->where('status', 1)
                 ->get()
                 ->groupBy('user_id');
-    
+
             // Build report data
             $reportData = [];
             $dateLabels = [];
@@ -2187,9 +2270,11 @@ class AttendanceReportController extends Controller
     
                 $row = [
                     'employee_name' => $employee->name,
+                    'employee_email' => $employee->email,
                     'employee_id' => $employee->employee_id ?? '--',
                     'designation' => $employee->designation_name ?? '--',
                     'department' => $employee->department_name ?? '--',
+                    'branch' => $employee->branch_name ?? '--',
                     'days' => [],
                     'total_present' => 0,
                     'total_absent' => 0,
@@ -2301,13 +2386,17 @@ class AttendanceReportController extends Controller
                 ->select('id', 'name')
                 ->orderBy('name')
                 ->get();
-    
+
+            $branches = DB::table('company_branches')
+                ->where('tenant_id', $tenantId)->where('status', 1)
+                ->select('id', 'name')->orderBy('name')->get();
+
             // Paginate the report data
             $perPage = $request->get('per_page', 50);
             $currentPage = $request->get('page', 1);
             $total = count($reportData);
             $paginatedData = array_slice($reportData, ($currentPage - 1) * $perPage, $perPage);
-    
+
             return view('client.report.attendance.attendance-overall', [
                 'reportData' => $paginatedData,
                 'allData' => $reportData,
@@ -2317,6 +2406,7 @@ class AttendanceReportController extends Controller
                 'selectedDate' => $selectedDate,
                 'stats' => $stats,
                 'departments' => $departments,
+                'branches' => $branches,
                 'paginator' => new \Illuminate\Pagination\LengthAwarePaginator(
                     $paginatedData,
                     $total,
@@ -2357,13 +2447,16 @@ class AttendanceReportController extends Controller
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
                     'u.employee_id',
                     'd.name as department_name',
                     'ds.name as designation_name',
-                    'uj.department as department_id'
+                    'uj.department as department_id',
+                    'uj.branch_id',
+                    'cb.name as branch_name'
                 )
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
@@ -2374,6 +2467,10 @@ class AttendanceReportController extends Controller
             // Apply filters
             if ($request->get('department')) {
                 $employees = $employees->where('department_id', (int)$request->get('department'));
+            }
+
+            if ($request->get('branch_id')) {
+                $employees = $employees->where('branch_id', (int) $request->get('branch_id'));
             }
 
             if ($request->get('search')) {
@@ -2433,7 +2530,7 @@ class AttendanceReportController extends Controller
             $csvData[] = [];
 
             // Build header row
-            $header = ['Employee ID', 'Employee Name', 'Designation', 'Department'];
+            $header = ['Employee ID', 'Employee Name', 'Designation', 'Department', 'Branch'];
             for ($i = 1; $i <= $daysInMonth; $i++) {
                 $date = Carbon::createFromFormat('Y-m-d', $monthStart)->addDays($i - 1);
                 $header[] = $date->format('Y-m-d');
@@ -2455,7 +2552,8 @@ class AttendanceReportController extends Controller
                     $employee->employee_id ?? '--',
                     $employee->name,
                     $employee->designation_name ?? '--',
-                    $employee->department_name ?? '--'
+                    $employee->department_name ?? '--',
+                    $employee->branch_name ?? '--'
                 ];
 
                 $totalPresent = 0;
@@ -2590,19 +2688,22 @@ class AttendanceReportController extends Controller
             $search = $request->get('search');
             $departmentFilter = $request->get('department');
             $employeeIdFilter = $request->get('employee_id');
+            $branchFilter = $request->get('branch_id');
 
             // Fetch all employees with details
             $employeesQuery = DB::table('users as u')
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
                 ->select(
                     'u.id',
                     'u.name',
                     'u.employee_id',
                     'd.name as department_name',
                     'ds.name as designation_name',
-                    'uj.department as department_id'
+                    'uj.department as department_id',
+                    'cb.name as branch_name'
                 )
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
@@ -2616,6 +2717,10 @@ class AttendanceReportController extends Controller
 
             if ($departmentFilter) {
                 $employeesQuery->where('uj.department', (int)$departmentFilter);
+            }
+
+            if ($branchFilter) {
+                $employeesQuery->where('uj.branch_id', (int)$branchFilter);
             }
 
             if ($search) {
@@ -2644,12 +2749,21 @@ class AttendanceReportController extends Controller
                 ->orderBy('name')
                 ->get();
 
+            // Get branches for filter
+            $branches = DB::table('company_branches')
+                ->where('tenant_id', $tenantId)
+                ->where('status', 1)
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
+
             // If no employees found
             if ($employees->isEmpty()) {
                 return view('client.report.attendance.attendance-employee-wise', [
                     'employees' => $employees,
                     'allEmployees' => $allEmployees,
                     'departments' => $departments,
+                    'branches' => $branches,
                     'selectedMonth' => $month,
                     'selectedDate' => $selectedDate,
                     'employeeData' => [],
@@ -2995,6 +3109,7 @@ class AttendanceReportController extends Controller
                 'employees' => $employees,
                 'allEmployees' => $allEmployees,
                 'departments' => $departments,
+                'branches' => $branches,
                 'selectedMonth' => $month,
                 'selectedDate' => $selectedDate,
                 'daysInMonth' => $daysInMonth,
@@ -3882,6 +3997,7 @@ class AttendanceReportController extends Controller
             $search = $request->get('search');
             $departmentFilter = $request->get('department');
             $statusFilter = $request->get('status');
+            $branchFilter = $request->get('branch_id');
 
             $dynamicEnabled = (bool) DB::table('tenants')->where('id', $tenantId)->value('payroll_dynamic_ui_enabled');
             $multiplier = app(\App\Services\Attendance\PolicyResolver::class)
@@ -3892,7 +4008,8 @@ class AttendanceReportController extends Controller
                 ->leftJoin('user_job_details as uj', 'u.id', '=', 'uj.user_id')
                 ->leftJoin('departments as d', 'uj.department', '=', 'd.id')
                 ->leftJoin('designations as ds', 'uj.designation', '=', 'ds.id')
-                ->select('u.id', 'u.name', 'u.employee_id', 'd.name as department_name', 'ds.name as designation_name')
+                ->leftJoin('company_branches as cb', 'uj.branch_id', '=', 'cb.id')
+                ->select('u.id', 'u.name', 'u.employee_id', 'd.name as department_name', 'ds.name as designation_name', 'cb.name as branch_name')
                 ->where('u.tenant_id', $tenantId)
                 ->where('u.status', 1)
                 ->where('u.role', '!=', 'admin');
@@ -3905,6 +4022,9 @@ class AttendanceReportController extends Controller
             }
             if ($departmentFilter) {
                 $usersQuery->where('uj.department', $departmentFilter);
+            }
+            if ($branchFilter) {
+                $usersQuery->where('uj.branch_id', $branchFilter);
             }
 
             $users = $usersQuery->orderBy('u.name')->get();
@@ -3976,6 +4096,7 @@ class AttendanceReportController extends Controller
                     'employee_id' => $user->employee_id,
                     'department' => $user->department_name,
                     'designation' => $user->designation_name,
+                    'branch' => $user->branch_name,
                     'request_count' => $userRequests->count(),
                     'approved_count' => $approved->count(),
                     'pending_count' => $pending->count(),
@@ -3997,6 +4118,7 @@ class AttendanceReportController extends Controller
             $reportData = $reportData->sortByDesc('approved_hours')->values();
 
             $departments = DB::table('departments')->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']);
+            $branches = DB::table('company_branches')->where('tenant_id', $tenantId)->where('status', 1)->orderBy('name')->get(['id', 'name']);
 
             $stats = [
                 'total_employees' => $reportData->count(),
@@ -4009,7 +4131,7 @@ class AttendanceReportController extends Controller
             ];
 
             return view('client.report.attendance.overtime-monthly', compact(
-                'reportData', 'stats', 'departments', 'selectedMonth', 'search', 'departmentFilter', 'statusFilter'
+                'reportData', 'stats', 'departments', 'branches', 'selectedMonth', 'search', 'departmentFilter', 'statusFilter', 'branchFilter'
             ));
         } catch (Exception $e) {
             Log::error('Overtime Monthly Report Error: ' . $e->getMessage());

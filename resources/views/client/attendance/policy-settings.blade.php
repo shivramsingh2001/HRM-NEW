@@ -130,6 +130,28 @@
 
                     <div class="policy-card">
                         <div class="policy-header">
+                            <h5>Multiple punches</h5>
+                            <p>Controls how many Clock In/Out events an employee may record per day.</p>
+                        </div>
+                        <div class="policy-body">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="allow_multiple_punches" name="allow_multiple_punches" value="1"
+                                       {{ old('allow_multiple_punches', $tenant->allow_multiple_punches) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="allow_multiple_punches">
+                                    Allow employees to clock in/out multiple times per day
+                                </label>
+                            </div>
+                            <div class="form-text mt-2">
+                                Off (default) &mdash; one Clock In and one Clock Out per day, exactly as today.
+                                On &mdash; an employee can clock in again after clocking out; the idle time between
+                                sessions is treated as a break and is not counted as worked time.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="policy-card">
+                        <div class="policy-header">
                             <h5>Monthly late allowance</h5>
                             <p>Record a day as <strong>half day</strong> once an employee's late arrivals
                                in a calendar month go over the allowance.</p>

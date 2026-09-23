@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Shift;
 
 use App\Http\Controllers\Controller;
 use App\Models\Shift;
+use App\Models\ShiftAssignment;
 use App\Models\UserShift;
 use App\Models\UserWeekoffs;
 use App\Models\User;
 use App\Models\Department;
+use App\Services\Shift\ShiftAssignmentService;
+use App\Services\Shift\ShiftAssignmentValidator;
+use App\Support\WeekOffPredicate;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -18,6 +22,12 @@ use Illuminate\Support\Facades\Log;
 
 class ShiftController extends Controller
 {
+    public function __construct(
+        private ShiftAssignmentService $shiftAssignmentService,
+        private ShiftAssignmentValidator $shiftAssignmentValidator
+    ) {
+    }
+
     /**
      * Display a listing of shifts
      */
@@ -352,8 +362,7 @@ class ShiftController extends Controller
                 $userQuery->whereHas('jobDetails', fn ($q) => $q->where('department', $deptId));
             }
 
-            $perPage = $view === 'month' ? 12 : ($view === 'week' ? 15 : 25);
-            $users = $userQuery->orderBy('name')->paginate($request->input('per_page', $perPage))->withQueryString();
+            $users = $userQuery->orderBy('name')->paginate($request->input('per_page', 15))->withQueryString();
             $userIds = collect($users->items())->pluck('id');
 
             // Bulk maps
@@ -448,32 +457,7 @@ class ShiftController extends Controller
             return false;
         }
 
-        $ds = $date->format('Y-m-d');
-        $dayName = $date->format('l');
-
-        foreach ($userWeekoffs as $wo) {
-            if ($wo->off_type === 'day_based') {
-                if (strtolower($wo->day_name ?? '') !== strtolower($dayName)) {
-                    continue;
-                }
-                if ($wo->start_date && $ds < Carbon::parse($wo->start_date)->format('Y-m-d')) {
-                    continue;
-                }
-                if ($wo->end_date && $ds > Carbon::parse($wo->end_date)->format('Y-m-d')) {
-                    continue;
-                }
-                return true;
-            }
-            if ($wo->off_type === 'date_based') {
-                if ($wo->start_date && $wo->end_date
-                    && $ds >= Carbon::parse($wo->start_date)->format('Y-m-d')
-                    && $ds <= Carbon::parse($wo->end_date)->format('Y-m-d')) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return WeekOffPredicate::isWeekOff($userWeekoffs, $date);
     }
 
     /**
@@ -534,22 +518,48 @@ class ShiftController extends Controller
      */
     public function assignShift(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $type = in_array($request->input('type'), ['permanent', 'flexible'], true)
+            ? $request->input('type')
+            : 'flexible';
+
+        // The "Weekly offs → Dates" row always has one <input type="date"> in the
+        // DOM (only visually hidden when that mode isn't selected), so a plain
+        // form serialize sends week_off_dates[]="" whenever it's untouched.
+        // Strip blanks before validating so an empty/hidden row never fails the
+        // date rule or gets treated as a real week-off date.
+        if ($request->has('week_off_dates')) {
+            $request->merge([
+                'week_off_dates' => array_values(array_filter(
+                    (array) $request->input('week_off_dates'),
+                    fn ($d) => filled($d)
+                )),
+            ]);
+        }
+
+        $rules = [
             'assign_type' => 'required|in:user,department,all',
             'user_ids' => 'required_if:assign_type,user|array',
             'user_ids.*' => 'exists:users,id',
-            'department_id' => 'required_if:assign_type,department|exists:departments,id',
+            'department_id' => 'nullable|required_if:assign_type,department|exists:departments,id',
             'shift_id' => 'required|exists:shifts,id',
             'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
             'week_off_type' => 'nullable|in:day_based,date_based',
             'week_off_days' => 'required_if:week_off_type,day_based|array',
             'week_off_days.*' => 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'week_off_dates' => 'required_if:week_off_type,date_based|array',
             'week_off_dates.*' => 'date',
-            'override_existing' => 'nullable|boolean',
-            'apply_to_future_only' => 'nullable|boolean'
-        ]);
+        ];
+
+        // Permanent is open-ended by definition — no end date, no 90-day cap,
+        // no override flags (auto-supersede is implicit). Flexible keeps every
+        // existing rule unchanged.
+        if ($type === 'flexible') {
+            $rules['end_date'] = 'nullable|date|after_or_equal:start_date';
+            $rules['override_existing'] = 'nullable|boolean';
+            $rules['apply_to_future_only'] = 'nullable|boolean';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             if ($request->ajax() || $request->wantsJson()) {
@@ -584,9 +594,9 @@ class ShiftController extends Controller
 
             $shift = Shift::find($request->shift_id);
             $startDate = Carbon::parse($request->start_date);
-            $endDate = $request->end_date ? Carbon::parse($request->end_date) : $startDate;
+            $endDate = $request->end_date ? Carbon::parse($request->end_date) : $startDate->copy();
 
-            if ($startDate->diffInDays($endDate) > 90) {
+            if ($type === 'flexible' && $startDate->diffInDays($endDate) > 90) {
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json([
                         'status' => false,
@@ -599,46 +609,83 @@ class ShiftController extends Controller
                     ->withInput();
             }
 
+            $tenantId = Auth::user()->tenant_id;
             $assignedCount = 0;
             $skippedCount = 0;
             $alreadyAssignedCount = 0;
             $duplicateSkippedCount = 0;
             $weekOffCount = 0;
+            $supersededCount = 0;
+            // The radio's "None" option submits week_off_type="" — the column is
+            // a nullable enum(day_based,date_based), not "", so normalize here
+            // rather than pushing an empty string all the way to the DB.
+            $weekOffType = $request->week_off_type ?: null;
 
             foreach ($userIds as $userId) {
                 if ($request->week_off_type) {
-                    $weekOffResult = $this->assignWeekOffs($userId, $request);
-                    $weekOffCount += $weekOffResult;
+                    $weekOffCount += $this->assignWeekOffs($userId, $request);
                 }
 
-                $result = $this->assignShiftsForUser(
-                    $userId,
-                    $shift->id,
-                    $startDate,
-                    $endDate,
-                    $request
-                );
+                if ($type === 'permanent') {
+                    $result = $this->shiftAssignmentService->assignPermanent(
+                        $tenantId,
+                        $userId,
+                        $shift->id,
+                        $startDate,
+                        Auth::id(),
+                        $weekOffType,
+                        $request->week_off_days,
+                        $request->week_off_dates
+                    );
 
-                $assignedCount += $result['assigned'];
-                $skippedCount += $result['skipped'];
-                $alreadyAssignedCount += $result['already_assigned'];
-                $duplicateSkippedCount += $result['duplicate_skipped'] ?? 0;
+                    $assignedCount += $result['materialized']['assigned'];
+                    if ($result['superseded']) {
+                        $supersededCount++;
+                    }
+                } else {
+                    $result = $this->shiftAssignmentService->assignFlexible(
+                        $tenantId,
+                        $userId,
+                        $shift->id,
+                        $startDate,
+                        $endDate,
+                        Auth::id(),
+                        (bool) $request->override_existing,
+                        (bool) $request->apply_to_future_only,
+                        $weekOffType,
+                        $request->week_off_days,
+                        $request->week_off_dates
+                    );
+
+                    $m = $result['materialized'];
+                    $assignedCount += $m['assigned'];
+                    $skippedCount += $m['skipped'];
+                    $alreadyAssignedCount += $m['already_assigned'];
+                    $duplicateSkippedCount += $m['duplicate_skipped'];
+                }
             }
 
             DB::commit();
 
-            $message = "Shift assigned successfully! ";
-            $message .= "New: $assignedCount, ";
+            if ($type === 'permanent') {
+                $message = "Permanent shift assigned to $assignedCount day(s) across " . count($userIds) . " employee(s).";
+                if ($supersededCount > 0) {
+                    $message .= " $supersededCount previous permanent assignment(s) were ended and kept in history.";
+                }
+            } else {
+                $message = "Shift assigned successfully! ";
+                $message .= "New: $assignedCount, ";
 
-            if ($alreadyAssignedCount > 0) {
-                $message .= "Existing: $alreadyAssignedCount, ";
+                if ($alreadyAssignedCount > 0) {
+                    $message .= "Existing: $alreadyAssignedCount, ";
+                }
+
+                if ($duplicateSkippedCount > 0) {
+                    $message .= "Duplicates: $duplicateSkippedCount, ";
+                }
+
+                $message .= "Skipped: $skippedCount";
             }
-
-            if ($duplicateSkippedCount > 0) {
-                $message .= "Duplicates: $duplicateSkippedCount, ";
-            }
-
-            $message .= "Skipped: $skippedCount";
 
             if ($weekOffCount > 0) {
                 $message .= ", Week Offs: $weekOffCount";
@@ -649,11 +696,13 @@ class ShiftController extends Controller
                     'status' => true,
                     'message' => $message,
                     'data' => [
+                        'type' => $type,
                         'assigned' => $assignedCount,
                         'already_assigned' => $alreadyAssignedCount,
                         'duplicate_skipped' => $duplicateSkippedCount,
                         'skipped' => $skippedCount,
-                        'week_offs' => $weekOffCount
+                        'week_offs' => $weekOffCount,
+                        'superseded' => $supersededCount
                     ]
                 ], 200);
             }
@@ -786,159 +835,6 @@ class ShiftController extends Controller
     }
 
     /**
-     * Assign shifts to a user for a date range - With duplicate handling and week-off checking
-     */
-    private function assignShiftsForUser($userId, $shiftId, $startDate, $endDate, $request)
-    {
-        $assigned = 0;
-        $skipped = 0;
-        $alreadyAssigned = 0;
-        $duplicateSkipped = 0;
-        $weekOffSkipped = 0;
-    
-        // Get all active week-offs for this user
-        $userWeekoffs = UserWeekoffs::where('user_id', $userId)
-            ->where('status', 1)
-            ->get();
-    
-        // Get existing shifts for this user in the date range
-        $existingShifts = UserShift::where('user_id', $userId)
-            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->get()
-            ->keyBy('date');
-    
-        $current = clone $startDate;
-        while ($current->lte($endDate)) {
-            $dateString = $current->toDateString();
-    
-            // Check if this date is a week-off
-            $isWeekOff = $this->checkDateIsWeekOff($userId, $current, $userWeekoffs, $request);
-    
-            if ($isWeekOff) {
-                Log::info("Skipping week-off date", [
-                    'user_id' => $userId,
-                    'date' => $dateString
-                ]);
-                $weekOffSkipped++;
-                $current->addDay();
-                continue;
-            }
-    
-            // Check if shift already exists in our pre-loaded collection
-            if (isset($existingShifts[$dateString])) {
-                $existingShift = $existingShifts[$dateString];
-    
-                $shouldUpdate = false;
-    
-                // If override_existing is true, update the shift
-                if ($request->override_existing) {
-                    // If apply_to_future_only is true, only update future dates
-                    if ($request->apply_to_future_only && $current->isFuture()) {
-                        $shouldUpdate = true;
-                    } elseif (!$request->apply_to_future_only) {
-                        // If apply_to_future_only is false, update all dates (past, present, future)
-                        $shouldUpdate = true;
-                    }
-                }
-    
-                if ($shouldUpdate) {
-                    $existingShift->update([
-                        'shift_id' => $shiftId,
-                        'status' => 'upcoming'
-                    ]);
-                    $assigned++;
-                   
-                } else {
-                    $alreadyAssigned++;
-                    Log::info("Shift already exists, not updating", [
-                        'user_id' => $userId,
-                        'date' => $dateString
-                    ]);
-                }
-                $current->addDay();
-                continue;
-            }
-    
-            // ====== FIX: When override_existing is true, assign to ALL dates ======
-            if ($request->override_existing) {
-                // When overriding, assign to ALL dates regardless of past/future
-                try {
-                    UserShift::create([
-                        'user_id' => $userId,
-                        'shift_id' => $shiftId,
-                        'date' => $dateString,
-                        'status' => 'upcoming',
-                        'created_by' => Auth::id()
-                    ]);
-                    $assigned++;
-                    // Add to existing shifts collection to prevent duplicate checks
-                    $existingShifts[$dateString] = true;
-    
-                  
-                } catch (\Illuminate\Database\QueryException $e) {
-                    // Check if it's a duplicate entry error (MySQL error 1062)
-                    if ($e->errorInfo[1] == 1062) {
-                        $duplicateSkipped++;
-                        $existingShifts[$dateString] = true;
-                       
-                    } else {
-                        throw $e;
-                    }
-                }
-            } else {
-                // When NOT overriding, only assign for future dates or today
-                if ($current->isFuture() || $current->isToday()) {
-                    try {
-                        UserShift::create([
-                            'user_id' => $userId,
-                            'shift_id' => $shiftId,
-                            'date' => $dateString,
-                            'status' => 'upcoming',
-                            'created_by' => Auth::id()
-                        ]);
-                        $assigned++;
-                        $existingShifts[$dateString] = true;
-    
-                       
-                    } catch (\Illuminate\Database\QueryException $e) {
-                        // Check if it's a duplicate entry error (MySQL error 1062)
-                        if ($e->errorInfo[1] == 1062) {
-                            $duplicateSkipped++;
-                            $existingShifts[$dateString] = true;
-                           
-                        } else {
-                            throw $e;
-                        }
-                    }
-                } else {
-                    $skipped++;
-                   
-                }
-            }
-    
-            $current->addDay();
-        }
-    
-        Log::info('Shift assignment result', [
-            'user_id' => $userId,
-            'assigned' => $assigned,
-            'skipped' => $skipped,
-            'already_assigned' => $alreadyAssigned,
-            'duplicate_skipped' => $duplicateSkipped,
-            'week_off_skipped' => $weekOffSkipped
-        ]);
-    
-        return [
-            'assigned' => $assigned,
-            'skipped' => $skipped,
-            'already_assigned' => $alreadyAssigned,
-            'duplicate_skipped' => $duplicateSkipped,
-            'week_off_skipped' => $weekOffSkipped
-        ];
-    }
-
-
-    /**
      * Update single user shift
      */
     public function updateUserShift(Request $request)
@@ -1044,7 +940,9 @@ class ShiftController extends Controller
                 'to_date' => 'required|date|after_or_equal:from_date',
                 'user_id' => 'nullable|exists:users,id',
                 'shift_id' => 'nullable|exists:shifts,id',
-                'status' => 'nullable|in:upcoming,ongoing,complete'
+                'status' => 'nullable|in:upcoming,ongoing,complete',
+                'type' => 'nullable|in:permanent,flexible',
+                'search' => 'nullable|string|max:100'
             ]);
 
             if ($validator->fails()) {
@@ -1055,7 +953,7 @@ class ShiftController extends Controller
                 ], 422);
             }
 
-            $query = UserShift::with(['user', 'shift'])
+            $query = UserShift::with(['user', 'shift', 'shiftAssignment'])
                 ->whereBetween('date', [$request->from_date, $request->to_date]);
 
             if ($request->filled('user_id')) {
@@ -1068,6 +966,18 @@ class ShiftController extends Controller
 
             if ($request->filled('status')) {
                 $query->where('status', $request->status);
+            }
+
+            if ($request->filled('type')) {
+                $query->whereHas('shiftAssignment', fn ($q) => $q->where('type', $request->type));
+            }
+
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->whereHas('user', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('employee_id', 'like', "%{$search}%");
+                });
             }
 
             // Summary over the WHOLE filtered set (not just the current page).
@@ -1177,7 +1087,7 @@ class ShiftController extends Controller
                 return back()->withErrors($validator);
             }
 
-            $query = UserShift::with(['user', 'shift'])
+            $query = UserShift::with(['user', 'shift', 'shiftAssignment'])
                 ->whereBetween('date', [$request->from_date, $request->to_date]);
 
             if ($request->filled('user_id')) {
@@ -1201,7 +1111,7 @@ class ShiftController extends Controller
             $callback = function () use ($userShifts) {
                 $file = fopen('php://output', 'w');
 
-                fputcsv($file, ['Date', 'Employee ID', 'Employee Name', 'Shift', 'Start Time', 'End Time', 'Status']);
+                fputcsv($file, ['Date', 'Employee ID', 'Employee Name', 'Shift', 'Start Time', 'End Time', 'Status', 'Type']);
 
                 foreach ($userShifts as $shift) {
                     fputcsv($file, [
@@ -1211,7 +1121,8 @@ class ShiftController extends Controller
                         $shift->shift->name ?? 'N/A',
                         $shift->shift->start_time ?? 'N/A',
                         $shift->shift->end_time ?? 'N/A',
-                        $shift->status
+                        $shift->status,
+                        $shift->shiftAssignment->type ?? 'N/A'
                     ]);
                 }
 
@@ -1249,10 +1160,13 @@ class ShiftController extends Controller
         DB::beginTransaction();
 
         try {
+            $tenantId = Auth::user()->tenant_id;
             $assigned = 0;
             $skipped = 0;
 
             foreach ($request->user_ids as $userId) {
+                $assignedDates = [];
+
                 foreach ($request->dates as $date) {
                     // Check if shift already exists
                     $existing = UserShift::where('user_id', $userId)
@@ -1263,6 +1177,7 @@ class ShiftController extends Controller
                         if ($request->override_existing) {
                             $existing->update(['shift_id' => $request->shift_id]);
                             $assigned++;
+                            $assignedDates[] = $date;
                         } else {
                             $skipped++;
                         }
@@ -1276,6 +1191,7 @@ class ShiftController extends Controller
                                 'created_by' => Auth::id()
                             ]);
                             $assigned++;
+                            $assignedDates[] = $date;
                         } catch (\Illuminate\Database\QueryException $e) {
                             if ($e->errorInfo[1] == 1062) {
                                 // Duplicate entry - skip silently
@@ -1285,6 +1201,32 @@ class ShiftController extends Controller
                                 throw $e;
                             }
                         }
+                    }
+                }
+
+                // This path is always Flexible (explicit dates, not a
+                // range/permanent flow) — one shift_assignments history row
+                // per contiguous run of assigned dates, so this shows up
+                // correctly in "Existing Assignments" and counts toward
+                // shift history like every other Flexible assignment.
+                if (!empty($assignedDates)) {
+                    sort($assignedDates);
+                    foreach ($this->groupDatesIntoRanges($assignedDates) as $range) {
+                        $shiftAssignment = ShiftAssignment::create([
+                            'tenant_id' => $tenantId,
+                            'user_id' => $userId,
+                            'shift_id' => $request->shift_id,
+                            'type' => 'flexible',
+                            'start_date' => $range['start'],
+                            'end_date' => $range['end'],
+                            'status' => 'active',
+                            'source' => 'manual',
+                            'created_by' => Auth::id(),
+                        ]);
+
+                        UserShift::where('user_id', $userId)
+                            ->whereBetween('date', [$range['start'], $range['end']])
+                            ->update(['shift_assignment_id' => $shiftAssignment->id]);
                     }
                 }
             }
@@ -1306,6 +1248,109 @@ class ShiftController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to assign shifts'
+            ], 500);
+        }
+    }
+
+    /**
+     * AJAX: full shift_assignments history for one user (any status) — backs
+     * the "History" affordance on the Existing Assignments tab. Reads the
+     * append-only source-of-truth table directly, not the user_shifts cache,
+     * so ended/superseded assignments remain visible even after their cached
+     * days have been cleared.
+     */
+    public function assignmentHistory(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $history = ShiftAssignment::with('shift:id,name,color_code')
+            ->where('user_id', $request->user_id)
+            ->orderByDesc('start_date')
+            ->orderByDesc('id')
+            ->get(['id', 'shift_id', 'type', 'start_date', 'end_date', 'status', 'superseded_by_id', 'created_at']);
+
+        return response()->json(['status' => true, 'data' => $history], 200);
+    }
+
+    /**
+     * AJAX: does this user (or set of users) already have an active Permanent
+     * shift? Backs the "this will replace X" notice in the assign modal —
+     * called before submit, not a validation gate.
+     */
+    public function checkAssignmentConflicts(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_ids' => 'required|array',
+            'user_ids.*' => 'exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $tenantId = Auth::user()->tenant_id;
+        $conflicts = [];
+
+        foreach ($request->user_ids as $userId) {
+            $active = $this->shiftAssignmentValidator->findActivePermanent($tenantId, $userId);
+
+            if ($active) {
+                $conflicts[] = [
+                    'user_id' => $userId,
+                    'shift_name' => optional($active->shift)->name,
+                    'active_since' => $active->start_date->format('Y-m-d'),
+                ];
+            }
+        }
+
+        return response()->json(['status' => true, 'data' => $conflicts], 200);
+    }
+
+    /**
+     * Explicitly stop a Permanent assignment ("End Permanent Shift" row
+     * action). Closes the shift_assignments history row and lets whatever
+     * still-active Flexible/nothing take over from the end date forward.
+     */
+    public function endPermanentShift(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'end_date' => 'nullable|date',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $assignment = ShiftAssignment::where('type', 'permanent')->where('status', 'active')->find($id);
+
+        if (!$assignment) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Active permanent assignment not found'
+            ], 404);
+        }
+
+        try {
+            $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date) : Carbon::today();
+
+            $this->shiftAssignmentService->endPermanent($assignment, $endDate, Auth::id(), $request->reason);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Permanent shift ended from ' . $endDate->addDay()->format('Y-m-d') . ' onward.'
+            ], 200);
+        } catch (Exception $e) {
+            Log::error('End permanent shift error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to end permanent shift'
             ], 500);
         }
     }
@@ -1348,46 +1393,6 @@ class ShiftController extends Controller
      * Check if a specific date is a week-off for a user
      * Uses pre-loaded week-offs for better performance
      */
-    private function checkDateIsWeekOff($userId, Carbon $date, $userWeekoffs, $request)
-    {
-        $dateString = $date->toDateString();
-        $dayName = $date->format('l');
-
-        foreach ($userWeekoffs as $weekoff) {
-            // Check if week-off is active for this date
-            if ($weekoff->status != 1) {
-                continue;
-            }
-
-            // For day-based week-offs
-            if ($weekoff->off_type == 'day_based') {
-                // Check if day matches
-                if ($weekoff->day_name != $dayName) {
-                    continue;
-                }
-
-                // Check date range if exists
-                if ($weekoff->start_date && $dateString < $weekoff->start_date) {
-                    continue;
-                }
-                if ($weekoff->end_date && $dateString > $weekoff->end_date) {
-                    continue;
-                }
-
-                return true;
-            }
-
-            // For date-based week-offs
-            if ($weekoff->off_type == 'date_based') {
-                if ($dateString >= $weekoff->start_date && $dateString <= $weekoff->end_date) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     /**
      * Group consecutive dates into ranges
      */

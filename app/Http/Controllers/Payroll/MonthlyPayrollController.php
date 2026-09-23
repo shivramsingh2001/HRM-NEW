@@ -292,6 +292,7 @@ class MonthlyPayrollController extends Controller
 
                 foreach ($toReplace as $mp) {
                     $this->loanDeductionService->revokeForPayroll($mp->id, $mp->tenant_id);
+                    app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->revokeForPayroll($mp->id, $mp->tenant_id);
                     PayrollComponent::where('monthly_payroll_id', $mp->id)->delete();
                     $mp->delete();
                 }
@@ -653,6 +654,21 @@ class MonthlyPayrollController extends Controller
         }
 
         // =====================================================================
+        // LATE ARRIVAL / EARLY LEAVING DEDUCTIONS -- independent of whether
+        // the tenant's attendance-status action (half day/absent) is even
+        // enabled; see App\Services\Payroll\LateEarlyDeductionCalculator.
+        // =====================================================================
+        $lateEarly = app(\App\Services\Payroll\LateEarlyDeductionCalculator::class)
+            ->calculate($employee, $tenantId, $yearMonth);
+
+        if ($lateEarly['late_deduction_amount'] > 0) {
+            $employeeDeductions['late'] = $lateEarly['late_deduction_amount'];
+        }
+        if ($lateEarly['early_deduction_amount'] > 0) {
+            $employeeDeductions['early'] = $lateEarly['early_deduction_amount'];
+        }
+
+        // =====================================================================
         // TOTALS
         // =====================================================================
         $grossEarnings = array_sum($earnings);
@@ -727,6 +743,8 @@ class MonthlyPayrollController extends Controller
             'loan_deduction'            => $employeeDeductions['loan'] ?? 0,
             'loan_deduction_enabled'    => $includeLoanDeductions,
             'loan_deduction_computed'   => $loanDeductionDue,
+            'late_deduction'            => $employeeDeductions['late'] ?? 0,
+            'early_deduction'           => $employeeDeductions['early'] ?? 0,
             'other_deductions'          => $employeeDeductions['other'] ?? 0,
             // Employer Contributions (STORED but NOT deducted from salary)
             'employer_provident_fund'   => $employerContributions['employer_pf'] ?? 0,
@@ -850,6 +868,8 @@ class MonthlyPayrollController extends Controller
             'loan_deduction' => $result['loan_deduction'],
             'loan_deduction_enabled' => $includeLoanDeductions,
             'loan_deduction_computed' => $result['loan_deduction_due'],
+            'late_deduction' => $result['late_deduction'] ?? 0,
+            'early_deduction' => $result['early_deduction'] ?? 0,
             'gross_earnings' => $result['gross_earnings'],
             'total_deductions' => $result['total_deductions'],
             'net_payable' => $result['net_payable'],
@@ -894,6 +914,9 @@ class MonthlyPayrollController extends Controller
         if ($includeLoanDeductions && $result['loan_deduction'] > 0) {
             $this->updateLoanRepayments($employee->id, $yearMonth, $result['loan_deduction'], $tenantId, $monthlyPayroll->id);
         }
+
+        // Expense reimbursements the engine put on this payslip: link them to it (so a recalculation re-reads exactly these).
+        $this->linkExpenseReimbursements($monthlyPayroll, $result);
 
         // Now that this payslip is actually persisted, close the loop from
         // Phase 6: mark whatever arrears/bonus rows it just paid out.
@@ -1762,6 +1785,8 @@ class MonthlyPayrollController extends Controller
             'pt'    => 'Professional Tax',
             'tds'   => 'TDS',
             'loan'  => 'Loan Deduction',
+            'late'  => 'Late Arrival Deduction',
+            'early' => 'Early Leaving Deduction',
             'other' => 'Other Deductions',
         ][$key] ?? ucwords(str_replace('_', ' ', $key));
     }
@@ -1869,10 +1894,36 @@ class MonthlyPayrollController extends Controller
             $pendingOvertimeRate = $pendingOvertimeCalc['rate'];
             $pendingOvertimeAmount = $pendingOvertimeCalc['amount'];
 
+            // Dynamic-engine branch — additive, legacy tenants get $isDynamic
+            // = false and the view falls through to its existing hardcoded
+            // Earnings/Deductions/Employer fields completely unchanged. Gated
+            // on THIS payroll row's own engine_version, not just the
+            // tenant's current flag — a tenant can switch to the dynamic
+            // engine after some of its payrolls were already created via
+            // the legacy path, and editing those old rows must keep using
+            // the legacy form (their data has no dynamic-engine lineage to
+            // recompute against), not whatever the employee's structure
+            // looks like today.
+            $isDynamic = $monthlyPayroll->engine_version === 'dynamic_v1';
+            $dynamicComponents = null;
+            if ($isDynamic) {
+                try {
+                    $dynamicComponents = app(\App\Services\Payroll\PayrollCalculationEngine::class)
+                        ->resolveEmployeeComponents($monthlyPayroll->user, $monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month);
+                } catch (\Throwable $e) {
+                    // No PayrollEmployeeStructure effective for this employee/month
+                    // (e.g. this payroll predates the dynamic engine for them) —
+                    // fall back to the legacy field set rather than a 500.
+                    Log::warning('Dynamic component resolve failed in edit(): ' . $e->getMessage());
+                    $isDynamic = false;
+                }
+            }
+
             return view('client.payroll.monthly-payroll.edit', compact(
                 'monthlyPayroll', 'months', 'userPayroll', 'loanDueItems', 'loanDueTotal',
                 'approvedOvertimeRequests', 'pendingOvertimeRequests', 'canApproveOvertime',
-                'overtimeRateMultiplier', 'pendingOvertimeRate', 'pendingOvertimeHours', 'pendingOvertimeAmount'
+                'overtimeRateMultiplier', 'pendingOvertimeRate', 'pendingOvertimeHours', 'pendingOvertimeAmount',
+                'isDynamic', 'dynamicComponents'
             ));
         } catch (\Exception $e) {
             Log::error('Payroll edit error: ' . $e->getMessage());
@@ -1882,6 +1933,24 @@ class MonthlyPayrollController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Dynamic-engine branch — additive, early-return guard so the
+        // legacy validation/persistence logic below is completely untouched
+        // for every other request. Gated on THIS payroll row's own
+        // engine_version (see the matching comment in edit()) AND the
+        // employee still having an effective PayrollEmployeeStructure for
+        // this payroll's month (falls through to legacy otherwise).
+        $monthlyPayrollForBranch = MonthlyPayroll::find($id);
+        if ($monthlyPayrollForBranch && $monthlyPayrollForBranch->engine_version === 'dynamic_v1') {
+            $hasStructure = \App\Models\PayrollEmployeeStructure::withoutGlobalScope('tenant')
+                ->where('tenant_id', $monthlyPayrollForBranch->tenant_id)
+                ->forUser($monthlyPayrollForBranch->user_id)
+                ->effective(Carbon::createFromFormat('Y-m', $monthlyPayrollForBranch->payroll_month)->endOfMonth()->toDateString())
+                ->exists();
+            if ($hasStructure) {
+                return $this->updateDynamic($request, $monthlyPayrollForBranch);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'payroll_month'      => 'required|date_format:Y-m',
             'present_days'       => 'required|numeric|min:0',
@@ -2177,6 +2246,279 @@ class MonthlyPayrollController extends Controller
         }
     }
 
+    /**
+     * Dynamic-engine Edit/Update — entered only from update()'s early-return
+     * guard above. Unlike the legacy branch, which trusts whatever numeric
+     * values the client submits, this always recomputes through
+     * PayrollCalculationEngine::calculate() (the same engine store() uses)
+     * with the submitted day-count overrides, so Week Off/Absent/Holiday
+     * edits actually flow through real per-component proration instead of
+     * a blanket factor. Individual components can still be manually
+     * overridden after that recompute (same "manual edit wins" precedent
+     * the legacy form already has for its own fields).
+     */
+    private function updateDynamic(Request $request, MonthlyPayroll $monthlyPayroll)
+    {
+        if (auth()->user()->cannot('update', $monthlyPayroll)) {
+            return redirect()->route('monthly-payrolls.index')
+                ->with('error', 'Only pending payroll records can be edited.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'present_days' => 'required|numeric|min:0',
+            'paid_leaves' => 'nullable|numeric|min:0',
+            'week_offs' => 'nullable|numeric|min:0',
+            'holidays' => 'nullable|numeric|min:0',
+            'overtime_hours' => 'nullable|numeric|min:0',
+            'remarks' => 'nullable|string',
+            'loan_deduction_enabled' => 'nullable|boolean',
+            'confirm_negative_net_payable' => 'nullable|boolean',
+            'components' => 'nullable|array',
+            'components.*' => 'nullable|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $data = $validator->validated();
+        $includeLoanDeductions = $request->boolean('loan_deduction_enabled', true);
+
+        try {
+            DB::beginTransaction();
+
+            $result = app(\App\Services\Payroll\PayrollCalculationEngine::class)->calculate(
+                $monthlyPayroll->user,
+                $monthlyPayroll->tenant_id,
+                $monthlyPayroll->payroll_month,
+                $includeLoanDeductions,
+                $this->dayOverridesFromRequest($data, $monthlyPayroll)
+            );
+
+            $this->applyComponentOverrides($result, $data['components'] ?? []);
+
+            if (! $request->boolean('confirm_negative_net_payable') && $result['net_payable'] < 0) {
+                DB::rollBack();
+                return redirect()->back()->withInput()->with('error',
+                    'Net payable would be negative (₹' . number_format($result['net_payable'], 2) . '). Check "proceed anyway" to confirm.');
+            }
+
+            $this->applyCalculationResultToPayroll($monthlyPayroll, $result, $includeLoanDeductions);
+
+            if ($request->filled('remarks')) {
+                $monthlyPayroll->remarks = $request->remarks;
+                $monthlyPayroll->save();
+            }
+
+            DB::commit();
+
+            return redirect()->route('monthly-payrolls.show', $monthlyPayroll->id)
+                ->with('success', 'Payroll updated successfully.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Dynamic payroll update error: ' . $e->getMessage());
+            return redirect()->back()->withInput()
+                ->with('error', 'Failed to update payroll: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Read-only live preview for the dynamic Edit form: recomputes through
+     * the exact same PayrollCalculationEngine::calculate() call updateDynamic()
+     * will use on submit, so what the HR user sees while editing Week
+     * Off/Absent/Holiday can never drift from what actually gets saved —
+     * no separate simplified client-side proration formula.
+     */
+    public function recalculatePreview(Request $request, $id)
+    {
+        $monthlyPayroll = MonthlyPayroll::findOrFail($id);
+
+        $data = $request->validate([
+            'present_days' => 'required|numeric|min:0',
+            'paid_leaves' => 'nullable|numeric|min:0',
+            'week_offs' => 'nullable|numeric|min:0',
+            'holidays' => 'nullable|numeric|min:0',
+            'loan_deduction_enabled' => 'nullable|boolean',
+        ]);
+
+        try {
+            $result = app(\App\Services\Payroll\PayrollCalculationEngine::class)->calculate(
+                $monthlyPayroll->user,
+                $monthlyPayroll->tenant_id,
+                $monthlyPayroll->payroll_month,
+                $request->boolean('loan_deduction_enabled', true),
+                $this->dayOverridesFromRequest($data, $monthlyPayroll)
+            );
+
+            $grouped = collect($result['line_items'])->groupBy('component_type');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'earnings' => $grouped->get('earning', collect())->values(),
+                    'deductions' => $grouped->get('deduction', collect())->values(),
+                    'employer_contributions' => $grouped->get('employer_contribution', collect())->values(),
+                    'reimbursements' => $grouped->get('reimbursement', collect())->values(),
+                    'gross_earnings' => $result['gross_earnings'],
+                    'total_deductions' => $result['total_deductions'],
+                    'net_payable' => $result['net_payable'],
+                    'payable_days' => $result['context']['payable_days'],
+                    'absent_days' => $result['context']['absent_days'],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Recalculate preview error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to recalculate: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * present_days/paid_leave_days/week_offs/holidays for
+     * PayrollAttendanceContextBuilder::build()'s $dayOverrides — unset
+     * fields fall back to this payroll's current stored value rather than
+     * 0, so submitting the form without touching every single day-count
+     * field can't accidentally zero one out.
+     */
+    private function dayOverridesFromRequest(array $data, MonthlyPayroll $monthlyPayroll): array
+    {
+        return [
+            'present_days' => (float) $data['present_days'],
+            'paid_leave_days' => (float) ($data['paid_leaves'] ?? $monthlyPayroll->paid_leaves ?? 0),
+            'week_offs' => (float) ($data['week_offs'] ?? $monthlyPayroll->week_offs ?? 0),
+            'holidays' => (float) ($data['holidays'] ?? $monthlyPayroll->holidays ?? 0),
+        ];
+    }
+
+    /**
+     * Manual per-component amount overrides (submitted from the dynamic
+     * Edit form's editable component fields, keyed by component code) take
+     * precedence over the freshly recomputed amount for that one component
+     * — same "manual edit wins" precedent the legacy form already
+     * establishes for its own fields — then re-sums the affected totals.
+     */
+    private function applyComponentOverrides(array &$result, array $overrides): void
+    {
+        if (empty($overrides)) {
+            return;
+        }
+
+        foreach ($result['line_items'] as &$li) {
+            // A reimbursement line is fixed by the approved claim - payroll pays exactly that amount.
+            if ($li['code'] !== \App\Services\Expense\ExpenseReimbursementPayrollService::CODE && array_key_exists($li['code'], $overrides)) {
+                $li['amount'] = round((float) $overrides[$li['code']], 2);
+            }
+        }
+        unset($li);
+
+        $result['gross_earnings'] = round(collect($result['line_items'])->where('component_type', 'earning')->sum('amount'), 2);
+        $result['total_deductions'] = round(collect($result['line_items'])->where('component_type', 'deduction')->sum('amount'), 2);
+        $result['net_payable'] = round($result['gross_earnings'] - $result['total_deductions'], 2);
+    }
+
+    /**
+     * Shared "map a PayrollCalculationEngine::calculate() result onto a
+     * MonthlyPayroll row" persistence, mirroring the column-mapping
+     * processEmployeeMonthlyPayrollDynamic() uses for creation — kept as a
+     * deliberately separate method (not a refactor of that one) so the
+     * already-working bulk-generation path carries zero risk from this
+     * Edit/Update addition; both simply agree on the same column shapes.
+     */
+    private function applyCalculationResultToPayroll(MonthlyPayroll $monthlyPayroll, array $result, bool $includeLoanDeductions): void
+    {
+        $context = $result['context'];
+        $earnings = collect($result['line_items'])->where('component_type', 'earning')->keyBy('code');
+        $deductions = collect($result['line_items'])->where('component_type', 'deduction')->keyBy('code');
+        $employer = collect($result['line_items'])->where('component_type', 'employer_contribution')->keyBy('code');
+
+        $earningColumnMap = [
+            'basic' => 'basic_salary', 'hra' => 'hra', 'conveyance' => 'conveyence',
+            'medical_allowance' => 'medical_allowance', 'children_allowance' => 'children_allowance',
+            'post_allowance' => 'post_allowance', 'leave_travel_allowance' => 'leave_travel_allowance',
+            'monthly_incentive' => 'monthly_incentive', 'special_allowance' => 'special_allowance',
+        ];
+        $deductionColumnMap = [
+            'pf_employee' => 'provident_fund', 'esi_employee' => 'esi',
+            'pt' => 'professional_tax', 'tds' => 'tds',
+        ];
+        $employerColumnMap = [
+            'pf_employer' => 'employer_provident_fund', 'esi_employer' => 'employer_esi',
+        ];
+
+        $columns = [
+            'total_working_days' => (int) round($context['calendar_days']),
+            'payable_days' => $context['payable_days'],
+            'present_days' => (int) round($context['present_days']),
+            'half_days' => $context['half_days'],
+            'absent_days' => (int) round($context['absent_days']),
+            'paid_leaves' => $context['paid_leave_days'],
+            'unpaid_leaves' => $context['unpaid_leave_days'],
+            'holidays' => (int) round($context['holidays']),
+            'week_offs' => (int) round($context['week_offs']),
+            'overtime_hours' => $context['approved_overtime_hours'],
+            'actual_worked_hours' => $context['actual_worked_hours'],
+            'loan_deduction' => $result['loan_deduction'],
+            'loan_deduction_enabled' => $includeLoanDeductions,
+            'loan_deduction_computed' => $result['loan_deduction_due'],
+            'late_deduction' => $result['late_deduction'] ?? 0,
+            'early_deduction' => $result['early_deduction'] ?? 0,
+            'gross_earnings' => $result['gross_earnings'],
+            'total_deductions' => $result['total_deductions'],
+            'net_payable' => $result['net_payable'],
+        ];
+
+        foreach ($earningColumnMap as $code => $column) {
+            $columns[$column] = round((float) optional($earnings->get($code))['amount'], 2) ?: 0;
+        }
+        foreach ($deductionColumnMap as $code => $column) {
+            $columns[$column] = round((float) optional($deductions->get($code))['amount'], 2) ?: 0;
+        }
+        foreach ($employerColumnMap as $code => $column) {
+            $columns[$column] = round((float) optional($employer->get($code))['amount'], 2) ?: 0;
+        }
+
+        $monthlyPayroll->fill($columns);
+        $monthlyPayroll->save();
+
+        // Replace the per-line-item log so the payslip/show view (which
+        // iterates MonthlyPayroll->components) reflects the freshly
+        // recomputed breakdown, not the stale set from before this edit.
+        PayrollComponent::where('monthly_payroll_id', $monthlyPayroll->id)->delete();
+        foreach ($result['line_items'] as $li) {
+            if (! in_array($li['component_type'], ['earning', 'deduction', 'reimbursement'], true)) {
+                continue;
+            }
+
+            PayrollComponent::create([
+                'monthly_payroll_id' => $monthlyPayroll->id,
+                'component_name' => $li['name'],
+                'component_type' => $li['component_type'] === 'deduction' ? 'deduction' : 'earning',
+                'amount' => $li['amount'],
+                'is_taxable' => $li['is_taxable'],
+            ]);
+        }
+
+        if ($includeLoanDeductions && $result['loan_deduction'] > 0) {
+            $this->updateLoanRepayments($monthlyPayroll->user_id, $monthlyPayroll->payroll_month, $result['loan_deduction'], $monthlyPayroll->tenant_id, $monthlyPayroll->id);
+        } else {
+            $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $monthlyPayroll->tenant_id);
+        }
+
+        $this->linkExpenseReimbursements($monthlyPayroll, $result);
+    }
+
+    /**
+     * Attach the payslip's `expense_reimbursement` lines to their expenses (idempotent revoke-then-relink, so a
+     * recalculation that no longer includes one lets it go). Same shape as the loan-ledger sync above.
+     */
+    private function linkExpenseReimbursements(MonthlyPayroll $monthlyPayroll, array $result): void
+    {
+        $ids = collect($result['line_items'])
+            ->where('code', \App\Services\Expense\ExpenseReimbursementPayrollService::CODE)
+            ->pluck('source_id')->filter()->all();
+
+        app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->applyToPayroll((int) $monthlyPayroll->id, (int) $monthlyPayroll->tenant_id, $ids);
+    }
+
     public function destroy($id)
     {
         try {
@@ -2199,6 +2541,7 @@ class MonthlyPayrollController extends Controller
             // the cascade below) while still marked paid, permanently
             // desyncing the loan balance from any surviving payslip.
             $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $tenantId);
+            app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->revokeForPayroll((int) $monthlyPayroll->id, (int) $tenantId);   // reimbursements go back to the queue
             PayrollComponent::where('monthly_payroll_id', $id)->delete();
             $monthlyPayroll->delete();
             DB::commit();
@@ -2250,6 +2593,8 @@ class MonthlyPayrollController extends Controller
 
             DB::beginTransaction();
             $monthlyPayroll->update(['payment_status' => 'pending']);
+            // A paid payslip's reimbursement payments are reversed so the payslip can be corrected and paid again.
+            app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->onPayrollStatusChange($monthlyPayroll, $previousStatus, 'pending', Auth::user());
 
             PayrollAuditLog::create([
                 'tenant_id' => $tenantId,
@@ -2307,11 +2652,19 @@ class MonthlyPayrollController extends Controller
                 $updateData['transaction_reference'] = $request->transaction_reference;
             }
 
-            $monthlyPayroll->update($updateData);
+            $previousStatus = $monthlyPayroll->payment_status;
+
+            // One transaction: if a reimbursement on this payslip can no longer be paid, the payslip is NOT marked paid.
+            DB::transaction(function () use ($monthlyPayroll, $updateData, $previousStatus, $request) {
+                $monthlyPayroll->update($updateData);
+                app(\App\Services\Expense\ExpenseReimbursementPayrollService::class)->onPayrollStatusChange($monthlyPayroll, $previousStatus, $request->payment_status, Auth::user());
+            });
 
             $this->maybeLockPeriod($monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month, $request->payment_status);
 
             return redirect()->back()->with('success', 'Payment status updated successfully.');
+        } catch (\App\Exceptions\ExpenseException $e) {
+            return redirect()->back()->with('error', 'Cannot change the status: ' . $e->getMessage());
         } catch (\Exception $e) {
             Log::error('Update status error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update status: ' . $e->getMessage());
@@ -2366,7 +2719,18 @@ class MonthlyPayrollController extends Controller
             $affected = MonthlyPayroll::whereIn('id', $request->ids)
                 ->get(['tenant_id', 'payroll_month'])->unique(fn ($r) => $r->tenant_id . $r->payroll_month);
 
+            // The bulk update below is a query-builder update, so model events never fire - remember each
+            // payslip's previous status and drive the reimbursement settlement explicitly.
+            $before = MonthlyPayroll::whereIn('id', $request->ids)->orderBy('id')->get()->keyBy('id');
+            $previousStatus = $before->map->payment_status->all();
+
             MonthlyPayroll::whereIn('id', $request->ids)->update($updateData);
+
+            $expensePayroll = app(\App\Services\Expense\ExpenseReimbursementPayrollService::class);
+            foreach ($before as $slipId => $slip) {
+                $slip->refresh();
+                $expensePayroll->onPayrollStatusChange($slip, $previousStatus[$slipId], $request->payment_status, Auth::user());
+            }
 
             DB::commit();
 
@@ -2374,17 +2738,15 @@ class MonthlyPayrollController extends Controller
                 $this->maybeLockPeriod($row->tenant_id, $row->payroll_month, $request->payment_status);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => count($request->ids) . ' payroll records updated successfully.',
-            ]);
+            return redirect()->back()->with('success', count($request->ids) . ' payroll records updated successfully.');
+        } catch (\App\Exceptions\ExpenseException $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'Nothing was changed - a reimbursement on one of the payslips cannot be paid: ' . $e->getMessage());
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Bulk update error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update: ' . $e->getMessage(),
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to update: ' . $e->getMessage());
         }
     }
 

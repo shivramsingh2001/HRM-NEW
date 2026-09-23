@@ -6,20 +6,20 @@
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
+            gap: 10px;
+            margin-bottom: 16px;
         }
 
         .stats-card {
             background: white;
-            border-radius: 12px;
-            padding: 16px 18px;
+            border-radius: 10px;
+            padding: 10px 12px;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 10px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid #eef2f6;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
             position: relative;
             overflow: hidden;
             cursor: default;
@@ -47,33 +47,33 @@
         }
 
         .stats-card.total-card::before {
-            background: linear-gradient(90deg, #4f46e5, #818cf8);
+            background: linear-gradient(90deg, var(--primary), var(--primary-mid));
         }
 
         .stats-card.present-card::before {
-            background: linear-gradient(90deg, #10b981, #34d399);
+            background: var(--success);
         }
 
         .stats-card.absent-card::before {
-            background: linear-gradient(90deg, #ef4444, #f87171);
+            background: var(--danger);
         }
 
         .stats-card.leave-card::before {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            background: var(--warning);
         }
 
         .stats-card.holiday-card::before {
-            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+            background: var(--purple);
         }
 
         .stats-card.weekoff-card::before {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            background: var(--warning);
         }
 
         .stats-icon-wrapper {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -86,57 +86,57 @@
         }
 
         .total-card .stats-icon-wrapper {
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(79, 70, 229, 0.05));
+            background: var(--primary-light);
         }
 
         .total-card .stats-icon-wrapper i {
-            color: #4f46e5;
-            font-size: 17px;
+            color: var(--primary);
+            font-size: 15px;
         }
 
         .present-card .stats-icon-wrapper {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.05));
+            background: var(--success-light);
         }
 
         .present-card .stats-icon-wrapper i {
-            color: #10b981;
-            font-size: 17px;
+            color: var(--success);
+            font-size: 15px;
         }
 
         .absent-card .stats-icon-wrapper {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.05));
+            background: var(--danger-light);
         }
 
         .absent-card .stats-icon-wrapper i {
-            color: #ef4444;
-            font-size: 17px;
+            color: var(--danger);
+            font-size: 15px;
         }
 
         .leave-card .stats-icon-wrapper {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.05));
+            background: var(--warning-light);
         }
 
         .leave-card .stats-icon-wrapper i {
-            color: #f59e0b;
-            font-size: 17px;
+            color: var(--warning);
+            font-size: 15px;
         }
 
         .holiday-card .stats-icon-wrapper {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0.05));
+            background: var(--purple-light);
         }
 
         .holiday-card .stats-icon-wrapper i {
-            color: #8b5cf6;
-            font-size: 17px;
+            color: var(--purple);
+            font-size: 15px;
         }
 
         .weekoff-card .stats-icon-wrapper {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.05));
+            background: var(--warning-light);
         }
 
         .weekoff-card .stats-icon-wrapper i {
-            color: #f59e0b;
-            font-size: 17px;
+            color: var(--warning);
+            font-size: 15px;
         }
 
         .stats-content {
@@ -145,7 +145,7 @@
         }
 
         .stats-amount-main {
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 700;
             color: #0f172a;
             line-height: 1.2;
@@ -154,7 +154,7 @@
         }
 
         .stats-label {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 600;
             color: #64748b;
             text-transform: uppercase;
@@ -165,35 +165,35 @@
         /* ==================== FILTER SECTION ==================== */
         .filter-wrapper {
             background: white;
-            border-radius: 12px;
-            border: 1px solid #eef2f6;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-sm);
         }
 
         .filter-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
 
         .filter-title {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 600;
             color: #0f172a;
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: var(--primary);
             font-size: 12px;
-            background: #eef2ff;
+            background: var(--primary-light);
             padding: 5px;
             border-radius: 8px;
         }
@@ -202,19 +202,56 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .filter-item {
             flex: 0 0 auto;
         }
 
+        .filter-item.search {
+            min-width: 220px;
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .search-wrapper input {
+            height: 34px;
+            width: 100%;
+            padding: 6px 12px 6px 30px;
+            font-size: 11.5px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #0f172a;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .search-wrapper input:focus {
+            border-color: var(--primary-mid);
+            outline: none;
+            background: white;
+            box-shadow: var(--shadow-focus);
+        }
+
         .filter-item.date-picker {
-            min-width: 180px;
+            min-width: 160px;
         }
 
         .filter-item.date-picker input {
-            height: 38px;
+            height: 34px;
             padding: 6px 12px;
             font-size: 11.5px;
             border: 1.5px solid #e2e8f0;
@@ -233,19 +270,21 @@
         }
 
         .filter-item.date-picker input:focus {
-            border-color: #4f46e5;
+            border-color: var(--primary-mid);
             outline: none;
             background: white;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+            box-shadow: var(--shadow-focus);
         }
 
-        .filter-item.status-filter {
-            min-width: 200px;
+        .filter-item.status-filter,
+        .filter-item.branch-filter {
+            min-width: 180px;
         }
 
-        .filter-item.status-filter select {
+        .filter-item.status-filter select,
+        .filter-item.branch-filter select {
             width: 100%;
-            height: 38px;
+            height: 34px;
             padding: 6px 32px 6px 12px;
             font-size: 11.5px;
             border: 1.5px solid #e2e8f0;
@@ -259,21 +298,23 @@
             font-weight: 500;
         }
 
-        .filter-item.status-filter select:hover {
+        .filter-item.status-filter select:hover,
+        .filter-item.branch-filter select:hover {
             background-color: white;
             border-color: #cbd5e1;
         }
 
-        .filter-item.status-filter select:focus {
-            border-color: #4f46e5;
+        .filter-item.status-filter select:focus,
+        .filter-item.branch-filter select:focus {
+            border-color: var(--primary-mid);
             outline: none;
             background-color: white;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+            box-shadow: var(--shadow-focus);
         }
 
         .reset-btn {
-            height: 38px;
-            padding: 0 16px;
+            height: 34px;
+            padding: 0 14px;
             background: white;
             color: #64748b;
             border: 1.5px solid #e2e8f0;
@@ -289,10 +330,9 @@
         }
 
         .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            color: #0f172a;
-            transform: translateY(-2px);
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         .reset-btn i {
@@ -301,9 +341,9 @@
 
         /* ==================== TABLE STYLES ==================== */
         .card {
-            border: 1px solid #eef2f6;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: var(--shadow-sm);
             overflow: hidden;
         }
 
@@ -350,8 +390,8 @@
         }
 
         /* font-size and cell padding are centralized in client.layout.head
-           (11.5px / 3px 15px) — no local override, so this table matches
-           the project-wide compact table style. */
+                   (11.5px / 3px 15px) — no local override, so this table matches
+                   the project-wide compact table style. */
         .table tbody td {
             vertical-align: middle;
             border-bottom: 1px solid #f1f5f9;
@@ -374,50 +414,6 @@
             border-radius: 0 0 12px 12px;
         }
 
-        /* Employee Info */
-        .employee-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 140px;
-        }
-
-        .employee-avatar {
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #4f46e5;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            flex-shrink: 0;
-        }
-
-        .employee-details {
-            line-height: 1.3;
-            min-width: 0;
-        }
-
-        .employee-name-text {
-            font-weight: 600;
-            color: #0f172a;
-            font-size: 12px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .employee-email-text {
-            font-size: 8px;
-            color: #64748b;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
 
         /* Badges */
         .badge {
@@ -452,7 +448,7 @@
 
         .badge-holiday {
             background: #dbeafe !important;
-            color: #1e40af;
+            color: var(--primary);
             border-color: #bfdbfe;
         }
 
@@ -546,29 +542,29 @@
         }
 
         .action-btn.view-btn {
-            background: #eef2ff;
-            color: #4f46e5;
-            border-color: #c7d2fe;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--border-focus);
         }
 
         .action-btn.view-btn:hover {
-            background: #4f46e5;
+            background: var(--primary);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
         }
 
         .action-btn.mark-btn {
-            background: #d1fae5;
-            color: #065f46;
-            border-color: #a7f3d0;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: var(--border-focus);
         }
 
         .action-btn.mark-btn:hover {
-            background: #10b981;
+            background: var(--primary);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
         }
 
         .action-btn.mark-btn:disabled {
@@ -629,8 +625,8 @@
         }
 
         .form-control:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
         }
 
         .form-control.is-invalid {
@@ -662,11 +658,11 @@
             width: 48px;
             height: 48px;
             border-radius: 12px;
-            background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-light));
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #4f46e5;
+            color: var(--primary);
             font-weight: 700;
             font-size: 11.5px;
             text-transform: uppercase;
@@ -720,7 +716,7 @@
 
         .shift-badge.regular {
             background: #dbeafe;
-            color: #1e40af;
+            color: var(--primary);
         }
 
         .shift-badge.no-shift {
@@ -728,49 +724,9 @@
             color: #991b1b;
         }
 
-        .btn-primary-custom {
-            background: #4f46e5;
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 12px;
-            transition: all 0.3s;
-        }
-
-        .btn-primary-custom:hover {
-            background: #4338ca;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-            color: white;
-        }
-
-        .btn-primary-custom:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .btn-secondary-custom {
-            background: #f1f5f9;
-            color: #64748b;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 12px;
-            transition: all 0.3s;
-        }
-
-        .btn-secondary-custom:hover {
-            background: #e2e8f0;
-            color: #0f172a;
-        }
-
         .admin-badge {
             background: #dbeafe;
-            color: #1e40af;
+            color: var(--primary);
             font-size: 10px;
             padding: 2px 10px;
             border-radius: 12px;
@@ -779,12 +735,12 @@
         }
 
         .badge-info-custom {
-            background: #eef2ff !important;
-            color: #4f46e5 !important;
+            background: var(--primary-light) !important;
+            color: var(--primary) !important;
             font-weight: 600 !important;
             padding: 4px 12px !important;
             border-radius: 16px !important;
-            border: 1px solid #c7d2fe !important;
+            border: 1px solid var(--border-focus) !important;
             font-size: 11px !important;
         }
 
@@ -815,7 +771,7 @@
         }
 
         /* ==================== TOAST CUSTOMIZATIONS ==================== */
-        #toast-container > div {
+        #toast-container>div {
             opacity: 1 !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
             border-radius: 10px !important;
@@ -827,7 +783,7 @@
             max-width: 350px !important;
         }
 
-        #toast-container > div:hover {
+        #toast-container>div:hover {
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
         }
 
@@ -844,7 +800,7 @@
         }
 
         .toast-info {
-            background-color: #4f46e5 !important;
+            background-color: var(--primary) !important;
         }
 
         /* Half Day Status Select Custom Styles */
@@ -864,8 +820,8 @@
         }
 
         .attendance-status-select:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
             outline: none;
         }
 
@@ -875,8 +831,6 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
-            padding: 12px 0;
         }
 
         .pagination-info {
@@ -924,14 +878,14 @@
         }
 
         .pagination .active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: var(--primary);
+            border-color: var(--primary);
             color: white;
         }
 
         .pagination .active .page-link:hover {
-            background: #4338ca;
-            border-color: #4338ca;
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
         }
 
         .pagination .disabled .page-link {
@@ -946,12 +900,12 @@
                 align-items: stretch;
                 text-align: center;
             }
-            
+
             .pagination {
                 justify-content: center;
                 flex-wrap: wrap;
             }
-            
+
             .pagination .page-link {
                 min-width: 32px;
                 height: 32px;
@@ -1081,6 +1035,9 @@
 @section('content-area')
     <div class="page-header">
         <div class="page-header-left d-flex align-items-center">
+             <div class="page-header-title">
+                <h5 class="m-b-10">Team Attendance</h5>
+            </div>
             <ul class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
                 <li class="breadcrumb-item active">Team Attendance</li>
@@ -1154,7 +1111,7 @@
                     <i class="feather-filter"></i>
                     Filter Team Members
                 </div>
-                @if (request()->hasAny(['date', 'status']))
+                @if (request()->hasAny(['date', 'status', 'search', 'branch_id']))
                     <a href="{{ route('team.index') }}" class="reset-btn"
                         style="height: auto; padding: 4px 12px; font-size: 12px;">
                         <i class="feather-x"></i> Clear Filters
@@ -1164,6 +1121,14 @@
 
             <form action="{{ route('team.index') }}" method="GET" id="filterForm">
                 <div class="filter-row">
+                    <div class="filter-item search">
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" name="search" placeholder="Search by name, ID, email..."
+                                value="{{ request('search') }}">
+                        </div>
+                    </div>
+
                     <div class="filter-item date-picker">
                         <input type="date" name="date" value="{{ request('date', date('Y-m-d')) }}"
                             max="{{ date('Y-m-d') }}" onchange="this.form.submit()">
@@ -1172,7 +1137,7 @@
                     <div class="filter-item status-filter">
                         <select name="status" onchange="this.form.submit()">
                             <option value="">All Status</option>
-                             <option value="present" {{ request('status') == 'present' ? 'selected' : '' }}>✅ Present
+                            <option value="present" {{ request('status') == 'present' ? 'selected' : '' }}>✅ Present
                             </option>
                             <option value="absent" {{ request('status') == 'absent' ? 'selected' : '' }}>❌ Absent</option>
                             <option value="on_leave" {{ request('status') == 'on_leave' ? 'selected' : '' }}>🏖️ On Leave
@@ -1181,11 +1146,23 @@
                             </option>
                             <option value="week_off" {{ request('status') == 'week_off' ? 'selected' : '' }}>📅 Week Off
                             </option>
-                             <option value="halfday" {{ request('status') == 'halfday' ? 'selected' : '' }}>📅 Halfday
+                            <option value="halfday" {{ request('status') == 'halfday' ? 'selected' : '' }}>📅 Halfday
                             </option>
                             <option value="checked_in_only" {{ request('status') == 'checked_in_only' ? 'selected' : '' }}>
                                 ⏳ Checked In Only</option>
 
+                        </select>
+                    </div>
+
+                    <div class="filter-item branch-filter">
+                        <select name="branch_id" onchange="this.form.submit()">
+                            <option value="">All Branches</option>
+                            @foreach ($allBranches as $branch)
+                                <option value="{{ $branch->id }}"
+                                    {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                    {{ $branch->name }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -1204,9 +1181,9 @@
                 <div class="card stretch stretch-full">
                     <div class="card-header">
                         <h5 class="card-title">
-                            <i class="feather-users me-2" style="color: #4f46e5;"></i>
+                            <i class="feather-users me-2" style="color: var(--primary);"></i>
                             Team Members -
-                            <span style="color: #4f46e5;">
+                            <span style="color: var(--primary);">
                                 {{ \Carbon\Carbon::parse(request('date', date('Y-m-d')))->format('d F Y') }}
                             </span>
                         </h5>
@@ -1225,6 +1202,7 @@
                                         <th>Employee</th>
                                         <th>Designation</th>
                                         <th>Department</th>
+                                        <th>Branch</th>
                                         <th>Status</th>
                                         <th>Punch In</th>
                                         <th>Punch Out</th>
@@ -1242,7 +1220,8 @@
                                                 'on_leave',
                                                 'first half leave',
                                                 'second half leave',
-                                                'full day leave' => 'badge-on_leave',
+                                                'full day leave'
+                                                    => 'badge-on_leave',
                                                 'halfday' => 'badge-halfday',
                                                 'first_half' => 'badge-first_half',
                                                 'second_half' => 'badge-second_half',
@@ -1272,7 +1251,8 @@
                                                 'on_leave',
                                                 'first half leave',
                                                 'second half leave',
-                                                'full day leave' => 'on_leave',
+                                                'full day leave'
+                                                    => 'on_leave',
                                                 'halfday' => 'halfday',
                                                 'first_half' => 'first_half',
                                                 'second_half' => 'second_half',
@@ -1282,13 +1262,25 @@
                                                 default => 'absent',
                                             };
                                             $isAbsent = $status == 'absent';
-                                            $isAdmin = app(\App\Services\RbacService::class)->scopeFor(auth()->user(), 'attendance', 'edit') === 'company';
+                                            $isAdmin =
+                                                app(\App\Services\RbacService::class)->scopeFor(
+                                                    auth()->user(),
+                                                    'attendance',
+                                                    'edit',
+                                                ) === 'company';
                                             // Managers may mark their own reportees; the roster is already
                                             // filtered to reporting_head, and MarkAttendanceRequest re-checks.
-                                            $canMarkAttendance = app(\App\Services\RbacService::class)->can(auth()->user(), 'attendance', 'edit');
-                                            
+                                            $canMarkAttendance = app(\App\Services\RbacService::class)->can(
+                                                auth()->user(),
+                                                'attendance',
+                                                'edit',
+                                            );
+
                                             // Calculate serial number with pagination
-                                            $serialNumber = ($teamData->currentPage() - 1) * $teamData->perPage() + $loop->index + 1;
+                                            $serialNumber =
+                                                ($teamData->currentPage() - 1) * $teamData->perPage() +
+                                                $loop->index +
+                                                1;
                                         @endphp
                                         <tr>
                                             <td>{{ $serialNumber }}</td>
@@ -1298,7 +1290,9 @@
                                                         {{ strtoupper(substr($member->name ?? 'N/A', 0, 2)) }}
                                                     </div>
                                                     <div class="employee-details">
-                                                        <div class="employee-name-text">{{ $member->name ?? 'N/A' }} <small>( {{ $member->employee_id ?? 'N/A' }} )</small></div>
+                                                        <div class="employee-name-text">{{ $member->name ?? 'N/A' }}
+                                                            <small>( {{ $member->employee_id ?? 'N/A' }} )</small>
+                                                        </div>
                                                         <div class="employee-email-text">
                                                             {{ $member->email ?? 'N/A' }}</div>
                                                     </div>
@@ -1306,6 +1300,7 @@
                                             </td>
                                             <td>{{ $member->designation ?? 'N/A' }}</td>
                                             <td>{{ $member->department ?? 'N/A' }}</td>
+                                            <td>{{ $member->branch ?? 'N/A' }}</td>
                                             <td>
                                                 <span class="badge {{ $statusClass }}">
                                                     <span class="status-dot {{ $statusDot }}"></span>
@@ -1338,7 +1333,7 @@
                                                         $diff = $clockIn->diff($clockOut);
                                                         $hours = $diff->h + $diff->i / 60;
                                                     @endphp
-                                                    <span style="font-weight: 600; color: #4f46e5;">
+                                                    <span style="font-weight: 600; color: var(--primary);">
                                                         {{ $member->total_hours }} hrs
                                                     </span>
                                                 @else
@@ -1366,7 +1361,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="9" class="text-center py-5">
+                                            <td colspan="10" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="feather-users"></i>
                                                     <h4>No Team Members Found</h4>
@@ -1383,7 +1378,8 @@
                         <div class="card-footer">
                             <div class="pagination-wrapper">
                                 <div class="pagination-info">
-                                    Showing <strong>{{ $teamData->firstItem() }}</strong> to <strong>{{ $teamData->lastItem() }}</strong>
+                                    Showing <strong>{{ $teamData->firstItem() }}</strong> to
+                                    <strong>{{ $teamData->lastItem() }}</strong>
                                     of <strong>{{ $teamData->total() }}</strong> members
                                 </div>
                                 <div>
@@ -1400,12 +1396,12 @@
 
 @section('create-modal')
     <!-- Mark Attendance Modal -->
-    <div class="modal fade" id="markAttendanceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+    <div class="modal fade-scale" id="markAttendanceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered compact-modal compact-modal-plain modal-sm">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="feather-edit-2 me-2" style="color: #4f46e5;"></i>
+                        <i class="feather-edit-2 me-2" style="color: var(--primary);"></i>
                         Mark Attendance
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -1457,12 +1453,13 @@
                     <form id="markAttendanceForm" method="POST">
                         @csrf
                         <input type="hidden" name="user_id" id="markUserId">
-                        <input type="hidden" name="date" id="attendanceDate" value="{{ request('date', date('Y-m-d')) }}">
+                        <input type="hidden" name="date" id="attendanceDate"
+                            value="{{ request('date', date('Y-m-d')) }}">
 
                         <!-- Attendance Status Selection -->
                         <div class="mb-3">
                             <label class="form-label">
-                                <i class="feather-check-circle me-1" style="color: #4f46e5;"></i>
+                                <i class="feather-check-circle me-1" style="color: var(--primary);"></i>
                                 Attendance Status <span class="required">*</span>
                             </label>
                             <select class="attendance-status-select form-control" name="status" id="attendanceStatus">
@@ -1481,8 +1478,9 @@
                         <!-- Optional date range: apply the same status from `date` through `end_date` -->
                         <div class="mb-3">
                             <label class="form-label">
-                                <i class="feather-calendar me-1" style="color: #4f46e5;"></i>
-                                Apply through <span class="text-muted" style="font-size: 11px;">(optional — leave blank for a single day)</span>
+                                <i class="feather-calendar me-1" style="color: var(--primary);"></i>
+                                Apply through <span class="text-muted" style="font-size: 11px;">(optional — leave blank
+                                    for a single day)</span>
                             </label>
                             <input type="date" class="form-control" name="end_date" id="attendanceEndDate"
                                 value="{{ request('date', date('Y-m-d')) }}" max="{{ date('Y-m-d') }}">
@@ -1496,7 +1494,7 @@
                         <div class="row g-3" id="clockTimeFields">
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    <i class="feather-clock me-1" style="color: #4f46e5;"></i>
+                                    <i class="feather-clock me-1" style="color: var(--primary);"></i>
                                     Clock In Time <span class="required">*</span>
                                 </label>
                                 <input type="time" class="form-control" name="clock_in" id="clockInTime">
@@ -1504,7 +1502,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    <i class="feather-clock me-1" style="color: #4f46e5;"></i>
+                                    <i class="feather-clock me-1" style="color: var(--primary);"></i>
                                     Clock Out Time <span class="required">*</span>
                                 </label>
                                 <input type="time" class="form-control" name="clock_out" id="clockOutTime">
@@ -1514,12 +1512,12 @@
 
                         <div class="mt-3" id="leaveTypeField" style="display: none;">
                             <label class="form-label">
-                                <i class="feather-calendar me-1" style="color: #4f46e5;"></i>
+                                <i class="feather-calendar me-1" style="color: var(--primary);"></i>
                                 Leave Type <span class="required">*</span>
                             </label>
                             <select class="form-control" name="leave_type_id" id="leaveTypeId">
                                 <option value="">-- Select leave type --</option>
-                                @foreach (($leaveTypes ?? []) as $lt)
+                                @foreach ($leaveTypes ?? [] as $lt)
                                     <option value="{{ $lt->id }}">{{ $lt->name }}</option>
                                 @endforeach
                             </select>
@@ -1533,7 +1531,7 @@
 
                         <div class="mt-3">
                             <label class="form-label">
-                                <i class="feather-message-square me-1" style="color: #4f46e5;"></i>
+                                <i class="feather-message-square me-1" style="color: var(--primary);"></i>
                                 Remarks
                             </label>
                             <textarea class="form-control" name="remarks" id="attendanceRemarks" rows="2"
@@ -1542,7 +1540,7 @@
 
                         <div class="mt-2">
                             <div class="alert alert-info"
-                                style="background: #eef2ff; border-color: #c7d2fe; color: #1e40af; padding: 8px 12px; font-size: 12px; border-radius: 8px;">
+                                style="background: var(--primary-light); border-color: var(--border-focus); color: var(--primary); padding: 8px 12px; font-size: 12px; border-radius: 8px;">
                                 <i class="feather-shield me-1"></i>
                                 Attendance will be marked by: <strong>{{ auth()->user()->name }}</strong>
                                 ({{ auth()->user()->role }})
@@ -1565,10 +1563,11 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary-custom" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">
                         <i class="feather-x me-1"></i> Cancel
                     </button>
-                    <button type="button" class="btn-primary-custom" onclick="submitMarkAttendance()">
+                    <button type="button" class="btn btn-primary" id="markAttendanceSubmitBtn"
+                        onclick="submitMarkAttendance()">
                         <i class="feather-check me-1"></i> Mark Attendance
                     </button>
                 </div>
@@ -1590,6 +1589,15 @@
             // status select, which also uses name="status").
             $('#filterForm select[name="status"]').on('change', function() {
                 $('#filterForm').submit();
+            });
+
+            // Debounced live search, matching the employee list page's pattern.
+            let searchTimeout;
+            $('#filterForm input[name="search"]').on('keyup', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    $('#filterForm').submit();
+                }, 500);
             });
 
             // Set default time values
@@ -1649,64 +1657,67 @@
 
             // Fetch shift details
             const date = document.querySelector('input[name="date"]').value || '{{ date('Y-m-d') }}';
-            
+
             fetch('{{ route('team.get-user-shift') }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ user_id: userId, date: date })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.shift) {
-                    const shift = data.shift;
-                    document.getElementById('modalShiftName').textContent = shift.shift_name || 'Not Assigned';
-                    document.getElementById('modalShiftStart').textContent = shift.start_time || '--:--';
-                    document.getElementById('modalShiftEnd').textContent = shift.end_time || '--:--';
-                    
-                    const shiftType = document.getElementById('modalShiftType');
-                    if (shift.is_overnight) {
-                        shiftType.textContent = '🌙 Overnight Shift';
-                        shiftType.className = 'shift-badge overnight';
-                        document.getElementById('shiftNote').style.display = 'block';
-                        document.getElementById('shiftNoteText').textContent = 
-                            'This is an overnight shift. Clock out time will be on the next day.';
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        date: date
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.shift) {
+                        const shift = data.shift;
+                        document.getElementById('modalShiftName').textContent = shift.shift_name || 'Not Assigned';
+                        document.getElementById('modalShiftStart').textContent = shift.start_time || '--:--';
+                        document.getElementById('modalShiftEnd').textContent = shift.end_time || '--:--';
+
+                        const shiftType = document.getElementById('modalShiftType');
+                        if (shift.is_overnight) {
+                            shiftType.textContent = '🌙 Overnight Shift';
+                            shiftType.className = 'shift-badge overnight';
+                            document.getElementById('shiftNote').style.display = 'block';
+                            document.getElementById('shiftNoteText').textContent =
+                                'This is an overnight shift. Clock out time will be on the next day.';
+                        } else {
+                            shiftType.textContent = '☀️ Regular Shift';
+                            shiftType.className = 'shift-badge regular';
+                            document.getElementById('shiftNote').style.display = 'none';
+                        }
+
+                        // Set default clock in/out based on shift
+                        if (shift.start_time) {
+                            document.getElementById('clockInTime').value = shift.start_time;
+                        }
+                        if (shift.end_time) {
+                            document.getElementById('clockOutTime').value = shift.end_time;
+                        }
                     } else {
-                        shiftType.textContent = '☀️ Regular Shift';
-                        shiftType.className = 'shift-badge regular';
+                        document.getElementById('modalShiftName').textContent = 'No Shift Assigned';
+                        document.getElementById('modalShiftStart').textContent = '--:--';
+                        document.getElementById('modalShiftEnd').textContent = '--:--';
+                        const shiftType = document.getElementById('modalShiftType');
+                        shiftType.textContent = '⚠️ No Shift';
+                        shiftType.className = 'shift-badge no-shift';
                         document.getElementById('shiftNote').style.display = 'none';
                     }
-                    
-                    // Set default clock in/out based on shift
-                    if (shift.start_time) {
-                        document.getElementById('clockInTime').value = shift.start_time;
-                    }
-                    if (shift.end_time) {
-                        document.getElementById('clockOutTime').value = shift.end_time;
-                    }
-                } else {
-                    document.getElementById('modalShiftName').textContent = 'No Shift Assigned';
+                })
+                .catch(error => {
+                    console.error('Error fetching shift:', error);
+                    document.getElementById('modalShiftName').textContent = 'Error Loading Shift';
                     document.getElementById('modalShiftStart').textContent = '--:--';
                     document.getElementById('modalShiftEnd').textContent = '--:--';
                     const shiftType = document.getElementById('modalShiftType');
-                    shiftType.textContent = '⚠️ No Shift';
+                    shiftType.textContent = '⚠️ Error';
                     shiftType.className = 'shift-badge no-shift';
                     document.getElementById('shiftNote').style.display = 'none';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching shift:', error);
-                document.getElementById('modalShiftName').textContent = 'Error Loading Shift';
-                document.getElementById('modalShiftStart').textContent = '--:--';
-                document.getElementById('modalShiftEnd').textContent = '--:--';
-                const shiftType = document.getElementById('modalShiftType');
-                shiftType.textContent = '⚠️ Error';
-                shiftType.className = 'shift-badge no-shift';
-                document.getElementById('shiftNote').style.display = 'none';
-            });
+                });
 
             // Set default remarks
             const dateFormatted = '{{ \Carbon\Carbon::parse(request('date', date('Y-m-d')))->format('d M Y') }}';
@@ -1782,18 +1793,25 @@
                     body.innerHTML = data.data.map(row => {
                         const changes = (row.changes || [])
                             .map(c => {
-                                const from = (c.from === null || c.from === '' || typeof c.from === 'undefined') ? '—' : c.from;
-                                const to = (c.to === null || c.to === '' || typeof c.to === 'undefined') ? '—' : c.to;
-                                return '<div style="padding-left:10px;"><code>' + escapeLogHtml(c.field) + '</code>: ' +
-                                    escapeLogHtml(String(from)) + ' &rarr; ' + escapeLogHtml(String(to)) + '</div>';
+                                const from = (c.from === null || c.from === '' || typeof c.from ===
+                                    'undefined') ? '—' : c.from;
+                                const to = (c.to === null || c.to === '' || typeof c.to === 'undefined') ?
+                                    '—' : c.to;
+                                return '<div style="padding-left:10px;"><code>' + escapeLogHtml(c.field) +
+                                    '</code>: ' +
+                                    escapeLogHtml(String(from)) + ' &rarr; ' + escapeLogHtml(String(to)) +
+                                    '</div>';
                             })
                             .join('');
                         return '<div style="border-bottom:1px solid #eee; padding:6px 0;">' +
-                            '<div><strong>' + escapeLogHtml(row.source || row.event_type || 'change') + '</strong>' +
-                            '<span class="text-muted"> · ' + escapeLogHtml(row.event_time || '') + '</span></div>' +
+                            '<div><strong>' + escapeLogHtml(row.source || row.event_type || 'change') +
+                            '</strong>' +
+                            '<span class="text-muted"> · ' + escapeLogHtml(row.event_time || '') +
+                            '</span></div>' +
                             '<div class="text-muted">by ' + escapeLogHtml(row.actor || 'System') +
                             (row.actor_role ? ' (' + escapeLogHtml(row.actor_role) + ')' : '') + '</div>' +
-                            (row.reason ? '<div class="text-muted">' + escapeLogHtml(row.reason) + '</div>' : '') +
+                            (row.reason ? '<div class="text-muted">' + escapeLogHtml(row.reason) + '</div>' :
+                                '') +
                             changes +
                             '</div>';
                     }).join('');
@@ -1805,8 +1823,12 @@
 
         function escapeLogHtml(s) {
             return String(s).replace(/[&<>"']/g, m => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[m]));
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            } [m]));
         }
 
         /**
@@ -1823,7 +1845,7 @@
             document.getElementById('clockTimeFields').style.display = needsClock ? '' : 'none';
             document.getElementById('leaveTypeField').style.display = isLeave ? '' : 'none';
         }
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const sel = document.getElementById('attendanceStatus');
             if (sel) {
                 sel.addEventListener('change', onMarkStatusChange);
@@ -1889,7 +1911,7 @@
             let attendanceStatus = status;
 
             // Show loading state
-            const submitBtn = document.querySelector('.btn-primary-custom');
+            const submitBtn = document.getElementById('markAttendanceSubmitBtn');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i class="feather-loader me-1"></i> Saving...';
             submitBtn.disabled = true;
@@ -1919,14 +1941,14 @@
 
                     if (data.success === true) {
                         let message = data.message || 'Attendance marked successfully!';
-                        
+
                         // Add shift info to success message
                         if (data.shift_details && data.shift_details.is_overnight) {
-                            message += ' (Overnight shift: ' + 
-                                data.shift_details.clock_in + ' to ' + 
+                            message += ' (Overnight shift: ' +
+                                data.shift_details.clock_in + ' to ' +
                                 data.shift_details.clock_out + ')';
                         }
-                        
+
                         // Add status info
                         const statusLabels = {
                             'present': 'Present (Full Day)',
@@ -1940,7 +1962,7 @@
                         };
                         const statusLabel = statusLabels[attendanceStatus] || attendanceStatus;
                         message += ' | Status: ' + statusLabel;
-                        
+
                         toastr.success(message);
                         // Close modal
                         var modal = bootstrap.Modal.getInstance(document.getElementById('markAttendanceModal'));

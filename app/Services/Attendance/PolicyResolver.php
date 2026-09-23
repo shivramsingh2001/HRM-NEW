@@ -125,6 +125,19 @@ class PolicyResolver
             minRestHours: $base->minRestHours,
             maxDailyHours: $base->maxDailyHours,
             sandwichLeave: $base->sandwichLeave,
+            graceMode: $base->graceMode,
+            fixedGraceMinutes: $base->fixedGraceMinutes,
+            lateAttendanceAction: $base->lateAttendanceAction,
+            lateDeductionEnabled: $base->lateDeductionEnabled,
+            lateDeductionMultiplier: $base->lateDeductionMultiplier,
+            lateDeductionMode: $base->lateDeductionMode,
+            lateDeductionAmount: $base->lateDeductionAmount,
+            monthlyEarlyAllowance: $base->monthlyEarlyAllowance,
+            earlyAttendanceAction: $base->earlyAttendanceAction,
+            earlyDeductionEnabled: $base->earlyDeductionEnabled,
+            earlyDeductionMultiplier: $base->earlyDeductionMultiplier,
+            earlyDeductionMode: $base->earlyDeductionMode,
+            earlyDeductionAmount: $base->earlyDeductionAmount,
         );
     }
 

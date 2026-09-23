@@ -20,11 +20,6 @@
             }
         }
 
-        /* Hide FullCalendar toolbar */
-        .fc-toolbar-chunk {
-            display: none !important;
-        }
-
         /* Loading text */
         .loading-text {
             display: inline-flex;
@@ -32,139 +27,111 @@
             gap: 8px;
         }
 
-        /* Month picker styling */
-        input[type="month"] {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-color: white;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            padding: 0.375rem 2rem 0.375rem 0.75rem;
-            font-size: 0.875rem;
-            line-height: 1.25rem;
-            color: #374151;
-            background-repeat: no-repeat;
-            background-position: right 0.5rem center;
-            background-size: 1.5em 1.5em;
-        }
-
-        input[type="month"]:focus {
-            outline: 2px solid transparent;
-            outline-offset: 2px;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        input[type="month"]::-webkit-calendar-picker-indicator {
-            opacity: 0;
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-
         /* Profile Header */
         .profile-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
             color: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            box-shadow: var(--shadow-md);
         }
 
         .profile-avatar {
-            width: 120px;
-            height: 120px;
+            width: 62px;
+            height: 62px;
             border-radius: 50%;
-            border: 4px solid white;
+            border: 2px solid white;
             object-fit: cover;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
         }
 
-        /* Stats Cards */
-        .stats-grid {
-            margin: 15px 0 20px;
-        }
-
-        .stats-card {
-            padding: 15px;
-            border-radius: 10px;
-            background: white;
-            border: 1px solid #e5e7eb;
-            transition: all 0.3s ease;
-            height: 100%;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .stats-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            border-color: #3b82f6;
-        }
-
-        .stats-number {
-            font-size: 24px;
+        .profile-header h4 {
+            font-size: 15px;
             font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 2px;
+            letter-spacing: .02em;
         }
 
-        .stats-label {
-            font-size: 12px;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .profile-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            line-height: 1.3;
+            background: rgba(255, 255, 255, .15);
+            padding: 3px 9px;
+            border-radius: 20px;
         }
 
-        /* Month Filter Card */
-        .month-filter-card {
-            background: #f8fafc;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        .profile-meta-item i {
+            font-size: 10.5px;
+        }
+
+        /* Attendance Stats — a touch more compact than the shared default,
+           matching this page's overall smaller-density layout. */
+        .member-stats-grid {
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .member-stats-grid .stats-card {
+            padding: 8px 10px;
+            gap: 8px;
+        }
+
+        .member-stats-grid .stats-icon-wrapper {
+            width: 28px;
+            height: 28px;
+        }
+
+        .member-stats-grid .stats-amount-main {
+            font-size: 14px;
+        }
+
+        @media (max-width: 767px) {
+            .member-stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
         /* Tabs */
         .nav-tabs {
-            border-bottom: 2px solid #e5e7eb;
+            border-bottom: 2px solid var(--border);
             padding: 0 5px;
         }
 
         .nav-tabs .nav-link {
-            padding: 10px 20px;
+            padding: 7px 14px;
             margin: 0 5px -2px 0;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .tab-content {
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             border-top: none;
-            border-radius: 0 0 12px 12px;
-            padding: 20px;
+            border-radius: 0 0 10px 10px;
+            padding: 14px;
         }
 
         /* Info Cards */
         .info-card {
             border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
             background-color: #ffffff;
         }
 
         .info-card .card-header {
-            padding: 12px 15px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: 12px;
             background: #f8fafc;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border);
         }
 
         .info-item {
-            padding: 10px 15px;
+            padding: 7px 12px;
             border-bottom: 1px solid #f1f5f9;
             display: flex;
             align-items: center;
@@ -191,7 +158,7 @@
         }
 
         .document-card:hover {
-            border-color: #3b82f6;
+            border-color: var(--primary-mid);
             background: #f0f9ff;
         }
 
@@ -223,28 +190,28 @@
         }
 
         .badge-present {
-            background: #10b981;
-            color: white;
+            background: #2563eb;
+            color: #ffffff;
         }
 
         .badge-absent {
-            background: #ef4444;
-            color: white;
+            background: #1e3a8a;
+            color: #ffffff;
         }
 
         .badge-leave {
-            background: #3b82f6;
-            color: white;
+            background: #dbeafe;
+            color: #1d4ed8;
         }
 
         .badge-holiday {
-            background: #8b5cf6;
-            color: white;
+            background: #bfdbfe;
+            color: #1d4ed8;
         }
 
         .badge-week-off {
-            background: #6c757d;
-            color: white;
+            background: #eff6ff;
+            color: #475569;
         }
 
         /* Task count badge on calendar events */
@@ -279,67 +246,67 @@
         }
 
         .fc .fc-toolbar {
-            padding: 24px 24px 16px;
+            padding: 10px 14px;
             margin-bottom: 0 !important;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
             color: white;
             border-radius: 10px 12px 0 0;
         }
 
         .fc .fc-toolbar-title {
-            font-size: 16px !important;
+            font-size: 13px !important;
             font-weight: 600;
-            color: #374151;
+            color: #ffffff;
         }
 
         .fc .fc-button {
-            padding: 6px 12px !important;
-            font-size: 13px !important;
-            background-color: #3b82f6 !important;
-            border-color: #3b82f6 !important;
+            padding: 4px 10px !important;
+            font-size: 11.5px !important;
+            background-color: var(--primary-mid) !important;
+            border-color: var(--primary-mid) !important;
         }
 
         .fc .fc-button:hover {
-            background-color: #2563eb !important;
-            border-color: #2563eb !important;
+            background-color: var(--primary-dark) !important;
+            border-color: var(--primary-dark) !important;
         }
 
         .fc .fc-day-today {
-            background-color: rgba(59, 130, 246, 0.1) !important;
+            background-color: var(--primary-light) !important;
         }
 
         .fc-daygrid-event {
             border-radius: 4px;
-            border: none !important;
+            border: 1px solid !important;
             padding: 2px 6px !important;
             font-size: 11px !important;
-            font-weight: 500;
+            font-weight: 600;
             margin: 1px 0;
         }
 
         /* Calendar Controls */
         .calendar-controls {
             background: #f8fafc;
-            padding: 15px;
+            padding: 8px 10px;
             border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            margin-bottom: 15px;
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
 
         .calendar-view-options {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
 
         .calendar-view-btn {
-            padding: 6px 12px;
-            border: 1px solid #e5e7eb;
+            padding: 4px 10px;
+            border: 1px solid var(--border);
             background: white;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 500;
             color: #64748b;
             transition: all 0.2s ease;
@@ -347,13 +314,13 @@
         }
 
         .calendar-view-btn:hover {
-            border-color: #3b82f6;
-            color: #3b82f6;
+            border-color: var(--primary-mid);
+            color: var(--primary-mid);
         }
 
         .calendar-view-btn.active {
-            background: #3b82f6;
-            border-color: #3b82f6;
+            background: var(--primary-mid);
+            border-color: var(--primary-mid);
             color: white;
         }
 
@@ -381,6 +348,7 @@
             width: 12px;
             height: 12px;
             border-radius: 3px;
+            border: 1px solid transparent;
         }
 
         /* Loading state */
@@ -393,8 +361,8 @@
         /* Table */
         .attendance-table th,
         .attendance-table td {
-            padding: 10px 12px !important;
-            font-size: 13px;
+            padding: 7px 10px !important;
+            font-size: 11.5px;
         }
 
         .attendance-table th {
@@ -406,14 +374,14 @@
         /* Responsive */
         @media (max-width: 768px) {
             .profile-header {
-                padding: 20px;
+                padding: 14px;
                 text-align: center;
             }
 
             .profile-avatar {
-                width: 100px;
-                height: 100px;
-                margin: 0 auto 15px;
+                width: 80px;
+                height: 80px;
+                margin: 0 auto 12px;
             }
 
             .info-item {
@@ -470,36 +438,31 @@
                 <div class="col-lg-2 col-md-3 text-center text-md-start">
                     <img src="{{ $profileImage }}" alt="{{ $userInfo->name }}" class="profile-avatar">
                 </div>
-                <div class="col-lg-10 col-md-9 mt-3 mt-md-0">
-                    <div class="d-flex justify-content-between align-items-start">
+                <div class="col-lg-10 col-md-9 mt-2 mt-md-0">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                         <div>
                             <h4 class="mb-1">{{ strtoupper($userInfo->name) }}</h4>
-                            <div class="d-flex flex-wrap gap-3 mb-2">
-                                <div class="d-flex align-items-center">
-                                    <i class="feather-briefcase me-2 fs-12"></i>
-                                    <span class="fs-13">{{ $userInfo->designation ?? 'Not Assigned' }}</span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <i class="feather-hash me-2 fs-12"></i>
-                                    <span class="fs-13">ID: {{ $userInfo->employee_id ?? 'N/A' }}</span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <i class="feather-mail me-2 fs-12"></i>
-                                    <span class="fs-13">{{ $userInfo->email }}</span>
-                                </div>
+                            <div class="d-flex flex-wrap gap-2 mb-1">
+                                <span class="profile-meta-item">
+                                    <i class="feather-briefcase"></i>{{ $userInfo->designation ?? 'Not Assigned' }}
+                                </span>
+                                <span class="profile-meta-item">
+                                    <i class="feather-hash"></i>ID: {{ $userInfo->employee_id ?? 'N/A' }}
+                                </span>
+                                <span class="profile-meta-item">
+                                    <i class="feather-mail"></i>{{ $userInfo->email }}
+                                </span>
                             </div>
-                            <div class="d-flex flex-wrap gap-3">
+                            <div class="d-flex flex-wrap gap-2">
                                 @if ($userInfo->contact)
-                                    <div class="d-flex align-items-center">
-                                        <i class="feather-phone me-2 fs-12"></i>
-                                        <span class="fs-13">{{ $userInfo->contact }}</span>
-                                    </div>
+                                    <span class="profile-meta-item">
+                                        <i class="feather-phone"></i>{{ $userInfo->contact }}
+                                    </span>
                                 @endif
                                 @if ($userInfo->department)
-                                    <div class="d-flex align-items-center">
-                                        <i class="feather-layers me-2 fs-12"></i>
-                                        <span class="fs-13">{{ $userInfo->department }}</span>
-                                    </div>
+                                    <span class="profile-meta-item">
+                                        <i class="feather-layers"></i>{{ $userInfo->department }}
+                                    </span>
                                 @endif
                             </div>
                         </div>
@@ -516,41 +479,49 @@
             </div>
         </div>
 
-        <!-- Attendance Stats -->
-        <div class="row stats-grid g-2">
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-present">{{ $attendanceSummary['present'] ?? 0 }}</div>
+        <!-- Attendance Stats — same .stats-grid/.stats-card family as the
+             Team Attendance page (theme-custom.css centralizes it to the
+             app's single blue-only look). -->
+        <div class="stats-grid member-stats-grid">
+            <div class="stats-card present-card">
+                <div class="stats-icon-wrapper"><i class="feather-check-circle"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-present">{{ $attendanceSummary['present'] ?? 0 }}</div>
                     <div class="stats-label">Present</div>
                 </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-absent">{{ $attendanceSummary['absent'] ?? 0 }}</div>
+            <div class="stats-card absent-card">
+                <div class="stats-icon-wrapper"><i class="feather-x-circle"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-absent">{{ $attendanceSummary['absent'] ?? 0 }}</div>
                     <div class="stats-label">Absent</div>
                 </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-leave">{{ $attendanceSummary['on_leave'] ?? 0 }}</div>
+            <div class="stats-card leave-card">
+                <div class="stats-icon-wrapper"><i class="feather-calendar"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-leave">{{ $attendanceSummary['on_leave'] ?? 0 }}</div>
                     <div class="stats-label">On Leave</div>
                 </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-holiday">{{ $attendanceSummary['holiday'] ?? 0 }}</div>
+            <div class="stats-card holiday-card">
+                <div class="stats-icon-wrapper"><i class="feather-star"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-holiday">{{ $attendanceSummary['holiday'] ?? 0 }}</div>
                     <div class="stats-label">Holidays</div>
                 </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-weekoff">{{ $attendanceSummary['week_off'] ?? 0 }}</div>
+            <div class="stats-card weekoff-card">
+                <div class="stats-icon-wrapper"><i class="feather-coffee"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-weekoff">{{ $attendanceSummary['week_off'] ?? 0 }}</div>
                     <div class="stats-label">Week Off</div>
                 </div>
             </div>
-            <div class="col-md-2 col-sm-4 col-6 text-center">
-                <div class="stats-card">
-                    <div class="stats-number" id="stat-workdays">{{ $attendanceSummary['work_days'] ?? 0 }}</div>
+            <div class="stats-card total-card">
+                <div class="stats-icon-wrapper"><i class="feather-briefcase"></i></div>
+                <div class="stats-content">
+                    <div class="stats-amount-main" id="stat-workdays">{{ $attendanceSummary['work_days'] ?? 0 }}</div>
                     <div class="stats-label">Work Days</div>
                 </div>
             </div>
@@ -576,6 +547,14 @@
                     <i class="feather-calendar me-1"></i>Attendance
                 </button>
             </li>
+            @if ($userInfo->role === 'manager')
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="team-tab" data-bs-toggle="tab" data-bs-target="#reportingTeam"
+                        type="button" role="tab">
+                        <i class="feather-users me-1"></i>Team ({{ $directReports->count() }})
+                    </button>
+                </li>
+            @endif
         </ul>
 
         <!-- Tab Content -->
@@ -691,40 +670,15 @@
             </div>
 
             <!-- Attendance Tab -->
-            <div class="tab-pane fade show active" id="attendance" role="tabpanel">
-                <!-- Month Filter -->
-                <div class="month-filter-card">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <div class="d-flex flex-column flex-md-row align-items-center gap-2">
-                                <div class="position-relative w-100 w-md-auto" style="max-width: 180px;">
-                                    <input type="month" id="monthFilter" class="form-control form-control-sm"
-                                        value="{{ $selectedMonth }}" max="{{ date('Y-m') }}"
-                                        data-onboard-date="{{ $userCreatedDate ?? date('Y-m-d') }}"
-                                        style="padding-right: 30px;">
-                                    <i class="feather-calendar position-absolute"
-                                        style="right: 8px; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none;"></i>
-                                </div>
-                                <button id="applyFilter" class="btn btn-primary btn-sm w-100 w-md-auto">
-                                    <i class="feather-filter me-2"></i> Apply
-                                </button>
-                                <button id="resetFilter" class="btn btn-secondary btn-sm w-100 w-md-auto">
-                                    <i class="feather-refresh-cw me-2"></i> Current
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-6 text-end mt-3 mt-md-0">
-                            <div class="text-muted fs-12">
-                                <i class="feather-calendar me-1"></i>
-                                Showing: <span
-                                    id="currentMonthDisplay">{{ date('F Y', strtotime($selectedMonth)) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+            <div class="tab-pane fade show active" id="attendance" role="tabpanel"
+                data-onboard-date="{{ $userCreatedDate ?? date('Y-m-d') }}">
                 <!-- Calendar View -->
                 <div class="attendance-section active" id="calendarView">
+                    <div class="text-muted fs-12 mb-2">
+                        <i class="feather-calendar me-1"></i>
+                        Showing: <span id="currentMonthDisplay">{{ date('F Y', strtotime($selectedMonth)) }}</span>
+                    </div>
+
                     <!-- Calendar Controls -->
                     <div class="calendar-controls">
                         <div class="calendar-view-options">
@@ -749,25 +703,25 @@
                     <!-- Legend -->
                     <div class="calendar-legend">
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #28a745;"></div><span>Present</span>
+                            <div class="legend-color" style="background: #2563eb; border-color: #1d4ed8;"></div><span>Present</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #dc3545;"></div><span>Absent</span>
+                            <div class="legend-color" style="background: #1e3a8a; border-color: #1e293b;"></div><span>Absent</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #fd7e14;"></div><span>Leave</span>
+                            <div class="legend-color" style="background: #dbeafe; border-color: #93c5fd;"></div><span>Leave</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #0d6efd;"></div><span>Holiday</span>
+                            <div class="legend-color" style="background: #bfdbfe; border-color: #93c5fd;"></div><span>Holiday</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #6c757d;"></div><span>Week Off</span>
+                            <div class="legend-color" style="background: #eff6ff; border-color: #dbeafe;"></div><span>Week Off</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #ffc107;"></div><span>Checked In Only</span>
+                            <div class="legend-color" style="background: #93c5fd; border-color: #60a5fa;"></div><span>Checked In Only</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #6f42c1;"></div><span>Upcoming</span>
+                            <div class="legend-color" style="background: #f8fafc; border-color: #cbd5e1;"></div><span>Upcoming</span>
                         </div>
                         <!--<div class="legend-item">-->
                         <!--    <div class="legend-color" style="background: rgba(255,255,255,0.3);"></div><span>Has Tasks</span>-->
@@ -837,6 +791,13 @@
                     </div>
                 </div>
             </div>
+
+            @if ($userInfo->role === 'manager')
+                <!-- Reporting Team Tab -->
+                <div class="tab-pane fade" id="reportingTeam" role="tabpanel">
+                    @include('client.team.partials.direct-reports', ['directReports' => $directReports])
+                </div>
+            @endif
 
             <!-- Documents Tab -->
             <div class="tab-pane fade" id="documents" role="tabpanel">
@@ -962,12 +923,12 @@
                 setTimeout(initializeCalendar, 100);
             }
 
-            $('#applyFilter').on('click', function() {
-                const selectedMonth = $('#monthFilter').val();
-                const encryptedId = '{{ encrypt($userInfo->id) }}';
+            // Navigation-driven month change (calendar's own prev/next/today
+            // buttons), replacing the old Apply/Reset filter form.
+            window.currentCalendarMonth = '{{ $selectedMonth }}';
 
-                if (!selectedMonth) {
-                    showToast('Please select a month', 'warning');
+            window.handleCalendarMonthChange = function(selectedMonth) {
+                if (selectedMonth === window.currentCalendarMonth) {
                     return;
                 }
 
@@ -975,33 +936,28 @@
                 const currentDate = moment();
 
                 if (selectedDate.isAfter(currentDate, 'month')) {
-                    showToast('Cannot select future months', 'warning');
-                    $('#monthFilter').val(currentDate.format('YYYY-MM'));
+                    if (calendar) calendar.gotoDate(currentDate.format('YYYY-MM') + '-01');
                     return;
                 }
 
-                const userOnboardDate = $('#monthFilter').data('onboard-date');
+                const userOnboardDate = $('#attendance').data('onboard-date');
                 if (userOnboardDate) {
                     const onboardDate = moment(userOnboardDate);
                     if (selectedDate.isBefore(onboardDate, 'month')) {
-                        showToast('Selected month is before employee onboarding date', 'warning');
+                        if (calendar) calendar.gotoDate(onboardDate.format('YYYY-MM') + '-01');
                         return;
                     }
                 }
 
+                window.currentCalendarMonth = selectedMonth;
+                const encryptedId = '{{ encrypt($userInfo->id) }}';
+
                 $('#calendarView').addClass('opacity-50');
                 $('#tableView').addClass('opacity-50');
-                $('.stats-grid').addClass('opacity-50');
+                $('.member-stats-grid').addClass('opacity-50');
 
                 updateAttendanceStats(selectedMonth, encryptedId);
-            });
-
-            $('#resetFilter').on('click', function(e) {
-                e.preventDefault();
-                const currentMonth = '{{ date('Y-m') }}';
-                $('#monthFilter').val(currentMonth);
-                $('#applyFilter').click();
-            });
+            };
         });
 
         let calendar = null;
@@ -1026,50 +982,67 @@
 
                 if (!dateStr || !status) return;
 
-                let bgColor, title, borderColor;
+                // Single-color (blue) theme, matching the app's blue-only
+                // convention (see the Team Attendance .stats-card family) —
+                // statuses are distinguished by shade/fill intensity, not hue.
+                let bgColor, title, borderColor, textColor;
                 const statusLower = status.toLowerCase();
 
                 switch (statusLower) {
                     case 'present':
-                        bgColor = '#28a745';
-                        borderColor = '#28a745';
+                        bgColor = '#2563eb';
+                        borderColor = '#1d4ed8';
+                        textColor = '#ffffff';
                         title = 'Present';
                         break;
+                    case 'halfday':
+                        bgColor = '#60a5fa';
+                        borderColor = '#3b82f6';
+                        textColor = '#ffffff';
+                        title = 'Half Day';
+                        break;
                     case 'absent':
-                        bgColor = '#dc3545';
-                        borderColor = '#dc3545';
+                        bgColor = '#1e3a8a';
+                        borderColor = '#1e293b';
+                        textColor = '#ffffff';
                         title = 'Absent';
                         break;
                     case 'first half leave':
                     case 'second half leave':
                     case 'full day leave':
-                        bgColor = '#fd7e14';
-                        borderColor = '#fd7e14';
+                        bgColor = '#dbeafe';
+                        borderColor = '#93c5fd';
+                        textColor = '#1d4ed8';
                         title = 'Leave';
                         break;
                     case 'holiday':
-                        bgColor = '#0d6efd';
-                        borderColor = '#0d6efd';
+                        bgColor = '#bfdbfe';
+                        borderColor = '#93c5fd';
+                        textColor = '#1d4ed8';
                         title = record.holiday_name || 'Holiday';
                         break;
                     case 'week off':
-                        bgColor = '#6c757d';
-                        borderColor = '#6c757d';
+                        bgColor = '#eff6ff';
+                        borderColor = '#dbeafe';
+                        textColor = '#475569';
                         title = 'Week Off';
                         break;
                     case 'checked in only':
-                        bgColor = '#ffc107';
-                        borderColor = '#ffc107';
+                        bgColor = '#93c5fd';
+                        borderColor = '#60a5fa';
+                        textColor = '#1e3a8a';
                         title = 'Checked In Only';
                         break;
                     case 'upcoming':
-                        bgColor = '#6f42c1';
-                        borderColor = '#6f42c1';
+                        bgColor = '#f8fafc';
+                        borderColor = '#cbd5e1';
+                        textColor = '#64748b';
                         title = 'Upcoming';
                         break;
                     default:
-                        bgColor = '#9ca3af';
-                        borderColor = '#9ca3af';
+                        bgColor = '#eff6ff';
+                        borderColor = '#dbeafe';
+                        textColor = '#475569';
                         title = status;
                 }
 
@@ -1098,7 +1071,7 @@
                     allDay: true,
                     backgroundColor: bgColor,
                     borderColor: borderColor,
-                    textColor: '#ffffff',
+                    textColor: textColor,
                     extendedProps: {
                         date: dateStr,
                         day_name: record.day_name,
@@ -1125,10 +1098,20 @@
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+                    right: ''
                 },
                 themeSystem: 'standard',
                 events: events,
+                datesSet: function(info) {
+                    // Native prev/next/today navigation replaces the old
+                    // Apply/Reset month filter — fetch the newly-visible
+                    // month's data as soon as the calendar moves.
+                    const visibleMonth = moment(info.view.currentStart).format('YYYY-MM');
+                    $('#currentMonthDisplay').text(moment(visibleMonth + '-01').format('MMMM YYYY'));
+                    if (window.handleCalendarMonthChange) {
+                        window.handleCalendarMonthChange(visibleMonth);
+                    }
+                },
                 eventClick: function(info) {
                     const formattedDate = info.event.startStr.split('T')[0];
                     const encryptedUserId = info.event.extendedProps.encrypted_user_id;
@@ -1139,16 +1122,22 @@
                 eventContent: function(arg) {
                     let taskCount = arg.event.extendedProps.task_count || 0;
                     let taskBadge = '';
-                    
+
+                    // Custom HTML replaces FullCalendar's own title element, so it
+                    // no longer reliably inherits the per-event textColor — set it
+                    // explicitly or a light-bg event (e.g. Week Off, Upcoming) can
+                    // render with unreadable (white-on-white) text.
+                    const txtColor = arg.event.textColor || '#1a2236';
+
                     if (taskCount > 0) {
-                        taskBadge = `<span class="task-count-badge">Tasks ${taskCount}</span>`;
+                        taskBadge = `<span class="task-count-badge" style="color:${txtColor};">Tasks ${taskCount}</span>`;
                     }
-                    
+
                     let cleanTitle = arg.event.title.replace(/📋 \d+/, '').trim();
-                    
+
                     return {
-                        html: `<div class="fc-event-main" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px;">
-                                    <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cleanTitle}</span>
+                        html: `<div class="fc-event-main" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; color: ${txtColor};">
+                                    <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${txtColor};">${cleanTitle}</span>
                                     ${taskBadge}
                                </div>`
                     };
@@ -1189,7 +1178,7 @@
                 type: 'GET',
                 data: { month: selectedMonth, _token: '{{ csrf_token() }}' },
                 beforeSend: function() {
-                    $('#applyFilter').prop('disabled', true).addClass('loading-text').html('<span class="loading-spinner"></span> Loading...');
+                    $('.fc-prev-button, .fc-next-button, .fc-today-button').prop('disabled', true);
                 },
                 success: function(response) {
                     if (response.status) {
@@ -1215,8 +1204,8 @@
                 complete: function() {
                     $('#calendarView').removeClass('opacity-50');
                     $('#tableView').removeClass('opacity-50');
-                    $('.stats-grid').removeClass('opacity-50');
-                    $('#applyFilter').prop('disabled', false).removeClass('loading-text').html('<i class="feather-filter me-1"></i> Apply');
+                    $('.member-stats-grid').removeClass('opacity-50');
+                    $('.fc-prev-button, .fc-next-button, .fc-today-button').prop('disabled', false);
                 }
             });
         }
@@ -1287,7 +1276,7 @@
                             allDay: true,
                             backgroundColor: event.bgColor,
                             borderColor: event.borderColor,
-                            textColor: event.color || '#ffffff',
+                            textColor: event.color || '#1a2236',
                             extendedProps: {
                                 date: event.start,
                                 day_name: event.day_status,

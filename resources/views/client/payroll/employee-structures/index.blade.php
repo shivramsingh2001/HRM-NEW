@@ -10,7 +10,7 @@
     /* search bar */
     .structure-search { position: relative; max-width: 360px; }
     .structure-search input {
-        padding-left: 34px; border-radius: 999px; border: 1px solid #dfe5f0; font-size: 12px;
+        padding-left: 34px !important; border-radius: 999px; border: 1px solid #dfe5f0; font-size: 12px;
         background: #fff; transition: all .15s;
     }
     .structure-search input:focus {
@@ -63,6 +63,20 @@
     .structure-drawer .component-row .comp-name { flex: 1; font-size: 11.5px; font-weight: 600; }
     .structure-drawer .component-row .method-field select { font-size: 10px; padding: 3px 6px; height: auto; width: 105px; }
     .structure-drawer .component-row .value-field input { font-size: 10.5px; padding: 3px 8px; height: auto; width: 115px; }
+    .structure-drawer .component-row-locked { opacity: .45; }
+    .structure-drawer .component-row-locked .comp-name::after { content: ' (not in this structure)'; font-weight: 400; font-size: 9.5px; color: #9aa1b1; }
+    .structure-drawer .base-components-row {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+        padding: 4px 0 8px 26px; margin-top: -4px; border-bottom: 1px solid #f4f6fb;
+    }
+    .structure-drawer .base-components-label { font-size: 9px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; }
+    .structure-drawer .base-comp-check {
+        display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 400;
+        background: #eef2ff; border: 1px solid #dbe2fb; border-radius: 999px; padding: 2px 8px; cursor: pointer;
+    }
+    .structure-drawer .base-comp-check input { margin: 0; }
+    #componentsTotalNotice { color: var(--gray-600); }
+    #componentsTotalNotice.components-over-budget { color: var(--danger); }
     .structure-drawer .btn { padding: 4px 12px; font-size: 11px; border-radius: 7px; }
     .structure-drawer .btn-primary { background: #1e3a8a; border-color: #1e3a8a; }
     .structure-drawer .btn-primary:hover { background: #16295e; border-color: #16295e; }
@@ -212,7 +226,7 @@
                 <div class="form-section">
                     <h6>Assignment</h6>
                     <div class="row">
-                        <div class="col-12 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label>Employee</label>
                             <input type="text" class="form-control" id="assign_employee_display" readonly>
                         </div>
@@ -229,6 +243,11 @@
                             <label for="ctc">Annual CTC (₹) *</label>
                             <input type="number" step="0.01" class="form-control" name="ctc" id="ctc" required>
                             <small class="text-danger error-text ctc_error"></small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="monthly_ctc_display">Monthly CTC (₹)</label>
+                            <input type="text" class="form-control" id="monthly_ctc_display" readonly tabindex="-1">
+                            {{-- <small class="text-muted" style="font-size:9px;">Annual CTC ÷ 12 — matches what the "Monthly Components" amounts below should add up to.</small> --}}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="effective_from">Effective From *</label>
@@ -254,8 +273,12 @@
                 </div>
 
                 <div class="form-section">
-                    <h6>Components</h6>
+                    <h6>Monthly Components</h6>
+                    <div id="componentsTotalNotice" class="mb-2" style="font-size:10.5px;font-weight:600;">
+                        Total: <span id="componentsTotalDisplay">₹0.00</span> / Monthly CTC <span id="componentsTotalCtcDisplay">₹0.00</span>
+                    </div>
                     <div id="componentsError" class="text-danger error-text components_error mb-2"></div>
+                    @php $earningComponents = $components->where('component_type', 'earning'); @endphp
                     @foreach (['earning' => 'Earnings', 'deduction' => 'Deductions', 'employer_contribution' => 'Employer Contributions', 'reimbursement' => 'Reimbursements'] as $type => $label)
                         @php $typeComponents = $components->where('component_type', $type); @endphp
                         @if ($typeComponents->isNotEmpty())
@@ -274,7 +297,7 @@
                                         <div class="method-field">
                                             <select class="form-control component-method" name="components[{{ $c->id }}][calculation_method]">
                                                 <option value="fixed_amount">Fixed ₹</option>
-                                                <option value="percentage">% of Basic</option>
+                                                <option value="percentage">% Of</option>
                                             </select>
                                         </div>
                                         <div class="value-field amount-field">
@@ -288,6 +311,36 @@
                                                 value="{{ $c->percentage_value }}" placeholder="%">
                                         </div>
                                     </div>
+                                    @if ($earningComponents->isNotEmpty() && in_array($type, ['deduction', 'employer_contribution']))
+                                        {{-- Deductions/Employer Contributions only — an Earning itself
+                                             switched to "% Of" doesn't get this (it would almost always
+                                             mean "% of CTC/Basic", a fixed_base case, not a sum of other
+                                             Earnings). Which Earnings components this percentage is
+                                             calculated on (e.g. "12% of Basic + HRA"). Sibling of
+                                             .component-row, not nested inside it, so it can span the full
+                                             row width without fighting that row's fixed-width flex
+                                             layout; shown only when this row's method is switched to "%
+                                             Of". Checking more boxes
+                                             updates the selection live — submitted as
+                                             components[id][base_component_ids][]. Pre-checked from the
+                                             catalog's own configured default (baseComponents), or from
+                                             this employee's existing assignment when revising (see the
+                                             overrides prefill in the script below). --}}
+                                        <div class="base-components-row" data-component-id="{{ $c->id }}" style="display:none;">
+                                            <span class="base-components-label">% Of (Earnings):</span>
+                                            @foreach ($earningComponents as $ec)
+                                                @if ($ec->id !== $c->id)
+                                                    <label class="base-comp-check" data-earning-id="{{ $ec->id }}">
+                                                        <input type="checkbox"
+                                                            name="components[{{ $c->id }}][base_component_ids][]"
+                                                            value="{{ $ec->id }}"
+                                                            {{ $c->baseComponents->contains('id', $ec->id) ? 'checked' : '' }}>
+                                                        {{ $ec->name }}
+                                                    </label>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 @endforeach
                             </div>
                         @endif
@@ -318,11 +371,21 @@
         @foreach ($structures as $s)
             {{ $s->id }}: [
                 @foreach ($s->components as $sc)
+                    @php
+                        // The template's own "% Of (Earnings)" override takes
+                        // precedence; falls back to the catalog's configured
+                        // default when this structure component has none —
+                        // same precedence order as the per-employee override.
+                        $scBaseIds = $sc->baseComponents->isNotEmpty()
+                            ? $sc->baseComponents->pluck('id')
+                            : $sc->component->baseComponents->pluck('id');
+                    @endphp
                     {
                         id: {{ $sc->payroll_component_master_id }},
                         method: '{{ $sc->override_calculation_method ?? $sc->component->calculation_method }}',
                         amount: {{ $sc->override_amount ?? $sc->component->default_amount ?? 'null' }},
-                        percentage: {{ $sc->override_percentage ?? $sc->component->percentage_value ?? 'null' }}
+                        percentage: {{ $sc->override_percentage ?? $sc->component->percentage_value ?? 'null' }},
+                        base_component_ids: [{{ $scBaseIds->implode(',') }}]
                     },
                 @endforeach
             ],
@@ -404,12 +467,95 @@
             openAssignDrawerForUser(userId);
         });
 
+        // Monthly CTC is purely a derived, read-only display — Annual CTC
+        // is the one field actually submitted/stored.
+        function updateMonthlyCtcDisplay() {
+            const annual = parseFloat($('#ctc').val()) || 0;
+            $('#monthly_ctc_display').val((annual / 12).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            refreshComponentsTotalDisplay();
+        }
+        $('#ctc').on('input change', updateMonthlyCtcDisplay);
+
+        // Monthly Components can't add up to more than Monthly CTC — this
+        // is a live, best-effort mirror of the server-side check in
+        // PayrollEmployeeStructureController::estimateMonthlyComponentsTotal()
+        // (same algorithm: fixed-amount rows summed directly, a percentage
+        // row's base resolved only from OTHER checked fixed-amount rows in
+        // this same form). The server re-validates for real on submit
+        // regardless — this is purely so the mistake is visible immediately
+        // instead of only after clicking Save.
+        function computeMonthlyComponentsTotal() {
+            const fixedAmounts = {};
+            let total = 0;
+
+            $('.component-row').each(function() {
+                const row = $(this);
+                if (!row.find('.component-toggle').is(':checked')) return;
+                if (row.find('.component-method').val() !== 'fixed_amount') return;
+                const amt = parseFloat(row.find('.amount-field input').val()) || 0;
+                fixedAmounts[row.data('component-id')] = amt;
+                total += amt;
+            });
+
+            $('.component-row').each(function() {
+                const row = $(this);
+                if (!row.find('.component-toggle').is(':checked')) return;
+                if (row.find('.component-method').val() !== 'percentage') return;
+                const pct = parseFloat(row.find('.percentage-field input').val()) || 0;
+                let base = 0;
+                $('.base-components-row[data-component-id="' + row.data('component-id') + '"] input[type="checkbox"]:checked')
+                    .each(function() {
+                        base += fixedAmounts[$(this).val()] || 0;
+                    });
+                total += base * pct / 100;
+            });
+
+            return total;
+        }
+
+        function refreshComponentsTotalDisplay() {
+            const monthlyCtc = (parseFloat($('#ctc').val()) || 0) / 12;
+            const total = computeMonthlyComponentsTotal();
+            const overBudget = total > monthlyCtc + 0.01;
+
+            $('#componentsTotalDisplay').text('₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            $('#componentsTotalCtcDisplay').text('₹' + monthlyCtc.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            $('#componentsTotalNotice').toggleClass('components-over-budget', overBudget);
+
+            return !overBudget;
+        }
+
+        $(document).on('input change', '.component-toggle, .component-method, .amount-field input, .percentage-field input, .base-comp-check input', refreshComponentsTotalDisplay);
+
+        // The "% Of (Earnings)" list must only ever offer Earnings
+        // components that are actually enabled/checked for THIS employee's
+        // structure — not the tenant's whole Earnings catalog. Hides (and
+        // un-checks, so a now-unavailable base can never be silently
+        // submitted) any base-comp-check whose own main enable checkbox
+        // isn't ticked. Re-run any time an earning's enable state changes.
+        function refreshBaseComponentOptions() {
+            $('.base-comp-check[data-earning-id]').each(function() {
+                const earningId = $(this).data('earning-id');
+                const isEnabled = $('#assign_comp_' + earningId).is(':checked');
+                $(this).toggle(isEnabled);
+                if (!isEnabled) {
+                    $(this).find('input[type="checkbox"]').prop('checked', false);
+                }
+            });
+        }
+
         $(document).on('change', '.component-method', function() {
             const row = $(this).closest('.component-row');
             const isPercentage = $(this).val() === 'percentage';
             row.find('.amount-field').toggle(!isPercentage);
             row.find('.percentage-field').toggle(isPercentage);
+
+            const componentId = row.data('component-id');
+            $('.base-components-row[data-component-id="' + componentId + '"]').toggle(isPercentage);
+            if (isPercentage) refreshBaseComponentOptions();
         });
+
+        $(document).on('change', '.component-toggle', refreshBaseComponentOptions);
 
         $('#payroll_structure_id').on('change', function() {
             const structureId = $(this).val();
@@ -419,8 +565,24 @@
             });
 
             if (!structureId || !structureComponents[structureId]) {
+                // Ad hoc (no template) — every component freely selectable again.
+                $('.component-row').removeClass('component-row-locked')
+                    .find('.component-toggle').prop('disabled', false);
                 return;
             }
+
+            // "Only the components selected in that structure should be
+            // used" — lock down every component NOT in this structure so it
+            // can't be manually checked, instead of just pre-checking the
+            // matching ones and leaving the rest freely editable.
+            const allowedIds = structureComponents[structureId].map(c => c.id);
+            $('.component-row').each(function() {
+                const row = $(this);
+                const componentId = parseInt(row.data('component-id'), 10);
+                const allowed = allowedIds.includes(componentId);
+                row.toggleClass('component-row-locked', !allowed);
+                row.find('.component-toggle').prop('disabled', !allowed);
+            });
 
             structureComponents[structureId].forEach(function(comp) {
                 const row = $('.component-row[data-component-id="' + comp.id + '"]');
@@ -430,16 +592,43 @@
                 row.find('.component-method').val(comp.method).trigger('change');
                 if (comp.method === 'percentage') {
                     row.find('.percentage-field input').val(comp.percentage);
+
+                    // Pre-check from this template's own base-component
+                    // selection (already resolved server-side to the
+                    // template's override, or the catalog default if it
+                    // has none — see structureComponents above).
+                    const baseIds = (comp.base_component_ids || []).map(String);
+                    $('.base-components-row[data-component-id="' + comp.id + '"] input[type="checkbox"]')
+                        .each(function() {
+                            $(this).prop('checked', baseIds.includes(String($(this).val())));
+                        });
                 } else {
                     row.find('.amount-field input').val(comp.amount);
                 }
             });
+
+            // Run once after every row's enable-state is finalized above —
+            // the per-row .component-method 'change' trigger already calls
+            // this too, but iteration order within structureComponents[...]
+            // isn't guaranteed earnings-first, so a row-level call could run
+            // before its sibling earnings are checked yet.
+            refreshBaseComponentOptions();
+            refreshComponentsTotalDisplay();
         });
 
         function resetAssignForm() {
             $('#assignForm')[0].reset();
             $('.component-row .amount-field').show();
             $('.component-row .percentage-field').hide();
+            $('.component-row').removeClass('component-row-locked')
+                .find('.component-toggle').prop('disabled', false);
+            // Native reset() restores each checkbox's checked state (back to
+            // the catalog default) but doesn't fire 'change', so the
+            // visibility toggle from the .component-method handler has to
+            // be re-applied manually here.
+            $('.base-components-row').hide();
+            refreshBaseComponentOptions();
+            updateMonthlyCtcDisplay();
             $('.error-text').text('');
             $('#assignFormError').addClass('d-none').text('');
             $('#assignCurrentNotice').addClass('d-none').text('');
@@ -461,6 +650,7 @@
 
                     if (d.current) {
                         $('#ctc').val(d.current.ctc);
+                        updateMonthlyCtcDisplay();
                         $('#effective_from').val(d.current.effective_from);
                         $('#revision_type').val('increment');
                         $('#assignCurrentNotice').removeClass('d-none').html(
@@ -479,10 +669,25 @@
                             row.find('.component-method').val(values.calculation_method).trigger('change');
                             if (values.calculation_method === 'percentage') {
                                 row.find('.percentage-field input').val(values.percentage_value);
+
+                                // This employee's existing assignment already has
+                                // its own "% Of" base selection (possibly a
+                                // per-assignment override, not just the catalog
+                                // default) — replace whatever the page loaded
+                                // with those checkbox states as the true source
+                                // of truth for revising this employee.
+                                const baseIds = (values.base_component_ids || []).map(String);
+                                $('.base-components-row[data-component-id="' + componentId + '"] input[type="checkbox"]')
+                                    .each(function() {
+                                        $(this).prop('checked', baseIds.includes(String($(this).val())));
+                                    });
                             } else {
                                 row.find('.amount-field input').val(values.amount);
                             }
                         });
+
+                        refreshBaseComponentOptions();
+                        refreshComponentsTotalDisplay();
 
                         $('#assignDrawerLabel').text('Revise Dynamic Payroll Structure');
                     } else {
@@ -514,6 +719,16 @@
             e.preventDefault();
             $('.error-text').text('');
             $('#assignFormError').addClass('d-none').text('');
+
+            // Instant feedback before the round-trip — the server
+            // re-validates this for real regardless (estimateMonthlyComponentsTotal()
+            // in the controller), this is purely so a submit doesn't have to
+            // fail a request first to find out.
+            if (!refreshComponentsTotalDisplay()) {
+                $('.components_error').text('Selected components exceed the Monthly CTC — reduce the amounts/percentages or increase the CTC.');
+                toastr.error('Monthly Components exceed the Monthly CTC.');
+                return;
+            }
 
             $.ajax({
                 url: '{{ route("payroll-employee-structures.store") }}',

@@ -11,6 +11,7 @@ class BiometricDevice extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'auto_provision' => 'boolean',
+        'allow_direct_onboarding' => 'boolean',
         'default_privilege' => 'integer',
         'last_seen_at' => 'datetime',
         'last_punch_at' => 'datetime',

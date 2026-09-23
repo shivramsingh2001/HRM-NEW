@@ -374,35 +374,6 @@
         gap: 10px;
     }
 
-    .employee-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        background: #e3edfe;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #1e3a8a;
-        font-weight: 600;
-        font-size: 14px;
-        text-transform: uppercase;
-    }
-
-    .employee-details {
-        line-height: 1.3;
-    }
-
-    .employee-name {
-        font-weight: 600;
-        color: #1e293b;
-        font-size: 12px;
-    }
-
-    .employee-email {
-        font-size: 11px;
-        color: #64748b;
-    }
-
     .reporting-head-badge {
         font-size: 10px;
         background: #e0e7ff;
@@ -1295,7 +1266,7 @@
                             Showing {{ $regularizations->firstItem() }} to {{ $regularizations->lastItem() }} 
                             of {{ $regularizations->total() }} entries
                         </div>
-                        <div>
+                        <div class="remove-internal-para">
                             {{ $regularizations->appends(request()->query())->links() }}
                         </div>
                     </div>

@@ -1340,13 +1340,19 @@
                     <label for="self_assigned">Assignment Type *</label>
                     <select class="form-control" name="self_assigned" id="self_assigned" required>
                         <option value="" disabled selected>Select Assignment Type</option>
-                        @if (!in_array($authUser->role, ['admin']))
-                            <option value="1">Self Assigned (Task for myself)</option>
-                        @endif
-                        @if (!in_array($authUser->role, ['employee']))
-                            <option value="0">Assign to Someone Else</option>
-                            <option value="2">Assign to Group (Multiple Members)</option>
-                        @endif
+                        @feature('task_single')
+                            @if (!in_array($authUser->role, ['admin']))
+                                <option value="1">Self Assigned (Task for myself)</option>
+                            @endif
+                            @if (!in_array($authUser->role, ['employee']))
+                                <option value="0">Assign to Someone Else</option>
+                            @endif
+                        @endfeature
+                        @feature('task_group')
+                            @if (!in_array($authUser->role, ['employee']))
+                                <option value="2">Assign to Group (Multiple Members)</option>
+                            @endif
+                        @endfeature
                     </select>
                     <small class="form-hint">Self-assigned tasks go to your reporting head for approval.</small>
                     <small class="error-text self_assigned_error"></small>

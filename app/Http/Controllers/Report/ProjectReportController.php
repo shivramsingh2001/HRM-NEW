@@ -72,8 +72,32 @@ class ProjectReportController extends Controller
                     ->when($request->filled('department_id'), fn ($q) => $q->where('user_job_details.department', $request->department_id));
             });
         }
+        if ($request->filled('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('projects.name', 'like', "%{$search}%")
+                    ->orWhere('projects.project_code', 'like', "%{$search}%")
+                    ->orWhereExists(function ($sub) use ($search) {
+                        $sub->select(DB::raw(1))->from('users')
+                            ->whereColumn('users.id', 'projects.project_head')
+                            ->where(function ($u) use ($search) {
+                                $u->where('users.name', 'like', "%{$search}%")
+                                    ->orWhere('users.employee_id', 'like', "%{$search}%");
+                            });
+                    });
+            });
+        }
 
         return $query;
+    }
+
+    /** Left-join the project head's branch, so every report that goes through
+     *  applyCommonFilters() can also show/export a Branch column. */
+    private function joinProjectHeadBranch($query)
+    {
+        return $query
+            ->leftJoin('user_job_details as pr_ujd', 'projects.project_head', '=', 'pr_ujd.user_id')
+            ->leftJoin('company_branches as pr_branch', 'pr_ujd.branch_id', '=', 'pr_branch.id');
     }
 
     // ==================== 1. Project Summary Report ====================
@@ -96,11 +120,11 @@ class ProjectReportController extends Controller
         fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
         $this->writeCsvRow($handle, ['Project Summary Report — generated ' . now()->format('d M Y H:i')]);
         $this->writeCsvRow($handle, []);
-        $this->writeCsvRow($handle, ['Code', 'Name', 'Manager', 'Status', 'Priority', 'Start Date', 'Deadline', 'Team Size', 'Tasks Total', 'Tasks Completed', 'Progress %', 'Budget', 'Spent']);
+        $this->writeCsvRow($handle, ['Code', 'Name', 'Manager', 'Branch', 'Status', 'Priority', 'Start Date', 'Deadline', 'Team Size', 'Tasks Total', 'Tasks Completed', 'Progress %', 'Budget', 'Spent']);
 
         foreach ($projects as $p) {
             $this->writeCsvRow($handle, [
-                $p->project_code, $p->name, $p->manager_name, ucfirst($p->status), ucfirst($p->priority),
+                $p->project_code, $p->name, $p->manager_name, $p->branch_name ?? '—', ucfirst($p->status), ucfirst($p->priority),
                 optional($p->start_date)->format('d M Y'), optional($p->deadline_date)->format('d M Y'),
                 $p->team_size, $p->tasks_total, $p->tasks_completed, $p->progress_percentage,
                 $p->budget !== null ? number_format((float) $p->budget, 2) : '', number_format((float) $p->spent, 2),
@@ -119,11 +143,12 @@ class ProjectReportController extends Controller
     private function buildSummaryRows(Request $request)
     {
         $query = DB::table('projects')
-            ->leftJoin('users', 'projects.project_head', '=', 'users.id')
-            ->select(
+            ->leftJoin('users', 'projects.project_head', '=', 'users.id');
+        $query = $this->joinProjectHeadBranch($query);
+        $query->select(
                 'projects.id', 'projects.project_code', 'projects.name', 'projects.status', 'projects.priority',
                 'projects.start_date', 'projects.deadline_date', 'projects.progress_percentage', 'projects.budget',
-                'users.name as manager_name'
+                'users.name as manager_name', 'pr_branch.name as branch_name'
             )
             ->selectRaw('(SELECT COUNT(*) FROM project_assigns WHERE project_id = projects.id AND status = 1) as team_size')
             ->selectRaw('(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id) as tasks_total')
@@ -159,11 +184,11 @@ class ProjectReportController extends Controller
         fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
         $this->writeCsvRow($handle, ['Project Progress Report — generated ' . now()->format('d M Y H:i')]);
         $this->writeCsvRow($handle, []);
-        $this->writeCsvRow($handle, ['Code', 'Name', 'Progress %', 'Completed', 'In Progress', 'Pending', 'Overdue Tasks', 'Days Remaining/Overdue', 'Latest Update']);
+        $this->writeCsvRow($handle, ['Code', 'Name', 'Branch', 'Progress %', 'Completed', 'In Progress', 'Pending', 'Overdue Tasks', 'Days Remaining/Overdue', 'Latest Update']);
 
         foreach ($projects as $p) {
             $this->writeCsvRow($handle, [
-                $p->project_code, $p->name, $p->progress_percentage, $p->tasks_completed, $p->tasks_in_progress,
+                $p->project_code, $p->name, $p->branch_name ?? '—', $p->progress_percentage, $p->tasks_completed, $p->tasks_in_progress,
                 $p->tasks_pending, $p->tasks_overdue, $p->days_label, $p->latest_update_summary,
             ]);
         }
@@ -179,8 +204,9 @@ class ProjectReportController extends Controller
 
     private function buildProgressRows(Request $request)
     {
-        $query = DB::table('projects')
-            ->select('projects.id', 'projects.project_code', 'projects.name', 'projects.status', 'projects.deadline_date', 'projects.progress_percentage')
+        $query = DB::table('projects');
+        $query = $this->joinProjectHeadBranch($query);
+        $query->select('projects.id', 'projects.project_code', 'projects.name', 'projects.status', 'projects.deadline_date', 'projects.progress_percentage', 'pr_branch.name as branch_name')
             ->selectRaw("(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND status IN ('completed','approved')) as tasks_completed")
             ->selectRaw("(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND status = 'in_progress') as tasks_in_progress")
             ->selectRaw("(SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND status = 'pending') as tasks_pending")
@@ -234,11 +260,11 @@ class ProjectReportController extends Controller
         fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
         $this->writeCsvRow($handle, ['Project Task & Employee Performance Report — generated ' . now()->format('d M Y H:i')]);
         $this->writeCsvRow($handle, []);
-        $this->writeCsvRow($handle, ['Employee', 'Employee ID', 'Project', 'Total Tasks', 'Completed', 'In Progress', 'Pending', 'Overdue', 'Completion Rate %']);
+        $this->writeCsvRow($handle, ['Employee', 'Employee ID', 'Branch', 'Project', 'Total Tasks', 'Completed', 'In Progress', 'Pending', 'Overdue', 'Completion Rate %']);
 
         foreach ($rows as $r) {
             $rate = $r->total > 0 ? round(($r->completed / $r->total) * 100, 1) : 0;
-            $this->writeCsvRow($handle, [$r->employee_name, $r->employee_code, $r->project_name, $r->total, $r->completed, $r->in_progress, $r->pending, $r->overdue, $rate]);
+            $this->writeCsvRow($handle, [$r->employee_name, $r->employee_code, $r->branch_name ?? '—', $r->project_name, $r->total, $r->completed, $r->in_progress, $r->pending, $r->overdue, $rate]);
         }
 
         rewind($handle);
@@ -258,6 +284,8 @@ class ProjectReportController extends Controller
             ->join('tasks', 'task_assigns.task_id', '=', 'tasks.id')
             ->join('users', 'task_assigns.assigned_to', '=', 'users.id')
             ->leftJoin('projects', 'tasks.project_id', '=', 'projects.id')
+            ->leftJoin('user_job_details as tp_ujd', 'users.id', '=', 'tp_ujd.user_id')
+            ->leftJoin('company_branches as tp_branch', 'tp_ujd.branch_id', '=', 'tp_branch.id')
             ->where('tasks.tenant_id', $tenantId);
 
         if ($request->filled('project_id')) {
@@ -273,10 +301,16 @@ class ProjectReportController extends Controller
             $query->where('tasks.status', $request->status);
         }
         if ($request->filled('department_id')) {
-            $query->whereExists(function ($sub) use ($request) {
-                $sub->select(DB::raw(1))->from('user_job_details')
-                    ->whereColumn('user_job_details.user_id', 'users.id')
-                    ->where('user_job_details.department', $request->department_id);
+            $query->where('tp_ujd.department', $request->department_id);
+        }
+        if ($request->filled('branch_id')) {
+            $query->where('tp_ujd.branch_id', $request->branch_id);
+        }
+        if ($request->filled('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('users.name', 'like', "%{$search}%")
+                    ->orWhere('users.employee_id', 'like', "%{$search}%");
             });
         }
         if ($request->filled('date_from')) {
@@ -288,6 +322,7 @@ class ProjectReportController extends Controller
 
         return $query->select(
                 'users.id as user_id', 'users.name as employee_name', 'users.employee_id as employee_code',
+                'tp_branch.name as branch_name',
                 'projects.id as project_id', 'projects.name as project_name',
                 DB::raw('COUNT(*) as total'),
                 DB::raw("SUM(CASE WHEN tasks.status IN ('completed','approved') THEN 1 ELSE 0 END) as completed"),
@@ -295,7 +330,7 @@ class ProjectReportController extends Controller
                 DB::raw("SUM(CASE WHEN tasks.status = 'pending' THEN 1 ELSE 0 END) as pending"),
                 DB::raw("SUM(CASE WHEN tasks.status NOT IN ('completed','approved','cancelled','rejected') AND tasks.deadline_date < CURDATE() THEN 1 ELSE 0 END) as overdue")
             )
-            ->groupBy('users.id', 'users.name', 'users.employee_id', 'projects.id', 'projects.name')
+            ->groupBy('users.id', 'users.name', 'users.employee_id', 'tp_branch.name', 'projects.id', 'projects.name')
             ->orderByDesc('total')
             ->get();
     }
@@ -320,11 +355,11 @@ class ProjectReportController extends Controller
         fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
         $this->writeCsvRow($handle, ['Project Timeline / Overdue Report — generated ' . now()->format('d M Y H:i')]);
         $this->writeCsvRow($handle, []);
-        $this->writeCsvRow($handle, ['Code', 'Name', 'Manager', 'Status', 'Start Date', 'Deadline', 'Overdue?', 'Days', 'Next Milestone']);
+        $this->writeCsvRow($handle, ['Code', 'Name', 'Manager', 'Branch', 'Status', 'Start Date', 'Deadline', 'Overdue?', 'Days', 'Next Milestone']);
 
         foreach ($projects as $p) {
             $this->writeCsvRow($handle, [
-                $p->project_code, $p->name, $p->manager_name, ucfirst($p->status),
+                $p->project_code, $p->name, $p->manager_name, $p->branch_name ?? '—', ucfirst($p->status),
                 optional($p->start_date)->format('d M Y'), optional($p->deadline_date)->format('d M Y'),
                 $p->is_overdue ? 'Yes' : 'No', $p->days_label, $p->next_milestone,
             ]);
@@ -342,10 +377,11 @@ class ProjectReportController extends Controller
     private function buildTimelineRows(Request $request)
     {
         $query = DB::table('projects')
-            ->leftJoin('users', 'projects.project_head', '=', 'users.id')
-            ->select(
+            ->leftJoin('users', 'projects.project_head', '=', 'users.id');
+        $query = $this->joinProjectHeadBranch($query);
+        $query->select(
                 'projects.id', 'projects.project_code', 'projects.name', 'projects.status',
-                'projects.start_date', 'projects.deadline_date', 'users.name as manager_name'
+                'projects.start_date', 'projects.deadline_date', 'users.name as manager_name', 'pr_branch.name as branch_name'
             );
 
         $this->applyCommonFilters($query, $request);

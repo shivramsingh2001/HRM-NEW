@@ -96,6 +96,9 @@
                     <div class="filter-item">
                         <input type="date" name="date_to" class="form-control-sm-custom" value="{{ request('date_to') }}" title="Deadline to">
                     </div>
+                    <div class="filter-item">
+                        <input type="text" name="search" class="form-control-sm-custom" placeholder="Search project, code or manager…" value="{{ request('search') }}">
+                    </div>
                     <div class="filter-item"><button type="submit" class="btn-sm-custom"><i class="feather-eye"></i> View</button></div>
                     <div class="filter-item"><a href="{{ route('report.project.summary.index') }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
                 </div>
@@ -108,7 +111,7 @@
                     <table class="table table-hover" id="reportTable">
                         <thead>
                             <tr>
-                                <th>Code</th><th>Name</th><th>Manager</th><th>Status</th><th>Priority</th>
+                                <th>Code</th><th>Name</th><th>Manager</th><th>Branch</th><th>Status</th><th>Priority</th>
                                 <th>Start</th><th>Deadline</th><th>Team</th><th>Tasks</th><th>Progress</th><th>Budget</th><th>Spent</th>
                             </tr>
                         </thead>
@@ -118,6 +121,7 @@
                                     <td>{{ $p->project_code }}</td>
                                     <td>{{ $p->name }}</td>
                                     <td>{{ $p->manager_name ?? 'N/A' }}</td>
+                                    <td>{{ $p->branch_name ?? '—' }}</td>
                                     <td><span class="rpt-badge {{ in_array($p->status, ['ongoing','pending','hold']) ? 'badge-active' : 'badge-inactive' }}">{{ ucfirst($p->status) }}</span></td>
                                     <td>{{ ucfirst($p->priority) }}</td>
                                     <td>{{ optional($p->start_date)->format('d M Y') ?? '—' }}</td>
@@ -134,7 +138,7 @@
                                     <td>{{ number_format($p->spent, 2) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="12" class="text-center text-muted py-4">No projects match the selected filters.</td></tr>
+                                <tr><td colspan="13" class="text-center text-muted py-4">No projects match the selected filters.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

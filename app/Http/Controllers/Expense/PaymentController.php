@@ -2,45 +2,67 @@
 
 namespace App\Http\Controllers\Expense;
 
+use App\Exceptions\ExpenseException;
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\ExpensePayment;
-use App\Models\ExpenseStatusHistory;
-use App\Models\ExpenseTransaction;
 use App\Models\User;
-use App\Models\UserExpenseBalance;
-use App\Models\UserJobDetail;          // ← Bug 4 fix
+use App\Services\Expense\ExpensePaymentService;
+use App\Services\ExpensePaymentNotificationService;
+use App\Services\RbacService;
+use App\Support\Money;
+use App\Traits\AuthorizesByScope;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use App\Services\ExpensePaymentNotificationService;
-use App\Services\RbacService;
-use App\Traits\AuthorizesByScope;
 
+/**
+ * Expense payments — HTTP edge only: validate, authorize, call
+ * ExpensePaymentService (which owns the locking, ledger and paid_amount rules),
+ * map ExpenseException to JSON, send notifications after commit.
+ *
+ * No balance math or lockForUpdate lives here any more (see
+ * App\Services\Expense\ExpensePaymentService / ExpenseLedgerService).
+ */
 class PaymentController extends Controller
 {
     use AuthorizesByScope;
 
     protected $notificationService;
 
-    public function __construct(ExpensePaymentNotificationService $notificationService)
-    {
+    public function __construct(
+        ExpensePaymentNotificationService $notificationService,
+        protected ExpensePaymentService $payments,
+    ) {
         $this->notificationService = $notificationService;
     }
+
+    // ==================== LISTING ====================
+
     public function index(Request $request)
     {
         try {
             $authUser = Auth::user();
-            $employees = User::where('status', 1)->get();
+            $rbac = app(RbacService::class);
+            $canManage = $rbac->can($authUser, 'expenses', 'manage');
+
+            // Only people who can record payments need the employee picker /
+            // payable lists. (Previously every viewer got ALL users and ALL
+            // approved advances/reimbursements in the company.)
+            $employees = $canManage
+                ? User::where('status', 1)->select('id', 'name', 'employee_id', 'email')->orderBy('name')->get()
+                : collect();
 
             $query = ExpensePayment::with(['expense.user', 'payer'])
                 ->join('expenses', 'expense_payments.expense_id', '=', 'expenses.id')
                 ->join('users', 'expenses.user_id', '=', 'users.id')
+                ->leftJoin('expense_payment_batches as pb', 'pb.id', '=', 'expense_payments.batch_id')
                 ->select(
                     'expense_payments.*',
+                    'pb.voucher_number',
                     'expenses.expense_number',
                     'expenses.amount as expense_amount',
                     'expenses.requirement_type',
@@ -49,9 +71,8 @@ class PaymentController extends Controller
                     'users.email as employee_email'
                 );
 
-            if (app(RbacService::class)->scopeFor($authUser, 'expenses', 'view') !== 'company') {
-                $query->where('expenses.user_id', $authUser->id);
-            }
+            // Permission-driven scope (own / team / company), not "company or self".
+            $this->applyScope($query, 'expenses.user_id', $authUser, 'expenses', 'view');
 
             if ($request->filled('payment_mode')) {
                 $query->where('expense_payments.payment_mode', $request->payment_mode);
@@ -65,12 +86,18 @@ class PaymentController extends Controller
             if ($request->filled('user_id')) {
                 $query->where('expenses.user_id', $request->user_id);
             }
+            if (in_array($request->input('status'), ['posted', 'voided'], true)) {
+                $query->where('expense_payments.status', $request->input('status'));
+            }
             if ($request->filled('search')) {
                 $searchTerm = '%' . $request->search . '%';
                 $query->where(function ($q) use ($searchTerm) {
                     $q->where('users.name', 'LIKE', $searchTerm)
+                        ->orWhere('users.email', 'LIKE', $searchTerm)
+                        ->orWhere('users.employee_id', 'LIKE', $searchTerm)
                         ->orWhere('expenses.expense_number', 'LIKE', $searchTerm)
-                        ->orWhere('expense_payments.reference_number', 'LIKE', $searchTerm);
+                        ->orWhere('expense_payments.reference_number', 'LIKE', $searchTerm)
+                        ->orWhere('pb.voucher_number', 'LIKE', $searchTerm);
                 });
             }
 
@@ -78,66 +105,48 @@ class PaymentController extends Controller
                 ->paginate(15)
                 ->withQueryString();
 
-            $statsQuery = ExpensePayment::query()
+            // The list shows voided payments (struck through) for audit, but the totals
+            // and per-mode figures count POSTED payments only.
+            $statsQuery = ExpensePayment::query()->posted()
                 ->join('expenses', 'expense_payments.expense_id', '=', 'expenses.id');
 
-            if (app(RbacService::class)->scopeFor($authUser, 'expenses', 'view') !== 'company') {
-                $statsQuery->where('expenses.user_id', $authUser->id);
-            }
+            $this->applyScope($statsQuery, 'expenses.user_id', $authUser, 'expenses', 'view');
+
             if ($request->filled('user_id')) {
                 $statsQuery->where('expenses.user_id', $request->user_id);
             }
 
             $totalPayments = $statsQuery->count();
-            $totalAmount   = $statsQuery->sum('expense_payments.amount');
-            $modeStats     = $statsQuery->select(
+            $totalAmount = $statsQuery->sum('expense_payments.amount');
+            $modeStats = $statsQuery->select(
                 'expense_payments.payment_mode',
                 DB::raw('count(*) as count'),
                 DB::raw('sum(expense_payments.amount) as total')
             )->groupBy('expense_payments.payment_mode')->get();
 
-            // Include both advance AND reimbursement approved expenses
-            $approvedAdvance = Expense::with('user')
-                ->whereIn('requirement_type', ['advance'])
-                ->where('status', 'approved')
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($expense) {
-                    $paidAmount = $expense->payments()->sum('amount');
-                    $expense->paid_amount      = $paidAmount;
-                    $expense->remaining_amount = $expense->amount - $paidAmount;
-                    return $expense;
-                })
-                ->filter(fn($e) => $e->remaining_amount > 0);
-            $approvedreimbursement = Expense::with('user')
-                ->whereIn('requirement_type', ['reimbursement'])
-                ->where('status', 'approved')
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($expense) {
-                    $paidAmount = $expense->payments()->sum('amount');
-                    $expense->paid_amount      = $paidAmount;
-                    $expense->remaining_amount = $expense->amount - $paidAmount;
-                    return $expense;
-                })
-                ->filter(fn($e) => $e->remaining_amount > 0);
-
             return view('client.expense.expense.payment', [
-                'payments'        => $payments,
-                'totalPayments'   => $totalPayments,
-                'totalAmount'     => $totalAmount,
-                'modeStats'       => $modeStats,
-                'approvedAdvances' => $approvedAdvance,
-                'approvedReimbursements' => $approvedreimbursement,
-                'userRole'        => $authUser->role,
-                'filters'         => $request->all(),
-                'paymentModes'    => ['cash', 'bank_transfer', 'cheque', 'upi'],
-                'employees'       => $employees
+                'payments' => $payments,
+                'totalPayments' => $totalPayments,
+                'totalAmount' => $totalAmount,
+                'modeStats' => $modeStats,
+                'approvedAdvances' => $canManage ? $this->payableExpenses($authUser, ['advance']) : collect(),
+                'approvedReimbursements' => $canManage ? $this->payableExpenses($authUser, ['reimbursement']) : collect(),
+                'userRole' => $authUser->role,
+                'filters' => $request->all(),
+                'paymentModes' => ['cash', 'bank_transfer', 'cheque', 'upi'],
+                'employees' => $employees,
+                'canManage' => $canManage,
+                // Per-company switch (Super Admin): shows the Pay Batch / Vouchers buttons.
+                'bulkEnabled' => app(\App\Services\FeatureService::class)->enabledForCurrentTenant('expense_bulk_payment'),
             ]);
         } catch (Exception $e) {
-            Log::error('Error in payment index: ' . $e->getMessage());
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                throw $e; // 403 from applyScope must stay a 403
+            }
+            Log::error('Error in payment index: ' . $e->getMessage(), ['user_id' => Auth::id()]);
+
             return redirect()->route('expense.view-all')
-                ->with('error', 'Failed to load payments: ' . $e->getMessage());
+                ->with('error', 'Failed to load payments. Please try again or contact support.');
         }
     }
 
@@ -146,623 +155,15 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
+            if (! app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
             }
 
-            $userId = $request->get('user_id');
+            $data = $this->payableExpenses($authUser, ['advance', 'reimbursement'], $request->get('user_id'), 'asc');
 
-            $query = Expense::with(['user', 'expenseType', 'project'])
-                ->whereIn('requirement_type', ['advance', 'reimbursement'])
-                ->where('status', 'approved');
-
-            if ($userId) {
-                $query->where('user_id', $userId);
-            }
-
-            $pendingAdvances = $query->orderBy('created_at', 'asc')
-                ->get()
-                ->map(function ($expense) {
-                    $totalPaid = $expense->payments()->sum('amount');
-                    $expense->paid_amount      = $totalPaid;
-                    $expense->remaining_amount = $expense->amount - $totalPaid;
-                    return $expense;
-                })
-                ->filter(fn($e) => $e->remaining_amount > 0)
-                ->values();
-
-            return response()->json(['success' => true, 'data' => $pendingAdvances]);
+            return response()->json(['success' => true, 'data' => $data]);
         } catch (Exception $e) {
-            Log::error('Error getting user pending advances: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to get pending advances: ' . $e->getMessage()], 500);
-        }
-    }
-
-    public function store(Request $request)
-    {
-       
-        $validator = Validator::make($request->all(), [
-            'payment_date'     => 'required|date',
-            'amount'           => 'required|numeric|min:0.01',
-            'payment_mode'     => 'required|in:cash,bank_transfer,cheque,upi',
-            'reference_number' => 'nullable|string|max:100',
-            'bank_name'        => 'nullable|string|max:255',
-            'paid_to'          => 'nullable|string|max:255',
-            'remarks'          => 'nullable|string|max:500',
-            'payment_type'     => 'required|in:direct,advance,reimbursement'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
-        }
-
-        DB::beginTransaction();
-        try {
-            $authUser = Auth::user();
-
-            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
-            }
-
-            $paymentType = $request->payment_type;
-            $payment     = null;
-            $expense     = null;
-
-            // ==================== 1. DIRECT PAYMENT ====================
-            if ($paymentType === 'direct') {
-                $v2 = Validator::make($request->all(), ['direct_user_id' => 'required|exists:users,id']);
-                if ($v2->fails()) {
-                    return response()->json(['success' => false, 'errors' => $v2->errors()], 422);
-                }
-
-                $expense = Expense::create([
-                    'tenant_id'        => session('tenant_id'),
-                    'user_id'          => $request->direct_user_id,
-                    'expense_type'     => 1,
-                    'amount'           => $request->amount,
-                    'date'             => $request->payment_date,
-                    'project_id'       => 1,
-                    'requirement_type' => 'advance',
-                    'description'      => 'Direct payment: ' . ($request->remarks ?? 'No remarks'),
-                    'status'           => 'complete',
-                    'expense_number'   => 'DIRECT-' . time() . '-' . rand(1000, 9999)
-                ]);
-
-                $payment = ExpensePayment::create([
-                    'tenant_id'        => session('tenant_id'),
-                    'expense_id'       => $expense->id,
-                    'payment_date'     => $request->payment_date,
-                    'amount'           => $request->amount,
-                    'payment_mode'     => $request->payment_mode,
-                    'reference_number' => $request->reference_number,
-                    'bank_name'        => $request->bank_name,
-                    'paid_to'          => $request->paid_to,
-                    'paid_by'          => $authUser->id,
-                    'remarks'          => $request->remarks
-                ]);
-
-                $this->creditAdvanceBalance(
-                    $expense,
-                    $request->amount,
-                    $authUser->id,
-                    'Direct payment credited: ' . ($request->remarks ?? '')
-                );
-
-                ExpenseStatusHistory::create([
-                    'tenant_id'  => session('tenant_id'),
-                    'expense_id' => $expense->id,
-                    'status'     => 'complete',
-                    'changed_by' => $authUser->id,
-                    'remarks'    => 'Direct payment processed. Amount: ₹' . number_format($request->amount, 2)
-                ]);
-
-                $message = 'Direct payment added successfully and credited to employee balance';
-                $data = [
-                    'id'               => $payment->id,
-                    'payment_date'     => $payment->payment_date,
-                    'amount'           => $payment->amount,
-                    'payment_mode'     => $payment->payment_mode,
-                    'reference_number' => $payment->reference_number,
-                    'bank_name'        => $payment->bank_name,
-                    'paid_to'          => $payment->paid_to,
-                    'remarks'          => $payment->remarks,
-                    'expense_number'   => $expense->expense_number,
-                    'employee_name'    => $expense->user->name,
-                    'payer_name'       => $payment->payer ? $payment->payer->name : null,
-                    'payment_type'     => 'direct'
-                ];
-
-                // ==================== 2. ADVANCE PAYMENT ====================
-            } elseif ($paymentType === 'advance') {
-                $v2 = Validator::make($request->all(), ['advance_expense_id' => 'required|exists:expenses,id']);
-                if ($v2->fails()) {
-                    return response()->json(['success' => false, 'errors' => $v2->errors()], 422);
-                }
-
-                $expense = Expense::findOrFail($request->expense_id);
-
-                // Verify it's an advance request
-                if ($expense->requirement_type !== 'advance') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Selected expense is not an advance request.'
-                    ], 400);
-                }
-
-                if ($expense->status !== 'approved') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Only approved advances can have payment records.'
-                    ], 400);
-                }
-
-                $totalPaid = $expense->payments()->sum('amount');
-                $remainingAmount = $expense->amount - $totalPaid;
-
-                if ($request->amount > $remainingAmount + 0.01) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Payment amount exceeds remaining balance. Remaining: ₹' . number_format($remainingAmount, 2)
-                    ], 400);
-                }
-
-                $payment = ExpensePayment::create([
-                    'tenant_id'        => session('tenant_id'),
-                    'expense_id'       => $expense->id,
-                    'payment_date'     => $request->payment_date,
-                    'amount'           => $request->amount,
-                    'payment_mode'     => $request->payment_mode,
-                    'reference_number' => $request->reference_number,
-                    'bank_name'        => $request->bank_name,
-                    'paid_to'          => $request->paid_to,
-                    'paid_by'          => $authUser->id,
-                    'remarks'          => $request->remarks
-                ]);
-
-                $newTotalPaid = $totalPaid + $request->amount;
-                $isFullyPaid = abs($newTotalPaid - $expense->amount) < 0.01;
-
-                // Credit to advance balance
-                $this->creditAdvanceBalance($expense, $request->amount, $authUser->id, $request->remarks);
-
-                if ($isFullyPaid && $expense->status !== 'complete') {
-                    $expense->update(['status' => 'complete']);
-                    ExpenseStatusHistory::create([
-                        'tenant_id'  => session('tenant_id'),
-                        'expense_id' => $expense->id,
-                        'status'     => 'complete',
-                        'changed_by' => $authUser->id,
-                        'remarks'    => 'Fully paid. Total: ₹' . number_format($newTotalPaid, 2)
-                    ]);
-                } elseif (!$isFullyPaid) {
-                    ExpenseStatusHistory::create([
-                        'tenant_id'  => session('tenant_id'),
-                        'expense_id' => $expense->id,
-                        'status'     => 'approved',
-                        'changed_by' => $authUser->id,
-                        'remarks'    => 'Partial payment of ₹' . number_format($request->amount, 2)
-                            . '. Remaining: ₹' . number_format($remainingAmount - $request->amount, 2)
-                    ]);
-                }
-
-                $message = 'Advance payment processed successfully';
-                $data = [
-                    'id'               => $payment->id,
-                    'payment_date'     => $payment->payment_date,
-                    'amount'           => $payment->amount,
-                    'payment_mode'     => $payment->payment_mode,
-                    'reference_number' => $payment->reference_number,
-                    'bank_name'        => $payment->bank_name,
-                    'paid_to'          => $payment->paid_to,
-                    'remarks'          => $payment->remarks,
-                    'expense_number'   => $expense->expense_number,
-                    'employee_name'    => $expense->user->name,
-                    'payer_name'       => $payment->payer ? $payment->payer->name : null,
-                    'total_paid'       => $newTotalPaid,
-                    'remaining_amount' => $expense->amount - $newTotalPaid,
-                    'is_fully_paid'    => $isFullyPaid,
-                    'payment_type'     => 'advance'
-                ];
-
-                // ==================== 3. REIMBURSEMENT PAYMENT ====================
-            } elseif ($paymentType === 'reimbursement') {
-                $v2 = Validator::make($request->all(), ['reimbursement_expense_id' => 'required|exists:expenses,id']);
-                if ($v2->fails()) {
-                    return response()->json(['success' => false, 'errors' => $v2->errors()], 422);
-                }
-
-                $expense = Expense::findOrFail($request->expense_id);
-
-                // Verify it's a reimbursement request
-                if ($expense->requirement_type !== 'reimbursement') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Selected expense is not a reimbursement request.'
-                    ], 400);
-                }
-
-                if ($expense->status !== 'approved') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Only approved reimbursements can have payment records.'
-                    ], 400);
-                }
-
-                $totalPaid = $expense->payments()->sum('amount');
-                $remainingAmount = $expense->amount - $totalPaid;
-
-                if ($request->amount > $remainingAmount + 0.01) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Payment amount exceeds remaining balance. Remaining: ₹' . number_format($remainingAmount, 2)
-                    ], 400);
-                }
-
-                $payment = ExpensePayment::create([
-                    'tenant_id'        => session('tenant_id'),
-                    'expense_id'       => $expense->id,
-                    'payment_date'     => $request->payment_date,
-                    'amount'           => $request->amount,
-                    'payment_mode'     => $request->payment_mode,
-                    'reference_number' => $request->reference_number,
-                    'bank_name'        => $request->bank_name,
-                    'paid_to'          => $request->paid_to,
-                    'paid_by'          => $authUser->id,
-                    'remarks'          => $request->remarks
-                ]);
-
-                $newTotalPaid = $totalPaid + $request->amount;
-                $isFullyPaid = abs($newTotalPaid - $expense->amount) < 0.01;
-
-                // Process reimbursement (adds to reimbursement balance)
-                $this->processReimbursementPayment($expense, $request->amount, $authUser->id, $request->remarks);
-
-                if ($isFullyPaid && $expense->status !== 'complete') {
-                    $expense->update(['status' => 'complete']);
-                    ExpenseStatusHistory::create([
-                        'tenant_id'  => session('tenant_id'),
-                        'expense_id' => $expense->id,
-                        'status'     => 'complete',
-                        'changed_by' => $authUser->id,
-                        'remarks'    => 'Fully reimbursed. Total: ₹' . number_format($newTotalPaid, 2)
-                    ]);
-                } elseif (!$isFullyPaid) {
-                    ExpenseStatusHistory::create([
-                        'tenant_id'  => session('tenant_id'),
-                        'expense_id' => $expense->id,
-                        'status'     => 'approved',
-                        'changed_by' => $authUser->id,
-                        'remarks'    => 'Partial reimbursement of ₹' . number_format($request->amount, 2)
-                            . '. Remaining: ₹' . number_format($remainingAmount - $request->amount, 2)
-                    ]);
-                }
-
-                $message = 'Reimbursement payment processed successfully';
-                $data = [
-                    'id'               => $payment->id,
-                    'payment_date'     => $payment->payment_date,
-                    'amount'           => $payment->amount,
-                    'payment_mode'     => $payment->payment_mode,
-                    'reference_number' => $payment->reference_number,
-                    'bank_name'        => $payment->bank_name,
-                    'paid_to'          => $payment->paid_to,
-                    'remarks'          => $payment->remarks,
-                    'expense_number'   => $expense->expense_number,
-                    'employee_name'    => $expense->user->name,
-                    'payer_name'       => $payment->payer ? $payment->payer->name : null,
-                    'total_paid'       => $newTotalPaid,
-                    'remaining_amount' => $expense->amount - $newTotalPaid,
-                    'is_fully_paid'    => $isFullyPaid,
-                    'payment_type'     => 'reimbursement'
-                ];
-            }
-
-
-            if ($payment) {
-                $payment->load('payer', 'expense.user');
-            }
-                        
-
-            DB::commit();
-            try{
-                $this->notificationService->notifyPaymentCreated($expense, $payment, $request->remarks);
-            }catch(Exception $e){
-                Log::error('Failed to send expense notifications: ' . $e->getMessage());
-            }
-
-            return response()->json(['success' => true, 'message' => $message, 'data' => $data], 200);
-        } catch (Exception $e) {
-            DB::rollBack();
-            Log::error('Error creating payment: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to add payment: ' . $e->getMessage()], 500);
-        }
-    }
-
-    public function update(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'payment_date'     => 'required|date',
-            'amount'           => 'required|numeric|min:0.01',
-            'payment_mode'     => 'required|in:cash,bank_transfer,cheque,upi',
-            'reference_number' => 'nullable|string|max:100',
-            'bank_name'        => 'nullable|string|max:255',
-            'paid_to'          => 'nullable|string|max:255',
-            'remarks'          => 'nullable|string|max:500'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
-        }
-
-        DB::beginTransaction();
-        try {
-            $authUser = Auth::user();
-
-            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
-            }
-
-            $payment   = ExpensePayment::with('expense.user')->findOrFail($id);
-            $expense   = $payment->expense;
-            $oldAmount = $payment->amount;
-
-            $isDirectPayment = $expense->requirement_type === 'advance'
-                && $expense->description
-                && str_contains($expense->description, 'Direct payment:');
-
-            if (!$isDirectPayment) {
-                $otherPaymentsTotal = $expense->payments()->where('id', '!=', $id)->sum('amount');
-                $maxAllowedAmount   = $expense->amount - $otherPaymentsTotal;
-
-                if ($request->amount > $maxAllowedAmount + 0.01) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Payment amount exceeds remaining balance. Maximum allowed: ₹' . number_format($maxAllowedAmount, 2)
-                    ], 400);
-                }
-            }
-
-            $payment->update([
-                'payment_date'     => $request->payment_date,
-                'amount'           => $request->amount,
-                'payment_mode'     => $request->payment_mode,
-                'reference_number' => $request->reference_number,
-                'bank_name'        => $request->bank_name,
-                'paid_to'          => $request->paid_to,
-                'remarks'          => $request->remarks
-            ]);
-
-            // ✅ Bug 1 fix — route balance adjustment by expense type
-            $amountDifference = $request->amount - $oldAmount;
-            if ($amountDifference != 0) {
-                if ($expense->requirement_type === 'reimbursement') {
-                    if ($amountDifference > 0) {
-                        $this->processReimbursementPayment($expense, $amountDifference, $authUser->id, $request->remarks);
-                    } else {
-                        $this->reverseReimbursementBalance($expense, abs($amountDifference), $authUser->id);
-                    }
-                } else {
-                    if ($amountDifference > 0) {
-                        $this->creditAdvanceBalance($expense, $amountDifference, $authUser->id, $request->remarks);
-                    } else {
-                        $this->reverseAdvanceBalance($expense, abs($amountDifference), $authUser->id);
-                    }
-                }
-            }
-
-            if (!$isDirectPayment) {
-                $otherPaymentsTotal = $expense->payments()->where('id', '!=', $id)->sum('amount');
-                $newTotalPaid       = $otherPaymentsTotal + $request->amount;
-                $isFullyPaid        = abs($newTotalPaid - $expense->amount) < 0.01;
-
-                if ($isFullyPaid && $expense->status !== 'complete') {
-                    $expense->update(['status' => 'complete']);
-                    ExpenseStatusHistory::create([
-                        'tenant_id'  => session('tenant_id'),
-                        'expense_id' => $expense->id,
-                        'status'     => 'complete',
-                        'changed_by' => $authUser->id,
-                        'remarks'    => $expense->requirement_type === 'reimbursement'
-                            ? 'Fully reimbursed after update. Total: ₹' . number_format($newTotalPaid, 2)
-                            : 'Fully paid after update. Total: ₹' . number_format($newTotalPaid, 2)
-                    ]);
-                } elseif (!$isFullyPaid && $expense->status === 'complete') {
-                    $expense->update(['status' => 'approved']);
-                    ExpenseStatusHistory::create([
-                        'tenant_id'  => session('tenant_id'),
-                        'expense_id' => $expense->id,
-                        'status'     => 'approved',
-                        'changed_by' => $authUser->id,
-                        'remarks'    => $expense->requirement_type === 'reimbursement'
-                            ? 'Partial reimbursement after update. Status reverted to approved'
-                            : 'Partially paid after update. Status reverted to approved'
-                    ]);
-                }
-            }
-
-            DB::commit();
-            try{
-                $this->notificationService->notifyPaymentUpdated($expense, $payment, $oldAmount, $request->remarks);
-            }catch(Exception $e){
-                Log::error('Failed to send expense notifications: ' . $e->getMessage());
-            }
-            
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment updated successfully',
-                'data'    => [
-                    'id'               => $payment->id,
-                    'payment_date'     => $payment->payment_date,
-                    'amount'           => $payment->amount,
-                    'payment_mode'     => $payment->payment_mode,
-                    'reference_number' => $payment->reference_number,
-                    'bank_name'        => $payment->bank_name,
-                    'paid_to'          => $payment->paid_to,
-                    'remarks'          => $payment->remarks,
-                    'payment_type'     => $isDirectPayment ? 'direct' : $expense->requirement_type
-                ]
-            ], 200);
-        } catch (Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating payment: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to update payment: ' . $e->getMessage()], 500);
-        }
-    }
-
-    public function destroy($id)
-    {
-        DB::beginTransaction();
-        try {
-            $authUser = Auth::user();
-
-            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
-            }
-
-            $payment       = ExpensePayment::with('expense')->findOrFail($id);
-            $expense       = $payment->expense;
-            $paymentAmount = $payment->amount;
-
-            // ✅ Bug 2 fix — route reversal by expense type
-            if ($expense->requirement_type === 'reimbursement') {
-                $this->reverseReimbursementBalance($expense, $paymentAmount, $authUser->id);
-            } else {
-                $this->reverseAdvanceBalance($expense, $paymentAmount, $authUser->id);
-            }
-
-            $payment->delete();
-
-            $totalPaid = $expense->payments()->sum('amount');
-
-            if ($totalPaid < $expense->amount && $expense->status === 'complete') {
-                $expense->update(['status' => 'approved']);
-                ExpenseStatusHistory::create([
-                    'tenant_id'  => session('tenant_id'),
-                    'expense_id' => $expense->id,
-                    'status'     => 'approved',
-                    'changed_by' => $authUser->id,
-                    'remarks'    => $totalPaid == 0
-                        ? 'All payments deleted - status reverted to approved'
-                        : 'Payment deleted - partially paid, status reverted to approved'
-                ]);
-            }
-
-            DB::commit();
-             try{
-               $this->notificationService->notifyPaymentDeleted($expense, $paymentAmount, 'Payment deleted');
-            }catch(Exception $e){
-                Log::error('Failed to send expense notifications: ' . $e->getMessage());
-            }
-
-            return response()->json(['success' => true, 'message' => 'Payment deleted successfully'], 200);
-        } catch (Exception $e) {
-            DB::rollBack();
-            Log::error('Error deleting payment: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to delete payment:'], 500);
-        }
-    }
-
-    public function expensePayments($expenseId)
-    {
-        try {
-            $authUser = Auth::user();
-
-            $expense = Expense::with(['payments.payer', 'user'])->findOrFail($expenseId);
-
-            if (!$this->scopeCoversOwner($authUser, 'expenses', 'view', $expense->user_id)) {
-                return response()->json(['success' => false, 'message' => 'You are not authorized to view these payments.'], 403);
-            }
-
-            $payments        = $expense->payments;
-            $totalPaid       = $payments->sum('amount');
-            $remainingAmount = $expense->amount - $totalPaid;
-
-            return response()->json([
-                'success' => true,
-                'data'    => [
-                    'expense_id'       => $expense->id,
-                    'expense_number'   => $expense->expense_number,
-                    'expense_amount'   => $expense->amount,
-                    'requirement_type' => $expense->requirement_type,
-                    'total_paid'       => $totalPaid,
-                    'remaining_amount' => $remainingAmount,
-                    'payments'         => $payments->map(fn($p) => [
-                        'id'               => $p->id,
-                        'payment_date'     => $p->payment_date,
-                        'amount'           => $p->amount,
-                        'payment_mode'     => $p->payment_mode,
-                        'reference_number' => $p->reference_number,
-                        'bank_name'        => $p->bank_name,
-                        'paid_to'          => $p->paid_to,
-                        'remarks'          => $p->remarks,
-                        'paid_by'          => $p->paid_by,
-                        'payer_name'       => $p->payer ? $p->payer->name : null,
-                        'created_at'       => $p->created_at
-                    ])
-                ]
-            ], 200);
-        } catch (Exception $e) {
-            Log::error('Error fetching expense payments: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to fetch payments: ' . $e->getMessage()], 500);
-        }
-    }
-
-    public function show($id)
-    {
-        try {
-            $authUser = Auth::user();
-
-            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
-            }
-
-            $payment = ExpensePayment::with('expense')->findOrFail($id);
-
-            return response()->json([
-                'success' => true,
-                'data'    => [
-                    'id'               => $payment->id,
-                    'expense_id'       => $payment->expense_id,
-                    'requirement_type' => $payment->expense->requirement_type,
-                    'payment_date'     => $payment->payment_date,
-                    'amount'           => $payment->amount,
-                    'payment_mode'     => $payment->payment_mode,
-                    'reference_number' => $payment->reference_number,
-                    'bank_name'        => $payment->bank_name,
-                    'paid_to'          => $payment->paid_to,
-                    'remarks'          => $payment->remarks
-                ]
-            ], 200);
-        } catch (Exception $e) {
-            Log::error('Error fetching payment details: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to fetch payment details: ' . $e->getMessage()], 500);
-        }
-    }
-
-    public function getAdvanceSummary($expenseId)
-    {
-        try {
-            $expense   = Expense::with('payments')->findOrFail($expenseId);
-            $totalPaid = $expense->payments->sum('amount');
-            $remaining = $expense->amount - $totalPaid;
-
-            return response()->json([
-                'success' => true,
-                'data'    => [
-                    'expense_id'       => $expense->id,
-                    'expense_number'   => $expense->expense_number,
-                    'requirement_type' => $expense->requirement_type,
-                    'total_amount'     => $expense->amount,
-                    'total_paid'       => $totalPaid,
-                    'remaining_amount' => $remaining,
-                    'is_fully_paid'    => $remaining <= 0,
-                    'payments'         => $expense->payments
-                ]
-            ]);
-        } catch (Exception $e) {
-            Log::error('Error getting advance summary: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to get advance summary: ' . $e->getMessage()], 500);
+            return $this->failure($e, 'getUserPendingAdvances');
         }
     }
 
@@ -771,138 +172,324 @@ class PaymentController extends Controller
         try {
             $authUser = Auth::user();
 
-            if (!app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
+            if (! app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
             }
 
-            $pendingAdvances = Expense::with(['user', 'expenseType', 'project'])
-                ->whereIn('requirement_type', ['advance', 'reimbursement'])
-                ->where('status', 'approved')
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(function ($expense) {
-                    $totalPaid = $expense->payments()->sum('amount');
-                    $expense->paid_amount      = $totalPaid;
-                    $expense->remaining_amount = $expense->amount - $totalPaid;
-                    return $expense;
-                })
-                ->filter(fn($e) => $e->remaining_amount > 0)
-                ->values();
+            $data = $this->payableExpenses($authUser, ['advance', 'reimbursement'], null, 'asc');
 
-            return response()->json(['success' => true, 'data' => $pendingAdvances]);
+            return response()->json(['success' => true, 'data' => $data]);
         } catch (Exception $e) {
-            Log::error('Error getting pending advances: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to get pending advances: ' . $e->getMessage()], 500);
+            return $this->failure($e, 'getPendingAdvances');
         }
     }
 
-    // ==================== PRIVATE BALANCE HELPERS ====================
+    // ==================== WRITE (thin — see ExpensePaymentService) ====================
 
-    private function creditAdvanceBalance($expense, $paymentAmount, $paidBy, $remarks)
+    public function store(Request $request)
     {
-        $balance = UserExpenseBalance::firstOrCreate(
-            ['user_id' => $expense->user_id],
-            ['current_balance' => 0, 'advance_balance' => 0, 'settlement_balance' => 0, 'reimbursement_balance' => 0]
-        );
-
-        $balanceBefore = $balance->current_balance;
-        $balanceAfter  = $balanceBefore + $paymentAmount;
-
-        $balance->update([
-            'current_balance' => $balanceAfter,
-            'advance_balance' => $balance->advance_balance + $paymentAmount
+        $validator = Validator::make($request->all(), [
+            'payment_date' => 'required|date',
+            'amount' => 'required|numeric|min:0.01|max:9999999.99',
+            'payment_mode' => 'required|in:cash,bank_transfer,cheque,upi',
+            'reference_number' => 'nullable|string|max:100',
+            'bank_name' => 'nullable|string|max:255',
+            'paid_to' => 'nullable|string|max:255',
+            'remarks' => 'nullable|string|max:500',
+            'payment_type' => 'required|in:direct,advance,reimbursement',
+            'idempotency_key' => 'nullable|string|max:64',
         ]);
 
-        ExpenseTransaction::create([
-            'tenant_id'        => session('tenant_id'),
-            'expense_id'       => $expense->id,
-            'user_id'          => $expense->user_id,
-            'transaction_type' => 'advance_credited',
-            'amount'           => $paymentAmount,
-            'balance_before'   => $balanceBefore,
-            'balance_after'    => $balanceAfter,
-            'description'      => $remarks ?: 'Advance payment of ₹' . number_format($paymentAmount, 2) . ' credited'
-        ]);
-
-        return true;
-    }
-
-    private function reverseAdvanceBalance($expense, $paymentAmount, $deletedBy)
-    {
-        $balance = UserExpenseBalance::where('user_id', $expense->user_id)->first();
-
-        if ($balance && $paymentAmount > 0) {
-            $balanceBefore = $balance->current_balance;
-            $balanceAfter  = $balanceBefore - $paymentAmount;
-
-            $balance->update([
-                'current_balance' => $balanceAfter,
-                'advance_balance' => $balance->advance_balance - $paymentAmount
-            ]);
-
-            ExpenseTransaction::create([
-                'tenant_id'        => session('tenant_id'),
-                'expense_id'       => $expense->id,
-                'user_id'          => $expense->user_id,
-                'transaction_type' => 'advance_credited',
-                'amount'           => -$paymentAmount,
-                'balance_before'   => $balanceBefore,
-                'balance_after'    => $balanceAfter,
-                'description'      => 'Advance payment of ₹' . number_format($paymentAmount, 2) . ' reversed | By user_id: ' . $deletedBy
-            ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        return true;
-    }
+        $authUser = Auth::user();
 
-    private function processReimbursementPayment($expense, $paymentAmount, $paidBy, $remarks)
-    {
-        $balance = UserExpenseBalance::firstOrCreate(
-            ['user_id' => $expense->user_id],
-            ['current_balance' => 0, 'advance_balance' => 0, 'settlement_balance' => 0, 'reimbursement_balance' => 0]
-        );
-
-        $reimbursementBefore = $balance->reimbursement_balance;
-        $reimbursementAfter  = $reimbursementBefore + $paymentAmount;
-
-        $balance->update(['reimbursement_balance' => $reimbursementAfter]);
-
-        ExpenseTransaction::create([
-            'tenant_id'        => session('tenant_id'),
-            'expense_id'       => $expense->id,
-            'user_id'          => $expense->user_id,
-            'transaction_type' => 'reimbursement_paid',
-            'amount'           => $paymentAmount,
-            'balance_before'   => $reimbursementBefore,
-            'balance_after'    => $reimbursementAfter,
-            'description'      => ($remarks ?: 'Reimbursement paid') . ' | Processed by user_id: ' . $paidBy
-        ]);
-
-        return true;
-    }
-
-       private function reverseReimbursementBalance($expense, $paymentAmount, $deletedBy)
-    {
-        $balance = UserExpenseBalance::where('user_id', $expense->user_id)->first();
-
-        if ($balance && $paymentAmount > 0) {
-            $reimbursementBefore = $balance->reimbursement_balance;
-            $reimbursementAfter  = max(0, $reimbursementBefore - $paymentAmount);
-
-            $balance->update(['reimbursement_balance' => $reimbursementAfter]);
-
-            ExpenseTransaction::create([
-                'tenant_id'        => session('tenant_id'),
-                'expense_id'       => $expense->id,
-                'user_id'          => $expense->user_id,
-                'transaction_type' => 'reimbursement_paid',
-                'amount'           => -$paymentAmount,
-                'balance_before'   => $reimbursementBefore,
-                'balance_after'    => $reimbursementAfter,
-                'description'      => 'Reimbursement of ₹' . number_format($paymentAmount, 2) . ' reversed | By user_id: ' . $deletedBy
-            ]);
+        if (! app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
         }
 
-        return true;
+        $type = $request->payment_type;
+
+        // The form posts a different field per payment type; validate the one that applies.
+        $idField = ['direct' => 'direct_user_id', 'advance' => 'advance_expense_id', 'reimbursement' => 'reimbursement_expense_id'][$type];
+        $idCheck = Validator::make($request->all(), [$idField => 'required|integer']);
+        if ($idCheck->fails()) {
+            return response()->json(['success' => false, 'message' => $idCheck->errors()->first()], 422);
+        }
+
+        $data = $request->only(['payment_date', 'amount', 'payment_mode', 'reference_number', 'bank_name', 'paid_to', 'remarks']);
+        $data[$type === 'direct' ? 'direct_user_id' : 'expense_id'] = $request->input($idField);
+
+        try {
+            $result = $this->payments->record(
+                $authUser,
+                $type,
+                $data,
+                $request->filled('idempotency_key') ? (string) $request->idempotency_key : null,
+                fn (int $ownerId) => $this->scopeCoversOwner($authUser, 'expenses', 'manage', $ownerId)
+            );
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
+        } catch (Exception $e) {
+            return $this->failure($e, 'store');
+        }
+
+        if ($result['duplicate']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'This payment was already recorded.',
+                'data' => ['id' => $result['payment']->id, 'amount' => $result['payment']->amount, 'duplicate' => true],
+            ], 200);
+        }
+
+        try {
+            $this->notificationService->notifyPaymentCreated($result['expense'], $result['payment'], $request->remarks);
+        } catch (Exception $e) {
+            Log::error('Failed to send expense notifications: ' . $e->getMessage());
+        }
+
+        return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result['data']], 200);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'payment_date' => 'required|date',
+            'amount' => 'required|numeric|min:0.01|max:9999999.99',
+            'payment_mode' => 'required|in:cash,bank_transfer,cheque,upi',
+            'reference_number' => 'nullable|string|max:100',
+            'bank_name' => 'nullable|string|max:255',
+            'paid_to' => 'nullable|string|max:255',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $authUser = Auth::user();
+
+        if (! app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
+        }
+
+        try {
+            $result = $this->payments->update(
+                $authUser,
+                (int) $id,
+                $request->only(['payment_date', 'amount', 'payment_mode', 'reference_number', 'bank_name', 'paid_to', 'remarks']),
+                fn (int $ownerId) => $this->scopeCoversOwner($authUser, 'expenses', 'manage', $ownerId)
+            );
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
+        } catch (Exception $e) {
+            return $this->failure($e, 'update', ['payment_id' => $id]);
+        }
+
+        /** @var Expense $expense @var ExpensePayment $payment */
+        ['expense' => $expense, 'payment' => $payment] = $result;
+
+        try {
+            $this->notificationService->notifyPaymentUpdated($expense, $payment, $result['oldAmount'], $request->remarks);
+        } catch (Exception $e) {
+            Log::error('Failed to send expense notifications: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment updated successfully',
+            'data' => [
+                'id' => $payment->id,
+                'payment_date' => $payment->payment_date,
+                'amount' => $payment->amount,
+                'payment_mode' => $payment->payment_mode,
+                'reference_number' => $payment->reference_number,
+                'bank_name' => $payment->bank_name,
+                'paid_to' => $payment->paid_to,
+                'remarks' => $payment->remarks,
+                'payment_type' => $result['isDirect'] ? 'direct' : $expense->requirement_type,
+            ],
+        ], 200);
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $authUser = Auth::user();
+
+        if (! app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
+        }
+
+        // Payments are never hard-deleted any more: "delete" VOIDS the payment (reverses the
+        // ledger, keeps the row with who/when/why). A reason is recorded; the UI's plain delete
+        // button sends none, so a sensible default is used.
+        $reason = trim((string) $request->input('reason', '')) ?: ('Voided by ' . $authUser->name);
+
+        try {
+            $result = $this->payments->voidPayment(
+                $authUser,
+                (int) $id,
+                $reason,
+                fn (int $ownerId) => $this->scopeCoversOwner($authUser, 'expenses', 'manage', $ownerId)
+            );
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
+        } catch (Exception $e) {
+            return $this->failure($e, 'destroy', ['payment_id' => $id]);
+        }
+
+        try {
+            $this->notificationService->notifyPaymentDeleted($result['expense'], $result['amount'], 'Payment voided');
+        } catch (Exception $e) {
+            Log::error('Failed to send expense notifications: ' . $e->getMessage());
+        }
+
+        return response()->json(['success' => true, 'message' => 'Payment voided successfully'], 200);
+    }
+
+    // ==================== READ ====================
+
+    public function expensePayments($expenseId)
+    {
+        try {
+            $authUser = Auth::user();
+
+            $expense = Expense::with(['payments.payer', 'user'])->findOrFail($expenseId);
+
+            if (! $this->scopeCoversOwner($authUser, 'expenses', 'view', (int) $expense->user_id)) {
+                return response()->json(['success' => false, 'message' => 'You are not authorized to view these payments.'], 403);
+            }
+
+            $payments = $expense->payments;
+            $totalPaid = $payments->sum('amount');
+            $remainingAmount = $expense->amount - $totalPaid;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'expense_id' => $expense->id,
+                    'expense_number' => $expense->expense_number,
+                    'expense_amount' => $expense->amount,
+                    'requirement_type' => $expense->requirement_type,
+                    'total_paid' => $totalPaid,
+                    'remaining_amount' => $remainingAmount,
+                    'payments' => $payments->map(fn ($p) => [
+                        'id' => $p->id,
+                        'payment_date' => $p->payment_date,
+                        'amount' => $p->amount,
+                        'payment_mode' => $p->payment_mode,
+                        'reference_number' => $p->reference_number,
+                        'bank_name' => $p->bank_name,
+                        'paid_to' => $p->paid_to,
+                        'remarks' => $p->remarks,
+                        'paid_by' => $p->paid_by,
+                        'payer_name' => $p->payer ? $p->payer->name : null,
+                        'created_at' => $p->created_at,
+                    ]),
+                ],
+            ], 200);
+        } catch (Exception $e) {
+            return $this->failure($e, 'expensePayments', ['expense_id' => $expenseId]);
+        }
+    }
+
+    public function show($id)
+    {
+        try {
+            $authUser = Auth::user();
+
+            if (! app(RbacService::class)->can($authUser, 'expenses', 'manage')) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
+            }
+
+            $payment = ExpensePayment::with('expense')->findOrFail($id);
+
+            if (! $this->scopeCoversOwner($authUser, 'expenses', 'manage', (int) $payment->expense->user_id)) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $payment->id,
+                    'expense_id' => $payment->expense_id,
+                    'requirement_type' => $payment->expense->requirement_type,
+                    'payment_date' => $payment->payment_date,
+                    'amount' => $payment->amount,
+                    'payment_mode' => $payment->payment_mode,
+                    'reference_number' => $payment->reference_number,
+                    'bank_name' => $payment->bank_name,
+                    'paid_to' => $payment->paid_to,
+                    'remarks' => $payment->remarks,
+                ],
+            ], 200);
+        } catch (Exception $e) {
+            return $this->failure($e, 'show', ['payment_id' => $id]);
+        }
+    }
+
+    public function getAdvanceSummary($expenseId)
+    {
+        try {
+            $expense = Expense::with('payments')->findOrFail($expenseId);
+
+            // Previously unchecked: any user could read any expense's payment summary.
+            if (! $this->scopeCoversOwner(Auth::user(), 'expenses', 'view', (int) $expense->user_id)) {
+                return response()->json(['success' => false, 'message' => 'You are not authorized to view this summary.'], 403);
+            }
+
+            $totalPaid = $expense->payments->sum('amount');
+            $remaining = $expense->amount - $totalPaid;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'expense_id' => $expense->id,
+                    'expense_number' => $expense->expense_number,
+                    'requirement_type' => $expense->requirement_type,
+                    'total_amount' => $expense->amount,
+                    'total_paid' => $totalPaid,
+                    'remaining_amount' => $remaining,
+                    'is_fully_paid' => Money::toCents($remaining) <= 0,
+                    'payments' => $expense->payments,
+                ],
+            ]);
+        } catch (Exception $e) {
+            return $this->failure($e, 'getAdvanceSummary', ['expense_id' => $expenseId]);
+        }
+    }
+
+    // ==================== HELPERS ====================
+
+    /**
+     * Approved advances/reimbursements that still have an unpaid amount, limited to
+     * the employees the caller may pay. The "still unpaid" filter is pushed into SQL
+     * (Expense::payable() on the cached paid_amount) — no per-row queries, no PHP loop.
+     * `paid_amount` / `remaining_amount` are the model's own column/accessor.
+     *
+     * @param  string[]  $types
+     */
+    private function payableExpenses(User $authUser, array $types, $userId = null, string $order = 'desc')
+    {
+        $query = Expense::with(['user', 'expenseType', 'project'])
+            ->payable()
+            ->whereIn('requirement_type', $types);
+
+        $this->applyScope($query, 'user_id', $authUser, 'expenses', 'manage');
+
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        return $query->orderBy('created_at', $order)->get()->each->append('remaining_amount');
+    }
+
+    private function failure(Exception $e, string $context, array $extra = [])
+    {
+        Log::error("Expense payment {$context} failed: " . $e->getMessage(), $extra + ['user_id' => Auth::id()]);
+
+        return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again or contact support.'], 500);
     }
 }

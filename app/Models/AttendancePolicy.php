@@ -33,5 +33,13 @@ class AttendancePolicy extends Model
         'max_daily_hours' => 'float',
         'sandwich_leave' => 'boolean',
         'metadata' => 'array',
+        'fixed_grace_minutes' => 'integer',
+        'late_deduction_enabled' => 'boolean',
+        'late_deduction_multiplier' => 'float',
+        'late_deduction_amount' => 'float',
+        'monthly_early_allowance' => 'integer',
+        'early_deduction_enabled' => 'boolean',
+        'early_deduction_multiplier' => 'float',
+        'early_deduction_amount' => 'float',
     ];
 }

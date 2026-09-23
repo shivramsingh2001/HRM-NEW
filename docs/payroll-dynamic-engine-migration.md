@@ -49,6 +49,70 @@ forward. This is deliberate (see `PayrollBackfillComponentCatalog`'s own docbloc
 monthly_payrolls, user_payrolls, or payroll_masters") and is the standard, safe migration practice:
 rewriting already-paid history is not something this guide recommends or provides tooling for.
 
+## 2026-09-19 update — Payroll Structure / Monthly Payroll overhaul
+
+A full review of the dynamic engine's Structure/Monthly-Payroll flow found and fixed:
+
+- **🔴 Fixed a blocking bug**: every snapshot-write path (`PayrollEmployeeStructureController::store()`,
+  and all of `PayrollStructureAssignmentService`'s write methods) hardcoded
+  `calculation_base_type => 'none'` onto the `payroll_employee_components` snapshot, never copying
+  the catalog's real base config. So "percentage of another component" silently computed ₹0 for
+  every assigned employee, regardless of catalog configuration — this was true before today's other
+  changes too, not something introduced by them.
+- **New multi-base percentage**: a percentage component (PF/ESIC/PT/TDS, or any Employer
+  Contribution) can now sum its percentage base across *several* Earnings components (e.g. "12% of
+  Basic + HRA") instead of one. New tables `payroll_component_base_components` (catalog) /
+  `payroll_employee_component_bases` (per-employee snapshot) — see `docs/database.md`.
+  `PayrollCalculationEngine::resolveBase()` sums over the multi-base set, falling back to the legacy
+  single FK only when the pivot is empty (so pre-migration snapshots keep resolving). Catalog UI:
+  `payroll/components/index.blade.php`'s "Calculate % Of" field is now a multi-select restricted to
+  Earnings components.
+- **Structure-scoped assignment enforced**: `payroll/employee-structures/index.blade.php` now
+  disables (not just leaves unchecked) any component outside a selected structure template, and
+  `PayrollEmployeeStructureController::store()` rejects a submission containing a component outside
+  the chosen structure server-side (422), rather than silently accepting it.
+- **Monthly Payroll Edit/Update got a real dynamic-engine branch** — previously `edit()`/`update()`
+  were 100% legacy-flat (`UserPayroll`'s fixed columns) even for tenants on the dynamic engine; only
+  *creation* (`store()`) branched dynamically. Gated on the **payroll row's own** `engine_version`
+  (not just the tenant flag — a tenant can flip to dynamic after some payrolls already exist under
+  the legacy engine; those old rows must keep using the legacy form). When dynamic:
+  Earnings/Deductions/Employer fields render only the employee's actual structure-selected
+  components (`PayrollCalculationEngine::resolveEmployeeComponents()`, the same resolver the salary
+  slip uses); Week Off/Holiday/Absent become genuinely editable (Absent is bidirectionally linked to
+  Present so the day-count identity `present+paidLeave+weekOff+holiday=totalDays` can't go
+  inconsistent); a new read-only `POST monthly-payrolls/{id}/recalculate-preview` endpoint drives a
+  live preview through the exact same `calculate()` call the eventual save uses, so the preview can
+  never drift from what's persisted. Legacy-engine payrolls are completely untouched by this branch.
+- **Salary slip fully dynamic**: `monthly-payroll/pdf.blade.php`'s hardcoded ~17-row fixed table
+  (plus a separately bolted-on "extra dynamic components" tail loop) is replaced with two
+  independent, zero-suppressed lists built from `resolveEmployeeComponents()` — an employee with
+  only Basic Salary now sees only Basic on their slip. **Update (2026-09-19, same day)**: the
+  Employer Contribution/CTC table is now unconditionally hidden on the slip for everyone, not just
+  the employee view (`@if (false)` in `pdf.blade.php` — was `@if (! ($isEmployeeView ?? false))`;
+  the `isEmployeeView` flag/threading into `Api/Payroll/PayrollController.php`'s three employee
+  endpoints is left in place, just no longer consulted for this). Also masked: PAN, Account No.,
+  IFSC, UAN No., ESI No. now show only the last 4 characters (`$maskId()` closure at the top of
+  `pdf.blade.php` — a closure, not a named function, since this view can render more than once per
+  request during bulk payslip export). Legacy-engine slips keep their fixed layout but gained the
+  same zero-row suppression.
+- **"Basic Salary" is now a fixed, always-present component.** `PayrollComponentController::update()`
+  rejects any name/type change to the `code = 'basic'` row (422), and `updateStatus()` rejects
+  deactivating it — every structure/slip assumes at least Basic Salary is always available as the
+  universal earnings base. The UI locks the row's status toggle and its Edit modal's name field to
+  match. Provisioning: `payroll:backfill-component-catalog` (already idempotent — skips any
+  tenant/code pair that already exists) is now scheduled daily (`routes/console.php`, 00:10) in
+  addition to its existing manual/cutover uses, so a tenant provisioned later by the separate
+  hrm-superadmin app (which writes directly to the shared `tenants` table — this app has no create
+  event to hook) still gets Basic Salary and the rest of the platform template set within a day
+  without a manual `--tenant=` run. Confirmed via a live run (2026-09-19) that all 6 current tenants
+  already have it.
+- **Bulk action route fixed** (`monthly-payrolls.bulk-update`): the JS was sending `ids` as a single
+  JSON-encoded string via a native form submit, while the controller validated it as a real array
+  and returned a JSON response a native submit can't consume — neither side matched the other. Fixed
+  by sending real `ids[]` fields and switching the controller to `redirect()->back()->with(...)`,
+  matching the page's own `updateStatus()` action (there was no existing AJAX pattern on this page
+  to match instead).
+
 ## Why this uses Artisan commands, not a hand-written SQL script
 
 A substantial migration path already exists in this codebase from an earlier "Payroll rebuild

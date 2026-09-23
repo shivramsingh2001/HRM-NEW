@@ -14,4 +14,9 @@ class ApprovalAction extends Model
         'acted_at' => 'datetime',
         'meta' => 'array',
     ];
+
+    public function actor()
+    {
+        return $this->belongsTo(User::class, 'actor_id');
+    }
 }

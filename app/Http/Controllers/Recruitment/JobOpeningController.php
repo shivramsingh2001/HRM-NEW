@@ -12,25 +12,18 @@ use App\Models\JobApplication;
 use App\Models\JobOffer;
 use App\Models\RecruitmentStage;
 use App\Models\User;
+use App\Services\Recruitment\RecruitmentPipelineService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Mail;
-
-// Email Mails
-use App\Mail\ApplicationReceivedMail;
-use App\Mail\ApplicationShortlistedMail;
-use App\Mail\ApplicationRejectedMail;
-use App\Mail\InterviewScheduledMail;
-use App\Mail\InterviewFeedbackMail;
-use App\Mail\OfferReleasedMail;
-use App\Mail\OfferAcceptedMail;
-use App\Mail\OfferRejectedMail;
 
 class JobOpeningController extends Controller
 {
+    public function __construct(protected RecruitmentPipelineService $pipeline)
+    {
+    }
 
     public function index(Request $request)
     {
@@ -66,26 +59,17 @@ class JobOpeningController extends Controller
                 'on_hold' => JobOpening::where('status', JobOpening::STATUS_ON_HOLD)->count(),
             ];
 
-            return view('client.recruitment.job-openings.index', compact('jobOpenings', 'stats'));
-        } catch (\Exception $e) {
-            Log::error('Failed to fetch job openings: ' . $e->getMessage());
-            return back()->with('error', 'Failed to load job openings.');
-        }
-    }
-
-    public function create()
-    {
-        try {
             $departments = Department::where('status', 1)->orderBy('name')->get();
             $designations = Designation::where('status', 1)->orderBy('name')->get();
             $hiringLeads = User::whereIn('role', ['hr', 'manager', 'admin', 'super_admin'])
                 ->orderBy('name')
                 ->get();
-
             $employmentTypes = JobOpening::$employmentTypes;
             $statuses = JobOpening::$statuses;
 
-            return view('client.recruitment.job-openings.create', compact(
+            return view('client.recruitment.job-openings.index', compact(
+                'jobOpenings',
+                'stats',
                 'departments',
                 'designations',
                 'hiringLeads',
@@ -93,8 +77,24 @@ class JobOpeningController extends Controller
                 'statuses'
             ));
         } catch (\Exception $e) {
-            Log::error('Failed to load create form: ' . $e->getMessage());
-            return back()->with('error', 'Failed to load create form.');
+            Log::error('Failed to fetch job openings: ' . $e->getMessage());
+            return back()->with('error', 'Failed to load job openings.');
+        }
+    }
+
+    /**
+     * JSON payload for the Add/Edit Job drawer on the index page (see
+     * openEditJobDrawer() in job-openings/index.blade.php). Kept on the
+     * existing `edit` route/name — no page render happens here anymore,
+     * job create/edit now lives in a 480px drawer on the index view.
+     */
+    public function edit($id)
+    {
+        try {
+            $jobOpening = JobOpening::findOrFail($id);
+            return response()->json(['success' => true, 'data' => $jobOpening]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Job opening not found'], 404);
         }
     }
 
@@ -103,38 +103,14 @@ class JobOpeningController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'department_id' => 'nullable|exists:departments,id',
-            'designation_id' => 'nullable|exists:designations,id',
-            'employment_type' => 'required|in:full_time,part_time,contract,internship,temporary',
-            'experience_required' => 'nullable|string|max:100',
-            'qualification_required' => 'nullable|string',
-            'skills_required' => 'nullable|string',
-            'description' => 'required|string',
-            'responsibilities' => 'nullable|string',
-            'requirements' => 'nullable|string',
-            'location' => 'nullable|string|max:255',
-            'salary_range_min' => 'nullable|numeric|min:0',
-            'salary_range_max' => 'nullable|numeric|min:0|gte:salary_range_min',
-            'no_of_vacancies' => 'required|integer|min:1',
-            'hiring_lead' => 'nullable|exists:users,id',
-            'status' => 'required|in:draft,published,closed,on_hold'
-        ], [
-            'title.required' => 'Job title is required',
-            'employment_type.required' => 'Employment type is required',
-            'description.required' => 'Job description is required',
-            'no_of_vacancies.required' => 'Number of vacancies is required',
-            'no_of_vacancies.min' => 'Number of vacancies must be at least 1',
-            'status.required' => 'Status is required',
-            'salary_range_max.gte' => 'Maximum salary must be greater than or equal to minimum salary'
-        ]);
+        $validator = Validator::make($request->all(), $this->rules(), $this->messages());
 
         try {
             DB::beginTransaction();
 
-            $validatedData = $validator->validated();
+            $validatedData = $validator->validate();
             $validatedData['created_by'] = auth()->id();
+            $validatedData['job_code'] = $this->generateJobCode();
 
             $jobOpening = JobOpening::create($validatedData);
 
@@ -143,6 +119,8 @@ class JobOpeningController extends Controller
             return redirect()
                 ->route('job-openings.index')
                 ->with('success', 'Job opening created successfully! Job Code: ' . $jobOpening->job_code);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withInput()->withErrors($e->errors());
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to create job opening: ' . $e->getMessage());
@@ -167,7 +145,18 @@ class JobOpeningController extends Controller
                 'applications' => function ($query) {
                     $query->latest()->limit(10);
                 },
-                'applications.candidate'
+                // withTrashed() + allTenants(): a candidate can be
+                // soft-deleted, or (data-integrity bug — candidate_id
+                // pointing at a row whose tenant_id doesn't match the job
+                // opening's) hidden by the tenant global scope; either way
+                // a plain belongsTo silently comes back null and crashes
+                // the view on ->full_name. The HR user viewing this page
+                // already has legitimate access to the application row, so
+                // showing whichever candidate it's actually linked to isn't
+                // a new exposure.
+                'applications.candidate' => function ($query) {
+                    $query->withTrashed()->allTenants();
+                },
             ])->findOrFail($id);
 
             // Get application statistics
@@ -201,74 +190,11 @@ class JobOpeningController extends Controller
     }
 
     /**
-     * Show the form for editing the specified job opening.
-     */
-    public function edit($id)
-    {
-        try {
-            $jobOpening = JobOpening::findOrFail($id);
-            // Check if job opening has applications and is not in draft
-            if ($jobOpening->applications()->exists() && $jobOpening->status !== JobOpening::STATUS_DRAFT) {
-                return redirect()
-                    ->route('job-openings.show', $id)
-                    ->with('warning', 'This job opening has applications. Some fields cannot be edited.');
-            }
-
-            $departments = Department::where('status', 1)->orderBy('name')->get();
-            $designations = Designation::where('status', 1)->orderBy('name')->get();
-            $hiringLeads = User::whereIn('role', ['hr', 'manager', 'admin', 'super_admin'])
-                ->orderBy('name')
-                ->get();
-
-            $employmentTypes = JobOpening::$employmentTypes;
-            $statuses = JobOpening::$statuses;
-
-            return view('client.recruitment.job-openings.update', compact(
-                'jobOpening',
-                'departments',
-                'designations',
-                'hiringLeads',
-                'employmentTypes',
-                'statuses'
-            ));
-        } catch (\Exception $e) {
-            return redirect()
-                ->route('job-openings.index')
-                ->with('error', 'Job opening not found.');
-        }
-    }
-
-    /**
      * Update the specified job opening.
      */
     public function update(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'department_id' => 'nullable|exists:departments,id',
-            'designation_id' => 'nullable|exists:designations,id',
-            'employment_type' => 'required|in:full_time,part_time,contract,internship,temporary',
-            'experience_required' => 'nullable|string|max:100',
-            'qualification_required' => 'nullable|string',
-            'skills_required' => 'nullable|string',
-            'description' => 'required|string',
-            'responsibilities' => 'nullable|string',
-            'requirements' => 'nullable|string',
-            'location' => 'nullable|string|max:255',
-            'salary_range_min' => 'nullable|numeric|min:0',
-            'salary_range_max' => 'nullable|numeric|min:0|gte:salary_range_min',
-            'no_of_vacancies' => 'required|integer|min:1',
-            'hiring_lead' => 'nullable|exists:users,id',
-            'status' => 'required|in:draft,published,closed,on_hold'
-        ], [
-            'title.required' => 'Job title is required',
-            'employment_type.required' => 'Employment type is required',
-            'description.required' => 'Job description is required',
-            'no_of_vacancies.required' => 'Number of vacancies is required',
-            'no_of_vacancies.min' => 'Number of vacancies must be at least 1',
-            'status.required' => 'Status is required',
-            'salary_range_max.gte' => 'Maximum salary must be greater than or equal to minimum salary'
-        ]);
+        $validator = Validator::make($request->all(), $this->rules(), $this->messages());
 
         try {
             DB::beginTransaction();
@@ -285,7 +211,7 @@ class JobOpeningController extends Controller
                     ->with('error', 'Cannot change status to draft when applications exist.');
             }
 
-            $validatedData = $validator->validated();
+            $validatedData = $validator->validate();
 
             // If status is being set to published and it was draft, set published_date
             if (
@@ -310,6 +236,8 @@ class JobOpeningController extends Controller
             return redirect()
                 ->route('job-openings.index')
                 ->with('success', 'Job opening updated successfully!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withInput()->withErrors($e->errors());
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -318,7 +246,6 @@ class JobOpeningController extends Controller
                 ->with('error', 'Failed to update job opening. Please try again.');
         }
     }
-
 
     /**
      * Remove the specified job opening.
@@ -394,7 +321,9 @@ class JobOpeningController extends Controller
     }
 
     /**
-     * Close a job opening.
+     * Close a job opening. Once closed, RecruitmentPipelineService blocks
+     * further forward movement (shortlist/schedule/offer) on its
+     * applications — see RecruitmentPipelineService::assertJobOpen().
      */
     public function close($id, Request $request)
     {
@@ -416,13 +345,9 @@ class JobOpeningController extends Controller
 
             $jobOpening->update([
                 'status' => JobOpening::STATUS_CLOSED,
-                'closed_date' => now()
+                'closed_date' => now(),
+                'close_reason' => $request->reason,
             ]);
-
-            // Optional: Add closing note in logs or metadata
-            if ($request->reason) {
-                Log::info("Job opening {$jobOpening->job_code} closed. Reason: " . $request->reason);
-            }
 
             DB::commit();
 
@@ -490,6 +415,7 @@ class JobOpeningController extends Controller
 
             // Create duplicate
             $newJob = $originalJob->replicate();
+            $newJob->job_code = $this->generateJobCode();
             $newJob->status = JobOpening::STATUS_DRAFT;
             $newJob->title = $originalJob->title . ' (Copy)';
             $newJob->published_date = null;
@@ -529,10 +455,21 @@ class JobOpeningController extends Controller
         try {
             $jobOpening = JobOpening::findOrFail($id);
 
-            $query = $jobOpening->applications()->with(['candidate', 'latestInterview']);
+            // withTrashed() + allTenants(): a candidate can be soft-deleted,
+            // or (data-integrity bug — candidate_id pointing at a row whose
+            // tenant_id doesn't match this job opening's) hidden by the
+            // tenant global scope; either way a plain belongsTo silently
+            // comes back null and crashes the view on ->full_name.
+            $query = $jobOpening->applications()->with([
+                'candidate' => fn ($q) => $q->withTrashed()->allTenants(),
+                'latestInterview',
+            ]);
 
             if ($request->filled('stage')) {
-                $query->where('current_stage', $request->stage);
+                // Comma-separated for the stat cards that group several
+                // stages together (Offered/Onboarded/Rejected) — the
+                // dropdown still only ever submits a single value.
+                $query->whereIn('current_stage', explode(',', $request->stage));
             }
 
             if ($request->filled('search')) {
@@ -555,16 +492,29 @@ class JobOpeningController extends Controller
                 'interview_scheduled'   => $jobOpening->applications()->where('current_stage', 'interview_scheduled')->count(),
                 'interview_completed'   => $jobOpening->applications()->where('current_stage', 'interview_completed')->count(),
                 'offered'               => $jobOpening->applications()->whereIn('current_stage', ['offer_released', 'offer_accepted'])->count(),
-                'onboarded'             => $jobOpening->applications()->where('current_stage', 'onboarded')->count(),
+                'onboarded'             => $jobOpening->applications()->whereIn('current_stage', ['onboarding', 'onboarded', 'hired'])->count(),
                 'rejected'              => $jobOpening->applications()
                     ->whereIn('current_stage', ['cv_rejected', 'rejected', 'offer_rejected'])
                     ->count(),
             ];
 
+            // Passed server-side instead of the view running its own
+            // User::whereIn(...) query inline — keeps data-fetching out of Blade.
+            $interviewers = User::whereIn('role', ['hr', 'manager', 'admin', 'super_admin', 'employee'])
+                ->orderBy('name')
+                ->get(['id', 'name', 'role']);
+            $recruitmentStages = RecruitmentStage::orderBy('stage_order')->get();
+            $departments = Department::where('status', 1)->orderBy('name')->get();
+            $designations = Designation::where('status', 1)->orderBy('name')->get();
+
             return view('client.recruitment.application.index', compact(
                 'jobOpening',
                 'applications',
-                'applicationStats'
+                'applicationStats',
+                'interviewers',
+                'recruitmentStages',
+                'departments',
+                'designations'
             ));
         } catch (\Exception $e) {
             Log::error('Failed to fetch applications: ' . $e->getMessage());
@@ -573,111 +523,46 @@ class JobOpeningController extends Controller
     }
 
     // ─────────────────────────────────────────────
-    //  SHORTLIST WITH EMAIL
+    //  RECRUITMENT PIPELINE — all transitions delegate to
+    //  RecruitmentPipelineService (see app/Services/Recruitment).
     // ─────────────────────────────────────────────
 
     public function shortlist(Request $request, $id)
     {
         try {
             $request->validate(['remarks' => 'nullable|string|max:500']);
-
-            $application = JobApplication::with(['candidate', 'jobOpening'])->findOrFail($id);
-
-            if ($application->current_stage !== 'application_received') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Application cannot be shortlisted at this stage.',
-                ], 422);
-            }
-
-            DB::beginTransaction();
-            $application->moveToStage('cv_shortlisted', $request->remarks);
-            $application->candidate?->update(['status' => Candidate::STATUS_SCREENING]);
-            DB::commit();
-
-            // ✅ Send email to candidate
-            try {
-                Mail::to($application->candidate->email)->send(new ApplicationShortlistedMail(
-                    $application->candidate,
-                    $application->jobOpening,
-                    $request->remarks
-                ));
-            } catch (\Exception $e) {
-                Log::error('Failed to send shortlist email: ' . $e->getMessage());
-            }
-
+            $this->pipeline->shortlist(JobApplication::findOrFail($id), $request->remarks);
             return response()->json(['success' => true, 'message' => 'Application shortlisted successfully!']);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Shortlist failed: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to shortlist application.'], 500);
         }
     }
 
-    // ─────────────────────────────────────────────
-    //  REJECT WITH EMAIL
-    // ─────────────────────────────────────────────
-
     public function reject(Request $request, $id)
     {
-    
         try {
             $request->validate(['remarks' => 'required|string|min:5|max:500']);
-
-            $application = JobApplication::with(['candidate', 'jobOpening'])->findOrFail($id);
-
-            $rejectableStages = [
-                'application_received',
-                'cv_shortlisted',
-                'interview_scheduled',
-                'interview_completed',
-            ];
-
-            if (!in_array($application->current_stage, $rejectableStages)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Application cannot be rejected at this stage.',
-                ], 422);
-            }
-
-            DB::beginTransaction();
-            $newStage = $application->current_stage === 'application_received' ? 'cv_rejected' : 'rejected';
-            $application->moveToStage($newStage, $request->remarks);
-            $application->candidate?->update(['status' => Candidate::STATUS_REJECTED]);
-            DB::commit();
-
-            // ✅ Send rejection email to candidate
-            try {
-                Mail::to($application->candidate->email)->send(new ApplicationRejectedMail(
-                    $application->candidate,
-                    $application->jobOpening,
-                    $request->remarks
-                ));
-            } catch (\Exception $e) {
-                Log::error('Failed to send rejection email: ' . $e->getMessage());
-            }
-
+            $this->pipeline->rejectApplication(JobApplication::findOrFail($id), $request->remarks);
             return response()->json(['success' => true, 'message' => 'Application rejected successfully!']);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Reject failed: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to reject application.'], 500);
         }
     }
 
-    // ─────────────────────────────────────────────
-    //  SCHEDULE INTERVIEW WITH EMAIL
-    // ─────────────────────────────────────────────
-
     public function scheduleInterview(Request $request, $id)
     {
         try {
-            $request->validate([
-                'interview_round'       => 'required|integer|min:1',
+            $data = $request->validate([
                 'round_name'            => 'required|string|max:255',
                 'interview_type'        => 'required|in:online,offline,telephonic,video',
                 'interviewer_id'        => 'required|exists:users,id',
@@ -692,73 +577,7 @@ class JobOpeningController extends Controller
                 'recruitment_stage_id'  => 'nullable|exists:recruitment_stages,id',
             ]);
 
-            $application = JobApplication::with(['candidate', 'jobOpening'])->findOrFail($id);
-
-            $schedulableStages = ['cv_shortlisted', 'interview_completed'];
-
-            if (!in_array($application->current_stage, $schedulableStages)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Interview cannot be scheduled at this stage (' . $application->current_stage . ').',
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            $interview = Interview::create([
-                'tenant_id'             => $application->tenant_id,
-                'interview_code'        => $this->generateInterviewCode(),
-                'job_application_id'    => $application->id,
-                'candidate_id'          => $application->candidate_id,
-                'recruitment_stage_id'  => $request->recruitment_stage_id,
-                'interview_round'       => $request->interview_round,
-                'round_name'            => $request->round_name,
-                'interview_type'        => $request->interview_type,
-                'interviewer_id'        => $request->interviewer_id,
-                'co_interviewer_ids'    => json_encode($request->co_interviewer_ids ?? []),
-                'scheduled_date'        => $request->scheduled_date,
-                'scheduled_time'        => $request->scheduled_time,
-                'duration_minutes'      => $request->duration_minutes,
-                'meeting_link'          => $request->meeting_link,
-                'location'              => $request->location,
-                'instructions'          => $request->instructions,
-                'status'                => 'scheduled',
-                'created_by'            => auth()->id(),
-            ]);
-
-            $application->moveToStage(
-                'interview_scheduled',
-                "Interview scheduled: Round {$request->interview_round} – {$request->round_name}"
-            );
-
-            $application->candidate?->update(['status' => Candidate::STATUS_INTERVIEWING]);
-
-            DB::commit();
-
-            // ✅ Send interview invitation email to candidate
-            try {
-                Mail::to($application->candidate->email)->send(new InterviewScheduledMail(
-                    $application->candidate,
-                    $application->jobOpening,
-                    $interview
-                ));
-            } catch (\Exception $e) {
-                Log::error('Failed to send interview schedule email: ' . $e->getMessage());
-            }
-
-            // ✅ Also send email to interviewer
-            try {
-                $interviewer = User::find($request->interviewer_id);
-                // if ($interviewer) {
-                //     Mail::to($interviewer->email)->send(new \App\Mail\InterviewerInvitationMail(
-                //         $application->candidate,
-                //         $application->jobOpening,
-                //         $interview
-                //     ));
-                // }
-            } catch (\Exception $e) {
-                Log::error('Failed to send interviewer invitation email: ' . $e->getMessage());
-            }
+            $interview = $this->pipeline->scheduleInterview(JobApplication::findOrFail($id), $data);
 
             return response()->json([
                 'success'   => true,
@@ -766,27 +585,72 @@ class JobOpeningController extends Controller
                 'data'      => [
                     'interview_id'   => $interview->id,
                     'interview_code' => $interview->interview_code,
+                    'interview_round' => $interview->interview_round,
                     'scheduled_date' => $interview->scheduled_date->format('d M Y'),
                     'scheduled_time' => $interview->scheduled_time->format('h:i A'),
                 ],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Schedule interview failed: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to schedule interview: ' . $e->getMessage()], 500);
         }
     }
 
-    // ─────────────────────────────────────────────
-    //  SUBMIT FEEDBACK & DECISION WITH EMAIL
-    // ─────────────────────────────────────────────
+    public function cancelInterview(Request $request, $id)
+    {
+        try {
+            $request->validate(['reason' => 'nullable|string|max:500']);
+            $this->pipeline->cancelInterview(Interview::findOrFail($id), $request->reason);
+            return response()->json(['success' => true, 'message' => 'Interview cancelled.']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            Log::error('Cancel interview failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to cancel interview.'], 500);
+        }
+    }
+
+    public function rescheduleInterview(Request $request, $id)
+    {
+        try {
+            $data = $request->validate([
+                'scheduled_date' => 'required|date|after_or_equal:today',
+                'scheduled_time' => 'required|date_format:H:i',
+                'reason'         => 'nullable|string|max:500',
+            ]);
+
+            $newInterview = $this->pipeline->rescheduleInterview(
+                Interview::findOrFail($id),
+                $data['scheduled_date'],
+                $data['scheduled_time'],
+                $data['reason'] ?? null
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Interview rescheduled.',
+                'data' => ['interview_id' => $newInterview->id],
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            Log::error('Reschedule interview failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to reschedule interview.'], 500);
+        }
+    }
 
     public function submitFeedback(Request $request, $id)
     {
         try {
-            $request->validate([
+            $data = $request->validate([
                 'technical_skill'       => 'nullable|integer|min:1|max:5',
                 'communication_skill'   => 'nullable|integer|min:1|max:5',
                 'problem_solving'       => 'nullable|integer|min:1|max:5',
@@ -801,160 +665,37 @@ class JobOpeningController extends Controller
                 'next_round_suggested'  => 'nullable|string|max:255',
             ]);
 
-            $interview = Interview::with(['application.candidate', 'application.jobOpening'])->findOrFail($id);
+            $interview = $this->pipeline->submitInterviewFeedback(Interview::findOrFail($id), $data);
 
-            if ($interview->status === 'completed') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Feedback has already been submitted for this interview.',
-                ], 422);
-            }
-
-            $application = $interview->application;
-
-            DB::beginTransaction();
-
-            // Mark interview as completed
-            $interview->update([
-                'status'       => 'completed',
-                'outcome'      => $request->decision,
-                'feedback'     => $request->comments,
-                'rating'       => $request->overall_rating,
-                'completed_at' => now(),
+            return response()->json([
+                'success' => true,
+                'message' => 'Feedback submitted successfully!',
+                'data' => [
+                    'decision' => $data['decision'],
+                    // Lets the UI immediately offer "Schedule Round N+1" for next_round,
+                    // instead of a separate nextRound() endpoint.
+                    'next_round' => $data['decision'] === 'next_round' ? $interview->interview_round + 1 : null,
+                ],
             ]);
-
-            // Detailed feedback record
-            $interview->feedbacks()->create([
-                'tenant_id'            => $interview->tenant_id,
-                'interviewer_id'       => auth()->id(),
-                'technical_skill'      => $request->technical_skill,
-                'communication_skill'  => $request->communication_skill,
-                'problem_solving'      => $request->problem_solving,
-                'cultural_fit'         => $request->cultural_fit,
-                'experience_relevance' => $request->experience_relevance,
-                'overall_rating'       => $request->overall_rating,
-                'strengths'            => $request->strengths,
-                'weaknesses'           => $request->weaknesses,
-                'comments'             => $request->comments,
-                'recommendation'       => $request->recommendation,
-                'next_round_suggested' => $request->next_round_suggested,
-            ]);
-
-            // ── Process decision and send emails ──────────────────────────
-
-            switch ($request->decision) {
-
-                case 'selected':
-                    $application->moveToStage(
-                        'interview_completed',
-                        "Selected in {$interview->round_name}. Ready for offer."
-                    );
-                    $application->candidate?->update(['status' => Candidate::STATUS_OFFERED]);
-                    
-                    // ✅ Send selection email
-                    try {
-                        Mail::to($application->candidate->email)->send(new InterviewFeedbackMail(
-                            $application->candidate,
-                            $application->jobOpening,
-                            $interview,
-                            'selected',
-                            $request->comments
-                        ));
-                    } catch (\Exception $e) {
-                        Log::error('Failed to send selection email: ' . $e->getMessage());
-                    }
-                    break;
-
-                case 'rejected':
-                    $application->moveToStage(
-                        'rejected',
-                        "Rejected in {$interview->round_name}: {$request->comments}"
-                    );
-                    $application->candidate?->update(['status' => Candidate::STATUS_REJECTED]);
-                    
-                    // ✅ Send rejection email
-                    try {
-                        Mail::to($application->candidate->email)->send(new InterviewFeedbackMail(
-                            $application->candidate,
-                            $application->jobOpening,
-                            $interview,
-                            'rejected',
-                            $request->comments
-                        ));
-                    } catch (\Exception $e) {
-                        Log::error('Failed to send rejection email: ' . $e->getMessage());
-                    }
-                    break;
-
-                case 'next_round':
-                    $fromStage = $application->current_stage;
-                    $application->update(['current_stage' => 'cv_shortlisted']);
-                    $application->candidate?->update(['status' => Candidate::STATUS_INTERVIEWING]);
-
-                    $application->logs()->create([
-                        'tenant_id'          => $application->tenant_id,
-                        'job_application_id' => $application->id,
-                        'from_stage'         => $fromStage,
-                        'to_stage'           => 'cv_shortlisted',
-                        'action'             => 'next_round',
-                        'action_by'          => auth()->id(),
-                        'remarks'            => "Advancing to next round after {$interview->round_name}"
-                            . ($request->next_round_suggested ? ". Next: {$request->next_round_suggested}" : ''),
-                    ]);
-                    
-                    // ✅ Send next round email
-                    try {
-                        Mail::to($application->candidate->email)->send(new InterviewFeedbackMail(
-                            $application->candidate,
-                            $application->jobOpening,
-                            $interview,
-                            'next_round',
-                            $request->comments
-                        ));
-                    } catch (\Exception $e) {
-                        Log::error('Failed to send next round email: ' . $e->getMessage());
-                    }
-                    break;
-
-                case 'on_hold':
-                    $application->logs()->create([
-                        'tenant_id'          => $application->tenant_id,
-                        'job_application_id' => $application->id,
-                        'from_stage'         => $application->current_stage,
-                        'to_stage'           => $application->current_stage,
-                        'action'             => 'on_hold',
-                        'action_by'          => auth()->id(),
-                        'remarks'            => "On hold after {$interview->round_name}: {$request->comments}",
-                    ]);
-                    $application->update(['current_stage' => 'cv_shortlisted']);
-                    break;
-            }
-
-            DB::commit();
-
-            return response()->json(['success' => true, 'message' => 'Feedback submitted successfully!']);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Submit feedback failed: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to submit feedback.'], 500);
         }
     }
 
-    // ─────────────────────────────────────────────
-    //  RELEASE OFFER WITH EMAIL
-    // ─────────────────────────────────────────────
-
     public function releaseOffer(Request $request, $id)
     {
         try {
-            $request->validate([
+            $data = $request->validate([
                 'joining_date'      => 'required|date|after_or_equal:today',
                 'designation_id'    => 'required|exists:designations,id',
                 'department_id'     => 'required|exists:departments,id',
                 'reporting_head'    => 'nullable|exists:users,id',
-                'employment_type'   => 'required|in:full_time,part_time,contract,internship',
+                'employment_type'   => 'required|in:full_time,part_time,contract,internship,temporary',
                 'offered_ctc'       => 'required|numeric|min:0',
                 'basic_salary'      => 'nullable|numeric|min:0',
                 'hra'               => 'nullable|numeric|min:0',
@@ -962,57 +703,7 @@ class JobOpeningController extends Controller
                 'variable_pay'      => 'nullable|numeric|min:0',
             ]);
 
-            $application = JobApplication::with(['candidate', 'jobOpening'])->findOrFail($id);
-
-            if ($application->current_stage !== 'interview_completed') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Offer can only be released after interview is completed.',
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            $offer = JobOffer::create([
-                'tenant_id'         => $application->tenant_id,
-                'offer_code'        => $this->generateOfferCode(),
-                'job_application_id' => $application->id,
-                'candidate_id'      => $application->candidate_id,
-                'offer_date'        => now(),
-                'joining_date'      => $request->joining_date,
-                'designation_id'    => $request->designation_id,
-                'department_id'     => $request->department_id,
-                'reporting_head'    => $request->reporting_head,
-                'employment_type'   => $request->employment_type,
-                'offer_status'      => 'sent',
-                'offered_ctc'       => $request->offered_ctc,
-                'basic_salary'      => $request->basic_salary,
-                'hra'               => $request->hra,
-                'other_allowances'  => $request->other_allowances,
-                'variable_pay'      => $request->variable_pay,
-                'sent_at'           => now(),
-                'created_by'        => auth()->id(),
-            ]);
-
-            $application->moveToStage(
-                'offer_released',
-                'Offer letter released. CTC: ₹' . number_format($request->offered_ctc)
-            );
-            $application->candidate?->update(['status' => Candidate::STATUS_OFFERED]);
-
-            DB::commit();
-
-            // ✅ Send offer letter email to candidate
-            try {
-                Mail::to($application->candidate->email)->send(new OfferReleasedMail(
-                    $application->candidate,
-                    $application->jobOpening,
-                    $offer,
-                    $request->joining_date
-                ));
-            } catch (\Exception $e) {
-                Log::error('Failed to send offer email: ' . $e->getMessage());
-            }
+            $offer = $this->pipeline->releaseOffer(JobApplication::findOrFail($id), $data);
 
             return response()->json([
                 'success'   => true,
@@ -1025,118 +716,54 @@ class JobOpeningController extends Controller
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Release offer failed: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to release offer.'.$e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Failed to release offer: ' . $e->getMessage()], 500);
         }
     }
-
-    // ─────────────────────────────────────────────
-    //  OFFER ACCEPTED WITH EMAIL
-    // ─────────────────────────────────────────────
 
     public function offerAccepted(Request $request, $id)
     {
         try {
-            $application = JobApplication::with(['candidate', 'jobOpening'])->findOrFail($id);
-            
-            if ($application->current_stage !== 'offer_released') {
-                return response()->json(['success' => false, 'message' => 'Invalid stage.'], 422);
-            }
-            
-            DB::beginTransaction();
-            $application->moveToStage('offer_accepted', 'Candidate accepted the offer.');
-            $application->candidate?->update(['status' => Candidate::STATUS_HIRED]);
-            
-            $offer = $application->offer()->latest()->first();
-            if ($offer) {
-                $offer->update(['offer_status' => 'accepted', 'accepted_at' => now()]);
-                $joiningDate = $offer->joining_date;
-            } else {
-                $joiningDate = now()->addDays(15);
-            }
-            
-            DB::commit();
+            $request->validate(['negotiation_details' => 'nullable|string|max:1000']);
 
-            // ✅ Send offer accepted confirmation email to candidate
-            try {
-                Mail::to($application->candidate->email)->send(new OfferAcceptedMail(
-                    $application->candidate,
-                    $application->jobOpening,
-                    $joiningDate
-                ));
-            } catch (\Exception $e) {
-                Log::error('Failed to send offer acceptance email: ' . $e->getMessage());
+            $application = JobApplication::with('offer')->findOrFail($id);
+            if (!$application->offer) {
+                return response()->json(['success' => false, 'message' => 'No offer found for this application.'], 422);
             }
 
-            // ✅ Notify HR team
-            try {
-                $hrUsers = User::whereIn('role', ['hr', 'admin'])->get();
-                // foreach ($hrUsers as $hr) {
-                //     Mail::to($hr->email)->send(new \App\Mail\OfferAcceptedHRMail(
-                //         $application->candidate,
-                //         $application->jobOpening
-                //     ));
-                // }
-            } catch (\Exception $e) {
-                Log::error('Failed to send HR notification email: ' . $e->getMessage());
-            }
+            $this->pipeline->markOfferAccepted($application->offer, $request->negotiation_details);
 
             return response()->json([
-                'success' => true, 
-                'message' => 'Offer marked as accepted! Onboarding process will begin shortly.'
+                'success' => true,
+                'message' => 'Offer marked as accepted! Onboarding has started.'
             ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Offer accepted failed: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to process offer acceptance.'.$e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Failed to process offer acceptance: ' . $e->getMessage()], 500);
         }
     }
-
-    // ─────────────────────────────────────────────
-    //  OFFER REJECTED WITH EMAIL
-    // ─────────────────────────────────────────────
 
     public function offerRejected(Request $request, $id)
     {
         try {
             $request->validate(['remarks' => 'nullable|string|max:500']);
-            
-            $application = JobApplication::with(['candidate', 'jobOpening'])->findOrFail($id);
-            
-            if ($application->current_stage !== 'offer_released') {
-                return response()->json(['success' => false, 'message' => 'Invalid stage.'], 422);
-            }
-            
-            DB::beginTransaction();
-            $application->moveToStage('offer_rejected', $request->remarks ?? 'Candidate rejected the offer.');
-            $application->candidate?->update(['status' => Candidate::STATUS_REJECTED]);
-            
-            $offer = $application->offers()->latest()->first();
-            if ($offer) {
-                $offer->update(['offer_status' => 'rejected', 'rejected_at' => now()]);
-            }
-            
-            DB::commit();
 
-            // ✅ Send offer rejected notification email to HR
-            try {
-                $hrUsers = User::whereIn('role', ['hr', 'admin'])->get();
-                foreach ($hrUsers as $hr) {
-                    Mail::to($hr->email)->send(new OfferRejectedMail(
-                        $application->candidate,
-                        $application->jobOpening,
-                        $request->remarks
-                    ));
-                }
-            } catch (\Exception $e) {
-                Log::error('Failed to send offer rejection email: ' . $e->getMessage());
+            $application = JobApplication::with('offer')->findOrFail($id);
+            if (!$application->offer) {
+                return response()->json(['success' => false, 'message' => 'No offer found for this application.'], 422);
             }
+
+            $this->pipeline->markOfferRejected($application->offer, $request->remarks ?? 'Candidate rejected the offer.');
 
             return response()->json(['success' => true, 'message' => 'Offer marked as rejected.']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Offer rejected failed: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to process offer rejection.'], 500);
         }
@@ -1150,7 +777,7 @@ class JobOpeningController extends Controller
     {
         try {
             $application = JobApplication::with([
-                'candidate',
+                'candidate' => fn ($q) => $q->withTrashed()->allTenants(),
                 'jobOpening',
                 'interviews' => function ($q) {
                     $q->with([
@@ -1199,18 +826,50 @@ class JobOpeningController extends Controller
     //  HELPERS
     // ─────────────────────────────────────────────
 
-   private function generateInterviewCode(): string
-{
-    $lastId = Interview::max('id') ?? 0;
-
-    return 'INT' . str_pad($lastId + 1, 6, '0', STR_PAD_LEFT);
-}
-
-    private function generateOfferCode(): string
+    protected function generateJobCode(): string
     {
-        $prefix = 'OFF';
-        $year   = date('Y');
-        $lastId = JobOffer::max('id') ?? 0;
-        return $prefix . $year . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $nextId = (JobOpening::max('id') ?? 0) + 1 + $attempt;
+            $code = 'JOB-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+            if (!JobOpening::where('job_code', $code)->exists()) {
+                return $code;
+            }
+        }
+        return 'JOB-' . date('YmdHis') . rand(100, 999);
+    }
+
+    protected function rules(): array
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'department_id' => 'nullable|exists:departments,id',
+            'designation_id' => 'nullable|exists:designations,id',
+            'employment_type' => 'required|in:full_time,part_time,contract,internship,temporary',
+            'experience_required' => 'nullable|string|max:100',
+            'qualification_required' => 'nullable|string',
+            'skills_required' => 'nullable|string',
+            'description' => 'required|string',
+            'responsibilities' => 'nullable|string',
+            'requirements' => 'nullable|string',
+            'location' => 'nullable|string|max:255',
+            'salary_range_min' => 'nullable|numeric|min:0',
+            'salary_range_max' => 'nullable|numeric|min:0|gte:salary_range_min',
+            'no_of_vacancies' => 'required|integer|min:1',
+            'hiring_lead' => 'nullable|exists:users,id',
+            'status' => 'required|in:draft,published,closed,on_hold'
+        ];
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'title.required' => 'Job title is required',
+            'employment_type.required' => 'Employment type is required',
+            'description.required' => 'Job description is required',
+            'no_of_vacancies.required' => 'Number of vacancies is required',
+            'no_of_vacancies.min' => 'Number of vacancies must be at least 1',
+            'status.required' => 'Status is required',
+            'salary_range_max.gte' => 'Maximum salary must be greater than or equal to minimum salary'
+        ];
     }
 }

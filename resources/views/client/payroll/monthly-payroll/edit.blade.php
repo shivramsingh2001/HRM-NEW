@@ -829,16 +829,29 @@
 
                     <!-- Employee Header -->
                     <div class="employee-header">
-                        <div class="employee-avatar">
-                            {{ strtoupper(substr($monthlyPayroll->user->name ?? 'NA', 0, 2)) }}
+                        <div class="employee-avatar" style="overflow:hidden;">
+                            @if ($monthlyPayroll->user->profile_image ?? null)
+                                <img src="{{ asset($monthlyPayroll->user->profile_image) }}" alt=""
+                                    style="width:100%;height:100%;object-fit:cover;">
+                            @else
+                                {{ strtoupper(substr($monthlyPayroll->user->name ?? 'NA', 0, 2)) }}
+                            @endif
                         </div>
                         <div class="employee-info">
-                            <h4>{{ $monthlyPayroll->user->name ?? 'N/A' }}</h4>
+                            <h4>
+                                {{ $monthlyPayroll->user->name ?? 'N/A' }}
+                                @if (($monthlyPayroll->user->status ?? 1) != 1)
+                                    <span class="badge-status status-badge cancelled" style="margin-left:6px;">Inactive</span>
+                                @endif
+                            </h4>
                             <p>{{ $monthlyPayroll->user->employee_id ?? 'N/A' }}</p>
                             <div class="employee-meta">
                                 <span><i class="feather-briefcase"></i> {{ $monthlyPayroll->user->jobDetails->designationRel->name ?? 'N/A' }}</span>
                                 <span><i class="feather-grid"></i> {{ $monthlyPayroll->user->jobDetails->departmentRel->name ?? 'N/A' }}</span>
                                 <span><i class="feather-mail"></i> {{ $monthlyPayroll->user->email ?? 'N/A' }}</span>
+                                @if ($monthlyPayroll->user->jobDetails->employment_type ?? null)
+                                    <span><i class="feather-user-check"></i> {{ ucfirst(str_replace('-', ' ', $monthlyPayroll->user->jobDetails->employment_type)) }}</span>
+                                @endif
                                 <span><i class="feather-calendar"></i> {{ Carbon\Carbon::createFromFormat('Y-m', $monthlyPayroll->payroll_month)->format('F Y') }}</span>
                                 <span>
                                     <i class="feather-{{ $calcType === 'hour_based' ? 'clock' : 'calendar' }}"></i>
@@ -847,6 +860,9 @@
                                         ({{ $userPayroll->payrollMaster->working_hours_per_day ?? 8 }} hrs/day)
                                     @endif
                                 </span>
+                                @if ($isDynamic)
+                                    <span style="color:#1e3a8a;"><i class="feather-layers"></i> Dynamic structure</span>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -970,15 +986,15 @@
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Holidays</label>
-                                    <input type="number" class="form-control" id="holidays_days"
-                                        value="{{ $monthlyPayroll->holidays ?? 0 }}" readonly>
+                                    <input type="number" step="0.5" name="holidays" class="form-control" id="holidays_days"
+                                        value="{{ old('holidays', $monthlyPayroll->holidays ?? 0) }}" {{ $isDynamic ? '' : 'readonly' }}>
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Week Offs</label>
-                                    <input type="number" class="form-control" id="week_offs_days"
-                                        value="{{ $monthlyPayroll->week_offs ?? 0 }}" readonly>
+                                    <input type="number" step="0.5" name="week_offs" class="form-control" id="week_offs_days"
+                                        value="{{ old('week_offs', $monthlyPayroll->week_offs ?? 0) }}" {{ $isDynamic ? '' : 'readonly' }}>
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -998,8 +1014,12 @@
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Absent</label>
-                                    <input type="number" class="form-control" id="absent_days_input"
-                                        value="{{ $monthlyPayroll->absent_days ?? 0 }}" readonly>
+                                    {{-- Not a submitted field — editing it (dynamic only) recomputes
+                                         Present client-side (total - absent - paidLeave - weekOff -
+                                         holiday), and Present is what actually gets sent/recalculated,
+                                         so the day-count identity can never go inconsistent. --}}
+                                    <input type="number" step="0.5" class="form-control" id="absent_days_input"
+                                        value="{{ $monthlyPayroll->absent_days ?? 0 }}" {{ $isDynamic ? '' : 'readonly' }}>
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -1123,6 +1143,9 @@
                     <!-- ============================================================ -->
                     <!-- EARNINGS SECTION (Common for both types)                    -->
                     <!-- ============================================================ -->
+                    @if ($isDynamic)
+                        @include('client.payroll.monthly-payroll.partials._dynamic-component-fields', ['dynamicComponents' => $dynamicComponents, 'show' => ['earnings']])
+                    @else
                     <div class="form-section">
                         <div class="section-title">
                             <span><i class="feather-trending-up me-1" style="color: var(--primary);"></i>Earnings</span>
@@ -1199,6 +1222,7 @@
                             </div>
                         </div>
                     </div>
+                    @endif
 
                     <!-- ============================================================ -->
                     <!-- OVERTIME SECTION -- approved breakdown + non-approved include -->
@@ -1333,8 +1357,11 @@
                     @endif
 
                     <!-- ============================================================ -->
-                    <!-- DEDUCTIONS SECTION                                           -->
+                    <!-- DEDUCTIONS + EMPLOYER SECTION                                -->
                     <!-- ============================================================ -->
+                    @if ($isDynamic)
+                        @include('client.payroll.monthly-payroll.partials._dynamic-component-fields', ['dynamicComponents' => $dynamicComponents, 'show' => ['deductions', 'employer_contributions']])
+                    @else
                     <div class="form-section">
                         <div class="section-title">
                             <span><i class="feather-trending-down me-1" style="color: var(--gray-600);"></i>Deductions</span>
@@ -1422,7 +1449,7 @@
                                         <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #1e3a8a; min-width: 90px;">
                                             <i class="feather-pie-chart"></i> Total
                                         </span>
-                                        <input type="text" class="form-control" id="total_employer_cost" 
+                                        <input type="text" class="form-control" id="total_employer_cost"
                                             style="background: #eef3fd; font-weight: 600; color: #1e3a8a;"
                                             value="₹{{ number_format(($monthlyPayroll->employer_provident_fund ?? 0) + ($monthlyPayroll->employer_esi ?? 0), 2) }}" readonly>
                                     </div>
@@ -1430,6 +1457,7 @@
                             </div>
                         </div>
                     </div>
+                    @endif
 
                     <!-- ============================================================ -->
                     <!-- SUMMARY SECTION                                              -->
@@ -2057,4 +2085,122 @@
         console.log('Original Payroll Data:', originalPayroll);
     });
 </script>
+
+@if ($isDynamic)
+    {{-- Dynamic-engine live recalculation — a separate script block so it
+         never touches the legacy calculation functions/variables above.
+         Week Off/Holiday/Absent are genuinely editable here (unlike the
+         legacy form): Absent recomputes Present client-side (so the day-
+         count identity present+paidLeave+weekOff+holiday=totalDays can
+         never go inconsistent), and every day-count change re-runs the
+         SAME PayrollCalculationEngine::calculate() the eventual save uses,
+         via the read-only recalculate-preview endpoint — so what's shown
+         while editing can't drift from what actually gets persisted. --}}
+    <script>
+        $(document).ready(function() {
+            const totalWorkingDays = {{ $monthlyPayroll->total_working_days ?? 30 }};
+            const previewUrl = '{{ route('monthly-payrolls.recalculate-preview', $monthlyPayroll->id) }}';
+            let previewInFlight = false;
+
+            function dayInputs() {
+                return {
+                    present: parseFloat($('#present_days').val()) || 0,
+                    paidLeaves: parseFloat($('#paid_leaves').val()) || 0,
+                    weekOffs: parseFloat($('#week_offs_days').val()) || 0,
+                    holidays: parseFloat($('#holidays_days').val()) || 0,
+                };
+            }
+
+            function updateAbsentDisplay() {
+                const d = dayInputs();
+                const absent = Math.max(0, totalWorkingDays - d.present - d.paidLeaves - d.weekOffs - d.holidays);
+                $('#absent_days_input').val(absent.toFixed(1));
+            }
+
+            function runPreview() {
+                if (previewInFlight) return;
+                previewInFlight = true;
+
+                const d = dayInputs();
+                $.ajax({
+                    url: previewUrl,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        present_days: d.present,
+                        paid_leaves: d.paidLeaves,
+                        week_offs: d.weekOffs,
+                        holidays: d.holidays,
+                        loan_deduction_enabled: $('#loan_deduction_enabled').val() || 1,
+                    },
+                    success: function(response) {
+                        if (!response.success) return;
+                        const data = response.data;
+
+                        ['earnings', 'deductions', 'employer_contributions'].forEach(function(group) {
+                            (data[group] || []).forEach(function(item) {
+                                const field = $('.dynamic-component-field[data-code="' + item.code + '"]');
+                                // Only overwrite fields the user hasn't manually
+                                // edited since the last recompute — matches the
+                                // legacy form's own "manual edit wins" pattern.
+                                if (field.length && !field.data('user-edited')) {
+                                    field.val(item.amount);
+                                }
+                            });
+                        });
+
+                        $('#gross_display').text('₹' + Number(data.gross_earnings).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+                        $('#deductions_display').text('₹' + Number(data.total_deductions).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+                        $('#net_display').text('₹' + Number(data.net_payable).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+                        $('#total_deductions').val(data.total_deductions);
+                        $('#net_payable').val(data.net_payable);
+                        $('#payable_days_input').val(data.payable_days);
+
+                        const employerTotal = (data.employer_contributions || []).reduce((sum, c) => sum + Number(c.amount), 0);
+                        $('#employer_contributions_display').text('₹' + employerTotal.toLocaleString('en-IN', {minimumFractionDigits: 2}));
+                        $('#monthly_ctc_display').text('₹' + (Number(data.gross_earnings) + employerTotal).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+                    },
+                    error: function() {
+                        showNotification('Failed to recalculate. Your day-count changes are saved to the form but the live preview could not refresh.', 'warning');
+                    },
+                    complete: function() {
+                        previewInFlight = false;
+                    }
+                });
+            }
+
+            // Week Off / Holiday — direct edits, straightforward recompute.
+            $('#week_offs_days, #holidays_days').on('change', function() {
+                updateAbsentDisplay();
+                runPreview();
+            });
+
+            // Present — recompute Absent's display (Absent isn't submitted,
+            // it's purely a derived display here) and re-run the preview.
+            $('#present_days, #paid_leaves').on('change', function() {
+                updateAbsentDisplay();
+                runPreview();
+            });
+
+            // Absent — the inverse: back-compute Present from it, write that
+            // into the real submitted field, then recompute exactly like a
+            // direct Present edit would.
+            $('#absent_days_input').on('change', function() {
+                const d = dayInputs();
+                const absent = Math.max(0, parseFloat($(this).val()) || 0);
+                const present = Math.max(0, totalWorkingDays - absent - d.paidLeaves - d.weekOffs - d.holidays);
+                $('#present_days').val(present.toFixed(1));
+                runPreview();
+            });
+
+            // A component amount the user types directly into stops that
+            // one field from being overwritten by the next preview refresh.
+            $(document).on('input', '.dynamic-component-field:not([readonly])', function() {
+                $(this).data('user-edited', true);
+            });
+
+            updateAbsentDisplay();
+        });
+    </script>
+@endif
 @endsection

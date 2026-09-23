@@ -6,17 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
 use App\Models\AttendanceLocation;
-use App\Models\AttendanceTrack;
+use App\Models\AttendanceTrackingPoint;
 use App\Models\AttendanceRegularization;
 use App\Models\Shift;
 use App\Models\UserShift;
 use App\Models\UserWeekoffs;
+use App\Services\FieldTracking\TrackingPointIngestService;
+use App\Services\FieldTracking\TrackingSessionService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Request as RequestStore;
 use App\Services\AttendanceNotificationService;
@@ -269,31 +272,6 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Recompute the policy-resolved status (Feature B) and the monthly summary
-     * for a user after an attendance row changes. Never throws — a failure here
-     * must not fail the clock-in/out itself.
-     */
-    private function refreshAttendanceDerived($userId, $tenantId, $date): void
-    {
-        try {
-            $tenantId = (int) ($tenantId ?: optional(Auth::user())->tenant_id);
-            if (!$tenantId || !$userId) {
-                return;
-            }
-            $ym = Carbon::parse($date)->format('Y-m');
-
-            app(\App\Services\Attendance\LatePolicyService::class)
-                ->recalculateMonth((int) $userId, $tenantId, $ym);
-            app(\App\Services\AttendanceSummaryService::class)
-                ->updateMonthlySummary((int) $userId, $ym, $tenantId);
-        } catch (\Throwable $e) {
-            Log::error('refreshAttendanceDerived failed', [
-                'user_id' => $userId, 'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
      * Return $value as a strict Y-m-d string, or $default when it is not a valid date.
      * Guarantees the result matches ^\d{4}-\d{2}-\d{2}$ so it is safe to inline in SQL.
      */
@@ -311,17 +289,6 @@ class AttendanceController extends Controller
             return $default;
         }
     }
-
-    // Rest of the methods remain exactly the same...
-    // getAttendance(), clockIn(), clockOut(), trackLocation(), todayLocations(),
-    // regularizationStore(), getMyRegularizations(), getReporteesRegularizations(),
-    // regularizationApproval(), calculateDistance(), getUserShiftForDate(), 
-    // isWeekoffForUser(), determineDayStatus(), createSuccessLog(), createFailureLog()
-
-    // The only changes are:
-    // 1. Added getAttendanceStatusByShift() method at the top
-    // 2. Updated SQL queries in index() and history() to use shift-based logic
-    // 3. Added a.scheduled_shift_start, a.scheduled_shift_end, a.worked_hours to SELECT
 
     public function getAttendance()
     {
@@ -437,6 +404,101 @@ class AttendanceController extends Controller
         }
     }
 
+    /**
+     * The logged-in user's raw punches + paired sessions for one day (default
+     * today). Additive — existing endpoints/response shapes are unaffected.
+     */
+    public function punchHistory(Request $request)
+    {
+        try {
+            $userId = (int) Auth::id();
+            $tenantId = (int) (optional(Auth::user())->tenant_id ?: DB::table('users')->where('id', $userId)->value('tenant_id'));
+            $date = $this->safeDate($request->input('date'), date('Y-m-d'));
+
+            $punches = \App\Models\AttendancePunch::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('user_id', $userId)
+                ->where('date', $date)
+                ->where('status', 'active')
+                ->orderBy('punched_at')
+                ->get(['id', 'direction', 'punched_at', 'source', 'method', 'lat', 'long', 'address', 'session_seq']);
+
+            $shift = $tenantId
+                ? app(\App\Services\Attendance\TenantShiftResolver::class)->forUserDate($userId, $tenantId, $date)
+                : null;
+            $paired = app(\App\Services\Attendance\PunchSessionCalculator::class)->pairSessions($punches, $shift);
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'date' => $date,
+                    'punches' => $punches->map(fn ($p) => [
+                        'id' => $p->id,
+                        'direction' => $p->direction,
+                        'punched_at' => optional($p->punched_at)->format('Y-m-d H:i:s'),
+                        'source' => $p->source,
+                        'method' => $p->method,
+                        'lat' => $p->lat,
+                        'long' => $p->long,
+                        'address' => $p->address,
+                    ])->values(),
+                    'sessions' => collect($paired['sessions'])->map(fn ($s) => [
+                        'clock_in' => $s['in']->format('Y-m-d H:i:s'),
+                        'clock_out' => $s['out']->format('Y-m-d H:i:s'),
+                        'worked_hours' => round($s['worked_seconds'] / 3600, 2),
+                    ])->values(),
+                    'open_session' => $paired['open_session'],
+                    'session_count' => $paired['session_count'],
+                ],
+            ], 200);
+        } catch (Exception $e) {
+            Log::error('Attendance punch history failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occured. Please try again later.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Cheap open/closed status for the mobile clock-in/out button state.
+     * Additive — does not replace today()/getAttendance().
+     */
+    public function currentSession(Request $request)
+    {
+        try {
+            $userId = (int) Auth::id();
+            $tenantId = (int) (optional(Auth::user())->tenant_id ?: DB::table('users')->where('id', $userId)->value('tenant_id'));
+
+            $latest = \App\Models\AttendancePunch::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('user_id', $userId)
+                ->where('status', 'active')
+                ->orderByDesc('punched_at')
+                ->first(['direction', 'punched_at', 'session_seq']);
+
+            $clockedIn = (bool) ($latest && $latest->direction === 'in');
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'clocked_in' => $clockedIn,
+                    'session_number' => $clockedIn ? $latest->session_seq : null,
+                    'clock_in_at' => $clockedIn ? optional($latest->punched_at)->format('Y-m-d H:i:s') : null,
+                    'open_since_seconds' => $clockedIn ? Carbon::parse($latest->punched_at)->diffInSeconds(Carbon::now()) : null,
+                ],
+            ], 200);
+        } catch (Exception $e) {
+            Log::error('Attendance current-session failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occured. Please try again later.',
+            ], 500);
+        }
+    }
+
     public function clockIn(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -480,48 +542,11 @@ class AttendanceController extends Controller
             $shift = $userShift ? Shift::find($userShift['id']) : null;
     
            
-            // NIGHT SHIFT FIX: Determine correct attendance date
-            $attendanceDate = $currentDate;
-            if ($shift) {
-                $shiftStartTime = Carbon::parse($shift->start_time);
-                $shiftEndTime = Carbon::parse($shift->end_time);
-            
-                // Check if night shift (end time < start time or ends before 4 AM)
-                $isNightShift = $shiftEndTime->format('H:i') < $shiftStartTime->format('H:i') ||
-                    ($shiftEndTime->format('H:i') <= '04:00' && $shiftStartTime->format('H:i') >= '20:00');
-            
-                // For night shifts clocking in after midnight, use previous day
-                if ($isNightShift) {
-                    $currentHour = (int)$currentTime->format('H');
-                    $shiftStartHour = (int)$shiftStartTime->format('H');
-                    
-                    // Only use previous day if clocking in after midnight (00:00 - 05:59)
-                    // This prevents early clock-ins (like 19:55 for 20:00 shift) from using previous day
-                    if ($currentHour >= 0 && $currentHour < 6 && $currentHour < $shiftStartHour) {
-                        $attendanceDate = Carbon::parse($currentDate)->subDay()->format('Y-m-d');
-                    }
-                }
-            }
-    
-            // NIGHT SHIFT FIX: Check for existing active attendance
-            $existing = Attendance::where('user_id', $userId)
-                ->where('date', $attendanceDate)
-                ->whereNull('clock_out')
-                ->first();
-    
-            if ($existing && $existing->clock_in != null) {
-                $this->createFailureLog($userId, 'check_in', 'already_clocked_in', [
-                    'existing_attendance_id' => $existing->id,
-                    'existing_clock_in' => $existing->clock_in,
-                    'attendance_date' => $attendanceDate
-                ], $request);
-    
-                return response()->json([
-                    'status' => false,
-                    'message' => 'You have already checked in for this shift.'
-                ], 200);
-            }
-    
+            // NIGHT SHIFT FIX: Determine correct attendance date. Shared with
+            // every other punch source via AttendancePunchService.
+            $attendanceDate = app(\App\Services\Attendance\AttendanceCalculator::class)
+                ->resolveAttendanceDate($currentTime, $shift);
+
             $hasApprovedRequest = RequestStore::where('user_id', $userId)
                 ->where('status', 'APPROVED')
                 ->whereDate('start_date', '<=', $attendanceDate)
@@ -680,33 +705,11 @@ class AttendanceController extends Controller
             // END OF CHANGED: ENHANCED BRANCH HANDLING
             // =============================================
     
-            $lateMinutes = 0;
-            $attendanceStatus = 'present';
-    
-            if ($shift) {
-                $scheduledStart = Carbon::parse($attendanceDate . ' ' . $shift->start_time);
-                $graceMinutes = $shift->grace_minutes ?? 0;
-                $minutesAfterShift = $scheduledStart->diffInMinutes($currentTime, false);
-    
-                if ($currentTime->gt($scheduledStart)) {
-                    if ($minutesAfterShift > $graceMinutes) {
-                        $lateMinutes = $minutesAfterShift;
-                        $attendanceStatus = 'late';
-                    } else {
-                        $lateMinutes = 0;
-                        $attendanceStatus = 'present';
-                    }
-                } else {
-                    $lateMinutes = 0;
-                    $attendanceStatus = 'present';
-                }
-            }
-    
             // Update user_shift status
             $userShiftRecord = UserShift::where('user_id', $userId)
                 ->where('date', $attendanceDate)
                 ->first();
-    
+
             if ($userShiftRecord) {
                 $userShiftRecord->status = 'ongoing';
                 $userShiftRecord->save();
@@ -715,87 +718,96 @@ class AttendanceController extends Controller
                     ->where('id', $userShift['user_shift_id'])
                     ->update(['status' => 'ongoing']);
             }
-    
-            DB::beginTransaction();
-    
+
             try {
-                try {
-                    $attendance = Attendance::create([
-                        'tenant_id' => $user->tenant_id,
-                        'user_id' => $userId,
-                        'shift_id' => $shift->id ?? null,
-                        'branch_id' => $branchId,
-                        'date' => $attendanceDate,
-                        'scheduled_shift_start' => $shift->start_time ?? null,
-                        'scheduled_shift_end' => $shift->end_time ?? null,
-                        'clock_in' => $currentDateTime,
-                        'clock_in_lat' => $request->lat,
-                        'clock_in_long' => $request->long,
-                        'clock_in_address' => $request->address,
-                        'check_in_distance' => $checkInDistance,
-                        'location_verification' => $locationVerification,
-                        'device_id' => $request->device_id,
-                        'ip_address' => $request->ip(),
-                        'wifi_ssid' => $request->wifi_ssid,
-                        'late_minutes' => $lateMinutes,
-                        'attendance_status' => $attendanceStatus,
-                        'status' => 1
-                    ]);
-                } catch (\Illuminate\Database\QueryException $qe) {
-                    if (($qe->errorInfo[1] ?? null) != 1062) {
-                        throw $qe;
-                    }
-                    // Lost the race for the unique (tenant,user,date) key.
-                    DB::rollBack();
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'You have already clocked in for today.'
-                    ], 200);
-                }
-    
-                $this->createSuccessLog(
-                    $userId,
-                    $attendance->id,
-                    'check_in',
-                    $request,
-                    $checkInDistance
+                $punchInput = new \App\Services\Attendance\PunchInput(
+                    userId: $userId,
+                    tenantId: (int) $user->tenant_id,
+                    direction: 'in',
+                    punchedAt: $currentDateTime,
+                    source: 'mobile_app',
+                    method: 'gps',
+                    lat: is_numeric($request->lat) ? (float) $request->lat : null,
+                    long: is_numeric($request->long) ? (float) $request->long : null,
+                    address: $request->address,
+                    locationVerification: $locationVerification,
+                    attendanceLocationId: $branchId,
+                    distanceMeters: $checkInDistance,
+                    deviceId: $request->device_id,
+                    networkType: $request->network_type,
+                    wifiSsid: $request->wifi_ssid,
+                    ipAddress: $request->ip(),
+                    batteryPercent: is_numeric($request->battery_per) ? (int) $request->battery_per : null,
+                    audit: new \App\Services\Attendance\AuditContext(
+                        actorId: $userId,
+                        actorRole: optional(Auth::user())->role,
+                        source: 'clock_in',
+                        reason: 'Mobile clock-in',
+                    ),
                 );
-    
-                AttendanceTrack::create([
-                    'attendance_id' => $attendance->id,
-                    'user_id' => $userId,
-                    'track_time' => $currentDateTime,
-                    'lat' => $request->lat,
-                    'long' => $request->long,
-                    'address' => $request->address,
-                    'battery_per' => $request->battery_per
-                ]);
-    
-                DB::commit();
 
-                $this->refreshAttendanceDerived($attendance->user_id, $attendance->tenant_id, $attendance->date);
-
-                try {
-                    $this->notificationService->notifyClockIn($attendance, $user);
-                } catch (Exception $e) {
-                    Log::error('Clock-in notification failed: ' . $e->getMessage());
-                }
-
-                $lt = app(\App\Services\FieldTracking\FieldTrackingService::class)->resolveForUser((int) $userId);
+                $capturedPunch = app(\App\Services\Attendance\AttendancePunchService::class)->capture($punchInput);
+            } catch (\App\Exceptions\OpenPunchSessionException $e) {
+                $this->createFailureLog($userId, 'check_in', 'already_clocked_in', [
+                    'attendance_date' => $attendanceDate,
+                ], $request);
 
                 return response()->json([
-                    'status' => true,
-                    'message' => 'Clock-In successful.',
-                    'tracking_enabled' => $lt['enabled'],
-                    'next_ping_seconds' => $lt['enabled'] ? (int) $lt['ping_seconds'] : 0,
+                    'status' => false,
+                    'message' => $e->getMessage(),
+                ], 200);
+            } catch (\App\Exceptions\PeriodLockedException $e) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $e->getMessage(),
                 ], 200);
             } catch (Exception $e) {
-                DB::rollBack();
                 return response()->json([
                     'status' => false,
                     'message' => 'Clock-in failed: ' . $e->getMessage()
                 ], 500);
             }
+
+            $attendance = Attendance::where('user_id', $userId)->where('date', $attendanceDate)->first();
+
+            $this->createSuccessLog(
+                $userId,
+                $attendance->id ?? null,
+                'check_in',
+                $request,
+                $checkInDistance
+            );
+
+            $trackingSession = app(TrackingSessionService::class)->resolveSessionForPunch($capturedPunch);
+            if ($trackingSession) {
+                app(TrackingPointIngestService::class)->ingestBatch(
+                    (int) $trackingSession->tenant_id,
+                    $userId,
+                    [[
+                        'point_id' => (string) Str::uuid(),
+                        'lat' => $request->lat,
+                        'long' => $request->long,
+                        'track_time' => $currentDateTime,
+                        'address' => $request->address,
+                        'battery_per' => $request->battery_per,
+                    ]]
+                );
+            }
+
+            try {
+                $this->notificationService->notifyClockIn($attendance, $user);
+            } catch (Exception $e) {
+                Log::error('Clock-in notification failed: ' . $e->getMessage());
+            }
+
+            $lt = app(\App\Services\FieldTracking\FieldTrackingService::class)->resolveForUser((int) $userId);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Clock-In successful.',
+                'tracking_enabled' => $lt['enabled'],
+                'next_ping_seconds' => $lt['enabled'] ? (int) $lt['ping_seconds'] : 0,
+            ], 200);
         } catch (Exception $e) {
             return response()->json([
                 'status' => false,
@@ -1128,127 +1140,114 @@ class AttendanceController extends Controller
             // END OF CHANGED: ENHANCED BRANCH HANDLING
             // =============================================
     
-            // Properly handle night shifts crossing midnight
-            $calc = new \App\Services\Attendance\AttendanceCalculator();
-            $clockIn = Carbon::parse($attendance->clock_in);
-            $clockOut = $currentDateTime;
-
-            // If clock_out is before clock_in the punch crossed midnight.
-            if ($clockOut->lt($clockIn)) {
-                $clockOut->addDay();
-            }
-
-            $workedSeconds = $calc->workedSeconds($clockIn, $clockOut);
-            $workedHours = $calc->decimalHours($workedSeconds);
-
-            $earlyDepartureMinutes = 0;
-            $overtimeMinutes = 0;
-            $attendanceStatus = $attendance->attendance_status;
-    
-            if ($attendance->shift_id) {
-                $shift = Shift::find($attendance->shift_id);
-                if ($shift) {
-                    $attendanceDate = $attendance->date;
-                    $scheduledEnd = Carbon::parse($attendanceDate . ' ' . $shift->end_time);
-    
-                    // NIGHT SHIFT FIX: Add a day to scheduled end for night shifts
-                    $scheduledStart = Carbon::parse($attendanceDate . ' ' . $shift->start_time);
-                    if (Carbon::parse($shift->end_time)->format('H:i') < $scheduledStart->format('H:i')) {
-                        $scheduledEnd->addDay();
-                    }
-    
-                    $graceMinutes = $shift->grace_minutes ?? 0;
-    
-                    if ($clockOut->lt($scheduledEnd)) {
-                        $minutesEarly = (int) floor($clockOut->diffInSeconds($scheduledEnd) / 60);
-                        if ($minutesEarly > $graceMinutes) {
-                            $earlyDepartureMinutes = $minutesEarly;
-                            $attendanceStatus = 'early_departure';
-                        }
-                    } elseif ($clockOut->gt($scheduledEnd)) {
-                        $overtimeMinutes = (int) floor($scheduledEnd->diffInSeconds($clockOut) / 60);
-                        $attendanceStatus = 'overtime';
-                    }
-                }
-            }
-    
             // Update user_shift status
             $userShift = UserShift::where('user_id', $userId)
                 ->where('date', $attendance->date)
                 ->first();
-    
+
             if ($userShift) {
                 $userShift->status = 'complete';
                 $userShift->save();
             }
-    
-            DB::beginTransaction();
-    
+
             try {
-                $attendance->clock_out = $currentDateTime;
-                $attendance->clock_out_lat = $request->lat;
-                $attendance->clock_out_long = $request->long;
-                $attendance->clock_out_address = $request->address;
-                $attendance->check_out_distance = $checkOutDistance ?? null;
-                $attendance->location_verification = $locationVerification;
-                $attendance->total_hours = $calc->formatDuration($workedSeconds);
-                $attendance->worked_hours = $workedHours;
-                $attendance->early_departure_minutes = $earlyDepartureMinutes;
-                $attendance->overtime_minutes = $overtimeMinutes;
-                $attendance->attendance_status = $attendanceStatus;
-    
-                $attendance->save();
-    
-                $this->createSuccessLog(
-                    $userId,
-                    $attendance->id,
-                    'check_out',
-                    $request,
-                    $checkOutDistance
+                $punchInput = new \App\Services\Attendance\PunchInput(
+                    userId: $userId,
+                    tenantId: (int) $attendance->tenant_id,
+                    direction: 'out',
+                    punchedAt: $currentDateTime,
+                    source: 'mobile_app',
+                    method: 'gps',
+                    lat: is_numeric($request->lat) ? (float) $request->lat : null,
+                    long: is_numeric($request->long) ? (float) $request->long : null,
+                    address: $request->address,
+                    locationVerification: $locationVerification,
+                    attendanceLocationId: $branch->id ?? null,
+                    distanceMeters: $checkOutDistance,
+                    accuracyMeters: is_numeric($request->accuracy) ? (float) $request->accuracy : null,
+                    deviceId: $request->device_id,
+                    networkType: $request->network_type,
+                    wifiSsid: $request->wifi_ssid,
+                    ipAddress: $request->ip(),
+                    batteryPercent: is_numeric($request->battery_per) ? (int) $request->battery_per : null,
+                    audit: new \App\Services\Attendance\AuditContext(
+                        actorId: $userId,
+                        actorRole: optional(Auth::user())->role,
+                        source: 'clock_out',
+                        reason: 'Mobile clock-out',
+                    ),
                 );
-    
-                AttendanceTrack::create([
+
+                $capturedPunch = app(\App\Services\Attendance\AttendancePunchService::class)->capture($punchInput);
+            } catch (\App\Exceptions\NoOpenPunchSessionException $e) {
+                $this->createFailureLog($userId, 'check_out', 'already_clocked_out', [
                     'attendance_id' => $attendance->id,
-                    'user_id' => $userId,
-                    'track_time' => $currentDateTime,
-                    'lat' => $request->lat,
-                    'long' => $request->long,
-                    'address' => $request->address,
-                    'battery_per' => $request->battery_per
-                ]);
-    
-                DB::commit();
+                ], $request);
 
-                $this->refreshAttendanceDerived($attendance->user_id, $attendance->tenant_id, $attendance->date);
-
-                try {
-                    $this->notificationService->notifyClockOut($attendance, $user);
-                } catch (Exception $e) {
-                    Log::error('Clock-out notification failed: ' . $e->getMessage());
-                }
-    
                 return response()->json([
-                    'status' => true,
-                    'message' => 'Clock-Out successfully.',
-                    'data' => [
-                        'clock_out_time' => $attendance->clock_out,
-                        'total_hours' => $attendance->total_hours,
-                        'worked_hours' => $workedHours,
-                        'attendance_status' => $attendanceStatus,
-                        'shift_status' => 'complete'
-                    ],
-                    // Additive: the app stops the tracker on clock-out regardless.
-                    'tracking_enabled' => false,
-                    'next_ping_seconds' => 0,
+                    'status' => false,
+                    'message' => $e->getMessage(),
+                ], 200);
+            } catch (\App\Exceptions\PeriodLockedException $e) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $e->getMessage(),
                 ], 200);
             } catch (Exception $e) {
-                DB::rollBack();
                 Log::error('Clock-out transaction error: ' . $e->getMessage());
                 return response()->json([
                     'status' => false,
                     'message' => 'An error occured. Please try again later.'
                 ], 500);
             }
+
+            $attendance = $attendance->fresh();
+
+            $this->createSuccessLog(
+                $userId,
+                $attendance->id,
+                'check_out',
+                $request,
+                $checkOutDistance
+            );
+
+            $trackingSession = app(TrackingSessionService::class)->resolveSessionForPunch($capturedPunch);
+            if ($trackingSession) {
+                app(TrackingPointIngestService::class)->ingestBatch(
+                    (int) $trackingSession->tenant_id,
+                    $userId,
+                    [[
+                        'point_id' => (string) Str::uuid(),
+                        'lat' => $request->lat,
+                        'long' => $request->long,
+                        'track_time' => $currentDateTime,
+                        'accuracy_meters' => is_numeric($request->accuracy) ? (float) $request->accuracy : null,
+                        'address' => $request->address,
+                        'battery_per' => $request->battery_per,
+                    ]]
+                );
+            }
+
+            try {
+                $this->notificationService->notifyClockOut($attendance, $user);
+            } catch (Exception $e) {
+                Log::error('Clock-out notification failed: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Clock-Out successfully.',
+                'data' => [
+                    'clock_out_time' => $attendance->clock_out,
+                    'total_hours' => $attendance->total_hours,
+                    'worked_hours' => (float) $attendance->worked_hours,
+                    'attendance_status' => $attendance->attendance_status,
+                    'shift_status' => 'complete'
+                ],
+                // Additive: the app stops the tracker on clock-out regardless.
+                'tracking_enabled' => false,
+                'next_ping_seconds' => 0,
+            ], 200);
         } catch (Exception $e) {
             Log::error('Clock-out error: ' . $e->getMessage());
             return response()->json([
@@ -1377,7 +1376,7 @@ class AttendanceController extends Controller
 
         try {
             $userId = Auth::id();
-            $today = date('Y-m-d');
+            $tenantId = (int) (optional(Auth::user())->tenant_id ?: DB::table('users')->where('id', $userId)->value('tenant_id'));
 
             $lt = app(\App\Services\FieldTracking\FieldTrackingService::class)->resolveForUser((int) $userId);
             $pingOn = $lt['enabled'] ? (int) $lt['ping_seconds'] : 0;
@@ -1393,52 +1392,27 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
-            // NIGHT SHIFT FIX: Look for active attendance from today or yesterday
-            $attendance = Attendance::where('user_id', $userId)
-                ->where(function ($query) use ($today) {
-                    $query->where('date', $today)
-                        ->orWhere('date', Carbon::parse($today)->subDay()->format('Y-m-d'));
-                })
-                ->whereNull('clock_out')
-                ->orderBy('date', 'desc')
-                ->first();
-
-            if (!$attendance) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'User has not clocked in for any active shift.',
-                    'tracking_enabled' => $lt['enabled'],
-                    'next_ping_seconds' => 0,
-                ], 200);
-            }
-
-            if (!is_null($attendance->clock_out)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'You have already checked out for this shift.',
-                    'tracking_enabled' => $lt['enabled'],
-                    'next_ping_seconds' => 0,
-                ], 200);
-            }
-
-            $row = [
-                'attendance_id' => $attendance->id,
-                'user_id' => $userId,
-                'track_time' => now(),
+            // Single-ping mode is a 1-point batch through the same session-aware,
+            // idempotent ingest path as trackBatch — the server mints the point_id
+            // since single-ping predates the client-generated id.
+            $result = app(TrackingPointIngestService::class)->ingestBatch($tenantId, (int) $userId, [[
+                'point_id' => (string) Str::uuid(),
                 'lat' => $request->lat,
                 'long' => $request->long,
-                'battery_per' => $request->battery_per,
+                'track_time' => now(),
                 'address' => $request->address,
-            ];
+                'battery_per' => $request->battery_per,
+            ]]);
 
-            if (config('location.async_ingest')) {
-                \App\Jobs\RecordLocationPings::dispatch([$row + [
-                    'tenant_id' => Auth::user()->tenant_id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]]);
-            } else {
-                AttendanceTrack::create($row);
+            if ($result['no_session'] || $result['saved'] === 0) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $result['no_session']
+                        ? 'User has not clocked in for any active shift.'
+                        : 'You have already checked out for this shift.',
+                    'tracking_enabled' => $lt['enabled'],
+                    'next_ping_seconds' => 0,
+                ], 200);
             }
 
             return response()->json([
@@ -1458,14 +1432,18 @@ class AttendanceController extends Controller
     /**
      * Buffered GPS upload — the app collects points locally and flushes a batch
      * every few minutes. One request + one bulk insert instead of one per ping.
-     * New endpoint; the app switches to it when GET /today reports mode="batch".
+     * points[].point_id is a client-generated idempotency key: a retried batch
+     * (same point_ids) is safe by construction via the atp_session_point_uq
+     * DB constraint — see TrackingPointIngestService.
      */
     public function trackBatch(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'points' => 'required|array|min:1|max:' . (int) config('location.batch_max', 60),
+            'points.*.point_id' => 'required|string|max:64',
             'points.*.lat' => 'required|numeric',
             'points.*.long' => 'required|numeric',
+            'points.*.accuracy_meters' => 'nullable|numeric|min:0|max:1000',
             'points.*.battery_per' => 'nullable',
             'points.*.address' => 'nullable|string|max:255',
             'points.*.track_time' => 'required',
@@ -1477,7 +1455,7 @@ class AttendanceController extends Controller
 
         try {
             $userId = Auth::id();
-            $today = date('Y-m-d');
+            $tenantId = (int) (optional(Auth::user())->tenant_id ?: DB::table('users')->where('id', $userId)->value('tenant_id'));
 
             $lt = app(\App\Services\FieldTracking\FieldTrackingService::class)->resolveForUser((int) $userId);
             $pingOn = $lt['enabled'] ? (int) $lt['ping_seconds'] : 0;
@@ -1491,16 +1469,9 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
-            $attendance = Attendance::where('user_id', $userId)
-                ->where(function ($query) use ($today) {
-                    $query->where('date', $today)
-                        ->orWhere('date', Carbon::parse($today)->subDay()->format('Y-m-d'));
-                })
-                ->whereNull('clock_out')
-                ->orderBy('date', 'desc')
-                ->first();
+            $result = app(TrackingPointIngestService::class)->ingestBatch($tenantId, (int) $userId, $request->input('points'));
 
-            if (! $attendance || ! is_null($attendance->clock_out)) {
+            if ($result['no_session']) {
                 return response()->json([
                     'status' => false,
                     'message' => 'No active shift to attach location to.',
@@ -1509,57 +1480,18 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
-            $tenantId = Auth::user()->tenant_id;
-            $clockIn = $attendance->clock_in ? Carbon::parse($attendance->clock_in) : null;
-            $upperBound = now()->addMinutes(5);
-
-            $rows = [];
-            $rejected = 0;
-            foreach ($request->input('points') as $p) {
-                try {
-                    $t = is_numeric($p['track_time'])
-                        ? Carbon::createFromTimestamp((int) (strlen((string) $p['track_time']) > 10 ? $p['track_time'] / 1000 : $p['track_time']))
-                        : Carbon::parse($p['track_time']);
-                } catch (\Throwable $e) {
-                    $rejected++;
-                    continue;
-                }
-
-                if (($clockIn && $t->lt($clockIn)) || $t->gt($upperBound)) {
-                    $rejected++;
-                    continue;
-                }
-
-                $rows[] = [
-                    'attendance_id' => $attendance->id,
-                    'user_id' => $userId,
-                    'tenant_id' => $tenantId,
-                    'track_time' => $t->format('Y-m-d H:i:s'),
-                    'lat' => $p['lat'],
-                    'long' => $p['long'],
-                    'battery_per' => $p['battery_per'] ?? null,
-                    'address' => $p['address'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-
-            if (! empty($rows)) {
-                if (config('location.async_ingest')) {
-                    \App\Jobs\RecordLocationPings::dispatch($rows);
-                } else {
-                    foreach (array_chunk($rows, 500) as $chunk) {
-                        DB::table('attendance_tracks')->insert($chunk);
-                    }
-                }
-            }
-
-            $saved = count($rows);
+            $saved = $result['saved'];
+            $rejected = $result['rejected'];
 
             return response()->json([
                 'status' => true,
-                'message' => "Saved {$saved} of " . ($saved + $rejected) . ' points.',
-                'data' => ['saved' => $saved, 'rejected' => $rejected],
+                'message' => "Saved {$saved} of " . ($saved + $rejected + $result['duplicates']) . ' points.',
+                'data' => [
+                    'saved' => $saved,
+                    'rejected' => $rejected,
+                    'duplicates' => $result['duplicates'],
+                    'session_id' => $result['session_id'],
+                ],
                 'tracking_enabled' => $lt['enabled'],
                 'next_ping_seconds' => $pingOn,
             ]);
@@ -1588,8 +1520,7 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
-            $locations = AttendanceTrack::where('attendance_id', $attendance->id)
-                ->orderBy('track_time', 'asc')
+            $locations = AttendanceTrackingPoint::forAttendanceId($attendance->id)
                 ->get([
                     'track_time',
                     'lat',

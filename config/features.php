@@ -61,6 +61,13 @@ return [
         'description' => 'Work-from-home and on-duty / travel requests.',
         'default' => true,
     ],
+    'attendance_biometric' => [
+        'name' => 'Biometric / fingerprint attendance',
+        'module' => 'attendance',
+        'group' => 'Attendance & Time',
+        'description' => 'Punches captured from a fingerprint/biometric terminal device. When off, the Biometric settings screen and device sync are unavailable.',
+        'default' => false,
+    ],
 
     // ---- Shifts ----------------------------------------------------------
     'fixed_shift' => [
@@ -117,6 +124,15 @@ return [
         'default' => false,
     ],
 
+    // ---- Assets ---------------------------------------------------
+    'asset_management' => [
+        'name' => 'Asset management',
+        'module' => 'assets',
+        'group' => 'Assets',
+        'description' => 'Company assets, categories, vendors, lifecycle and employee assignment.',
+        'default' => true,
+    ],
+
     // ---- People -------------------------------------------------------
     'onboarding' => [
         'name' => 'Onboarding',
@@ -153,6 +169,20 @@ return [
         'module' => 'expenses',
         'group' => 'Payroll & Finance',
         'description' => 'Expense claims, category budgets and reimbursement.',
+        'default' => false,
+    ],
+    'expense_bulk_payment' => [
+        'name' => 'Expense bulk payment',
+        'module' => 'expenses',
+        'group' => 'Payroll & Finance',
+        'description' => 'Pay many approved advances / reimbursements in one voucher (bank-transfer CSV, PDF, void) and bulk approve or reject expenses.',
+        'default' => true,
+    ],
+    'expense_payroll_link' => [
+        'name' => 'Expense reimbursement via payroll',
+        'module' => 'expenses',
+        'group' => 'Payroll & Finance',
+        'description' => 'Approved reimbursements can be added to the employee\'s next salary slip (paid with the salary) instead of a payment voucher. Needs Payroll, Expense management and the dynamic payroll engine.',
         'default' => false,
     ],
     'loan_management' => [

@@ -167,7 +167,8 @@ class PayrollController extends Controller
             $pdf = Pdf::loadView('client.payroll.monthly-payroll.pdf', [
                 'monthlyPayroll' => $monthlyPayroll,
                 'bankDetails' => $bankDetails,
-                'company' => $company
+                'company' => $company,
+                'isEmployeeView' => true,
             ]);
 
             $pdf->setPaper('A4', 'portrait');
@@ -248,7 +249,8 @@ class PayrollController extends Controller
             $pdf = Pdf::loadView('client.payroll.monthly-payroll.pdf', [
                 'monthlyPayroll' => $monthlyPayroll,
                 'bankDetails' => $bankDetails,
-                'company' => $company
+                'company' => $company,
+                'isEmployeeView' => true,
             ]);
 
             $pdf->setPaper('A4', 'portrait');
@@ -306,7 +308,8 @@ class PayrollController extends Controller
             $pdf = Pdf::loadView('client.payroll.monthly-payroll.pdf', [
                 'monthlyPayroll' => $monthlyPayroll,
                 'bankDetails' => $bankDetails,
-                'company' => $company
+                'company' => $company,
+                'isEmployeeView' => true,
             ]);
 
             $pdf->setPaper('A4', 'portrait');

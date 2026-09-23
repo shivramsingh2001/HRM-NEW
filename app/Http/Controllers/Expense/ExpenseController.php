@@ -17,6 +17,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use App\Exceptions\ExpenseException;
+use App\Exceptions\InsufficientBalanceException;
+use App\Http\Requests\Expense\DecideExpenseRequest;
+use App\Http\Requests\Expense\StoreExpenseRequest;
+use App\Http\Requests\Expense\UpdateExpenseRequest;
+use App\Services\AuditLogger;
+use App\Services\Expense\ExpenseAttachmentService;
+use App\Services\Expense\ExpenseService;
+use App\Services\Expense\ExpenseStatsService;
 use App\Services\ExpenseNotificationService;
 use App\Services\RbacService;
 use App\Traits\AuthorizesByScope;
@@ -27,9 +36,24 @@ class ExpenseController extends Controller
 
     protected $notificationService;
 
-    public function __construct(ExpenseNotificationService $notificationService)
-    {
+    public function __construct(
+        ExpenseNotificationService $notificationService,
+        protected ExpenseAttachmentService $attachments,
+        protected ExpenseService $expenseService,
+        protected ExpenseStatsService $stats,
+    ) {
         $this->notificationService = $notificationService;
+    }
+
+    /**
+     * Never echo a raw \Throwable message to the browser (it can carry SQL,
+     * paths or internals) — log it with context and return a generic one.
+     */
+    private function genericFailure(\Throwable $e, string $context, array $extra = []): array
+    {
+        Log::error("Expense {$context} failed: " . $e->getMessage(), $extra + ['user_id' => Auth::id()]);
+
+        return ['success' => false, 'message' => 'Something went wrong. Please try again or contact support.'];
     }
 
     /**
@@ -54,7 +78,9 @@ class ExpenseController extends Controller
             if ($authUser->role === 'manager' || $authUser->role === 'admin') {
                 $projects = $projectsQuery->orderBy('name')->get(['id', 'project_code', 'name']);
             } else {
-                $projects = $projectsQuery->whereHas('assignments', function ($q) use ($authUser) {
+                // Project's relation is assigns() (this said assignments(), which doesn't
+                // exist, so the page threw for every non-manager/admin user).
+                $projects = $projectsQuery->whereHas('assigns', function ($q) use ($authUser) {
                     $q->where('user_id', $authUser->id);
                 })->orderBy('name')->get(['id', 'project_code', 'name']);
             }
@@ -64,7 +90,7 @@ class ExpenseController extends Controller
 
             // Build the expenses query with filters
             $expenseQuery = Expense::where('expenses.user_id', $userId)
-                ->with(['expenseType', 'project', 'payments'])
+                ->with(['expenseType', 'project', 'payments', 'attachments', 'possibleDuplicateOf:id,expense_number'])
                 ->leftJoin('expense_types', 'expenses.expense_type', '=', 'expense_types.id')
                 ->leftJoin('projects', 'expenses.project_id', '=', 'projects.id')
                 ->select([
@@ -75,7 +101,10 @@ class ExpenseController extends Controller
 
             // Apply filters
             if ($request->filled('status')) {
-                $expenseQuery->where('status', $request->status);
+                // Qualified: expense_types and projects (both joined above) also have a
+                // `status` column, so a bare `status` was an ambiguous-column SQL error
+                // and every status filter / status summary-card link redirected with an error.
+                $expenseQuery->where('expenses.status', $request->status);
             }
 
             if ($request->filled('expense_type')) {
@@ -112,93 +141,20 @@ class ExpenseController extends Controller
                 ->orderBy('expenses.created_at', 'desc')
                 ->get();
 
-            // Transform file URLs
-            $expenses->transform(function ($expense) use ($baseUrl) {
-                $expense->file = $expense->file ? asset($expense->file) : null;
+            // Receipt links (signed for private files, plain URL for legacy ones).
+            // `file` keeps the raw stored path so views can read its extension.
+            $expenses->transform(function ($expense) {
+                $expense->file_url = $this->attachments->url($expense->file, (int) $expense->id);
+                $expense->receipt_list = $this->attachments->receipts($expense);   // primary + extra receipts, signed URLs
                 return $expense;
             });
 
-            // ==================== ENHANCED STATISTICS ====================
-            // Note: These statistics are calculated on the FILTERED expenses collection
-            // This means cards will reflect the current filter selections!
-
-            // 1. TOTAL STATISTICS
-            // $totalExpenses = $expenses->count();
-            // $totalAmount = $expenses->sum('amount');
-             $totalExpenses = $expenses->whereIn('requirement_type', ['settlement','reimbursement'])->count();
-            $totalAmount = $expenses->whereIn('requirement_type', ['settlement','reimbursement'])->sum('amount');
-
-            // 2. SEPARATE BY REQUIREMENT TYPE
-            $advanceExpenses = $expenses->where('requirement_type', 'advance');
-            $settlementExpenses = $expenses->where('requirement_type', 'settlement');
-            $reimbursementExpenses = $expenses->where('requirement_type', 'reimbursement');
-
-            // 3. ADVANCE STATISTICS
-            $totalAdvanceCount = $advanceExpenses->count();
-            $totalAdvanceAmount = $advanceExpenses->sum('amount');
-
-            // 4. SETTLEMENT STATISTICS
-            $totalSettlementCount = $settlementExpenses->count();
-            $totalSettlementAmount = $settlementExpenses->sum('amount');
-
-            // 5. REIMBURSEMENT STATISTICS
-            $totalReimbursementCount = $reimbursementExpenses->count();
-            $totalReimbursementAmount = $reimbursementExpenses->sum('amount');
-
-            // 6. PENDING STATISTICS (by type)
-            $pendingAdvanceCount = $advanceExpenses->where('status', 'pending')->count();
-            $pendingAdvanceAmount = $advanceExpenses->where('status', 'pending')->sum('amount');
-
-            $pendingSettlementCount = $settlementExpenses->where('status', 'pending')->count();
-            $pendingSettlementAmount = $settlementExpenses->where('status', 'pending')->sum('amount');
-
-            $pendingReimbursementCount = $reimbursementExpenses->where('status', 'pending')->count();
-            $pendingReimbursementAmount = $reimbursementExpenses->where('status', 'pending')->sum('amount');
-
-            // 7. APPROVED STATISTICS (by type)
-            $approvedAdvanceCount = $advanceExpenses->where('status', 'approved')->count();
-            $approvedAdvanceAmount = $advanceExpenses->where('status', 'approved')->sum('amount');
-
-            $approvedSettlementCount = $settlementExpenses->where('status', 'approved')->count();
-            $approvedSettlementAmount = $settlementExpenses->where('status', 'approved')->sum('amount');
-
-            $approvedReimbursementCount = $reimbursementExpenses->where('status', 'approved')->count();
-            $approvedReimbursementAmount = $reimbursementExpenses->where('status', 'approved')->sum('amount');
-
-            // 8. COMPLETED STATISTICS (by type)
-            $completedAdvanceCount = $advanceExpenses->where('status', 'complete')->count();
-            $completedAdvanceAmount = $advanceExpenses->where('status', 'complete')->sum('amount');
-
-            $completedSettlementCount = $settlementExpenses->where('status', 'complete')->count();
-            $completedSettlementAmount = $settlementExpenses->where('status', 'complete')->sum('amount');
-
-            $completedReimbursementCount = $reimbursementExpenses->where('status', 'complete')->count();
-            $completedReimbursementAmount = $reimbursementExpenses->where('status', 'complete')->sum('amount');
-
-            // 9. CANCELLED STATISTICS (by type)
-            $cancelledAdvanceCount = $advanceExpenses->where('status', 'cancelled')->count();
-            $cancelledAdvanceAmount = $advanceExpenses->where('status', 'cancelled')->sum('amount');
-
-            $cancelledSettlementCount = $settlementExpenses->where('status', 'cancelled')->count();
-            $cancelledSettlementAmount = $settlementExpenses->where('status', 'cancelled')->sum('amount');
-
-            $cancelledReimbursementCount = $reimbursementExpenses->where('status', 'cancelled')->count();
-            $cancelledReimbursementAmount = $reimbursementExpenses->where('status', 'cancelled')->sum('amount');
-
-            // 10. OVERALL PENDING/APPROVED/COMPLETED (combined)
-            $pendingCount =  $pendingSettlementCount + $pendingReimbursementCount;
-            $pendingAmount =  $pendingSettlementAmount + $pendingReimbursementAmount;
-
-            $approvedCount = $approvedSettlementCount + $approvedReimbursementCount;
-            $approvedAmount =  $approvedSettlementAmount + $approvedReimbursementAmount;
-
-            $completedCount = $completedSettlementCount + $completedReimbursementCount;
-            $completedAmount =  $completedSettlementAmount + $completedReimbursementAmount;
-
-            $cancelledCount =  $cancelledSettlementCount + $cancelledReimbursementCount;
-            $cancelledAmount = $cancelledSettlementAmount + $cancelledReimbursementAmount;
-
-            $data = [
+            // Summary cards: one grouped query over the FILTERED set (ExpenseStatsService),
+            // so the cards keep reflecting the current filter selections. The combined
+            // "Total" / pending / approved / completed / cancelled cards mean
+            // settlement + reimbursement (actual spend); advance figures are their own cards.
+            $stats = $this->stats->viewData($this->stats->matrix($expenseQuery));
+            $data = array_merge([
                 // Basic data
                 'projects' => $projects,
                 'expenseTypes' => $expenseTypes,
@@ -210,237 +166,60 @@ class ExpenseController extends Controller
                 'totalAdvanceTaken' => $totalAdvanceTaken,
                 'totalSettlementDone' => $totalSettlementDone,
                 'totalReimbursementDone' => $totalReimbursementDone,
-
-                // Combined totals (FILTERED)
-                'totalExpenses' => $totalExpenses,
-                'totalAmount' => $totalAmount,
-
-                // Advance totals (FILTERED)
-                'totalAdvanceCount' => $totalAdvanceCount,
-                'totalAdvanceAmount' => $totalAdvanceAmount,
-
-                // Settlement totals (FILTERED)
-                'totalSettlementCount' => $totalSettlementCount,
-                'totalSettlementAmount' => $totalSettlementAmount,
-
-                // Reimbursement totals (FILTERED)
-                'totalReimbursementCount' => $totalReimbursementCount,
-                'totalReimbursementAmount' => $totalReimbursementAmount,
-
-                // Combined status totals (FILTERED)
-                'pendingCount' => $pendingCount,
-                'pendingAmount' => $pendingAmount,
-                'approvedCount' => $approvedCount,
-                'approvedAmount' => $approvedAmount,
-                'completedCount' => $completedCount,
-                'completedAmount' => $completedAmount,
-                'cancelledCount' => $cancelledCount,
-                'cancelledAmount' => $cancelledAmount,
-
-                // Advance-specific totals (FILTERED)
-                'pendingAdvanceCount' => $pendingAdvanceCount,
-                'pendingAdvanceAmount' => $pendingAdvanceAmount,
-                'approvedAdvanceCount' => $approvedAdvanceCount,
-                'approvedAdvanceAmount' => $approvedAdvanceAmount,
-                'completedAdvanceCount' => $completedAdvanceCount,
-                'completedAdvanceAmount' => $completedAdvanceAmount,
-                'cancelledAdvanceCount' => $cancelledAdvanceCount,
-                'cancelledAdvanceAmount' => $cancelledAdvanceAmount,
-
-                // Settlement-specific totals (FILTERED)
-                'pendingSettlementCount' => $pendingSettlementCount,
-                'pendingSettlementAmount' => $pendingSettlementAmount,
-                'approvedSettlementCount' => $approvedSettlementCount,
-                'approvedSettlementAmount' => $approvedSettlementAmount,
-                'completedSettlementCount' => $completedSettlementCount,
-                'completedSettlementAmount' => $completedSettlementAmount,
-                'cancelledSettlementCount' => $cancelledSettlementCount,
-                'cancelledSettlementAmount' => $cancelledSettlementAmount,
-
-                // Reimbursement-specific totals (FILTERED)
-                'pendingReimbursementCount' => $pendingReimbursementCount,
-                'pendingReimbursementAmount' => $pendingReimbursementAmount,
-                'approvedReimbursementCount' => $approvedReimbursementCount,
-                'approvedReimbursementAmount' => $approvedReimbursementAmount,
-                'completedReimbursementCount' => $completedReimbursementCount,
-                'completedReimbursementAmount' => $completedReimbursementAmount,
-                'cancelledReimbursementCount' => $cancelledReimbursementCount,
-                'cancelledReimbursementAmount' => $cancelledReimbursementAmount,
-            ];
+            ], $stats);
 
             return view('client.expense.expense.expense', $data);
         } catch (Exception $e) {
-            return back()->with('error', 'Something went wrong: ' . $e->getMessage());
+            $this->genericFailure($e, 'index');
+            return back()->with('error', 'Something went wrong. Please try again or contact support.');
         }
     }
+
+    /** Fields of a create/update request that ExpenseService accepts. */
+    private const FORM_FIELDS = ['expense_type', 'amount', 'date', 'project_id', 'requirement_type', 'description'];
 
     /**
      * Store a newly created expense
      */
-    public function store(Request $request)
+    public function store(StoreExpenseRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'expense_type' => 'required|exists:expense_types,id',
-            'project_id' => 'nullable|exists:projects,id',
-            'requirement_type' => 'required|in:advance,settlement,reimbursement',
-            'description' => 'nullable|string|max:1000',
-            'file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'amount' => 'required|numeric|min:0',
-            'date' => 'required|date',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+        try {
+            $expense = $this->expenseService->submit(Auth::user(), $request->only(self::FORM_FIELDS), $request->receipts());
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
+        } catch (Exception $e) {
+            return response()->json($this->genericFailure($e, 'store'), 500);
         }
-
-        DB::beginTransaction();
 
         try {
-            $userId = Auth::id();
-
-            // Handle file upload
-            $filePath = null;
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $directory = public_path('uploads/expense/file');
-
-                if (!file_exists($directory)) {
-                    mkdir($directory, 0755, true);
-                }
-
-                $file->move($directory, $filename);
-                $filePath = 'uploads/expense/file/' . $filename;
-            }
-
-            // Create expense
-            $expense = Expense::create([
-                'user_id' => $userId,
-                'expense_type' => $request->expense_type,
-                'amount' => $request->amount,
-                'date' => $request->date,
-                'project_id' => $request->project_id,
-                'requirement_type' => $request->requirement_type,
-                'description' => $request->description,
-                'file' => $filePath,
-                'status' => 'pending'
-            ]);
-
-
-            ExpenseStatusHistory::create([
-                'expense_id' => $expense->id,
-                'status' => 'pending',
-                'changed_by' => $userId,
-                'remarks' => 'Expense submitted'
-            ]);
-
-
-            DB::commit();
-            try {
-                $this->notificationService->notifyExpenseSubmitted($expense);
-            } catch (Exception $e) {
-                Log::error('Failed to send expense notifications: ' . $e->getMessage());
-            }
-            return response()->json([
-                'success' => true,
-                'message' => 'Expense Created Successfully!!!'
-            ], 200);
+            $this->notificationService->notifyExpenseSubmitted($expense);
         } catch (Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Something went wrong: ' . $e->getMessage()
-            ], 500);
+            Log::error('Failed to send expense notifications: ' . $e->getMessage());
         }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Expense Created Successfully!!!'
+        ], 200);
     }
 
     /**
-     * Update an existing expense
+     * Update an existing expense (owner only, and only while still pending)
      */
-    public function update(Request $request)
+    public function update(UpdateExpenseRequest $request, $id)
     {
-        $id = $request->id;
-
-        $validator = Validator::make($request->all(), [
-            'expense_type' => 'required|exists:expense_types,id',
-            'project_id' => 'nullable|exists:projects,id',
-            'requirement_type' => 'required|in:advance,settlement,reimbursement',
-            'description' => 'nullable|string|max:1000',
-            'file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-            'amount' => 'required|numeric|min:0',
-            'date' => 'required|date',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        DB::beginTransaction();
-
         try {
-            $authUser = Auth::user();
-            $expense = Expense::findOrFail($id);
-
-            // Check if expense can be updated
-            if (!in_array($expense->status, ['pending'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only pending expenses can be updated.'
-                ], 400);
-            }
-
-            // Handle file upload
-            if ($request->hasFile('file')) {
-                // Delete old file if exists
-                if ($expense->file && file_exists(public_path($expense->file))) {
-                    unlink(public_path($expense->file));
-                }
-
-                $file = $request->file('file');
-                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $directory = public_path('uploads/expense/file');
-
-                if (!file_exists($directory)) {
-                    mkdir($directory, 0755, true);
-                }
-
-                $file->move($directory, $filename);
-                $expense->file = 'uploads/expense/file/' . $filename;
-            }
-
-            // Update expense
-            $expense->expense_type = $request->expense_type;
-            $expense->amount = $request->amount;
-            $expense->date = $request->date;
-            $expense->project_id = $request->project_id;
-            $expense->requirement_type = $request->requirement_type;
-            $expense->description = $request->description;
-            $expense->save();
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Expense Updated Successfully!'
-            ], 200);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Expense not found.'
-            ], 404);
+            $this->expenseService->update(Auth::user(), (int) $id, $request->only(self::FORM_FIELDS), $request->receipts());
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
         } catch (Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Something went wrong: ' . $e->getMessage()
-            ], 500);
+            return response()->json($this->genericFailure($e, 'update', ['expense_id' => $id]), 500);
         }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Expense Updated Successfully!'
+        ], 200);
     }
 
     /**
@@ -469,7 +248,7 @@ class ExpenseController extends Controller
                 ->get(['id', 'name']);
 
             // Build the expenses query
-            $expenseQuery = Expense::with(['user', 'expenseType', 'project', 'payments'])
+            $expenseQuery = Expense::with(['user', 'expenseType', 'project', 'payments', 'attachments', 'possibleDuplicateOf:id,expense_number'])
                 ->join('users', 'expenses.user_id', '=', 'users.id')
                 ->leftJoin('expense_types', 'expenses.expense_type', '=', 'expense_types.id')
                 ->leftJoin('user_job_details', 'expenses.user_id', '=', 'user_job_details.user_id')
@@ -530,89 +309,17 @@ class ExpenseController extends Controller
                 $expenseQuery->where(function ($q) use ($searchTerm) {
                     $q->where('users.name', 'LIKE', $searchTerm)
                         ->orWhere('users.email', 'LIKE', $searchTerm)
+                        ->orWhere('expenses.expense_number', 'LIKE', $searchTerm)
                         ->orWhere('expenses.description', 'LIKE', $searchTerm)
                         ->orWhere('expense_types.name', 'LIKE', $searchTerm)
                         ->orWhere('projects.name', 'LIKE', $searchTerm);
                 });
             }
 
-            // ==================== ENHANCED COUNT STATISTICS ====================
-
-            // Base query for counts (without pagination)
-            $countsQuery = $expenseQuery;
-
-            $allExpenses = (clone $countsQuery)->get();
-
-            // Separate by requirement type
-            $advanceExpenses = $allExpenses->where('requirement_type', 'advance');
-            $settlementExpenses = $allExpenses->where('requirement_type', 'settlement');
-            $reimbursementExpenses = $allExpenses->where('requirement_type', 'reimbursement');
-
-            // ==================== TOTAL COUNTS ====================
-             $totalExpenses = $allExpenses->whereIn('requirement_type', ['advance','reimbursement'])->count();
-            $totalAmount = $allExpenses->whereIn('requirement_type', ['advance','reimbursement'])->sum('amount');
-
-            $totalAdvanceCount = $advanceExpenses->count();
-            $totalAdvanceAmount = $advanceExpenses->sum('amount');
-
-            $totalSettlementCount = $settlementExpenses->count();
-            $totalSettlementAmount = $settlementExpenses->sum('amount');
-
-            $totalReimbursementCount = $reimbursementExpenses->count();
-            $totalReimbursementAmount = $reimbursementExpenses->sum('amount');
-
-            // ==================== PENDING COUNTS ====================
-            $pendingAdvanceCount = $advanceExpenses->where('status', 'pending')->count();
-            $pendingAdvanceAmount = $advanceExpenses->where('status', 'pending')->sum('amount');
-
-            $pendingSettlementCount = $settlementExpenses->where('status', 'pending')->count();
-            $pendingSettlementAmount = $settlementExpenses->where('status', 'pending')->sum('amount');
-
-            $pendingReimbursementCount = $reimbursementExpenses->where('status', 'pending')->count();
-            $pendingReimbursementAmount = $reimbursementExpenses->where('status', 'pending')->sum('amount');
-
-            $pendingCount = $pendingAdvanceCount + $pendingReimbursementCount;
-            $pendingAmount = $pendingAdvanceAmount + $pendingReimbursementAmount;
-
-            // ==================== APPROVED COUNTS ====================
-            $approvedAdvanceCount = $advanceExpenses->where('status', 'approved')->count();
-            $approvedAdvanceAmount = $advanceExpenses->where('status', 'approved')->sum('amount');
-
-            $approvedSettlementCount = $settlementExpenses->where('status', 'approved')->count();
-            $approvedSettlementAmount = $settlementExpenses->where('status', 'approved')->sum('amount');
-
-            $approvedReimbursementCount = $reimbursementExpenses->where('status', 'approved')->count();
-            $approvedReimbursementAmount = $reimbursementExpenses->where('status', 'approved')->sum('amount');
-
-            $approvedCount = $approvedAdvanceCount + $approvedReimbursementCount;
-            $approvedAmount = $approvedAdvanceAmount + $approvedReimbursementAmount;
-
-            // ==================== COMPLETED COUNTS ====================
-            $completedAdvanceCount = $advanceExpenses->where('status', 'complete')->count();
-            $completedAdvanceAmount = $advanceExpenses->where('status', 'complete')->sum('amount');
-
-            $completedSettlementCount = $settlementExpenses->where('status', 'complete')->count();
-            $completedSettlementAmount = $settlementExpenses->where('status', 'complete')->sum('amount');
-
-            $completedReimbursementCount = $reimbursementExpenses->where('status', 'complete')->count();
-            $completedReimbursementAmount = $reimbursementExpenses->where('status', 'complete')->sum('amount');
-
-            $completedCount = $completedAdvanceCount + $completedReimbursementCount;
-            $completedAmount = $completedAdvanceAmount + $completedReimbursementAmount;
-
-            // ==================== CANCELLED COUNTS ====================
-            $cancelledAdvanceCount = $advanceExpenses->where('status', 'cancelled')->count();
-
-            $cancelledAdvanceAmount = $advanceExpenses->where('status', 'cancelled')->sum('amount');
-
-            $cancelledSettlementCount = $settlementExpenses->where('status', 'cancelled')->count();
-            $cancelledSettlementAmount = $settlementExpenses->where('status', 'cancelled')->sum('amount');
-
-            $cancelledReimbursementCount = $reimbursementExpenses->where('status', 'cancelled')->count();
-            $cancelledReimbursementAmount = $reimbursementExpenses->where('status', 'cancelled')->sum('amount');
-
-            $cancelledCount = $cancelledAdvanceCount  + $cancelledReimbursementCount;
-            $cancelledAmount = $cancelledAdvanceAmount + $cancelledReimbursementAmount;
+            // Summary cards: one grouped query over the FILTERED set (ExpenseStatsService).
+            // The combined "Total" / pending / approved / completed / cancelled cards mean
+            // settlement + reimbursement (actual spend); advance figures are their own cards.
+            $stats = $this->stats->viewData($this->stats->matrix($expenseQuery));
             // Get paginated results
             $expenses = $expenseQuery
                 ->orderBy('expenses.date', 'desc')
@@ -620,9 +327,10 @@ class ExpenseController extends Controller
                 ->paginate(15)
                 ->withQueryString();
 
-            // Transform file URLs
+            // Receipt links (signed for private files, plain URL for legacy ones).
             $expenses->getCollection()->transform(function ($expense) {
-                $expense->file = $expense->file ? asset($expense->file) : null;
+                $expense->file_url = $this->attachments->url($expense->file, (int) $expense->id);
+                $expense->receipt_list = $this->attachments->receipts($expense);
                 return $expense;
             });
 
@@ -647,272 +355,70 @@ class ExpenseController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'project_code']);
 
-            $data = [
+            $data = array_merge([
                 'expenses' => $expenses,
                 'expenseTypes' => $expenseTypes,
                 'employees' => $employees,
                 'projects' => $projects,
-
-                // Combined totals
-                'totalExpenses' => $totalExpenses,
-                'totalAmount' => $totalAmount,
-
-                // Advance specific totals (matching card variable names)
-                'totalAdvanceCount' => $totalAdvanceCount,
-                'totalAdvanceAmount' => $totalAdvanceAmount,
-
-                // Settlement specific totals (matching card variable names)
-                'totalSettlementCount' => $totalSettlementCount,
-                'totalSettlementAmount' => $totalSettlementAmount,
-
-                // Reimbursement specific totals (matching card variable names)
-                'totalReimbursementCount' => $totalReimbursementCount,
-                'totalReimbursementAmount' => $totalReimbursementAmount,
-
-                // Pending with breakdown (matching card variable names)
-                'pendingCount' => $pendingCount,
-                'pendingAmount' => $pendingAmount,
-                'pendingAdvanceCount' => $pendingAdvanceCount,
-                'pendingAdvanceAmount' => $pendingAdvanceAmount,
-                'pendingSettlementCount' => $pendingSettlementCount,
-                'pendingSettlementAmount' => $pendingSettlementAmount,
-                'pendingReimbursementCount' => $pendingReimbursementCount,
-                'pendingReimbursementAmount' => $pendingReimbursementAmount,
-
-                // Approved with breakdown (matching card variable names)
-                'approvedCount' => $approvedCount,
-                'approvedAmount' => $approvedAmount,
-                'approvedAdvanceCount' => $approvedAdvanceCount,
-                'approvedAdvanceAmount' => $approvedAdvanceAmount,
-                'approvedSettlementCount' => $approvedSettlementCount,
-                'approvedSettlementAmount' => $approvedSettlementAmount,
-                'approvedReimbursementCount' => $approvedReimbursementCount,
-                'approvedReimbursementAmount' => $approvedReimbursementAmount,
-
-                // Completed with breakdown (matching card variable names)
-                'completedCount' => $completedCount,
-                'completedAmount' => $completedAmount,
-                'completedAdvanceCount' => $completedAdvanceCount,
-                'completedAdvanceAmount' => $completedAdvanceAmount,
-                'completedSettlementCount' => $completedSettlementCount,
-                'completedSettlementAmount' => $completedSettlementAmount,
-                'completedReimbursementCount' => $completedReimbursementCount,
-                'completedReimbursementAmount' => $completedReimbursementAmount,
-
-                // Cancelled with breakdown (matching card variable names)
-                'cancelledCount' => $cancelledCount,
-                'cancelledAmount' => $cancelledAmount,
-                'cancelledAdvanceCount' => $cancelledAdvanceCount,
-                'cancelledAdvanceAmount' => $cancelledAdvanceAmount,
-                'cancelledSettlementCount' => $cancelledSettlementCount,
-                'cancelledSettlementAmount' => $cancelledSettlementAmount,
-                'cancelledReimbursementCount' => $cancelledReimbursementCount,
-                'cancelledReimbursementAmount' => $cancelledReimbursementAmount,
-
                 'userRole' => $authUser->role,
-                'filters' => $request->all()
-            ];
+                'filters' => $request->all(),
+                // Bulk approve/reject: the company must have the feature AND the user the approve permission.
+                'canBulk' => app(\App\Services\FeatureService::class)->enabledForCurrentTenant('expense_bulk_payment')
+                    && app(RbacService::class)->can($authUser, 'expenses', 'approve'),
+            ], $stats);
 
             return view('client.expense.expense.view-all-expense', $data);
         } catch (Exception $e) {
           
-            Log::error('Error in view_all: ' . $e->getMessage());
-            return back()->with('error', 'Something went wrong: ' . $e->getMessage());
+            $this->genericFailure($e, 'view_all');
+            return back()->with('error', 'Something went wrong. Please try again or contact support.');
         }
     }
 
     /**
-     * Update expense status (Approve/Reject)
+     * Approve / reject an expense.
+     *
+     * Coarse "can this role approve expenses at all" is enforced at the route
+     * (permission:expenses,approve); here we check the expense's owner falls
+     * inside the caller's granted scope, then ExpenseService performs the
+     * locked, re-checked transition (shared with the mobile API).
      */
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(DecideExpenseRequest $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'status' => 'required|in:approved,cancelled,complete',
-            'remarks' => 'nullable|string|max:500',
-        ]);
+        $authUser = Auth::user();
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-            ], 422);
+        $expense = Expense::find($id);
+        if (! $expense) {
+            return response()->json(['success' => false, 'message' => 'Expense not found.'], 404);
         }
 
-        DB::beginTransaction();
+        if (! $this->scopeCoversOwner($authUser, 'expenses', 'approve', (int) $expense->user_id)) {
+            return response()->json(['success' => false, 'message' => 'You are not authorized to update this expense.'], 403);
+        }
 
         try {
-            $authUser = Auth::user();
-
-            // Coarse "can this role approve expenses at all" is enforced at
-            // the route level (permission:expenses,approve). Get the
-            // expense, then check whether its owner falls within the
-            // caller's granted scope.
-            //
-            // Note: the previous version of this check had a real bug —
-            // it repeated the exact same `!in_array(role, [admin,hr,manager])`
-            // test that had already caused an early return just above when
-            // true, so by the time execution reached the second check it
-            // could never be true again, meaning the manager/reporting_head
-            // ownership check below it was dead code. In practice this
-            // meant any manager could approve ANY expense, not just their
-            // own team's. scopeCoversOwner() replaces both checks correctly.
-            $expense = Expense::where('expenses.id', $id)
-                ->leftJoin('user_job_details', 'expenses.user_id', '=', 'user_job_details.user_id')
-                ->select('expenses.*', 'user_job_details.reporting_head')
-                ->first();
-
-            if (!$expense) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Expense not found.'
-                ], 404);
-            }
-
-            if (!$this->scopeCoversOwner($authUser, 'expenses', 'approve', $expense->user_id)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You are not authorized to update this expense.'
-                ], 403);
-            }
-
-            if ($expense->status !== 'pending') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This expense has already been processed.'
-                ], 400);
-            }
-
-            if ($request->status === 'approved') {
-                if ($expense->requirement_type === 'advance') {
-                    // For advance: Just mark as approved, payment will be created separately
-                    $expense->update([
-                        'status' => 'approved',
-                        'approved_by' => $authUser->id,
-                        'approved_at' => now(),
-                        'approval_remarks' => $request->remarks
-                    ]);
-                    $message = 'Advance approved. Please create payment to credit balance.';
-                } elseif ($expense->requirement_type === 'settlement') {
-                     try {
-                    $this->handleSettlementApproval($expense, $authUser->id, $request->remarks);
-                    $message = 'Settlement approved and balance deducted successfully';
-                    } catch (Exception $e) {
-                        // Rollback transaction and return specific error
-                        DB::rollBack();
-                        return response()->json([
-                            'success' => false,
-                            'message' => $e->getMessage() // Return the actual error message
-                        ], 400);
-                    }
-                } elseif ($expense->requirement_type === 'reimbursement') {
-                    // ✅ NEW: Just approve it — payment will trigger actual reimbursement
-                    $expense->update([
-                        'status' => 'approved',
-                        'approved_by' => $authUser->id,
-                        'approved_at' => now(),
-                        'approval_remarks' => $request->remarks
-                    ]);
-                    $message = 'Reimbursement approved. Please process payment to reimburse the employee.';
-                } else {
-                    $expense->update([
-                        'status' => 'approved',
-                        'approved_by' => $authUser->id,
-                        'approved_at' => now(),
-                        'approval_remarks' => $request->remarks
-                    ]);
-                    $message = 'Expense approved successfully';
-                }
-            } elseif ($request->status === 'cancelled') {
-                // Handle rejection - no balance changes
-                $expense->update([
-                    'status' => 'cancelled',
-                    'rejected_by' => $authUser->id,
-                    'rejected_at' => now(),
-                    'rejection_reason' => $request->remarks
-                ]);
-                $message = 'Expense rejected successfully';
-            } else {
-                // Handle complete status
-                $expense->update([
-                    'status' => 'complete',
-                    'status_update_by' => $authUser->id,
-                    'status_update_remarks' => $request->remarks,
-                    'status_update_at' => now(),
-                ]);
-                $message = 'Expense marked as complete';
-            }
-
-            ExpenseStatusHistory::create([
-                'expense_id' => $id,
-                'status' => $request->status,
-                'changed_by' => $authUser->id,
-                'remarks' => $request->remarks
-            ]);
-
-
-            DB::commit();
-            try {
-                if ($request->status === 'approved') {
-                    $this->notificationService->notifyExpenseApproved($expense, $request->remarks);
-                } elseif ($request->status === 'cancelled') {
-                    $this->notificationService->notifyExpenseRejected($expense, $request->remarks);
-                }
-            } catch (Exception $e) {
-                Log::error('Failed to send status update notification: ' . $e->getMessage());
-            }
-            return response()->json([
-                'success' => true,
-                'message' => $message
-            ]);
+            $result = $this->expenseService->decide((int) $id, $authUser, $request->status, $request->remarks, $request->boolean('cover_shortfall'));
+        } catch (InsufficientBalanceException $e) {
+            // Carries the numbers so the approval screen can offer "deduct what the advance covers and
+            // turn the rest into a reimbursement" instead of a dead end.
+            return response()->json(['success' => false, 'message' => $e->getMessage()] + $e->toPayload(), $e->httpStatus());
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
         } catch (Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update status: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    private function handleSettlementApproval($expense, $approvedBy, $remarks)
-    {
-        // Get user balance
-        $balance = UserExpenseBalance::where('user_id', $expense->user_id)->first();
-
-        if (!$balance || $balance->current_balance < $expense->amount) {
-            throw new Exception("Insufficient advance balance. Available: " .
-                ($balance ? $balance->current_balance : 0) .
-                ", Requested: " . $expense->amount);
+            return response()->json($this->genericFailure($e, 'updateStatus', ['expense_id' => $id]), 500);
         }
 
-        $balanceBefore = $balance->current_balance;
-        $balanceAfter = $balanceBefore - $expense->amount;
+        try {
+            if ($request->status === Expense::STATUS_APPROVED) {
+                $this->notificationService->notifyExpenseApproved($result['expense'], $request->remarks);
+            } else {
+                $this->notificationService->notifyExpenseRejected($result['expense'], $request->remarks);
+            }
+        } catch (Exception $e) {
+            Log::error('Failed to send status update notification: ' . $e->getMessage());
+        }
 
-        // Update expense
-        $expense->update([
-            'status' => 'approved',
-            'approved_by' => $approvedBy,
-            'approved_at' => now(),
-            'approval_remarks' => $remarks
-        ]);
-
-        // Update user balance
-        $balance->update([
-            'current_balance' => $balanceAfter,
-            'settlement_balance' => $balance->settlement_balance + $expense->amount
-        ]);
-
-        // Create transaction record
-        ExpenseTransaction::create([
-            'expense_id' => $expense->id,
-            'user_id' => $expense->user_id,
-            'transaction_type' => 'settlement_debited',
-            'amount' => $expense->amount,
-            'balance_before' => $balanceBefore,
-            'balance_after' => $balanceAfter,
-            'description' => $remarks ?: 'Settlement approved and balance deducted'
-        ]);
-
-        return true;
+        return response()->json(['success' => true, 'message' => $result['message']]);
     }
 
     /**
@@ -956,6 +462,12 @@ class ExpenseController extends Controller
     {
         try {
             $expense = Expense::findOrFail($expenseId);
+
+            // Previously unchecked: any user could read any expense's ledger.
+            if (! $this->scopeCoversOwner(Auth::user(), 'expenses', 'view', (int) $expense->user_id)) {
+                return response()->json(['success' => false, 'message' => 'You are not authorized to view these transactions.'], 403);
+            }
+
             $transactions = $expense->transactions()->orderBy('created_at', 'desc')->get();
 
             return response()->json([
@@ -1056,53 +568,100 @@ class ExpenseController extends Controller
      */
     public function destroy($id)
     {
-        DB::beginTransaction();
-
         try {
-            $expense = Expense::findOrFail($id);
-            $userId = Auth::id();
-
-            // Check ownership
-            if ($expense->user_id !== $userId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized access.'
-                ], 403);
-            }
-
-            // Check if can be deleted
-            if ($expense->status !== 'pending') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only pending expenses can be deleted.'
-                ], 400);
-            }
-
-            // Delete file if exists
-            if ($expense->file && file_exists(public_path($expense->file))) {
-                unlink(public_path($expense->file));
-            }
-
-            $expense->delete();
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Expense deleted successfully.'
-            ], 200);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Expense not found.'
-            ], 404);
+            $this->expenseService->delete(Auth::user(), (int) $id);
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
         } catch (Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete expense: ' . $e->getMessage()
-            ], 500);
+            return response()->json($this->genericFailure($e, 'destroy', ['expense_id' => $id]), 500);
         }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Expense deleted successfully.'
+        ], 200);
+    }
+
+    /**
+     * Approve / reject MANY expenses at once (route middleware: permission:expenses,approve).
+     *
+     * Deliberately NOT all-or-nothing (unlike a payment voucher): each expense is decided in
+     * its own locked transaction by ExpenseService::decide() — the same code as the single
+     * approve — so one bad row (out of scope, already processed, settlement larger than the
+     * employee's balance) never blocks the rest. The response reports every row.
+     */
+    public function bulkStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'ids' => 'required|array|min:1|max:100',
+            'ids.*' => 'integer',
+            'status' => 'required|in:approved,cancelled',
+            'remarks' => 'nullable|string|max:500',
+            'cover_shortfall' => 'nullable|boolean',
+        ], ['ids.max' => 'You can decide at most 100 expenses at a time.']);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $authUser = Auth::user();
+        $ids = collect($request->ids)->map(fn ($i) => (int) $i)->unique()->sort()->values();
+
+        $results = [];
+        $decided = [];
+
+        foreach ($ids as $id) {
+            $expense = Expense::find($id);
+
+            if (! $expense) {
+                $results[] = ['id' => $id, 'ok' => false, 'message' => 'Expense not found.'];
+                continue;
+            }
+            if (! $this->scopeCoversOwner($authUser, 'expenses', 'approve', (int) $expense->user_id)) {
+                $results[] = ['id' => $id, 'expense_number' => $expense->expense_number, 'ok' => false, 'message' => 'You are not authorized to decide this expense.'];
+                continue;
+            }
+
+            try {
+                $outcome = $this->expenseService->decide($id, $authUser, $request->status, $request->remarks, $request->boolean('cover_shortfall'));
+                $results[] = ['id' => $id, 'expense_number' => $expense->expense_number, 'ok' => true, 'message' => $outcome['message']];
+                $decided[] = $outcome['expense'];
+            } catch (InsufficientBalanceException $e) {
+                $results[] = ['id' => $id, 'expense_number' => $expense->expense_number, 'ok' => false, 'message' => $e->getMessage()] + $e->toPayload();
+            } catch (ExpenseException $e) {
+                $results[] = ['id' => $id, 'expense_number' => $expense->expense_number, 'ok' => false, 'message' => $e->getMessage()];
+            } catch (Exception $e) {
+                Log::error('Expense bulk decide failed: ' . $e->getMessage(), ['expense_id' => $id, 'user_id' => $authUser->id]);
+                $results[] = ['id' => $id, 'expense_number' => $expense->expense_number, 'ok' => false, 'message' => 'Something went wrong for this expense.'];
+            }
+        }
+
+        // After the response is sent — push notifications are synchronous HTTP calls.
+        $status = $request->status;
+        $remarks = $request->remarks;
+        dispatch(function () use ($decided, $status, $remarks) {
+            foreach ($decided as $expense) {
+                try {
+                    $status === Expense::STATUS_APPROVED
+                        ? $this->notificationService->notifyExpenseApproved($expense, $remarks)
+                        : $this->notificationService->notifyExpenseRejected($expense, $remarks);
+                } catch (Exception $e) {
+                    Log::error('Failed to send status update notification: ' . $e->getMessage());
+                }
+            }
+        })->afterResponse();
+
+        $succeeded = count($decided);
+
+        return response()->json([
+            'success' => $succeeded > 0,
+            'message' => $succeeded === count($results)
+                ? "{$succeeded} expense(s) " . ($status === 'approved' ? 'approved' : 'rejected') . '.'
+                : "{$succeeded} of " . count($results) . ' expense(s) ' . ($status === 'approved' ? 'approved' : 'rejected') . '; the rest were skipped (see details).',
+            'succeeded' => $succeeded,
+            'failed' => count($results) - $succeeded,
+            'results' => $results,
+        ]);
     }
 
     /**
@@ -1112,6 +671,11 @@ class ExpenseController extends Controller
     {
         try {
             $expense = Expense::with(['payments.payer', 'user'])->findOrFail($expenseId);
+
+            // Previously unchecked: any user could list any expense's payments by id.
+            if (! $this->scopeCoversOwner(Auth::user(), 'expenses', 'view', (int) $expense->user_id)) {
+                return response()->json(['success' => false, 'message' => 'You are not authorized to view these payments.'], 403);
+            }
 
             return response()->json([
                 'success' => true,
@@ -1123,5 +687,68 @@ class ExpenseController extends Controller
                 'message' => 'Failed to fetch payments'
             ], 500);
         }
+    }
+
+    /**
+     * The employee withdraws their OWN claim (pending, or approved-but-completely-unpaid advance /
+     * reimbursement). Keeps a visible record — see ExpenseService::withdraw().
+     */
+    public function withdraw(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), ['reason' => 'required|string|min:3|max:500']);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        try {
+            $this->expenseService->withdraw(Auth::user(), (int) $id, (string) $request->reason);
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
+        } catch (Exception $e) {
+            return response()->json($this->genericFailure($e, 'withdraw', ['expense_id' => $id]), 500);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Your claim has been withdrawn.']);
+    }
+
+    /** Remove one receipt from a pending claim ({attachment} is an id, or "primary" for the first one). */
+    public function removeReceipt($id, $attachment)
+    {
+        try {
+            $this->expenseService->removeReceipt(Auth::user(), (int) $id, $attachment === 'primary' ? null : (int) $attachment);
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
+        } catch (Exception $e) {
+            return response()->json($this->genericFailure($e, 'removeReceipt', ['expense_id' => $id]), 500);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Receipt removed.']);
+    }
+
+    /** Stream an EXTRA receipt (expense_attachments) — same signed-URL model as file() below. */
+    public function attachment(Request $request, $id)
+    {
+        $attachment = \App\Models\ExpenseAttachment::withoutGlobalScopes()
+            ->where('tenant_id', (int) $request->query('tenant'))
+            ->findOrFail($id);
+
+        return $this->attachments->streamAttachment($attachment);
+    }
+
+    /**
+     * Stream an expense receipt. Reached only through a short-lived signed URL
+     * (route middleware `signed`), which ExpenseAttachmentService::url() mints
+     * only for records the caller was already allowed to list — so this works
+     * for the mobile app without a session while staying non-guessable.
+     */
+    public function file(Request $request, $id)
+    {
+        // No tenant context on this route, so scope explicitly by the tenant
+        // carried (and signed) in the URL — never an unfiltered global bypass.
+        $expense = Expense::withoutGlobalScopes()
+            ->where('tenant_id', (int) $request->query('tenant'))
+            ->findOrFail($id);
+
+        return $this->attachments->stream($expense);
     }
 }

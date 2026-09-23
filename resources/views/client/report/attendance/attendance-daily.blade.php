@@ -672,63 +672,6 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
-        .employee-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 150px;
-        }
-
-        .employee-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #e3edfe, #e3edfe);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #1e3a8a;
-            font-weight: 600;
-            font-size: 10.5px;
-            text-transform: uppercase;
-            flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(79, 70, 229, 0.1);
-            transition: all 0.3s;
-        }
-
-        .employee-info:hover .employee-avatar {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
-        }
-
-        .employee-details {
-            line-height: 1.3;
-            min-width: 0;
-        }
-
-        .employee-name-text {
-            font-weight: 600;
-            color: #0f172a;
-            font-size: 10.5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            transition: color 0.2s;
-        }
-
-        .employee-info:hover .employee-name-text {
-            color: #1e3a8a;
-        }
-
-        .employee-email-text {
-            font-size: 9.5px;
-            color: #64748b;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-weight: 500;
-        }
-
         /* ==================== BADGES ==================== */
         .badge {
             padding: 3px 8px;
@@ -760,7 +703,8 @@
             color: #1e3a8a;
             border-color: #60a5fa;
         }
-         .badge-halfday {
+
+        .badge-halfday {
             background: #e3edfe !important;
             color: #2563eb;
             border-color: #2563eb;
@@ -841,7 +785,8 @@
         .status-dot.checked_in_only {
             background: #2563eb;
         }
-         .status-dot.halfday {
+
+        .status-dot.halfday {
             background: #2563eb;
         }
 
@@ -1182,7 +1127,7 @@
                     <i class="feather-filter"></i>
                     Filter Report
                     @php
-                        $activeFilterCount = collect(request()->only(['date', 'user_id', 'status', 'search']))
+                        $activeFilterCount = collect(request()->only(['date', 'user_id', 'status', 'search', 'branch_id']))
                             ->filter()
                             ->count();
                     @endphp
@@ -1190,7 +1135,7 @@
                         <span>{{ $activeFilterCount }} active</span>
                     @endif
                 </div>
-                @if (request()->hasAny(['date', 'user_id', 'status', 'search']))
+                @if (request()->hasAny(['date', 'user_id', 'status', 'search', 'branch_id']))
                     <a href="{{ route('report.attendance.day.index') }}" class="clear-all-link">
                         <i class="feather-x"></i>
                         Clear All
@@ -1267,23 +1212,33 @@
                             </option>
                             <option value="week_off" {{ request('status') == 'week_off' ? 'selected' : '' }}>📅 Week Off
                             </option>
-                             <option value="halfday" {{ request('status') == 'halfday' ? 'selected' : '' }}>📅 Halfday
+                            <option value="halfday" {{ request('status') == 'halfday' ? 'selected' : '' }}>📅 Halfday
                             </option>
                             <option value="checked_in_only" {{ request('status') == 'checked_in_only' ? 'selected' : '' }}>
                                 ⏳ Checked In Only</option>
                         </select>
                     </div>
 
-                    <!-- Search Filter -->
-                    {{-- <div class="filter-item search-filter">
-                    <div class="search-wrapper">
-                        <i class="feather-search"></i>
-                        <input type="text" class="form-control" name="search" 
-                               placeholder="Search employee by name or ID..." 
-                               value="{{ request('search') }}"
-                               onkeyup="if(event.keyCode==13) this.form.submit();">
+                    <!-- Branch Filter -->
+                    <div class="filter-item">
+                        <select class="filter-select" name="branch_id" onchange="this.form.submit()">
+                            <option value="">All Branches</option>
+                            @foreach ($branches ?? [] as $b)
+                                <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                </div> --}}
+
+                    <!-- Search Filter -->
+                    <div class="filter-item search-filter">
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" class="form-control" name="search"
+                                   placeholder="Search employee by name or ID..."
+                                   value="{{ request('search') }}"
+                                   onkeyup="if(event.keyCode==13) this.form.submit();">
+                        </div>
+                    </div>
 
                     <div class="filter-item" style="min-width: auto;">
                         <a href="{{ route('report.attendance.day.index') }}" class="reset-btn">
@@ -1295,7 +1250,7 @@
             </form>
 
             <!-- Active Filter Tags -->
-            @if (request()->hasAny(['date', 'user_id', 'status', 'search']))
+            @if (request()->hasAny(['date', 'user_id', 'status', 'search', 'branch_id']))
                 <div class="active-filters">
                     <span class="active-filters-label">Active:</span>
 
@@ -1343,6 +1298,17 @@
                         </span>
                     @endif
 
+                    @if (request('branch_id') && isset($branches) && ($selectedBranch = $branches->firstWhere('id', (int) request('branch_id'))))
+                        <span class="filter-tag">
+                            <i class="feather-map-pin"></i>
+                            {{ $selectedBranch->name }}
+                            <a href="{{ route('report.attendance.day.index', array_merge(request()->except(['branch_id', 'page']))) }}"
+                                class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
                     <a href="{{ route('report.attendance.day.index') }}" class="filter-tag clear-all">
                         <i class="feather-refresh-cw"></i>
                         Clear All
@@ -1376,6 +1342,7 @@
                                     <tr>
                                         <th width="40">#</th>
                                         <th>Employee</th>
+                                        <th>Branch</th>
                                         <th>Date</th>
                                         <th>Day</th>
                                         <th>Status</th>
@@ -1428,21 +1395,22 @@
                                             <td>{{ ($reportData->currentPage() - 1) * $reportData->perPage() + $loop->iteration }}
                                             </td>
                                             <td>
-                                                <a
-                                                    href="{{ route('attendance.sessions', ['user_id' => encrypt($record['user_id']), 'date' => $record['date']]) }}">
-                                                    <div class="employee-info">
-                                                        <div class="employee-avatar">
-                                                            {{ strtoupper(substr($record['name'], 0, 2)) }}
-                                                        </div>
-                                                        <div class="employee-details">
-                                                            <div class="employee-name-text">{{ $record['name'] }}</div>
-                                                            <div class="employee-email-text">
-                                                                {{ $record['employee_id'] ?? '' }}
-                                                            </div>
-                                                        </div>
+                                                <div class="employee-info">
+                                                    <div class="employee-avatar">
+                                                        {{ strtoupper(substr($record['name'] ?? 'N/A', 0, 2)) }}
                                                     </div>
-                                                </a>
+                                                    <div class="employee-details">
+                                                        <div class="employee-name-text">
+                                                            {{ $record['name'] ?? 'N/A' }}
+                                                            <small class="employee-id-text">(
+                                                                {{ $record['employee_id'] ?? 'N/A' }} )</small>
+                                                        </div>
+                                                        <div class="employee-email-text">
+                                                            {{ $record['email'] ?? 'N/A' }}</div>
+                                                    </div>
+                                                </div>
                                             </td>
+                                            <td>{{ $record['branch'] ?? '—' }}</td>
                                             <td>{{ \Carbon\Carbon::parse($record['date'])->format('d M Y') }}</td>
                                             <td>{{ \Carbon\Carbon::parse($record['date'])->format('D') }}</td>
                                             <td>
@@ -1557,7 +1525,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="15" class="text-center py-5">
+                                            <td colspan="16" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="feather-calendar"></i>
                                                     <h4>No Attendance Records Found</h4>

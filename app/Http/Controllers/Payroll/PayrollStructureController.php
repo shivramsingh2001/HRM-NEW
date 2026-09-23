@@ -35,7 +35,9 @@ class PayrollStructureController extends Controller
         // Rendered once into the shared Add/Edit drawer; the Edit drawer's
         // checkbox/override values are then populated over this same markup
         // via AJAX (see show()) rather than rendering a second checklist.
-        $components = PayrollComponentMaster::active()->orderBy('priority')->orderBy('display_order')->get();
+        // baseComponents eager-loaded so the "% Of (Earnings)" multi-select
+        // per percentage component can pre-check the catalog's default.
+        $components = PayrollComponentMaster::active()->with('baseComponents')->orderBy('priority')->orderBy('display_order')->get();
 
         return view('client.payroll.structures.index', compact('structures', 'components'));
     }
@@ -47,12 +49,13 @@ class PayrollStructureController extends Controller
      */
     public function show($id)
     {
-        $structure = PayrollStructure::with('components')->findOrFail($id);
+        $structure = PayrollStructure::with('components.baseComponents')->findOrFail($id);
 
         $overrides = $structure->components->keyBy('payroll_component_master_id')->map(fn ($row) => [
             'override_calculation_method' => $row->override_calculation_method,
             'override_amount' => $row->override_amount,
             'override_percentage' => $row->override_percentage,
+            'base_component_ids' => $row->baseComponents->pluck('id')->all(),
         ]);
 
         return response()->json([
@@ -185,6 +188,14 @@ class PayrollStructureController extends Controller
             'components.*.override_calculation_method' => 'nullable|in:fixed_amount,percentage',
             'components.*.override_amount' => 'nullable|numeric|min:0',
             'components.*.override_percentage' => 'nullable|numeric|min:0|max:100',
+            // Per-structure override of which Earnings a percentage
+            // component's base sums — empty/omitted falls back to the
+            // catalog's own configured default (see syncComponents()).
+            'components.*.base_component_ids' => 'nullable|array',
+            'components.*.base_component_ids.*' => [
+                'integer',
+                Rule::exists('payroll_component_master', 'id')->where('tenant_id', $tenantId)->where('component_type', 'earning'),
+            ],
         ]);
     }
 
@@ -202,6 +213,7 @@ class PayrollStructureController extends Controller
                 'override_calculation_method' => $row['override_calculation_method'] ?? null,
                 'override_amount' => $row['override_amount'] ?? null,
                 'override_percentage' => $row['override_percentage'] ?? null,
+                'base_component_ids' => array_map('intval', array_filter($row['base_component_ids'] ?? [])),
             ])
             ->values();
 
@@ -224,8 +236,15 @@ class PayrollStructureController extends Controller
     {
         $structure->components()->delete();
 
+        $masters = PayrollComponentMaster::with('baseComponents')
+            ->whereIn('id', collect($components)->pluck('payroll_component_master_id'))
+            ->get()
+            ->keyBy('id');
+
         foreach ($components as $row) {
-            $structure->components()->create([
+            $master = $masters->get($row['payroll_component_master_id']);
+
+            $structureComponent = $structure->components()->create([
                 'tenant_id' => $tenantId,
                 'payroll_component_master_id' => $row['payroll_component_master_id'],
                 'override_calculation_method' => $row['override_calculation_method'],
@@ -233,6 +252,24 @@ class PayrollStructureController extends Controller
                 'override_percentage' => $row['override_percentage'],
                 'is_mandatory' => true,
             ]);
+
+            // "% Of (Earnings)" base selection for this template: the
+            // submitted per-structure override takes precedence; falls
+            // back to the catalog's own configured default when nothing
+            // was submitted (row left at its pre-filled default) — same
+            // precedence PayrollEmployeeStructureController's
+            // createComponentSnapshots() already establishes one layer
+            // down, at the per-employee level.
+            $baseComponentIds = ! empty($row['base_component_ids'])
+                ? $row['base_component_ids']
+                : ($master && $master->calculation_base_type === 'component' ? $master->baseComponents->pluck('id')->all() : []);
+
+            foreach ($baseComponentIds as $baseId) {
+                $structureComponent->baseComponentBases()->create([
+                    'tenant_id' => $tenantId,
+                    'base_payroll_component_master_id' => $baseId,
+                ]);
+            }
         }
     }
 }

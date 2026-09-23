@@ -53,6 +53,23 @@ class AuthController extends Controller
                     ->withInput();
             }
 
+            // Real-time subscription-expiry gate — independent of the daily
+            // auto-suspend cron (which waits out a grace period before flipping
+            // tenant.status). New logins are blocked the instant the current
+            // subscription's end date (or trial) has passed, even during that
+            // grace window; already-open sessions are unaffected here.
+            $activeSub = DB::table('tenant_subscriptions')
+                ->where('tenant_id', $tenantId)
+                ->whereIn('status', ['active', 'trial'])
+                ->orderByDesc('start_date')->orderByDesc('id')
+                ->first();
+            $expiredAt = $activeSub?->end_date ?? ($activeSub?->status === 'trial' ? $activeSub?->trial_ends_at : null);
+            if ($expiredAt && \Illuminate\Support\Carbon::parse($expiredAt)->isPast()) {
+                return back()
+                    ->withErrors(['error' => 'Your subscription has ended. Please contact your admin to renew before logging in again.'])
+                    ->withInput();
+            }
+
             // Consecutive-failure lockout — scoped per tenant+employee_id
             // since employee_id alone isn't unique across tenants.
             $lockoutKey = 'web:' . $tenantId . ':' . $request->employee_id;

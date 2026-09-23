@@ -22,15 +22,27 @@
     #structureDrawer .form-section h6 { font-size: 10px; font-weight: 700; color: #1a2236; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px; }
     #structureDrawer label { font-size: 10.5px; font-weight: 600; margin-bottom: 2px; }
     #structureDrawer .form-control { font-size: 10.5px; padding: 4px 8px; height: auto; }
-    #structureDrawer .row > [class*="col-"] { flex: 0 0 100%; max-width: 100%; margin-bottom: 4px !important; }
-    #structureDrawer .component-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f4f6fb; }
+    #structureDrawer .row > [class*="col-"] { max-width: 100%; margin-bottom: 4px !important; }
+    #structureDrawer .component-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f4f6fb; }
     #structureDrawer .component-row:last-child { border-bottom: none; }
-    #structureDrawer .component-row .comp-name { flex: 1 1 100%; font-size: 11.5px; font-weight: 600; }
-    #structureDrawer .component-row .comp-meta { font-size: 8.5px; color: #9aa1b1; }
-    #structureDrawer .component-row .method-field { width: 95px; }
-    #structureDrawer .component-row .method-field select { font-size: 10px; padding: 3px 6px; height: auto; }
-    #structureDrawer .component-row .override-field { width: 120px; }
-    #structureDrawer .component-row .override-field input { font-size: 10.5px; padding: 3px 8px; height: auto; }
+    #structureDrawer .component-row .form-check.mb-0 { flex: 0 0 auto; }
+    #structureDrawer .component-row .comp-name { flex: 1 1 auto; min-width: 0; font-size: 11.5px; font-weight: 600; }
+    #structureDrawer .component-row .comp-name label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #structureDrawer .component-row .comp-meta { font-size: 8.5px; color: #9aa1b1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #structureDrawer .component-row .method-field { flex: 0 0 80px; width: 80px; }
+    #structureDrawer .component-row .method-field select { font-size: 10px; padding: 3px 4px; height: auto; }
+    #structureDrawer .component-row .override-field { flex: 0 0 100px; width: 100px; }
+    #structureDrawer .component-row .override-field input { font-size: 10.5px; padding: 3px 6px; height: auto; width: 100%; }
+    #structureDrawer .base-components-row {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+        padding: 4px 0 8px 26px; margin-top: -4px; border-bottom: 1px solid #f4f6fb;
+    }
+    #structureDrawer .base-components-label { font-size: 9px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; }
+    #structureDrawer .base-comp-check {
+        display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 400;
+        background: #eef2ff; border: 1px solid #dbe2fb; border-radius: 999px; padding: 2px 8px; cursor: pointer;
+    }
+    #structureDrawer .base-comp-check input { margin: 0; }
     #structureDrawer .btn { padding: 4px 12px; font-size: 11px; border-radius: 7px; }
     #structureDrawer .btn-modal-cancel { background: #f4f6fb; border-color: #dfe5f0; color: #475569; }
     #structureDrawer .btn-modal-cancel:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
@@ -159,13 +171,14 @@
                         </div>
                     </div>
 
+                    @php $structureEarningComponents = $components->where('component_type', 'earning'); @endphp
                     @foreach (['earning' => 'Earnings', 'deduction' => 'Deductions', 'employer_contribution' => 'Employer Contributions', 'reimbursement' => 'Reimbursements'] as $type => $label)
                         @php $typeComponents = $components->where('component_type', $type); @endphp
                         @if ($typeComponents->isNotEmpty())
                             <div class="form-section">
                                 <h6>{{ $label }}</h6>
                                 @foreach ($typeComponents as $c)
-                                    <div class="component-row">
+                                    <div class="component-row" data-component-id="{{ $c->id }}">
                                         <div class="form-check mb-0">
                                             <input type="checkbox" class="form-check-input component-toggle"
                                                 name="components[{{ $c->id }}][enabled]" value="1"
@@ -198,6 +211,30 @@
                                                 style="{{ $c->calculation_method === 'percentage' ? '' : 'display:none;' }}">
                                         </div>
                                     </div>
+                                    @if ($structureEarningComponents->isNotEmpty() && in_array($type, ['deduction', 'employer_contribution']))
+                                        {{-- Deductions/Employer Contributions only — an Earning itself
+                                             switched to "% Of" doesn't get this. Which Earnings this
+                                             template's percentage components are calculated on, e.g.
+                                             "12% of Basic + HRA" — only ever offers Earnings that are
+                                             actually checked/enabled above (filtered live by JS), same
+                                             behavior as the Employee Assign/Revise drawer. Submitted as
+                                             components[id][base_component_ids][], overriding the catalog
+                                             default for this template only. --}}
+                                        <div class="base-components-row" data-component-id="{{ $c->id }}" style="display:{{ $c->calculation_method === 'percentage' ? 'flex' : 'none' }};">
+                                            <span class="base-components-label">% Of (Earnings):</span>
+                                            @foreach ($structureEarningComponents as $ec)
+                                                @if ($ec->id !== $c->id)
+                                                    <label class="base-comp-check" data-earning-id="{{ $ec->id }}">
+                                                        <input type="checkbox"
+                                                            name="components[{{ $c->id }}][base_component_ids][]"
+                                                            value="{{ $ec->id }}"
+                                                            {{ $c->baseComponents->contains('id', $ec->id) ? 'checked' : '' }}>
+                                                        {{ $ec->name }}
+                                                    </label>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 @endforeach
                             </div>
                         @endif
@@ -238,11 +275,31 @@
             const isPercentage = $select.val() === 'percentage';
             $('.override-amount-input[data-component-id="' + componentId + '"]').toggle(!isPercentage);
             $('.override-percentage-input[data-component-id="' + componentId + '"]').toggle(isPercentage);
+            $('.base-components-row[data-component-id="' + componentId + '"]').toggle(isPercentage);
+            if (isPercentage) refreshBaseComponentOptions();
+        }
+
+        // The "% Of (Earnings)" list must only ever offer Earnings that are
+        // actually enabled/checked for THIS template — not the whole
+        // catalog. Hides (and un-checks) any option whose own main enable
+        // checkbox isn't ticked, same behavior as the Employee
+        // Assign/Revise drawer.
+        function refreshBaseComponentOptions() {
+            $('.base-comp-check[data-earning-id]').each(function() {
+                const earningId = $(this).data('earning-id');
+                const isEnabled = $('#comp_' + earningId).is(':checked');
+                $(this).toggle(isEnabled);
+                if (!isEnabled) {
+                    $(this).find('input[type="checkbox"]').prop('checked', false);
+                }
+            });
         }
 
         $(document).on('change', '.override-method', function() {
             syncOverrideMethodRow($(this));
         });
+
+        $(document).on('change', '.component-toggle', refreshBaseComponentOptions);
 
         function syncAllOverrideMethodRows() {
             $('.override-method').each(function() {
@@ -259,6 +316,7 @@
             $('#structureSubmitBtn').html('<i class="feather-save me-2"></i>Save Structure');
             toggleHours();
             syncAllOverrideMethodRows();
+            refreshBaseComponentOptions();
         }
 
         $('#addStructureBtn').on('click', function(e) {
@@ -305,9 +363,17 @@
                         if (values.override_percentage !== null && values.override_percentage !== undefined) {
                             $('input[name="components[' + componentId + '][override_percentage]"]').val(values.override_percentage);
                         }
+                        if (values.base_component_ids && values.base_component_ids.length) {
+                            const baseIds = values.base_component_ids.map(String);
+                            $('.base-components-row[data-component-id="' + componentId + '"] input[type="checkbox"]')
+                                .each(function() {
+                                    $(this).prop('checked', baseIds.includes(String($(this).val())));
+                                });
+                        }
                     });
 
                     syncAllOverrideMethodRows();
+                    refreshBaseComponentOptions();
 
                     $('#structureDrawerLabel').text('Edit Payroll Structure');
                     $('#structureSubmitBtn').html('<i class="feather-save me-2"></i>Update Structure');

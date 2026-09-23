@@ -8,12 +8,17 @@ use App\Models\Shift;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserWeekoffs;
+use App\Services\FeatureService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ShiftSettingsController extends Controller
 {
+    public function __construct(private FeatureService $features)
+    {
+    }
+
     /**
      * Show the per-tenant shift settings page.
      */
@@ -25,10 +30,23 @@ class ShiftSettingsController extends Controller
             ? Shift::withoutGlobalScopes()->where('tenant_id', $tenant->id)->find($tenant->default_shift_id)
             : null;
 
+        $activeShiftsCount = Shift::where('tenant_id', $tenant->id)->where('status', 1)->count();
+        $employeeCount = User::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('status', 1)->count();
+        $assignedThisMonth = DB::table('user_shifts')
+            ->where('tenant_id', $tenant->id)
+            ->whereMonth('date', now()->month)
+            ->whereYear('date', now()->year)
+            ->count();
+
         return view('client.shift.settings', [
             'tenant' => $tenant,
             'defaultShift' => $defaultShift,
             'weekdays' => UpdateShiftSettingsRequest::WEEKDAYS,
+            'activeShiftsCount' => $activeShiftsCount,
+            'employeeCount' => $employeeCount,
+            'assignedThisMonth' => $assignedThisMonth,
+            'canFixed' => $this->features->enabledForCurrentTenant('fixed_shift'),
+            'canCustom' => $this->features->enabledForCurrentTenant('custom_shift'),
         ]);
     }
 
@@ -40,6 +58,13 @@ class ShiftSettingsController extends Controller
     {
         $tenant = Tenant::findOrFail(Auth::user()->tenant_id);
         $enabled = $request->boolean('custom_shifts_enabled');
+
+        $requiredFeature = $enabled ? 'custom_shift' : 'fixed_shift';
+        if (! $this->features->enabledForCurrentTenant($requiredFeature)) {
+            return back()->with('error', $enabled
+                ? 'Custom shifts are not included in your plan.'
+                : 'Fixed shift management is not included in your plan.');
+        }
 
         DB::transaction(function () use ($request, $tenant, $enabled) {
             if (!$enabled) {

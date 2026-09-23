@@ -117,6 +117,15 @@
                     <option value="rejected" {{ $statusFilter === 'rejected' ? 'selected' : '' }}>Has Rejected</option>
                 </select>
             </div>
+            <div class="col-md-2">
+                <label class="d-block text-muted mb-1" style="font-size:9.5px;">Branch</label>
+                <select name="branch_id" class="form-control">
+                    <option value="">All Branches</option>
+                    @foreach ($branches ?? [] as $b)
+                        <option value="{{ $b->id }}" {{ (string) ($branchFilter ?? '') === (string) $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                    @endforeach
+                </select>
+            </div>
             <div class="col-md-1">
                 <button type="submit" class="btn btn-apply w-100">Apply</button>
             </div>
@@ -130,6 +139,7 @@
                             <tr>
                                 <th>Employee</th>
                                 <th>Department</th>
+                                <th>Branch</th>
                                 <th class="text-center">Requests</th>
                                 <th class="text-center">Approved</th>
                                 <th class="text-center">Pending</th>
@@ -156,6 +166,7 @@
                                         </div>
                                     </td>
                                     <td>{{ $row['department'] ?? '—' }}</td>
+                                    <td>{{ $row['branch'] ?? '—' }}</td>
                                     <td class="text-center">{{ $row['request_count'] }}</td>
                                     <td class="text-center">
                                         <span class="hours-pill hours-approved">{{ number_format($row['approved_hours'], 1) }}h ({{ $row['approved_count'] }})</span>
@@ -171,7 +182,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">No overtime requests found for this month.</td>
+                                    <td colspan="9" class="text-center text-muted py-4">No overtime requests found for this month.</td>
                                 </tr>
                             @endforelse
                         </tbody>

@@ -13,7 +13,7 @@ use App\Models\UserBasicDetail;
 use App\Models\UserBankDetail;
 use App\Models\UserJobDetail;
 use App\Models\Attendance;
-use App\Models\AttendanceTrack;
+use App\Models\AttendanceTrackingPoint;
 use App\Models\Country;
 use App\Models\State;
 use App\Models\City;
@@ -708,10 +708,7 @@ class UserController extends Controller
             // Get today's location tracks (unchanged)
             $todayLocationTracks = [];
             if ($todayAttendanceId && in_array($todayAttendance['day_status'], ['Present', 'Checked In Only'])) {
-                $tracks = AttendanceTrack::where('attendance_id', $todayAttendanceId)
-                    ->whereDate('track_time', $today)
-                    ->orderBy('track_time', 'asc')
-                    ->get();
+                $tracks = AttendanceTrackingPoint::forAttendanceId($todayAttendanceId, $today)->get();
 
                 foreach ($tracks as $track) {
                     $todayLocationTracks[] = [
@@ -1162,9 +1159,7 @@ class UserController extends Controller
             }
 
             // Get location tracks
-            $locationTracks = AttendanceTrack::where('attendance_id', $attendance->id)
-                ->whereDate('track_time', $date)
-                ->orderBy('track_time', 'asc')
+            $locationTracks = AttendanceTrackingPoint::forAttendanceId($attendance->id, $date)
                 ->get()
                 ->map(function ($track) {
                     return [

@@ -43,6 +43,29 @@ class PayrollComponentMaster extends Model
         return $this->belongsTo(self::class, 'calculation_base_component_id');
     }
 
+    /**
+     * Pivot rows for the multi-base "percentage of several Earnings
+     * components" selection (calculation_base_type === 'component').
+     */
+    public function baseComponentSelections()
+    {
+        return $this->hasMany(PayrollComponentBaseComponent::class, 'payroll_component_master_id');
+    }
+
+    /**
+     * The actual Earnings components this component's percentage is
+     * calculated against, resolved through the pivot above.
+     */
+    public function baseComponents()
+    {
+        return $this->belongsToMany(
+            self::class,
+            'payroll_component_base_components',
+            'payroll_component_master_id',
+            'base_payroll_component_master_id'
+        )->withTimestamps();
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -107,5 +130,72 @@ class PayrollComponentMaster extends Model
                 }
             }
         });
+    }
+
+    /**
+     * Validates a submitted multi-base selection (the "Calculate % Of —
+     * Earnings components" multi-select) before it's synced onto
+     * baseComponentSelections(). Every base must be an Earnings component
+     * (the multi-select's option list already filters to this, but the
+     * server can't trust that), and this component's priority must exceed
+     * the highest priority among all its bases — same two-pass-engine
+     * reasoning as the single-base check in booted() above, generalized to
+     * a set instead of one value.
+     *
+     * @param  int[]  $baseIds
+     */
+    public static function assertValidBaseComponents(string $componentType, int $priority, array $baseIds, ?int $tenantId = null): void
+    {
+        if (empty($baseIds)) {
+            return;
+        }
+
+        $query = self::withoutGlobalScope('tenant')->whereIn('id', $baseIds);
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
+        }
+        $bases = $query->get();
+
+        foreach ($baseIds as $baseId) {
+            if (! $bases->firstWhere('id', $baseId)) {
+                throw new RuntimeException("Base component #{$baseId} was not found in this tenant's catalog.");
+            }
+        }
+
+        foreach ($bases as $base) {
+            if ($base->component_type !== 'earning') {
+                throw new RuntimeException(
+                    "Base component '{$base->name}' must be an Earnings component — ".
+                    "percentage components can only be calculated against Earnings."
+                );
+            }
+        }
+
+        $maxBasePriority = $bases->max('priority');
+        if ($maxBasePriority !== null && $priority <= $maxBasePriority) {
+            throw new RuntimeException(
+                "This component's priority ({$priority}) must be higher than all of its base components' ".
+                "priority (highest base priority: {$maxBasePriority})."
+            );
+        }
+    }
+
+    /**
+     * The base-related fields to copy onto a PayrollEmployeeComponent
+     * snapshot at assignment time. calculation_base_component_id is kept
+     * only as a denormalized "primary base" mirror (first submitted base) —
+     * the real, authoritative multi-base set lives in the pivot synced
+     * separately via syncBaseComponentsOnto(). See the 4 call sites in
+     * PayrollEmployeeStructureController::store() and
+     * PayrollStructureAssignmentService that must all use this instead of
+     * hardcoding calculation_base_type => 'none'.
+     */
+    public function snapshotBaseFields(): array
+    {
+        return [
+            'calculation_base_type' => $this->calculation_base_type,
+            'calculation_base' => $this->calculation_base,
+            'calculation_base_component_id' => $this->calculation_base_component_id,
+        ];
     }
 }

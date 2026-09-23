@@ -18,13 +18,20 @@ class FieldTrackingService
     /** @var array<int,Tenant|null> */
     private array $tenantCache = [];
 
-    /** Active employees currently consuming a field-tracking seat. */
+    /**
+     * Employees currently consuming a field-tracking seat — counted regardless
+     * of their active/inactive status. A deactivated employee still holds their
+     * seat until tracking is explicitly turned off for them; otherwise
+     * deactivating a tracked employee would silently free a seat (without ever
+     * clearing location_tracking_enabled) that could be assigned elsewhere,
+     * then reactivating the original employee would push the tenant back over
+     * its purchased cap.
+     */
     public function seatsUsed(int $tenantId): int
     {
         return (int) DB::table('user_job_details as jd')
             ->join('users as u', 'u.id', '=', 'jd.user_id')
             ->where('u.tenant_id', $tenantId)
-            ->where('u.status', 1)
             ->where('jd.location_tracking_enabled', 1)
             ->count();
     }

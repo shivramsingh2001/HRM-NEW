@@ -665,6 +665,8 @@
                         if(request('project_id') && request('project_id') != 'all') $activeFilters++;
                         if(request('assigned_to') && request('assigned_to') != 'all') $activeFilters++;
                         if(request('assigned_by') && request('assigned_by') != 'all') $activeFilters++;
+                        if(request('branch_id') && request('branch_id') != 'all') $activeFilters++;
+                        if(request('search')) $activeFilters++;
                     @endphp
                     @if($activeFilters > 0)
                         <span class="badge-count">{{ $activeFilters }} active</span>
@@ -737,6 +739,27 @@
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+
+                    <div class="filter-item grow">
+                        <select name="branch_id" class="filter-select auto-submit">
+                            <option value="all">All Branches</option>
+                            @foreach($branchList as $b)
+                                <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>
+                                    {{ $b->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="filter-item grow">
+                        <input type="text" name="search" class="filter-input"
+                               placeholder="Search task code, title or assignee…"
+                               value="{{ request('search') }}">
+                    </div>
+
+                    <div class="filter-item">
+                        <button type="submit" class="btn-sm-custom-outline"><i class="feather-search"></i> Search</button>
                     </div>
 
                     <div class="filter-item">
@@ -870,6 +893,9 @@
                                         @endif
                                     </div>
                                     <span class="person-name">{{ $a->name }}</span>
+                                    @if(!empty($a->branch_name))
+                                        <span class="badge badge-secondary" style="font-size: 9px; padding: 1px 6px;">{{ $a->branch_name }}</span>
+                                    @endif
                                     @if($a->member_role === 'lead')
                                         <span class="badge badge-primary" style="font-size: 9px; padding: 1px 6px;">Lead</span>
                                     @endif

@@ -22,9 +22,9 @@
 
         /* Header Section */
         .career-hero {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
-            padding: 80px 20px;
+            padding: 48px 20px;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -43,14 +43,14 @@
         }
 
         .career-hero h1 {
-            font-size: 48px;
+            font-size: 30px;
             font-weight: 700;
-            margin-bottom: 16px;
+            margin-bottom: 8px;
             position: relative;
         }
 
         .career-hero p {
-            font-size: 18px;
+            font-size: 13.5px;
             opacity: 0.95;
             position: relative;
         }
@@ -58,7 +58,7 @@
         /* Search Section */
         .search-section {
             max-width: 1200px;
-            margin: -30px auto 0;
+            margin: -22px auto 0;
             padding: 0 20px;
             position: relative;
             z-index: 10;
@@ -66,43 +66,44 @@
 
         .search-card {
             background: white;
-            border-radius: 16px;
-            padding: 24px 30px;
+            border-radius: 12px;
+            padding: 14px 18px;
             box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1);
         }
 
         .search-form {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
         }
 
         .search-group {
             flex: 1;
-            min-width: 200px;
+            min-width: 180px;
         }
 
         .search-group input, .search-group select {
             width: 100%;
-            padding: 12px 16px;
+            padding: 8px 12px;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 14px;
+            border-radius: 8px;
+            font-size: 12px;
             transition: all 0.3s;
         }
 
         .search-group input:focus, .search-group select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .search-btn {
-            padding: 12px 28px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
+            font-size: 12.5px;
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s;
@@ -136,7 +137,7 @@
         .stat-number {
             font-size: 32px;
             font-weight: 700;
-            color: #667eea;
+            color: #1e3a8a;
         }
 
         .stat-label {
@@ -149,129 +150,169 @@
         .jobs-section {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px 20px 60px;
+            padding: 16px 20px 40px;
         }
 
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 14px;
         }
 
         .section-header h2 {
-            font-size: 24px;
+            font-size: 17px;
             font-weight: 700;
             color: #1e293b;
         }
 
         .jobs-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 14px;
         }
 
         .job-card {
             background: white;
-            border-radius: 16px;
-            padding: 24px;
+            border-radius: 12px;
+            padding: 14px 16px;
             transition: all 0.3s;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             border: 1px solid #eef2f6;
         }
 
         .job-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+            border-color: #1e3a8a;
+        }
+
+        .job-code {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: #94a3b8;
+            letter-spacing: .3px;
         }
 
         .job-title {
-            font-size: 18px;
+            font-size: 14.5px;
             font-weight: 700;
             color: #1e293b;
-            margin-bottom: 8px;
+            margin-bottom: 3px;
         }
 
         .job-company {
-            font-size: 13px;
+            font-size: 11px;
             color: #64748b;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .job-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
-            margin: 15px 0;
+            gap: 6px;
+            margin: 8px 0;
         }
 
         .job-meta-item {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-size: 12px;
+            gap: 4px;
+            font-size: 10.5px;
             color: #475569;
             background: #f8fafc;
-            padding: 4px 10px;
+            padding: 3px 8px;
             border-radius: 20px;
         }
 
         .job-meta-item i {
-            font-size: 11px;
-            color: #667eea;
+            font-size: 9.5px;
+            color: #1e3a8a;
         }
 
+        .job-salary {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #065f46;
+            background: #ecfdf5;
+            border: 1px solid #d1fae5;
+            padding: 4px 9px;
+            border-radius: 6px;
+            margin: 8px 0;
+            width: fit-content;
+        }
+
+        .job-salary i { font-size: 10px; }
+
         .job-description {
-            font-size: 13px;
+            font-size: 11px;
             color: #64748b;
-            line-height: 1.5;
-            margin: 12px 0;
+            line-height: 1.45;
+            margin: 8px 0;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
 
+        .job-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin: 8px 0;
+        }
+
+        .job-skill-tag {
+            font-size: 9.5px;
+            color: #1e3a8a;
+            background: #eff6ff;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
         .job-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 16px;
-            padding-top: 16px;
+            margin-top: 10px;
+            padding-top: 10px;
             border-top: 1px solid #eef2f6;
         }
 
         .job-type {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
-            padding: 4px 10px;
+            padding: 3px 9px;
             border-radius: 20px;
         }
 
         .job-type-full_time { background: #dbeafe; color: #1e40af; }
-        .job-type-part_time { background: #fef3c7; color: #92400e; }
-        .job-type-contract { background: #f1f5f9; color: #475569; }
+        .job-type-part_time { background: #f1f5f9; color: #475569; }
+        .job-type-contract { background: #fef3c7; color: #92400e; }
         .job-type-internship { background: #e0e7ff; color: #3730a3; }
         .job-type-temporary { background: #e5e7eb; color: #4b5563; }
 
         .apply-btn {
-            padding: 6px 16px;
-            background: #667eea;
+            padding: 5px 14px;
+            background: #1e3a8a;
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 12px;
+            border-radius: 7px;
+            font-size: 11px;
             font-weight: 500;
             text-decoration: none;
             transition: all 0.2s;
         }
 
         .apply-btn:hover {
-            background: #5a67d8;
+            background: #1e40af;
             transform: translateY(-1px);
         }
 
@@ -299,9 +340,9 @@
         }
 
         .pagination li.active span {
-            background: #667eea;
+            background: #1e3a8a;
             color: white;
-            border-color: #667eea;
+            border-color: #1e3a8a;
         }
 
         /* Empty State */
@@ -404,9 +445,13 @@
         <div class="jobs-grid">
             @foreach($jobs as $job)
             <div class="job-card">
+                <div class="job-code">{{ $job->job_code }}</div>
                 <h3 class="job-title">{{ $job->title }}</h3>
                 <div class="job-company">
                     <i class="fas fa-building"></i> {{ $job->department->name ?? config('app.name') }}
+                    @if($job->designation)
+                        &middot; {{ $job->designation->name }}
+                    @endif
                 </div>
                 <div class="job-meta">
                     <span class="job-meta-item"><i class="fas fa-map-marker-alt"></i> {{ $job->location ?? 'Remote' }}</span>
@@ -414,10 +459,33 @@
                     @if($job->experience_required)
                     <span class="job-meta-item"><i class="fas fa-chart-line"></i> {{ $job->experience_required }}</span>
                     @endif
+                    @if($job->qualification_required)
+                    <span class="job-meta-item"><i class="fas fa-graduation-cap"></i> {{ $job->qualification_required }}</span>
+                    @endif
+                    <span class="job-meta-item"><i class="fas fa-users"></i> {{ $job->no_of_vacancies }} {{ Str::plural('opening', $job->no_of_vacancies) }}</span>
                 </div>
+                @if($job->salary_range_min || $job->salary_range_max)
+                <div class="job-salary">
+                    <i class="fas fa-money-bill-wave"></i>
+                    @if($job->salary_range_min && $job->salary_range_max)
+                        &#8377;{{ number_format($job->salary_range_min) }} - &#8377;{{ number_format($job->salary_range_max) }}
+                    @elseif($job->salary_range_min)
+                        From &#8377;{{ number_format($job->salary_range_min) }}
+                    @else
+                        Up to &#8377;{{ number_format($job->salary_range_max) }}
+                    @endif
+                </div>
+                @endif
                 <div class="job-description">
                     {{ Str::limit(strip_tags($job->description), 120) }}
                 </div>
+                @if($job->skills_required)
+                <div class="job-skills">
+                    @foreach(array_slice(array_filter(array_map('trim', explode(',', $job->skills_required))), 0, 5) as $skill)
+                        <span class="job-skill-tag">{{ $skill }}</span>
+                    @endforeach
+                </div>
+                @endif
                 <div class="job-footer">
                     <span class="job-type job-type-{{ $job->employment_type }}">
                         {{ ucfirst(str_replace('_', ' ', $job->employment_type)) }}

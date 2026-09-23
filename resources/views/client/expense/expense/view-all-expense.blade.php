@@ -4,13 +4,13 @@
     <style>
         /* ==================== SIMPLE CONSISTENT STYLING ==================== */
         .custom-employee-dropdown .btn {
-            height: 36px;
+            height: 34px;
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             color: #1e293b;
-            font-size: 13px;
-            padding: 0 12px;
+            font-size: 12px;
+            padding: 0 9px;
         }
 
         .custom-employee-dropdown .btn:hover {
@@ -19,8 +19,8 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
         }
 
         /* Consistent initials style - same color for all */
@@ -28,7 +28,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border-radius: 50%;
             display: inline-flex;
@@ -69,12 +69,12 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #4f46e5 !important;
+            color: #1e3a8a !important;
             opacity: 0.8;
         }
 
@@ -99,7 +99,7 @@
         }
 
         .bg-soft-primary {
-            background-color: rgba(79, 70, 229, 0.1);
+            background-color: rgba(30, 58, 138, 0.1);
         }
 
         .bg-soft-success {
@@ -174,13 +174,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -209,21 +209,45 @@
             font-size: 14px;
         }
 
+        .filter-desc {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* One single row on desktop; wraps only below 1200px */
         .filter-row {
             display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
+            flex-wrap: nowrap;
+            align-items: flex-end;
+            gap: 8px;
         }
 
         .filter-item {
-            flex: 0 0 auto;
-            min-width: 140px;
+            flex: 1 1 0;
+            min-width: 0;
         }
 
         .filter-item.search {
-            flex: 1 1 200px;
-            min-width: 180px;
+            flex: 1.7 1 0;
+        }
+
+        .filter-item.reset {
+            flex: 0 0 auto;
+        }
+
+        .filter-label {
+            display: block;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 3px;
+            white-space: nowrap;
+        }
+
+        .filter-date {
+            padding-right: 6px !important;
+            background-image: none !important;
         }
 
         .search-wrapper {
@@ -243,9 +267,9 @@
 
         .search-wrapper .form-control {
             width: 100%;
-            height: 36px;
-            padding: 6px 12px 6px 32px;
-            font-size: 13px;
+            height: 34px;
+            padding: 5px 10px 5px 30px;
+            font-size: 12px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             background: #f8fafc;
@@ -254,16 +278,17 @@
 
         .search-wrapper .form-control:focus {
             background: white;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
             outline: none;
         }
 
         .filter-select {
             width: 100%;
-            height: 36px;
-            padding: 6px 28px 6px 10px;
+            height: 34px;
+            padding: 5px 24px 5px 9px;
             font-size: 12px;
+            color: #1e293b;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center;
@@ -275,15 +300,15 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
             outline: none;
         }
 
         .apply-btn {
             height: 36px;
             padding: 0 16px;
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             border: none;
             border-radius: 8px;
@@ -298,12 +323,12 @@
         }
 
         .apply-btn:hover {
-            background: #4338ca;
+            background: #172c6b;
             transform: translateY(-1px);
         }
 
         .reset-btn {
-            height: 36px;
+            height: 34px;
             padding: 0 12px;
             background: white;
             color: #64748b;
@@ -360,7 +385,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 11px;
         }
 
@@ -378,83 +403,48 @@
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
-        /* ==================== EMPLOYEE AVATAR ==================== */
-        .employee-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #4f46e5;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-            flex-shrink: 0;
-        }
-
-        .employee-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .employee-details {
-            line-height: 1.4;
-        }
-
-        .employee-name {
-            font-weight: 600;
-            color: #1e293b;
-            font-size: 14px;
-        }
-
-        .employee-email {
-            font-size: 11px;
-            color: #64748b;
-        }
-
+       
         /* ==================== TABLE STYLES ==================== */
         .table {
             margin-bottom: 0;
         }
 
         .table th {
-            background-color: #f8fafc;
+            background-color: #f7f8fb;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 10.5px;
             text-transform: uppercase;
             letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 12px 16px;
+            color: #64748b;
+            border-bottom: 1px solid #eaeef5;
+            padding: 9px 12px;
             white-space: nowrap;
         }
 
         .table td {
             vertical-align: middle;
-            font-size: 13px;
-            padding: 12px 16px;
-            border-bottom: 1px solid #f1f5f9;
+            font-size: 12px;
+            padding: 8px 12px;
+            border-bottom: 1px solid #eef1f7;
         }
 
         .table tbody tr:hover {
-            background-color: #f8fafc;
+            background-color: #f6f8fd;
         }
 
-        /* ==================== BADGES ==================== */
+        /* ==================== BADGES — one blue theme ==================== */
         .badge {
-            padding: 4px 10px;
-            font-weight: 500;
-            font-size: 11px;
+            padding: 3px 10px;
+            font-weight: 600;
+            font-size: 10.5px;
             border-radius: 20px;
             display: inline-flex;
             align-items: center;
@@ -462,78 +452,76 @@
         }
 
         .badge.bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
+            background: rgba(29, 78, 216, .14) !important;
+            color: #1d4ed8;
         }
 
         .badge.bg-danger {
-            background: #fee2e2 !important;
-            color: #991b1b;
+            background: #eef1f7 !important;
+            color: #64748b;
         }
 
         .badge.bg-info {
-            background: #e0f2fe !important;
-            color: #0369a1;
+            background: rgba(14, 165, 233, .14) !important;
+            color: #0c87c4;
         }
 
         .badge.bg-warning {
-            background: #fef3c7 !important;
-            color: #92400e;
+            background: rgba(96, 165, 250, .20) !important;
+            color: #2563eb;
         }
 
         .badge.bg-primary {
-            background: #e0e7ff !important;
-            color: #4f46e5;
+            background: #e3edfe !important;
+            color: #1e3a8a;
         }
 
         /* ==================== ACTION BUTTONS ==================== */
         .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border-radius: 10%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-            margin: 0 2px;
+            background: #fff;
+            color: #475569;
+            border: 1px solid #dfe5f0;
+            transition: all 0.18s ease;
             cursor: pointer;
-        }
-
-        .action-btn:hover {
-            background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.1);
-        }
-
-        .action-btn.approve {
-            background: #10b981;
-            color: white;
-            border-color: #10b981;
-        }
-
-        .action-btn.approve:hover {
-            background: #059669;
-            transform: translateY(-2px);
-        }
-
-        .action-btn.reject {
-            background: #ef4444;
-            color: white;
-            border-color: #ef4444;
-        }
-
-        .action-btn.reject:hover {
-            background: #dc2626;
-            transform: translateY(-2px);
         }
 
         .action-btn i {
             font-size: 14px;
+            line-height: 1;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.18);
+        }
+
+        /* Approve = filled theme blue, Reject = outlined — same colour family, clearly different weight */
+        .action-btn.approve {
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .action-btn.approve:hover {
+            background: linear-gradient(135deg, #172c6b, #1d4ed8);
+        }
+
+        .action-btn.reject {
+            background: #fff;
+            color: #1e3a8a;
+            border-color: #bcd0f5;
+        }
+
+        .action-btn.reject:hover {
+            background: #e3edfe;
+            border-color: #1e3a8a;
         }
 
         /* ==================== FILE ATTACHMENT ==================== */
@@ -547,7 +535,7 @@
         }
 
         .file-attachment:hover {
-            color: #4f46e5;
+            color: #1e3a8a;
             transform: translateY(-1px);
         }
 
@@ -594,8 +582,8 @@
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: #1e3a8a;
+            border-color: #1e3a8a;
             color: white;
         }
 
@@ -638,6 +626,26 @@
             .col-xxl-4 {
                 flex: 0 0 auto;
                 width: 33.33333333%;
+            }
+        }
+
+        @media (max-width: 1199.98px) {
+            .filter-row {
+                flex-wrap: wrap;
+            }
+
+            .filter-item {
+                flex: 1 1 calc(25% - 8px);
+                min-width: 130px;
+            }
+
+            .filter-item.search {
+                flex: 1 1 calc(50% - 8px);
+            }
+
+            .filter-item.reset {
+                flex: 0 0 auto;
+                min-width: 0;
             }
         }
 
@@ -772,7 +780,7 @@
         }
 
         .text-primary {
-            color: #4f46e5 !important;
+            color: #1e3a8a !important;
         }
 
         .text-success {
@@ -789,6 +797,162 @@
 
         .text-info {
             color: #0ea5e9 !important;
+        }
+
+        /* ==================== EXPENSE OVERVIEW — mirrors the admin dashboard tiles ==================== */
+        .exp-team {
+            --d-card: #ffffff;
+            --d-border: #eaeef5;
+            --d-border-strong: #dfe5f0;
+            --d-text: #1a2236;
+            --d-text-soft: #6b7385;
+            --d-text-muted: #9aa1b1;
+            --d-radius: 14px;
+            --d-shadow: 0 1px 2px rgba(20, 30, 60, .04), 0 2px 8px rgba(20, 30, 60, .04);
+            --d-shadow-hover: 0 6px 22px rgba(30, 50, 110, .10);
+        }
+
+        .exp-team .section-hdr {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: #f7f8fb;
+            border: 1px solid var(--d-border);
+            border-radius: 10px;
+            padding: 7px 12px;
+            margin-bottom: 8px;
+        }
+
+        .exp-team .section-hdr-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .exp-team .section-hdr-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            flex: none;
+            background: #e3edfe;
+            color: #1e3a8a;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+
+        .exp-team .section-hdr-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--d-text);
+            margin: 0;
+        }
+
+        .exp-team .section-hdr-hint {
+            font-size: 10.5px;
+            color: var(--d-text-soft);
+        }
+
+        .exp-team .row.g-compact {
+            --bs-gutter-x: 8px;
+            --bs-gutter-y: 8px;
+        }
+
+        .exp-team .exp-card {
+            background: var(--d-card);
+            border: 1px solid var(--d-border);
+            border-radius: var(--d-radius);
+            box-shadow: var(--d-shadow);
+            margin-bottom: 0;
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
+
+        .exp-team .exp-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--d-shadow-hover);
+            border-color: var(--d-border-strong);
+        }
+
+        .exp-team .exp-card .card-body {
+            padding: 10px;
+        }
+
+        .exp-team .exp-card .mini-stat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            font-size: 13px;
+            flex-shrink: 0;
+            background: #e3edfe !important;
+            color: #1e3a8a !important;
+        }
+
+        .exp-team .exp-card a {
+            text-decoration: none;
+            transition: color .15s ease;
+        }
+
+        .exp-team .stat-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--d-text-soft);
+        }
+
+        .exp-team .stat-value-sm {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--d-text);
+            line-height: 1.1;
+            margin: 0;
+        }
+
+        .exp-team .stat-sub {
+            font-size: 9.5px;
+            color: var(--d-text-muted);
+        }
+
+        .exp-team .breakdown-row + .breakdown-row {
+            border-top: 1px dashed var(--d-border);
+        }
+
+        .exp-team .bd-num {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .exp-team .bd-pending {
+            color: #3b82f6;
+        }
+
+        .exp-team .bd-approved {
+            color: #1d4ed8;
+        }
+
+        .exp-team .bd-complete {
+            color: #0ea5e9;
+        }
+
+        .exp-team .bd-cancelled {
+            color: #64748b;
+        }
+
+        .exp-team .exp-card a:hover .stat-sub {
+            color: #1e3a8a;
+        }
+
+        .exp-team .employee-avatar {
+            width: 32px;
+            height: 32px;
+            font-size: 12px;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+        }
+
+        .exp-team .employee-name {
+            font-size: 12.5px;
         }
     </style>
 @endsection
@@ -841,505 +1005,97 @@
         <!--</div>-->
     </div>
 
-    <div class="main-content" style="padding: 20px !important;">
-        <div class="row g-3 mb-2">
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-primary" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'advance'])) }}"
-                                class="text-decoration-none flex-grow-1">
+    <div class="main-content exp-team" style="padding: 20px !important;">
+        <!-- Expense Overview (same tiles as the admin dashboard) -->
+        {{-- <div class="section-hdr">
+            <div class="section-hdr-left">
+                <span class="section-hdr-icon"><i class="feather-credit-card"></i></span>
+                <h6 class="section-hdr-title">Expense Overview</h6>
+            </div>
+            <span class="section-hdr-hint">Click any figure to filter the list below</span>
+        </div> --}}
+        <div class="row g-compact mb-3">
+            @php
+                $expenseCards = [
+                    ['title'=>'Advance','amount'=>$totalAdvanceAmount ?? 0,'count'=>$totalAdvanceCount ?? 0,'icon'=>'fa-arrow-up','type'=>'advance',
+                        'pending'=>['c'=>$pendingAdvanceCount ?? 0,'a'=>$pendingAdvanceAmount ?? 0],'approved'=>['c'=>$approvedAdvanceCount ?? 0,'a'=>$approvedAdvanceAmount ?? 0],
+                        'completed'=>['c'=>$completedAdvanceCount ?? 0,'a'=>$completedAdvanceAmount ?? 0],'cancelled'=>['c'=>$cancelledAdvanceCount ?? 0,'a'=>$cancelledAdvanceAmount ?? 0]],
+                    ['title'=>'Settlement','amount'=>$totalSettlementAmount ?? 0,'count'=>$totalSettlementCount ?? 0,'icon'=>'fa-arrow-down','type'=>'settlement',
+                        'pending'=>['c'=>$pendingSettlementCount ?? 0,'a'=>$pendingSettlementAmount ?? 0],'approved'=>['c'=>$approvedSettlementCount ?? 0,'a'=>$approvedSettlementAmount ?? 0],
+                        'completed'=>['c'=>$completedSettlementCount ?? 0,'a'=>$completedSettlementAmount ?? 0],'cancelled'=>['c'=>$cancelledSettlementCount ?? 0,'a'=>$cancelledSettlementAmount ?? 0]],
+                    ['title'=>'Reimbursement','amount'=>$totalReimbursementAmount ?? 0,'count'=>$totalReimbursementCount ?? 0,'icon'=>'fa-exchange-alt','type'=>'reimbursement',
+                        'pending'=>['c'=>$pendingReimbursementCount ?? 0,'a'=>$pendingReimbursementAmount ?? 0],'approved'=>['c'=>$approvedReimbursementCount ?? 0,'a'=>$approvedReimbursementAmount ?? 0],
+                        'completed'=>['c'=>$completedReimbursementCount ?? 0,'a'=>$completedReimbursementAmount ?? 0],'cancelled'=>['c'=>$cancelledReimbursementCount ?? 0,'a'=>$cancelledReimbursementAmount ?? 0]],
+                    ['title'=>'Total Expenses','amount'=>$totalAmount ?? 0,'count'=>$totalExpenses ?? 0,'icon'=>'fa-chart-pie','type'=>null,
+                        'pending'=>['c'=>$pendingCount ?? 0,'a'=>$pendingAmount ?? 0],'approved'=>['c'=>$approvedCount ?? 0,'a'=>$approvedAmount ?? 0],
+                        'completed'=>['c'=>$completedCount ?? 0,'a'=>$completedAmount ?? 0],'cancelled'=>['c'=>$cancelledCount ?? 0,'a'=>$cancelledAmount ?? 0]],
+                ];
+            @endphp
+            @foreach ($expenseCards as $ec)
+                @php
+                    $baseParams = request()->except(['page']);
+                    $allParams = $ec['type'] ? array_merge($baseParams, ['requirement_type' => $ec['type']]) : $baseParams;
+                    $mk = function ($status) use ($baseParams, $ec) {
+                        $p = $ec['type'] ? array_merge($baseParams, ['requirement_type' => $ec['type'], 'status' => $status]) : array_merge($baseParams, ['status' => $status]);
+                        return route('expense.view-all', $p);
+                    };
+                @endphp
+                <div class="col-xl-3 col-md-6">
+                    <div class="card stat-card exp-card stretch-full">
+                        <div class="card-body">
+                            <a href="{{ route('expense.view-all', $allParams) }}" class="d-block mb-2">
                                 <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-primary">
-                                        <i class="fas fa-arrow-up text-primary fs-5"></i>
-                                    </div>
+                                    <div class="mini-stat-icon bg-soft-primary"><i class="fas {{ $ec['icon'] }}"></i></div>
                                     <div>
-                                        <span class="fs-12 text-muted">Advance</span>
-                                        <h6 class="fw-bold mb-0">₹{{ number_format($totalAdvanceAmount ?? 0, 2) }}</h6>
-                                        <span class="fs-11 text-muted">{{ $totalAdvanceCount ?? 0 }} total requests</span>
+                                        <span class="stat-label d-block">{{ $ec['title'] }}</span>
+                                        <h6 class="stat-value-sm">₹{{ number_format($ec['amount'], 2) }}</h6>
+                                        <span class="stat-sub">{{ $ec['count'] }} total requests</span>
                                     </div>
                                 </div>
                             </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Pending:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'advance', 'status' => 'pending'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-warning">{{ $pendingAdvanceCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($pendingAdvanceAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Approved:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'advance', 'status' => 'approved'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-success">{{ $approvedAdvanceCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($approvedAdvanceAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Completed:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'advance', 'status' => 'complete'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completedAdvanceCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($completedAdvanceAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Cancelled:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'advance', 'status' => 'cancelled'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-danger">{{ $cancelledAdvanceCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($cancelledAdvanceAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
+                            <div class="border-top pt-2">
+                                <div class="breakdown-row d-flex justify-content-between align-items-center">
+                                    <span class="stat-sub">Pending</span>
+                                    <a href="{{ $mk('pending') }}"><span class="bd-num bd-pending">{{ $ec['pending']['c'] }}</span> <span class="stat-sub">(₹{{ number_format($ec['pending']['a'], 2) }})</span></a>
+                                </div>
+                                <div class="breakdown-row d-flex justify-content-between align-items-center">
+                                    <span class="stat-sub">Approved</span>
+                                    <a href="{{ $mk('approved') }}"><span class="bd-num bd-approved">{{ $ec['approved']['c'] }}</span> <span class="stat-sub">(₹{{ number_format($ec['approved']['a'], 2) }})</span></a>
+                                </div>
+                                <div class="breakdown-row d-flex justify-content-between align-items-center">
+                                    <span class="stat-sub">Completed</span>
+                                    <a href="{{ $mk('complete') }}"><span class="bd-num bd-complete">{{ $ec['completed']['c'] }}</span> <span class="stat-sub">(₹{{ number_format($ec['completed']['a'], 2) }})</span></a>
+                                </div>
+                                <div class="breakdown-row d-flex justify-content-between align-items-center">
+                                    <span class="stat-sub">Cancelled</span>
+                                    <a href="{{ $mk('cancelled') }}"><span class="bd-num bd-cancelled">{{ $ec['cancelled']['c'] }}</span> <span class="stat-sub">(₹{{ number_format($ec['cancelled']['a'], 2) }})</span></a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Settlement Card with Status Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-success" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'settlement'])) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-success">
-                                        <i class="fas fa-arrow-down text-success fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Settlement</span>
-                                        <h6 class="fw-bold mb-0">₹{{ number_format($totalSettlementAmount ?? 0, 2) }}</h6>
-                                        <span class="fs-11 text-muted">{{ $totalSettlementCount ?? 0 }} total
-                                            requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Pending:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'settlement', 'status' => 'pending'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-warning">{{ $pendingSettlementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($pendingSettlementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Approved:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'settlement', 'status' => 'approved'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-success">{{ $approvedSettlementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($approvedSettlementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Completed:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'settlement', 'status' => 'complete'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completedSettlementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($completedSettlementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Cancelled:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'settlement', 'status' => 'cancelled'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-danger">{{ $cancelledSettlementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($cancelledSettlementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reimbursement Card with Status Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-info" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement'])) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-info">
-                                        <i class="fas fa-exchange-alt text-info fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Reimbursement</span>
-                                        <h6 class="fw-bold mb-0">₹{{ number_format($totalReimbursementAmount ?? 0, 2) }}
-                                        </h6>
-                                        <span class="fs-11 text-muted">{{ $totalReimbursementCount ?? 0 }} total
-                                            requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Pending:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement', 'status' => 'pending'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span
-                                            class="fw-semibold text-warning">{{ $pendingReimbursementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($pendingReimbursementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Approved:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement', 'status' => 'approved'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span
-                                            class="fw-semibold text-success">{{ $approvedReimbursementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($approvedReimbursementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Completed:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement', 'status' => 'complete'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completedReimbursementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($completedReimbursementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Cancelled:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement', 'status' => 'cancelled'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span
-                                            class="fw-semibold text-danger">{{ $cancelledReimbursementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($cancelledReimbursementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Total Card with Status Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-dark" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['page']))) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-dark">
-                                        <i class="fas fa-chart-pie text-dark fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Total Expenses</span>
-                                        <h6 class="fw-bold mb-0">₹{{ number_format($totalAmount ?? 0, 2) }}</h6>
-                                        <span class="fs-11 text-muted">{{ $totalExpenses ?? 0 }} total requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Pending:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'pending'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-warning">{{ $pendingCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($pendingAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Approved:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'approved'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-success">{{ $approvedCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($approvedAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Completed:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'complete'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completedCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($completedAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Cancelled:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'cancelled'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-danger">{{ $cancelledCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($cancelledAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @endforeach
         </div>
 
-        {{-- <!-- Second Row - Status Wise Breakdown -->
-        <div class="row mt-2">
-            <!--<div class="col-12">-->
-            <!--    <h6 class="mb-3 text-muted">Status Breakdown</h6>-->
-            <!--</div>-->
-
-            <!-- Pending Card with Advance/Settlement Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-warning" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'pending'])) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-warning">
-                                        <i class="feather-clock text-warning fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Pending</span>
-                                        <h5 class="fw-bold mb-0">₹{{ number_format($pending_amount ?? 0, 2) }}</h5>
-                                        <span class="fs-11 text-muted">{{ $pending_expenses ?? 0 }} total requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Advance:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'pending', 'requirement_type' => 'advance'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-primary">{{ $pending_advance_count ?? 0 }}</span>
-                                        <span class="fs-11 text-muted">
-                                            (₹{{ number_format($pending_advance_amount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Settlement:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'pending', 'requirement_type' => 'settlement'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-primary">{{ $pending_settlement_count ?? 0 }}</span>
-                                        <span class="fs-11 text-muted">
-                                            (₹{{ number_format($pending_settlement_amount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Approved Card with Advance/Settlement Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-success" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'approved'])) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-success">
-                                        <i class="feather-check-circle text-success fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Approved</span>
-                                        <h5 class="fw-bold mb-0">₹{{ number_format($approved_amount ?? 0, 2) }}</h5>
-                                        <span class="fs-11 text-muted">{{ $approved_expenses ?? 0 }} total requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Advance:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'approved', 'requirement_type' => 'advance'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-success">{{ $approved_advance_count ?? 0 }}</span>
-                                        <span class="fs-11 text-muted">
-                                            (₹{{ number_format($approved_advance_amount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Settlement:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'approved', 'requirement_type' => 'settlement'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span
-                                            class="fw-semibold text-success">{{ $approved_settlement_count ?? 0 }}</span>
-                                        <span class="fs-11 text-muted">
-                                            (₹{{ number_format($approved_settlement_amount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Completed Card with Advance/Settlement Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-info" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'complete'])) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-info">
-                                        <i class="feather-check-square text-info fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Completed</span>
-                                        <h5 class="fw-bold mb-0">₹{{ number_format($complete_amount ?? 0, 2) }}</h5>
-                                        <span class="fs-11 text-muted">{{ $complete_expenses ?? 0 }} total requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fs-11 text-muted">Advance:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'complete', 'requirement_type' => 'advance'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completed_advance_count ?? 0 }}</span>
-                                        <span class="fs-11 text-muted">
-                                            (₹{{ number_format($completed_advance_amount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Settlement:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'complete', 'requirement_type' => 'settlement'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completed_settlement_count ?? 0 }}</span>
-                                        <span class="fs-11 text-muted">
-                                            (₹{{ number_format($completed_settlement_amount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Rejected/Cancelled Card with Advance/Settlement Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-danger" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'cancelled'])) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-danger">
-                                        <i class="feather-x-circle text-danger fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Rejected/Cancelled</span>
-                                        <h5 class="fw-bold mb-0">₹{{ number_format($cancelled_amount ?? 0, 2) }}</h5>
-                                        <span class="fs-11 text-muted">{{ $cancelled_expenses ?? 0 }} total
-                                            requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fs-11 text-muted">Advance:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'cancelled', 'requirement_type' => 'advance'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-danger">{{ $cancelled_advance_count ?? 0 }}</span>
-                                        <span class="fs-11 text-muted">
-                                            (₹{{ number_format($cancelled_advance_amount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Settlement:</span>
-                                <a href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['status' => 'cancelled', 'requirement_type' => 'settlement'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span
-                                            class="fw-semibold text-danger">{{ $cancelled_settlement_count ?? 0 }}</span>
-                                        <span class="fs-11 text-muted">
-                                            (₹{{ number_format($cancelled_settlement_amount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> --}}
         <!-- Filter Section -->
+        @php
+            $filterKeys = ['status', 'from_date', 'to_date', 'expense_type', 'project_id', 'requirement_type', 'user_id', 'search'];
+            $activeFilterCount = collect(request()->only($filterKeys))->filter()->count();
+            $tagUrl = fn(array $drop) => route('expense.view-all', request()->except(array_merge($drop, ['page'])));
+        @endphp
         <div class="filter-wrapper">
             <div class="filter-header">
-                <div class="filter-title">
-                    <i class="feather-filter"></i>
-                    Filter Expenses
-                    @php
-                        $activeFilterCount = collect(
-                            request()->only(['status', 'from_date', 'to_date', 'expense_type', 'search']),
-                        )
-                            ->filter()
-                            ->count();
-                    @endphp
-                    @if ($activeFilterCount > 0)
-                        <span>{{ $activeFilterCount }} active</span>
-                    @endif
+                <div>
+                    <div class="filter-title">
+                        <i class="feather-filter"></i>
+                        Filter Expenses
+                        @if ($activeFilterCount > 0)
+                            <span>{{ $activeFilterCount }} active</span>
+                        @endif
+                    </div>
+                    {{-- <div class="filter-desc">Search or narrow the list by employee, status, category, project, requirement and date — it updates as you choose.</div> --}}
                 </div>
-                @if (request()->hasAny(['status', 'from_date', 'to_date', 'expense_type', 'search']))
+                @if ($activeFilterCount > 0)
                     <a href="{{ route('expense.view-all') }}" class="clear-all-link">
                         <i class="feather-x"></i>
                         Clear All
@@ -1348,20 +1104,28 @@
             </div>
 
             <form action="{{ route('expense.view-all') }}" method="GET" id="filterForm">
+                <input type="hidden" name="user_id" value="{{ request('user_id') }}">
                 <div class="filter-row">
                     <!-- Search -->
-                    <div class="filter-item">
+                    <div class="filter-item search">
+                        {{-- <label class="filter-label">Search</label> --}}
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" name="search" class="form-control" value="{{ request('search') }}"
+                                placeholder="Name, code, category, project…" autocomplete="off">
+                        </div>
+                    </div>
 
+                    <!-- Employee -->
+                    <div class="filter-item">
+                        {{-- <label class="filter-label">Employee</label> --}}
                         <div class="custom-employee-dropdown">
                             <button class="btn btn-light w-100 d-flex align-items-center justify-content-between"
                                 type="button" id="employeeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="d-flex align-items-center gap-2" id="selectedEmployeeDisplay">
+                                <span class="d-flex align-items-center gap-2 text-truncate" id="selectedEmployeeDisplay">
                                     @if (request('user_id') && ($selectedEmployee = $employees->firstWhere('id', request('user_id'))))
-                                        @php
-                                            $selectedInitials = strtoupper(substr($selectedEmployee->name, 0, 2));
-                                        @endphp
-                                        <span class="employee-initials-sm">{{ $selectedInitials }}</span>
-                                        <span class="employee-name">{{ $selectedEmployee->name }}</span>
+                                        <span class="employee-initials-sm">{{ strtoupper(substr($selectedEmployee->name, 0, 2)) }}</span>
+                                        <span class="employee-name text-truncate">{{ $selectedEmployee->name }}</span>
                                     @else
                                         <span class="text-muted">All Employees</span>
                                     @endif
@@ -1369,21 +1133,18 @@
                                 <i class="feather-chevron-down text-muted"></i>
                             </button>
 
-                            <ul class="dropdown-menu w-80 p-2" aria-labelledby="employeeDropdown">
+                            <ul class="dropdown-menu p-2" aria-labelledby="employeeDropdown">
                                 <li>
                                     <a class="dropdown-item rounded {{ !request('user_id') ? 'active' : '' }}"
-                                        href="{{ route('expense.view-all', array_merge(request()->except(['user_id', 'page']))) }}">
+                                        href="{{ $tagUrl(['user_id']) }}">
                                         <span>All Employees</span>
                                     </a>
                                 </li>
                                 @foreach ($employees as $employee)
-                                    @php
-                                        $initials = strtoupper(substr($employee->name, 0, 2));
-                                    @endphp
                                     <li>
                                         <a class="dropdown-item rounded d-flex align-items-center gap-2 {{ request('user_id') == $employee->id ? 'active' : '' }}"
                                             href="{{ route('expense.view-all', array_merge(request()->except(['page']), ['user_id' => $employee->id])) }}">
-                                            <span class="employee-initials">{{ $initials }}</span>
+                                            <span class="employee-initials">{{ strtoupper(substr($employee->name, 0, 2)) }}</span>
                                             <div class="d-flex flex-column">
                                                 <span>{{ $employee->name }} (<small
                                                         class="text-muted">{{ $employee->employee_id }})</small></span>
@@ -1396,93 +1157,79 @@
                         </div>
                     </div>
 
-                    <!-- Status Filter -->
+                    <!-- Status -->
                     <div class="filter-item">
+                        {{-- <label class="filter-label">Status</label> --}}
                         <select class="filter-select" name="status">
                             <option value="">All Status</option>
-                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending
-                            </option>
-                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved
-                            </option>
-                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>
-                                Cancelled/Rejected</option>
-                            <option value="complete" {{ request('status') == 'complete' ? 'selected' : '' }}>Complete
-                            </option>
+                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                            <option value="complete" {{ request('status') == 'complete' ? 'selected' : '' }}>Complete</option>
+                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled / Rejected</option>
                         </select>
                     </div>
 
-                    <!-- Expense Type Filter -->
+                    <!-- Category -->
                     <div class="filter-item">
+                        {{-- <label class="filter-label">Category</label> --}}
                         <select class="filter-select" name="expense_type">
-                            <option value="">All Types</option>
+                            <option value="">All Categories</option>
                             @foreach ($expenseTypes as $type)
-                                <option value="{{ $type->id }}"
-                                    {{ request('expense_type') == $type->id ? 'selected' : '' }}>
+                                <option value="{{ $type->id }}" {{ request('expense_type') == $type->id ? 'selected' : '' }}>
                                     {{ $type->name }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
-                     <!-- Project Type Filter -->
+                    <!-- Project -->
                     <div class="filter-item">
+                        {{-- <label class="filter-label">Project</label> --}}
                         <select class="filter-select" name="project_id">
-                            <option value="">All Project</option>
+                            <option value="">All Projects</option>
                             @foreach ($projects as $project)
-                                <option value="{{ $project->id }}"
-                                    {{ request('project_id') == $project->id ? 'selected' : '' }}>
+                                <option value="{{ $project->id }}" {{ request('project_id') == $project->id ? 'selected' : '' }}>
                                     {{ $project->name }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
-                    <!-- Expense Type Filter -->
+                    <!-- Requirement -->
                     <div class="filter-item">
+                        {{-- <label class="filter-label">Requirement</label> --}}
                         <select class="filter-select" name="requirement_type">
-                            <option value="">All Requirement</option>
-                            <option value="advance" {{ request('requirement_type') == 'advance' ? 'selected' : '' }}>
-                                Advance
-                            </option>
-                            <option value="settlement"
-                                {{ request('requirement_type') == 'settlement' ? 'selected' : '' }}>
-                                Settlement
-                            </option>
+                            <option value="">All Requirements</option>
+                            <option value="advance" {{ request('requirement_type') == 'advance' ? 'selected' : '' }}>Advance</option>
+                            <option value="settlement" {{ request('requirement_type') == 'settlement' ? 'selected' : '' }}>Settlement</option>
+                            <option value="reimbursement" {{ request('requirement_type') == 'reimbursement' ? 'selected' : '' }}>Reimbursement</option>
                         </select>
                     </div>
-                    <!-- From Date -->
+
+                    <!-- From date -->
                     <div class="filter-item">
-                        <input type="date" class="form-control" name="from_date"
-                            style="padding: .375rem .75rem !important;" value="{{ request('from_date') }}"
-                            placeholder="From Date">
+                        {{-- <label class="filter-label">From date</label> --}}
+                        <input type="date" class="filter-select filter-date" name="from_date" value="{{ request('from_date') }}">
                     </div>
 
-                    <!-- To Date -->
+                    <!-- To date -->
                     <div class="filter-item">
-                        <input type="date" class="form-control" name="to_date"
-                            style="padding: .375rem .75rem !important;" value="{{ request('to_date') }}"
-                            placeholder="To Date">
+                        {{-- <label class="filter-label">To date</label> --}}
+                        <input type="date" class="filter-select filter-date" name="to_date" value="{{ request('to_date') }}">
                     </div>
 
-                    <!-- Action Buttons -->
-                    {{-- <div class="filter-item" style="min-width: auto;">
-                        <button type="submit" class="apply-btn">
-                            <i class="feather-search"></i>
-                            Apply
-                        </button>
-                    </div> --}}
-
-                    <div class="filter-item" style="min-width: auto;">
-                        <a href="{{ route('expense.view-all') }}" class="reset-btn">
+                    <!-- Reset -->
+                    <div class="filter-item reset">
+                        {{-- <label class="filter-label">&nbsp;</label> --}}
+                        <a href="{{ route('expense.view-all') }}" class="reset-btn" title="Reset all filters">
                             <i class="feather-refresh-cw"></i>
-                            
                         </a>
                     </div>
                 </div>
             </form>
 
             <!-- Active Filter Tags -->
-            @if (request()->hasAny(['status', 'from_date', 'to_date', 'expense_type', 'search']))
+            @if ($activeFilterCount > 0)
                 <div class="active-filters">
                     <span class="active-filters-label">Active:</span>
 
@@ -1490,10 +1237,15 @@
                         <span class="filter-tag">
                             <i class="feather-search"></i>
                             "{{ request('search') }}"
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['search', 'page']))) }}"
-                                class="remove-tag">
-                                <i class="feather-x"></i>
-                            </a>
+                            <a href="{{ $tagUrl(['search']) }}" class="remove-tag"><i class="feather-x"></i></a>
+                        </span>
+                    @endif
+
+                    @if (request('user_id') && ($tagEmployee = $employees->firstWhere('id', request('user_id'))))
+                        <span class="filter-tag">
+                            <i class="feather-user"></i>
+                            Employee: {{ $tagEmployee->name }}
+                            <a href="{{ $tagUrl(['user_id']) }}" class="remove-tag"><i class="feather-x"></i></a>
                         </span>
                     @endif
 
@@ -1501,24 +1253,31 @@
                         <span class="filter-tag">
                             <i class="feather-activity"></i>
                             Status: {{ ucfirst(request('status')) }}
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['status', 'page']))) }}"
-                                class="remove-tag">
-                                <i class="feather-x"></i>
-                            </a>
+                            <a href="{{ $tagUrl(['status']) }}" class="remove-tag"><i class="feather-x"></i></a>
                         </span>
                     @endif
 
                     @if (request('expense_type'))
-                        @php
-                            $selectedType = $expenseTypes->firstWhere('id', request('expense_type'));
-                        @endphp
                         <span class="filter-tag">
                             <i class="feather-tag"></i>
-                            Type: {{ $selectedType->name ?? request('expense_type') }}
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['expense_type', 'page']))) }}"
-                                class="remove-tag">
-                                <i class="feather-x"></i>
-                            </a>
+                            Category: {{ $expenseTypes->firstWhere('id', request('expense_type'))->name ?? request('expense_type') }}
+                            <a href="{{ $tagUrl(['expense_type']) }}" class="remove-tag"><i class="feather-x"></i></a>
+                        </span>
+                    @endif
+
+                    @if (request('project_id'))
+                        <span class="filter-tag">
+                            <i class="feather-briefcase"></i>
+                            Project: {{ $projects->firstWhere('id', request('project_id'))->name ?? request('project_id') }}
+                            <a href="{{ $tagUrl(['project_id']) }}" class="remove-tag"><i class="feather-x"></i></a>
+                        </span>
+                    @endif
+
+                    @if (request('requirement_type'))
+                        <span class="filter-tag">
+                            <i class="feather-layers"></i>
+                            Requirement: {{ ucfirst(request('requirement_type')) }}
+                            <a href="{{ $tagUrl(['requirement_type']) }}" class="remove-tag"><i class="feather-x"></i></a>
                         </span>
                     @endif
 
@@ -1526,10 +1285,7 @@
                         <span class="filter-tag">
                             <i class="feather-calendar"></i>
                             From: {{ request('from_date') }}
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['from_date', 'page']))) }}"
-                                class="remove-tag">
-                                <i class="feather-x"></i>
-                            </a>
+                            <a href="{{ $tagUrl(['from_date']) }}" class="remove-tag"><i class="feather-x"></i></a>
                         </span>
                     @endif
 
@@ -1537,10 +1293,7 @@
                         <span class="filter-tag">
                             <i class="feather-calendar"></i>
                             To: {{ request('to_date') }}
-                            <a href="{{ route('expense.view-all', array_merge(request()->except(['to_date', 'page']))) }}"
-                                class="remove-tag">
-                                <i class="feather-x"></i>
-                            </a>
+                            <a href="{{ $tagUrl(['to_date']) }}" class="remove-tag"><i class="feather-x"></i></a>
                         </span>
                     @endif
 
@@ -1556,9 +1309,20 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="card-title mb-0">Expense Applications</h5>
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            @if ($canBulk ?? false)
+                                {{-- Bulk approve / reject (Super Admin can switch this off per company) --}}
+                                <div id="bulkBar" class="d-none align-items-center gap-2">
+                                    <span class="small fw-semibold"><span id="bulkCount">0</span> selected</span>
+                                    <button type="button" class="btn btn-primary btn-sm"
+                                        onclick="openBulkModal('approved')"><i class="feather-check me-1"></i>Approve</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm"
+                                        onclick="openBulkModal('cancelled')"><i class="feather-x me-1"></i>Reject</button>
+                                    <button type="button" class="btn btn-light btn-sm" id="bulkClear">Clear</button>
+                                </div>
+                            @endif
                             <span class="badge bg-info">
                                 <i class="feather-list me-1"></i>Total: {{ $expenses->total() }}
                             </span>
@@ -1569,6 +1333,10 @@
                             <table class="table" id="expenseList">
                                 <thead>
                                     <tr>
+                                        @if ($canBulk ?? false)
+                                            <th width="34"><input type="checkbox" id="bulkSelectAll"
+                                                    title="Select all pending on this page"></th>
+                                        @endif
                                         <th width="50">#</th>
                                         <th>Expense Code</th>
                                         <th>Requirement Type</th>
@@ -1586,8 +1354,33 @@
                                 <tbody>
                                     @forelse ($expenses as $expense)
                                         <tr>
+                                            @if ($canBulk ?? false)
+                                                <td>
+                                                    @if ($expense->status === 'pending')
+                                                        <input type="checkbox" class="bulk-row" value="{{ $expense->id }}">
+                                                    @endif
+                                                </td>
+                                            @endif
                                             <td>{{ $loop->iteration }}</td>
-                                            <td class="text-bold">{{ $expense->expense_number ?? 'NA' }}</td>
+                                            <td class="text-bold">
+                                                {{ $expense->expense_number ?? 'NA' }}
+                                                @if ($expense->possible_duplicate_of)
+                                                    {{-- Flag for the approver, never a block: same person, category, amount and date. --}}
+                                                    <div><span class="badge bg-warning text-dark" style="font-size:10px"
+                                                            title="Same employee, category, amount and date as {{ $expense->possibleDuplicateOf?->expense_number ?? 'an earlier claim' }}">
+                                                            <i class="feather-copy"></i> Possible duplicate</span></div>
+                                                @endif
+                                                @if ($expense->parent_expense_id)
+                                                    <div><span class="badge bg-light text-dark" style="font-size:10px"
+                                                            title="Created automatically from the shortfall of a settlement">Split from a settlement</span>
+                                                    </div>
+                                                @endif
+                                                @if ($expense->payout_channel === 'payroll')
+                                                    <div><span class="badge bg-info" style="font-size:10px"
+                                                            title="Paid with the salary instead of a voucher">Via payroll {{ $expense->payroll_target_month }}</span>
+                                                    </div>
+                                                @endif
+                                            </td>
                                             <td>
                                                 @if ($expense->requirement_type == 'advance')
                                                     <span class="badge bg-primary">Advance</span>
@@ -1622,39 +1415,32 @@
                                             <td>
                                                 <span class="fw-bold">₹{{ number_format($expense->amount, 2) }}</span>
                                             </td>
-                                            <td style="max-width: 200px;">
-                                                <div style="white-space: normal; word-wrap: break-word;">
-                                                    {{ Str::limit($expense->description ?? 'No description', 50) }}
+                                            <td style="max-width: 100px;">
+                                                <div style="white-space: normal;">
+                                                    {{ Str::limit($expense->description ?? 'No description', 10) }}
                                                 </div>
                                             </td>
                                             <td>
-                                                @if (!empty($expense->file))
-                                                    @php
-                                                        $filePath = $expense->file;
-                                                        $extension = strtolower(
-                                                            pathinfo($filePath, PATHINFO_EXTENSION),
-                                                        );
-                                                        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                                                    @endphp
-
-                                                    @if (in_array($extension, $imageExtensions))
-                                                        <a href="{{ asset($filePath) }}" target="_blank"
-                                                            class="file-attachment"
+                                                {{-- Every receipt: the primary one plus any extras (signed URLs). --}}
+                                                @forelse ($expense->receipt_list ?? [] as $receipt)
+                                                    @if ($receipt['is_image'])
+                                                        <a href="{{ $receipt['url'] }}" target="_blank" class="file-attachment"
+                                                            title="{{ $receipt['name'] }}"
                                                             style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
-                                                            <img src="{{ asset($filePath) }}" alt="Expense File"
+                                                            <img src="{{ $receipt['url'] }}" alt="{{ $receipt['name'] }}"
                                                                 style="width:30px; height:30px; border-radius:50%; object-fit: cover;">
                                                         </a>
                                                     @else
-                                                        <a href="{{ asset($filePath) }}" class="file-attachment"
-                                                            download
+                                                        <a href="{{ $receipt['url'] }}" class="file-attachment" download
+                                                            title="{{ $receipt['name'] }}"
                                                             style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none; color: #475569;">
                                                             <i class="feather-paperclip"></i>
-                                                            <span>View</span>
+                                                            <span>PDF</span>
                                                         </a>
                                                     @endif
-                                                @else
+                                                @empty
                                                     <span class="text-muted">—</span>
-                                                @endif
+                                                @endforelse
                                             </td>
                                             <td>
                                                 @php
@@ -1667,8 +1453,13 @@
                                                         ][$expense->status] ?? 'bg-secondary';
                                                 @endphp
                                                 <span class="badge {{ $statusClass }}">
-                                                    {{ ucfirst($expense->status) }}
+                                                    {{ $expense->withdrawn_at ? 'Withdrawn' : ucfirst($expense->status) }}
                                                 </span>
+                                                @if ($expense->withdrawn_at && $expense->withdrawn_reason)
+                                                    <div class="small text-muted" style="font-size:10px;max-width:140px"
+                                                        title="{{ $expense->withdrawn_reason }}">
+                                                        {{ \Illuminate\Support\Str::limit($expense->withdrawn_reason, 40) }}</div>
+                                                @endif
                                             </td>
                                             <td class="text-center">
                                                 @if (in_array($expense->status, ['pending']))
@@ -1691,7 +1482,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="9" class="text-center py-5">
+                                            <td colspan="13" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="fas fa-rupee-sign"></i>
                                                     <h4>No Expense Applications Found</h4>
@@ -1763,9 +1554,131 @@
             </div>
         </div>
     </div>
+
+    @if ($canBulk ?? false)
+        {{-- Bulk approve / reject --}}
+        <div class="modal fade" id="bulkModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="bulkTitle">Bulk update</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted mb-2" id="bulkMessage"></p>
+                        <label class="form-label small">Remarks <small class="text-muted">(optional, applied to
+                                all)</small></label>
+                        <textarea class="form-control" id="bulkRemarks" rows="2" maxlength="500"></textarea>
+                        <div class="form-check mt-2" id="bulkCoverWrap">
+                            <input class="form-check-input" type="checkbox" id="bulkCover">
+                            <label class="form-check-label small" for="bulkCover">If a settlement is larger than the
+                                employee's advance balance, deduct what the advance covers and turn the rest into a
+                                reimbursement (instead of skipping it).</label>
+                        </div>
+                        <div id="bulkResult" class="mt-3 d-none"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal" id="bulkCancel">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="bulkConfirm">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 @endsection
 
 @section('script-area')
+    @if ($canBulk ?? false)
+        <script>
+            (function() {
+                const BULK_URL = @json(route('expense.bulk-status'));
+                let bulkStatus = 'approved';
+
+                const ids = () => $('.bulk-row:checked').map((i, el) => parseInt(el.value)).get();
+                const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                } [c]));
+
+                function sync() {
+                    const n = ids().length;
+                    $('#bulkCount').text(n);
+                    $('#bulkBar').toggleClass('d-none', n === 0).toggleClass('d-flex', n > 0);
+                    const all = $('.bulk-row').length;
+                    $('#bulkSelectAll').prop('checked', all > 0 && n === all);
+                }
+
+                $(document).on('change', '.bulk-row', sync);
+                $('#bulkSelectAll').on('change', function() {
+                    $('.bulk-row').prop('checked', this.checked);
+                    sync();
+                });
+                $('#bulkClear').on('click', function() {
+                    $('.bulk-row, #bulkSelectAll').prop('checked', false);
+                    sync();
+                });
+
+                window.openBulkModal = function(status) {
+                    bulkStatus = status;
+                    const n = ids().length;
+                    const approve = status === 'approved';
+                    $('#bulkTitle').text((approve ? 'Approve ' : 'Reject ') + n + ' expense(s)');
+                    $('#bulkMessage').text(approve ?
+                        'Each expense is approved on its own — any that cannot be (already processed, outside your team, or a settlement larger than the employee\'s balance) is skipped and listed afterwards.' :
+                        'Each selected expense is rejected. Any that were already processed are skipped and listed afterwards.'
+                        );
+                    $('#bulkRemarks').val('');
+                    $('#bulkCover').prop('checked', false);
+                    $('#bulkCoverWrap').toggle(approve);   // only meaningful when approving
+                    $('#bulkResult').addClass('d-none').empty();
+                    $('#bulkConfirm').prop('disabled', false).removeClass('btn-danger btn-success btn-primary')
+                        .addClass(approve ? 'btn-success' : 'btn-danger').text(approve ? 'Approve all' : 'Reject all');
+                    $('#bulkModal').modal('show');
+                };
+
+                $('#bulkConfirm').on('click', function() {
+                    const selected = ids();
+                    if (!selected.length) return;
+                    const btn = $(this).prop('disabled', true).html(
+                        '<span class="spinner-border spinner-border-sm me-1"></span>Working…');
+
+                    $.ajax({
+                        url: BULK_URL,
+                        type: 'POST',
+                        data: {
+                            ids: selected,
+                            status: bulkStatus,
+                            remarks: $('#bulkRemarks').val(),
+                            cover_shortfall: (bulkStatus === 'approved' && $('#bulkCover').is(':checked')) ? 1 : 0
+                        },
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                    }).done(function(res) {
+                        const failed = (res.results || []).filter(r => !r.ok);
+                        let html = `<div class="alert alert-${failed.length ? 'warning' : 'success'} mb-2">${esc(res.message)}</div>`;
+                        if (failed.length) {
+                            html += '<div class="small">Skipped:</div><ul class="small mb-0">' +
+                                failed.map(f =>
+                                    `<li><b>${esc(f.expense_number || ('#' + f.id))}</b> — ${esc(f.message)}</li>`
+                                    ).join('') + '</ul>';
+                        }
+                        $('#bulkResult').html(html).removeClass('d-none');
+                        btn.addClass('d-none');
+                        $('#bulkCancel').text('Close').off('click').on('click', () => location.reload());
+                        $('#bulkModal').off('hidden.bs.modal').on('hidden.bs.modal', () => location.reload());
+                    }).fail(function(xhr) {
+                        toastr.error(xhr.responseJSON?.message || 'Something went wrong. Please try again.');
+                        btn.prop('disabled', false).text(bulkStatus === 'approved' ? 'Approve all' :
+                            'Reject all');
+                    });
+                });
+            })();
+        </script>
+    @endif
     <script>
         // Configure toastr
         toastr.options = {
@@ -1784,18 +1697,31 @@
 
         $(document).ready(function() {
             // Auto-submit on select change
-            $('.filter-select').on('change', function() {
+            $('select.filter-select').on('change', function() {
                 $('#filterForm').submit();
             });
 
-            // Debounce search input
+            // Live search: submit shortly after typing stops, then put the cursor back
+            // (the page reloads) so the user can keep typing.
             let searchTimeout;
-            $('input[name="search"]').on('keyup', function() {
+            const searchBox = $('input[name="search"]');
+            let lastSearch = searchBox.val();
+            searchBox.on('input', function() {
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
+                    if (searchBox.val() === lastSearch) return;
+                    try { sessionStorage.setItem('expTeamSearchFocus', '1'); } catch (e) {}
                     $('#filterForm').submit();
-                }, 500);
+                }, 600);
             });
+            try {
+                if (sessionStorage.getItem('expTeamSearchFocus')) {
+                    sessionStorage.removeItem('expTeamSearchFocus');
+                    const el = searchBox.get(0);
+                    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+                }
+            } catch (e) {}
+
 
             // Date inputs validation
             $('input[name="from_date"], input[name="to_date"]').on('change', function() {
@@ -1805,7 +1731,9 @@
                 if (fromDate && toDate && fromDate > toDate) {
                     toastr.error('From date cannot be greater than To date');
                     $(this).val('');
+                    return;
                 }
+                $('#filterForm').submit();
             });
 
             // Status update form submission
@@ -1816,7 +1744,12 @@
                 const expenseId = $('#expense_id').val();
                 const status = $('#status_value').val();
                 const actionUrl = "{{ url('expense/update-status') }}/" + expenseId;
-                const formData = form.serialize();
+                let formData = form.serialize();
+                // Set when the approver just agreed to "cover the shortfall" (see the 400 handler below).
+                if (window.coverShortfallNext) {
+                    formData += '&cover_shortfall=1';
+                    window.coverShortfallNext = false;
+                }
                 const confirmBtn = $('#confirmButton');
 
                 // Disable button and show loading
@@ -1845,14 +1778,32 @@
                     error: function(xhr) {
                         confirmBtn.prop('disabled', false).html('Confirm');
                         if (xhr.status === 422) {
-                            let errors = xhr.responseJSON.errors;
-                            $.each(errors, function(key, value) {
-                                toastr.error(value[0]);
-                            });
+                            // Validation errors come as `errors`; a blocked budget comes as a plain `message`.
+                            let errors = xhr.responseJSON?.errors;
+                            if (errors) {
+                                $.each(errors, function(key, value) {
+                                    toastr.error(value[0]);
+                                });
+                            } else {
+                                toastr.error(xhr.responseJSON?.message || 'This could not be approved.');
+                            }
                         } else if (xhr.status === 400) {
-                        // Bad request - our custom error for insufficient balance
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            toastr.error(xhr.responseJSON.message);
+                        // Bad request. An insufficient-advance-balance error carries the numbers, so offer the remedy
+                        // instead of a dead end: deduct what the advance covers and turn the rest into a reimbursement.
+                        const r = xhr.responseJSON || {};
+                        if (r.code === 'insufficient_balance' && status === 'approved') {
+                            const m = n => Number(n).toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                            if (confirm(`The employee's advance balance is ₹${m(r.available)}, but this settlement is ₹${m(r.requested)}.\n\nApprove anyway? ₹${m(r.available)} will be deducted from the advance and the remaining ₹${m(r.shortfall)} will become a reimbursement, ready to be paid.`)) {
+                                window.coverShortfallNext = true;
+                                $('#statusUpdateForm').trigger('submit');
+                            } else {
+                                toastr.warning('Not approved.');
+                            }
+                        } else if (r.message) {
+                            toastr.error(r.message);
                         } else {
                             toastr.error("Bad request. Please check your data.");
                         }

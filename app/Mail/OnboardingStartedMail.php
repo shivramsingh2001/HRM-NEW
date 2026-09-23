@@ -3,51 +3,32 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use App\Helpers\TenantHelper;
 
 class OnboardingStartedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct()
+    public $candidate;
+    public $jobOpening;
+    public $assignment;
+    public $company;
+    public $tenantId;
+
+    public function __construct($candidate, $jobOpening, $assignment, $tenantId = null)
     {
-        //
+        $this->candidate = $candidate;
+        $this->jobOpening = $jobOpening;
+        $this->assignment = $assignment;
+        $this->tenantId = $tenantId ?? ($jobOpening->tenant_id ?? 1);
+        $this->company = TenantHelper::getTenantDetails($this->tenantId);
     }
 
-    /**
-     * Get the message envelope.
-     */
-    public function envelope(): Envelope
+    public function build()
     {
-        return new Envelope(
-            subject: 'Onboarding Started Mail',
-        );
-    }
-
-    /**
-     * Get the message content definition.
-     */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'view.name',
-        );
-    }
-
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
-    public function attachments(): array
-    {
-        return [];
+        return $this->subject('Welcome Aboard - Onboarding Started for ' . $this->jobOpening->title)
+            ->view('client.emails.onboarding_started');
     }
 }

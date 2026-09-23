@@ -442,7 +442,7 @@
                                         </div>
                                     </div>
                                     <div class="col-6">
-                                        <button class="btn btn-primary" type="submit"><i class="feather-save me-2"></i>Update Project</button>
+                                        <button class="btn btn-primary" type="submit"><i class="feather-save me-2"></i>Update</button>
                                     </div>
                                     <div class="col-6">
                                         <a href="javascript:void(0)" class="btn btn-modal-cancel float-end" data-bs-dismiss="modal"><i class="feather-x me-2"></i>Cancel</a>

@@ -872,7 +872,6 @@
                                             @endif
                                         @endforeach
                                     </select>
-                                    <small class="form-text text-muted">First selected is treated as the primary reporting head.</small>
                                     @error('reporting_head')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -980,8 +979,6 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    <small class="text-muted">Select multiple leave types that this employee is eligible
-                                        for</small>
                                     @error('leave_type_assigned')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

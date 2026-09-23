@@ -3,27 +3,176 @@
 @section('style')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
-        .shift-manage .content-area-body { padding: 10px 14px !important; }
-        .shift-manage .card { margin-bottom: 0; }
-        .shift-manage .card-header { padding: 8px 12px; }
-        .shift-manage .card-header .card-title { font-size: 13px; }
-        .shift-manage .card-body { padding: 0; }
-        .shift-manage .card-footer { padding: 6px 12px; }
+        /* ============================================
+           MANAGE SHIFTS — matches Shift Settings' theme
+           (single blue #1e3a8a, full-width main-content)
+           ============================================ */
 
-        .shift-stat { border: 1px solid #edf2f7; border-radius: 10px; background: #fff; padding: 9px 12px; }
-        .shift-stat .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
-        .shift-stat .value { font-size: 18px; font-weight: 700; color: #1e293b; line-height: 1.2; }
+        /* ============ STAT CARDS ============ */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
 
-        .shift-manage table#shiftList { font-size: 12px; margin: 0; }
-        .shift-manage table#shiftList td, .shift-manage table#shiftList th { vertical-align: middle; padding: 5px 10px; }
-        .shift-manage table#shiftList thead th { font-size: 10px; text-transform: uppercase; letter-spacing: .02em; color: #64748b; background: #f8fafc; }
+        .stat-tile {
+            background: #fff;
+            border: 1px solid #edf2f7;
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all .15s ease;
+        }
+
+        .stat-tile:hover {
+            border-color: var(--primary-light, #e3edfe);
+            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.05);
+        }
+
+        .stat-tile__icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary-light, #e3edfe);
+            color: var(--primary, #1e3a8a);
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .stat-tile__body {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .stat-tile__label {
+            font-size: 10px;
+            font-weight: 500;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            line-height: 1.2;
+            margin-bottom: 2px;
+        }
+
+        .stat-tile__value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary, #1e3a8a);
+            line-height: 1.2;
+        }
+
+        .stat-tile__value.text-success { color: #059669; }
+        .stat-tile__value.text-danger { color: #dc2626; }
+
+        /* ============ MAIN CARD (shift definitions) ============ */
+        .shift-card {
+            background: #fff;
+            border: 1px solid #edf2f7;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 14px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+        }
+
+        .shift-card__head {
+            padding: 12px 18px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #fafbfc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .shift-card__title {
+            margin: 0;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #1e293b;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .shift-card__title i { font-size: 14px; color: var(--primary, #1e3a8a); }
+
+        .shift-card__body { padding: 0; }
+
+        .shift-card__foot {
+            padding: 8px 18px;
+            border-top: 1px solid #f1f5f9;
+            background: #fafbfc;
+        }
+
+        /* ============ TABLE ============ */
+        table#shiftList { font-size: 12px; margin: 0; }
+        table#shiftList td, table#shiftList th { vertical-align: middle; padding: 8px 14px; }
+        table#shiftList thead th { font-size: 10px; text-transform: uppercase; letter-spacing: .02em; color: #64748b; background: #f8fafc; }
         .shift-dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
         .shift-name { font-weight: 600; color: #1e293b; }
         .muted-cell { color: #94a3b8; }
         .shift-manage .badge { font-size: 10px; font-weight: 600; }
         .shift-manage label.form-label { font-size: 11px; margin-bottom: 2px; color: #64748b; }
         .shift-manage .form-control-sm { font-size: 12px; padding: 3px 8px; height: auto; }
-        .shift-manage .btn-sm { font-size: 12px; padding: 3px 9px; }
+
+        /* ============ STATUS TOGGLE (small, blue) ============ */
+        .status-toggle-wrap { display: flex; align-items: center; gap: 6px; }
+        .status-toggle {
+            appearance: none; -webkit-appearance: none;
+            width: 30px; height: 17px; border-radius: 999px;
+            background: #cbd5e1; border: none; position: relative;
+            cursor: pointer; transition: background .15s ease; flex-shrink: 0;
+            outline: none;
+        }
+        .status-toggle::before {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 13px; height: 13px; border-radius: 50%; background: #fff;
+            transition: transform .15s ease; box-shadow: 0 1px 2px rgba(0,0,0,.15);
+        }
+        .status-toggle:checked { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+        .status-toggle:checked::before { transform: translateX(13px); }
+        .status-toggle:disabled { opacity: .5; cursor: wait; }
+        .status-toggle-label { font-size: 11px; font-weight: 600; }
+        .status-toggle-label.is-active { color: var(--primary, #1e3a8a); }
+        .status-toggle-label.is-inactive { color: #94a3b8; }
+
+        /* ============ ROW ACTIONS (no 3-dot dropdown) ============ */
+        .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+        .row-action-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 7px;
+            border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+            transition: all .15s ease; cursor: pointer; text-decoration: none;
+        }
+        .row-action-btn:hover { border-color: var(--primary, #1e3a8a); color: var(--primary, #1e3a8a); background: var(--primary-light, #e3edfe); }
+        .row-action-btn.danger:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+
+        /* ============ BUTTONS (header actions) ============ */
+        .btn-save {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; border: none;
+            font-size: 12.5px; font-weight: 500; padding: 7px 18px;
+            border-radius: 8px; cursor: pointer; transition: all .15s ease; text-decoration: none;
+        }
+        .btn-save:hover { filter: brightness(0.9); color: #fff; box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3); }
+
+        .btn-ghost {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; border: 1px solid var(--primary, #1e3a8a);
+            font-size: 11.5px; font-weight: 500; padding: 5px 12px;
+            border-radius: 7px; text-decoration: none; cursor: pointer; transition: all .15s ease;
+        }
+        .btn-ghost:hover { filter: brightness(0.9); color: #fff; box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3); }
 
         .modal-custom .modal-content { border: none; border-radius: 14px; }
         .modal-custom .modal-title { font-size: 15px; }
@@ -39,168 +188,163 @@
 
 @section('content-area')
     <div class="shift-manage">
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Manage Shifts</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('shift.roster') }}">Shift</a></li>
-                <li class="breadcrumb-item">Manage Shifts</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="hstack gap-2">
-                <a href="{{ route('shift.roster') }}" class="btn btn-light-brand btn-sm rounded-pill">
-                    <i class="feather-grid me-1"></i>Roster &amp; Assign
-                </a>
-                <a href="#" class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#addShiftModal">
-                    <i class="feather-plus me-1"></i>Add Shift
-                </a>
-            </div>
-        </div>
-    </div>
+        <x-ui.page-header title="Manage Shifts" :parent="['label' => 'Shift', 'route' => 'shift.roster']">
+            <x-slot:actions>
+                <a href="{{ route('shift.roster') }}" class="btn-ghost"><i class="feather-grid"></i> Roster &amp; Assign</a>
+                <a href="#" class="btn-save" data-bs-toggle="modal" data-bs-target="#addShiftModal"><i class="feather-plus"></i> Add Shift</a>
+            </x-slot:actions>
+        </x-ui.page-header>
 
-    <div class="content-area-body">
-        @if (session('error'))
-            <div class="alert alert-danger py-2">{{ session('error') }}</div>
-        @endif
+        <div class="main-content" style="padding: 20px !important;">
+            @if (session('error'))
+                <div class="alert alert-danger py-2">{{ session('error') }}</div>
+            @endif
 
-        <div class="row g-2 mb-2">
-            <div class="col-3"><div class="shift-stat"><div class="label">Total</div><div class="value">{{ $totalShifts }}</div></div></div>
-            <div class="col-3"><div class="shift-stat"><div class="label">Active</div><div class="value text-success">{{ $activeShifts }}</div></div></div>
-            <div class="col-3"><div class="shift-stat"><div class="label">Inactive</div><div class="value text-danger">{{ $inactiveShifts }}</div></div></div>
-            <div class="col-3"><div class="shift-stat"><div class="label">Assigned this month</div><div class="value">{{ $assignedShiftsCount }}</div></div></div>
-        </div>
-
-        <div class="card stretch stretch-full">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Shift Definitions</h5>
-                <form method="GET" action="{{ route('shift.index') }}" class="d-flex gap-2" id="shiftFilterForm">
-                    <input type="text" name="search" class="form-control form-control-sm" style="width: 180px"
-                           placeholder="Search name" value="{{ request('search') }}">
-                    <select name="status" class="form-control form-control-sm" style="width: 130px" onchange="this.form.submit()">
-                        <option value="">All statuses</option>
-                        <option value="1" @selected(request('status') === '1')>Active</option>
-                        <option value="0" @selected(request('status') === '0')>Inactive</option>
-                    </select>
-                    <button class="btn btn-sm btn-primary" type="submit"><i class="feather-search"></i></button>
-                    @if (request('search') || request('status') !== null)
-                        <a href="{{ route('shift.index') }}" class="btn btn-sm btn-light">Reset</a>
-                    @endif
-                </form>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover" id="shiftList">
-                        <thead>
-                            <tr>
-                                <th>Shift</th>
-                                <th>Timing</th>
-                                <th>Duration</th>
-                                <th>Grace</th>
-                                <th>Break</th>
-                                <th>Assigned (this month)</th>
-                                <th>Status</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($shifts as $shift)
-                                @php
-                                    $start = \Carbon\Carbon::parse($shift->start_time);
-                                    $end = \Carbon\Carbon::parse($shift->end_time);
-                                    $overnight = $end->lessThanOrEqualTo($start);
-                                @endphp
-                                <tr>
-                                    <td>
-                                        <span class="shift-dot" style="background: {{ $shift->color_code ?: '#4f46e5' }}"></span>
-                                        <span class="shift-name">{{ $shift->name }}</span>
-                                        @if ($shift->description)
-                                            <div class="muted-cell small">{{ \Illuminate\Support\Str::limit($shift->description, 60) }}</div>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        {{ $start->format('h:i A') }} &ndash; {{ $end->format('h:i A') }}
-                                        @if ($overnight)<span class="badge bg-light text-dark ms-1">+1 day</span>@endif
-                                    </td>
-                                    <td>{{ $shift->total_hours }} h</td>
-                                    <td>{{ (int) $shift->grace_minutes }} min</td>
-                                    <td>{{ (int) $shift->break_time }} min</td>
-                                    <td>
-                                        @if (($shift->assigned_this_month ?? 0) > 0)
-                                            <span class="badge bg-info">{{ $shift->assigned_this_month }}</span>
-                                        @else
-                                            <span class="muted-cell">0</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($shift->status)
-                                            <span class="badge bg-success">Active</span>
-                                        @else
-                                            <span class="badge bg-danger">Inactive</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="dropdown">
-                                            <a href="#" class="avatar-text avatar-md" data-bs-toggle="dropdown" data-bs-offset="0,21">
-                                                <i class="feather feather-more-horizontal"></i>
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li>
-                                                    <a class="dropdown-item edit-shift" href="#"
-                                                       data-id="{{ $shift->id }}"
-                                                       data-name="{{ $shift->name }}"
-                                                       data-color_code="{{ $shift->color_code }}"
-                                                       data-start_time="{{ $start->format('H:i') }}"
-                                                       data-end_time="{{ $end->format('H:i') }}"
-                                                       data-grace_minutes="{{ (int) $shift->grace_minutes }}"
-                                                       data-break_time="{{ (int) $shift->break_time }}"
-                                                       data-status="{{ (int) $shift->status }}"
-                                                       data-description="{{ $shift->description }}">
-                                                        <i class="feather-edit-3 me-2"></i>Edit
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item change-status" href="#" data-id="{{ $shift->id }}">
-                                                        <i class="feather-power me-2"></i>{{ $shift->status ? 'Deactivate' : 'Activate' }}
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item text-danger delete-shift" href="#"
-                                                       data-id="{{ $shift->id }}" data-name="{{ $shift->name }}">
-                                                        <i class="feather-trash-2 me-2"></i>Delete
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="text-center py-4">
-                                        <span class="text-muted">No shifts yet. Click "Add Shift" to create one.</span>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            @if ($shifts->hasPages())
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted" style="font-size:11px">
-                            Showing {{ $shifts->firstItem() }}&ndash;{{ $shifts->lastItem() }} of {{ $shifts->total() }}
-                        </span>
-                        <div>{{ $shifts->appends(request()->query())->links() }}</div>
+            <div class="stat-grid">
+                <div class="stat-tile">
+                    <div class="stat-tile__icon"><i class="feather-clock"></i></div>
+                    <div class="stat-tile__body">
+                        <span class="stat-tile__label">Total</span>
+                        <span class="stat-tile__value">{{ $totalShifts }}</span>
                     </div>
                 </div>
-            @endif
+                <div class="stat-tile">
+                    <div class="stat-tile__icon"><i class="feather-check-circle"></i></div>
+                    <div class="stat-tile__body">
+                        <span class="stat-tile__label">Active</span>
+                        <span class="stat-tile__value">{{ $activeShifts }}</span>
+                    </div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-tile__icon"><i class="feather-slash"></i></div>
+                    <div class="stat-tile__body">
+                        <span class="stat-tile__label">Inactive</span>
+                        <span class="stat-tile__value">{{ $inactiveShifts }}</span>
+                    </div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-tile__icon"><i class="feather-users"></i></div>
+                    <div class="stat-tile__body">
+                        <span class="stat-tile__label">Assigned this month</span>
+                        <span class="stat-tile__value">{{ $assignedShiftsCount }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="shift-card">
+                <div class="shift-card__head">
+                    <h5 class="shift-card__title"><i class="feather-list"></i> Shift Definitions</h5>
+                    <form method="GET" action="{{ route('shift.index') }}" class="d-flex gap-2" id="shiftFilterForm">
+                        <input type="text" name="search" class="form-control form-control-sm" style="width: 180px"
+                               placeholder="Search name" value="{{ request('search') }}">
+                        <select name="status" class="form-control form-control-sm" style="width: 130px" onchange="this.form.submit()">
+                            <option value="">All statuses</option>
+                            <option value="1" @selected(request('status') === '1')>Active</option>
+                            <option value="0" @selected(request('status') === '0')>Inactive</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" type="submit"><i class="feather-search"></i></button>
+                        @if (request('search') || request('status') !== null)
+                            <a href="{{ route('shift.index') }}" class="btn btn-sm btn-light">Reset</a>
+                        @endif
+                    </form>
+                </div>
+                <div class="shift-card__body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="shiftList">
+                            <thead>
+                                <tr>
+                                    <th>Shift</th>
+                                    <th>Timing</th>
+                                    <th>Duration</th>
+                                    <th>Grace</th>
+                                    <th>Break</th>
+                                    <th>Assigned (this month)</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($shifts as $shift)
+                                    @php
+                                        $start = \Carbon\Carbon::parse($shift->start_time);
+                                        $end = \Carbon\Carbon::parse($shift->end_time);
+                                        $overnight = $end->lessThanOrEqualTo($start);
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <span class="shift-dot" style="background: {{ $shift->color_code ?: '#4f46e5' }}"></span>
+                                            <span class="shift-name">{{ $shift->name }}</span>
+                                            @if ($shift->description)
+                                                <div class="muted-cell small">{{ \Illuminate\Support\Str::limit($shift->description, 60) }}</div>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            {{ $start->format('h:i A') }} &ndash; {{ $end->format('h:i A') }}
+                                            @if ($overnight)<span class="badge bg-light text-dark ms-1">+1 day</span>@endif
+                                        </td>
+                                        <td>{{ $shift->total_hours }} h</td>
+                                        <td>{{ (int) $shift->grace_minutes }} min</td>
+                                        <td>{{ (int) $shift->break_time }} min</td>
+                                        <td>
+                                            @if (($shift->assigned_this_month ?? 0) > 0)
+                                                <span class="badge bg-info">{{ $shift->assigned_this_month }}</span>
+                                            @else
+                                                <span class="muted-cell">0</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <div class="status-toggle-wrap">
+                                                <input type="checkbox" class="status-toggle change-status" data-id="{{ $shift->id }}"
+                                                       {{ $shift->status ? 'checked' : '' }}>
+                                                <span class="status-toggle-label {{ $shift->status ? 'is-active' : 'is-inactive' }}">
+                                                    {{ $shift->status ? 'Active' : 'Inactive' }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="row-actions">
+                                                <a href="#" class="row-action-btn edit-shift" title="Edit"
+                                                   data-id="{{ $shift->id }}"
+                                                   data-name="{{ $shift->name }}"
+                                                   data-color_code="{{ $shift->color_code }}"
+                                                   data-start_time="{{ $start->format('H:i') }}"
+                                                   data-end_time="{{ $end->format('H:i') }}"
+                                                   data-grace_minutes="{{ (int) $shift->grace_minutes }}"
+                                                   data-break_time="{{ (int) $shift->break_time }}"
+                                                   data-status="{{ (int) $shift->status }}"
+                                                   data-description="{{ $shift->description }}">
+                                                    <i class="feather-edit-3"></i>
+                                                </a>
+                                                <a href="#" class="row-action-btn danger delete-shift" title="Delete"
+                                                   data-id="{{ $shift->id }}" data-name="{{ $shift->name }}">
+                                                    <i class="feather-trash-2"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">
+                                            <span class="text-muted">No shifts yet. Click "Add Shift" to create one.</span>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @if ($shifts->hasPages())
+                    <div class="shift-card__foot">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted" style="font-size:11px">
+                                Showing {{ $shifts->firstItem() }}&ndash;{{ $shifts->lastItem() }} of {{ $shifts->total() }}
+                            </span>
+                            <div>{{ $shifts->appends(request()->query())->links() }}</div>
+                        </div>
+                    </div>
+                @endif
+            </div>
         </div>
-    </div>
     </div>
 @endsection
 
@@ -255,7 +399,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" form="addShiftForm" class="btn btn-primary">Save Shift</button>
+                    <button type="submit" form="addShiftForm" class="btn-save">Save Shift</button>
                 </div>
             </div>
         </div>
@@ -318,7 +462,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" form="editShiftForm" class="btn btn-primary">Update Shift</button>
+                    <button type="submit" form="editShiftForm" class="btn-save">Update Shift</button>
                 </div>
             </div>
         </div>
@@ -372,7 +516,8 @@
                 });
             });
 
-            $(document).on('click', '.edit-shift', function () {
+            $(document).on('click', '.edit-shift', function (e) {
+                e.preventDefault();
                 const d = $(this).data();
                 $('#edit_id').val(d.id);
                 $('#edit_name').val(d.name);
@@ -402,16 +547,22 @@
                 });
             });
 
-            $(document).on('click', '.change-status', function () {
+            $(document).on('change', '.change-status', function () {
+                const $toggle = $(this);
+                $toggle.prop('disabled', true);
                 $.ajax({
-                    url: "{{ route('shift.change-status', '') }}/" + $(this).data('id'), type: 'POST',
+                    url: "{{ route('shift.change-status', '') }}/" + $toggle.data('id'), type: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrf },
-                    success: r => { toastr.success(r.message || 'Status updated'); setTimeout(() => location.reload(), 600); },
-                    error: xhr => toastr.error(xhr.responseJSON?.message || 'Failed to update status')
+                    success: r => { toastr.success(r.message || 'Status updated'); setTimeout(() => location.reload(), 500); },
+                    error: xhr => {
+                        $toggle.prop('disabled', false).prop('checked', !$toggle.is(':checked'));
+                        toastr.error(xhr.responseJSON?.message || 'Failed to update status');
+                    }
                 });
             });
 
-            $(document).on('click', '.delete-shift', function () {
+            $(document).on('click', '.delete-shift', function (e) {
+                e.preventDefault();
                 deleteId = $(this).data('id');
                 $('#deleteShiftName').text($(this).data('name'));
                 new bootstrap.Modal('#deleteModal').show();

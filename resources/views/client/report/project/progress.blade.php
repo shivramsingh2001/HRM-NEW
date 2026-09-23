@@ -62,8 +62,19 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="filter-item">
+                        <select name="branch_id" class="form-control-sm-custom" onchange="this.form.submit()">
+                            <option value="">-- All Branches --</option>
+                            @foreach ($allBranches as $b)
+                                <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="filter-item"><input type="date" name="date_from" class="form-control-sm-custom" value="{{ request('date_from') }}" title="Deadline from"></div>
                     <div class="filter-item"><input type="date" name="date_to" class="form-control-sm-custom" value="{{ request('date_to') }}" title="Deadline to"></div>
+                    <div class="filter-item">
+                        <input type="text" name="search" class="form-control-sm-custom" placeholder="Search project or code…" value="{{ request('search') }}">
+                    </div>
                     <div class="filter-item"><button type="submit" class="btn-sm-custom"><i class="feather-eye"></i> View</button></div>
                     <div class="filter-item"><a href="{{ route('report.project.progress.index') }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
                 </div>
@@ -76,7 +87,7 @@
                     <table class="table table-hover" id="reportTable">
                         <thead>
                             <tr>
-                                <th>Code</th><th>Name</th><th>Progress</th><th>Completed</th><th>In Progress</th>
+                                <th>Code</th><th>Name</th><th>Branch</th><th>Progress</th><th>Completed</th><th>In Progress</th>
                                 <th>Pending</th><th>Overdue Tasks</th><th>Days</th><th>Latest Update</th>
                             </tr>
                         </thead>
@@ -85,6 +96,7 @@
                                 <tr>
                                     <td>{{ $p->project_code }}</td>
                                     <td>{{ $p->name }}</td>
+                                    <td>{{ $p->branch_name ?? '—' }}</td>
                                     <td>
                                         <div class="d-flex align-items-center gap-1">
                                             <div class="progress-track"><div class="progress-fill" style="width: {{ $p->progress_percentage }}%"></div></div>
@@ -99,7 +111,7 @@
                                     <td>{{ $p->latest_update_summary }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="9" class="text-center text-muted py-4">No projects match the selected filters.</td></tr>
+                                <tr><td colspan="10" class="text-center text-muted py-4">No projects match the selected filters.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

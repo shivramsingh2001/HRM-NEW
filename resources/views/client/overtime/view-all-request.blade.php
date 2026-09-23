@@ -8,19 +8,17 @@
            colors are dropped so every icon shares the same blue) — no
            local copy. */
 
-        .stats-sub {
-            font-size: 11px;
-            color: #94a3b8;
-            margin-top: 4px;
-        }
-
-        /* Filter Section */
-        .filter-bar {
+        /* ==================== MODERN FILTER SECTION ====================
+           Same markup/classes as the Tasks "Assigned By Me" page
+           (resources/views/client/task/view-assigned-by-task.blade.php) so
+           every list page in the app shares one filter look. */
+        .filter-wrapper {
             background: white;
             border-radius: 12px;
             border: 1px solid #edf2f7;
-            padding: 20px;
+            padding: 16px 20px;
             margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
         .filter-header {
@@ -40,13 +38,13 @@
         }
 
         .filter-title i {
-            color: var(--primary-mid);
+            color: var(--primary-mid, #1e3a8a);
             font-size: 16px;
         }
 
         .filter-title span {
-            background: var(--primary-light);
-            color: var(--primary-mid);
+            background: var(--primary-light, #e3edfe);
+            color: var(--primary-mid, #1e3a8a);
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -54,80 +52,126 @@
             margin-left: 6px;
         }
 
-        .filter-form {
+        .clear-all-link {
             display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: flex-end;
+            align-items: center;
+            gap: 6px;
+            color: #64748b;
+            font-size: 12px;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 20px;
+            transition: all 0.2s;
         }
 
-        .filter-group {
+        .clear-all-link:hover {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .clear-all-link i {
+            font-size: 14px;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        .filter-item {
             flex: 1;
             min-width: 150px;
         }
 
-        .filter-group label {
+        .filter-item.date-range {
+            min-width: 140px;
+        }
+
+        .filter-item .form-label {
             font-size: 11px;
             font-weight: 600;
-            text-transform: uppercase;
             color: #64748b;
             margin-bottom: 4px;
             display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
 
-        .filter-control {
+        .filter-select {
             width: 100%;
-            padding: 8px 12px;
+            height: 36px;
+            padding: 6px 28px 6px 10px;
+            font-size: 12px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            font-size: 13px;
-            background: #f8fafc;
-            transition: all 0.2s;
-        }
-
-        .filter-control:focus {
-            border-color: var(--primary-mid);
-            outline: none;
-            background: white;
-        }
-
-        .btn-filter,
-        .btn-reset {
-            padding: 8px 20px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
+            background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center;
+            background-size: 14px;
+            appearance: none;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .btn-filter {
-            background: var(--primary-mid);
-            color: white;
-            border: none;
+        .filter-select:focus {
+            background-color: white;
+            border-color: var(--primary-mid, #1e3a8a);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            outline: none;
         }
 
-        .btn-filter:hover {
-            background: var(--primary-dark);
+        .filter-select:hover {
+            background-color: white;
+            border-color: #94a3b8;
         }
 
-        .btn-reset {
-            background: white;
+        .filter-date {
+            width: 100%;
+            height: 36px;
+            padding: 6px 10px;
+            font-size: 12px;
             border: 1px solid #e2e8f0;
-            color: #64748b;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-reset:hover {
+            border-radius: 8px;
             background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        /* Active Filters Styles */
+        .filter-date:focus {
+            background-color: white;
+            border-color: var(--primary-mid, #1e3a8a);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            outline: none;
+        }
+
+        .reset-btn {
+            height: 36px;
+            padding: 0 16px;
+            background: white;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .reset-btn:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #1e293b;
+        }
+
+        /* Active Filter Tags */
         .active-filters {
             margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid #e2e8f0;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
@@ -141,7 +185,7 @@
             text-transform: uppercase;
             letter-spacing: 0.3px;
             background: #f1f5f9;
-            padding: 4px 10px;
+            padding: 2px 8px;
             border-radius: 20px;
         }
 
@@ -149,26 +193,28 @@
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 30px;
-            padding: 4px 12px 4px 10px;
-            font-size: 12px;
+            padding: 3px 10px 3px 8px;
+            font-size: 11px;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             transition: all 0.2s;
         }
 
         .filter-tag i {
-            color: var(--primary-mid);
-            font-size: 12px;
+            color: var(--primary-mid, #1e3a8a);
+            font-size: 11px;
         }
 
         .filter-tag .remove-tag {
             color: #94a3b8;
             margin-left: 2px;
             cursor: pointer;
-            text-decoration: none;
             transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
         }
 
         .filter-tag .remove-tag:hover {
@@ -176,11 +222,21 @@
         }
 
         .filter-tag.clear-all {
-            background: var(--primary-light);
-            border-color: var(--primary-mid);
-            color: var(--primary-mid);
+            background: var(--primary-light, #e3edfe);
+            border-color: var(--primary-mid, #1e3a8a);
+            color: var(--primary-mid, #1e3a8a);
             font-weight: 600;
             text-decoration: none;
+            padding: 3px 10px;
+        }
+
+        .filter-tag.clear-all:hover {
+            background: var(--primary-mid, #1e3a8a);
+            color: white;
+        }
+
+        .filter-tag.clear-all i {
+            color: currentColor;
         }
 
         /* Employee Info Styles */
@@ -281,20 +337,27 @@
             color: var(--primary-mid);
         }
 
-        /* Table Styles */
+        /* Table Styles — matches Tasks "Assigned By Me" page */
+        .table {
+            margin-bottom: 0;
+        }
+
         .table th {
-            background: #f8fafc;
-            font-size: 12px;
+            background-color: #f8fafc;
             font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
             color: #475569;
-            padding: 12px 16px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom-width: 1px;
+            padding: 12px 12px;
+            white-space: nowrap;
         }
 
         .table td {
-            padding: 12px 16px;
             vertical-align: middle;
-            font-size: 13px;
+            font-size: 12px;
+            padding: 10px 12px;
             border-bottom: 1px solid #f1f5f9;
         }
 
@@ -338,11 +401,11 @@
         }
 
         .action-btn {
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             padding: 0;
-            border-radius: 8px;
-            font-size: 13px;
+            border-radius: 7px;
+            font-size: 12px;
             border: 1px solid transparent;
             cursor: pointer;
             transition: all 0.2s;
@@ -430,24 +493,35 @@
             margin-bottom: 16px;
         }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
+        /* Responsive — matches Tasks "Assigned By Me" page */
+        @media (max-width: 992px) {
+            .filter-row {
+                gap: 10px;
+            }
+
+            .filter-item {
+                flex: 1 1 calc(33.333% - 10px);
+                min-width: 120px;
             }
         }
 
         @media (max-width: 768px) {
-            .filter-form {
-                flex-direction: column;
+            .filter-wrapper {
+                padding: 12px;
             }
 
-            .filter-group {
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-item {
                 width: 100%;
             }
 
-            .stats-grid {
-                grid-template-columns: 1fr;
+            .table th,
+            .table td {
+                padding: 8px 10px;
             }
 
             .action-btns {
@@ -491,53 +565,49 @@
     <div class="main-content" style="padding: 20px !important;">
         <!-- Statistics Cards -->
         <div class="stats-grid">
-            <div class="stats-card total-card" onclick="filterByStatus('')">
-                <div class="stats-icon total-icon">
-                    <i class="feather-file-text"></i>
-                </div>
+            <div class="stats-card" data-status="all">
                 <div class="stats-info">
                     <h3>{{ $totalRequests }}</h3>
                     <p>Total Requests</p>
-                    <div class="stats-sub">{{ $totalHours }} total hours</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="feather-file-text"></i>
                 </div>
             </div>
 
-            <div class="stats-card pending-card" onclick="filterByStatus('pending')">
-                <div class="stats-icon pending-icon">
-                    <i class="feather-clock"></i>
-                </div>
+            <div class="stats-card" data-status="pending">
                 <div class="stats-info">
                     <h3>{{ $pendingRequests }}</h3>
                     <p>Pending</p>
-                    <div class="stats-sub">{{ $pendingHours }} hours</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="feather-clock"></i>
                 </div>
             </div>
 
-            <div class="stats-card approved-card" onclick="filterByStatus('approved')">
-                <div class="stats-icon approved-icon">
-                    <i class="feather-check-circle"></i>
-                </div>
+            <div class="stats-card" data-status="approved">
                 <div class="stats-info">
                     <h3>{{ $approvedRequests }}</h3>
                     <p>Approved</p>
-                    <div class="stats-sub">{{ $approvedHours }} hours</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="feather-check-circle"></i>
                 </div>
             </div>
 
-            <div class="stats-card rejected-card" onclick="filterByStatus('rejected')">
-                <div class="stats-icon rejected-icon">
-                    <i class="feather-x-circle"></i>
-                </div>
+            <div class="stats-card" data-status="rejected">
                 <div class="stats-info">
                     <h3>{{ $rejectedRequests }}</h3>
                     <p>Rejected</p>
-                    <div class="stats-sub">{{ $rejectedHours }} hours</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="feather-x-circle"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Filter Bar -->
-        <div class="filter-bar">
+        <!-- Modern Filter Section -->
+        <div class="filter-wrapper">
             <div class="filter-header">
                 <div class="filter-title">
                     <i class="feather-filter"></i>
@@ -552,17 +622,19 @@
                     @endif
                 </div>
                 @if (request()->hasAny(['status', 'employee', 'from_date', 'to_date']))
-                    <a href="{{ route('overtime.view-all') }}" class="btn-reset" style="padding: 4px 12px;">
-                        <i class="feather-x"></i> Clear All
+                    <a href="{{ route('overtime.view-all') }}" class="clear-all-link">
+                        <i class="feather-x"></i>
+                        Clear All
                     </a>
                 @endif
             </div>
 
             <form action="{{ route('overtime.view-all') }}" method="GET" id="filterForm">
-                <div class="filter-form">
-                    <div class="filter-group">
-                        <label>Status</label>
-                        <select name="status" class="filter-control" id="statusFilter">
+                <div class="filter-row">
+                    <!-- Status Filter -->
+                    <div class="filter-item">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="filter-select" id="statusFilter">
                             <option value="">All Status</option>
                             <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                             <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
@@ -570,125 +642,131 @@
                         </select>
                     </div>
 
-                    <div class="filter-group">
-                        <label>From Date</label>
-                        <input type="date" name="from_date" class="filter-control" value="{{ request('from_date') }}">
-                    </div>
-
-                    <div class="filter-group">
-                        <label>To Date</label>
-                        <input type="date" name="to_date" class="filter-control" value="{{ request('to_date') }}">
-                    </div>
-
-                        @if (in_array($userRole, ['admin', 'manager','hr']))
+                    @if (in_array($userRole, ['admin', 'manager', 'hr']))
+                        <!-- Employee Filter -->
                         <div class="filter-item" style="min-width: 220px;">
+                            <label class="form-label">Employee</label>
+                            <div class="custom-employee-dropdown">
+                                <button class="btn btn-light w-100 d-flex align-items-center justify-content-between"
+                                    type="button" id="employeeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="d-flex align-items-center gap-2" id="selectedEmployeeDisplay">
+                                        @if (request('employee') && ($selectedEmployee = $employees->firstWhere('id', request('employee'))))
+                                            @php
+                                                $selectedInitials = strtoupper(substr($selectedEmployee->name, 0, 2));
+                                            @endphp
+                                            <span class="employee-initials-sm">{{ $selectedInitials }}</span>
+                                            <span class="employee-name">{{ $selectedEmployee->name }}</span>
+                                        @else
+                                            <span class="text-muted">All Employees</span>
+                                        @endif
+                                    </span>
+                                    <i class="feather-chevron-down text-muted"></i>
+                                </button>
 
-                        <div class="custom-employee-dropdown">
-                            <button class="btn btn-light w-100 d-flex align-items-center justify-content-between"
-                                type="button" id="employeeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="d-flex align-items-center gap-2" id="selectedEmployeeDisplay">
-                                    @if (request('user_id') && ($selectedEmployee = $employees->firstWhere('id', request('user_id'))))
-                                        @php
-                                            $selectedInitials = strtoupper(substr($selectedEmployee->name, 0, 2));
-                                        @endphp
-                                        <span class="employee-initials-sm">{{ $selectedInitials }}</span>
-                                        <span class="employee-name">{{ $selectedEmployee->name }}</span>
-                                    @else
-                                        <span class="text-muted">All Employees</span>
-                                    @endif
-                                </span>
-                                <i class="feather-chevron-down text-muted"></i>
-                            </button>
-
-                            <ul class="dropdown-menu w-80 p-2" aria-labelledby="employeeDropdown">
-                                <li>
-                                    <a class="dropdown-item rounded {{ !request('employee') ? 'active' : '' }}"
-                                        href="{{ route('overtime.view-all', array_merge(request()->except(['employee', 'page']))) }}">
-                                        <span>All Employees</span>
-                                    </a>
-                                </li>
-                                @foreach ($employees as $employee)
-                                    @php
-                                        $initials = strtoupper(substr($employee->name, 0, 2));
-                                    @endphp
+                                <ul class="dropdown-menu w-80 p-2" aria-labelledby="employeeDropdown">
                                     <li>
-                                        <a class="dropdown-item rounded d-flex align-items-center gap-2 {{ request('employee') == $employee->id ? 'active' : '' }}"
-                                            href="{{ route('overtime.view-all', array_merge(request()->except(['page']), ['employee' => $employee->id])) }}">
-                                            <span class="employee-initials">{{ $initials }}</span>
-                                            <div class="d-flex flex-column">
-                                                <span>{{ $employee->name }} (<small
-                                                        class="text-muted">{{ $employee->employee_id }})</small></span>
-                                                <small class="text-muted">{{ $employee->email }}</small>
-                                            </div>
+                                        <a class="dropdown-item rounded {{ !request('employee') ? 'active' : '' }}"
+                                            href="{{ route('overtime.view-all', array_merge(request()->except(['employee', 'page']))) }}">
+                                            <span>All Employees</span>
                                         </a>
                                     </li>
-                                @endforeach
-                            </ul>
+                                    @foreach ($employees as $employee)
+                                        @php
+                                            $initials = strtoupper(substr($employee->name, 0, 2));
+                                        @endphp
+                                        <li>
+                                            <a class="dropdown-item rounded d-flex align-items-center gap-2 {{ request('employee') == $employee->id ? 'active' : '' }}"
+                                                href="{{ route('overtime.view-all', array_merge(request()->except(['page']), ['employee' => $employee->id])) }}">
+                                                <span class="employee-initials">{{ $initials }}</span>
+                                                <div class="d-flex flex-column">
+                                                    <span>{{ $employee->name }} (<small
+                                                            class="text-muted">{{ $employee->employee_id }})</small></span>
+                                                    <small class="text-muted">{{ $employee->email }}</small>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
                         </div>
-                    </div>
                     @endif
 
-                    <div class="filter-group" style="min-width: auto;">
-                        <a href="{{ route('overtime.view-all') }}" class="btn-reset d-inline-block text-center">
-                            <i class="feather-refresh-cw me-1"></i> Reset
+                    <!-- Date From Filter -->
+                    <div class="filter-item date-range">
+                        <label class="form-label">From Date</label>
+                        <input type="date" name="from_date" class="filter-date" value="{{ request('from_date') }}">
+                    </div>
+
+                    <!-- Date To Filter -->
+                    <div class="filter-item date-range">
+                        <label class="form-label">To Date</label>
+                        <input type="date" name="to_date" class="filter-date" value="{{ request('to_date') }}">
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div class="filter-item" style="min-width: auto; flex: 0 0 auto;">
+                        <a href="{{ route('overtime.view-all') }}" class="reset-btn">
+                            <i class="feather-refresh-cw"></i>
+                            Reset
                         </a>
                     </div>
                 </div>
             </form>
 
-            <!-- Active Filters Section -->
+            <!-- Active Filter Tags -->
             @if (request()->hasAny(['status', 'employee', 'from_date', 'to_date']))
-            <div class="active-filters">
-                <span class="active-filters-label">Active Filters:</span>
+                <div class="active-filters">
+                    <span class="active-filters-label">Active Filters:</span>
 
-                @if (request('status'))
-                    <span class="filter-tag">
-                        <i class="feather-activity"></i>
-                        Status: {{ ucfirst(request('status')) }}
-                        <a href="{{ route('overtime.view-all', array_merge(request()->except(['status', 'page']))) }}"
-                           class="remove-tag">
-                            <i class="feather-x"></i>
-                        </a>
-                    </span>
-                @endif
+                    @if (request('status'))
+                        <span class="filter-tag">
+                            <i class="feather-activity"></i>
+                            Status: {{ ucfirst(request('status')) }}
+                            <a href="{{ route('overtime.view-all', array_merge(request()->except(['status', 'page']))) }}"
+                                class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
 
-                @if (request('employee') && $selectedEmployee = $employees->firstWhere('id', request('employee')))
-                    <span class="filter-tag">
-                        <i class="feather-user"></i>
-                        Employee: {{ $selectedEmployee->name }}
-                        <a href="{{ route('overtime.view-all', array_merge(request()->except(['employee', 'page']))) }}"
-                           class="remove-tag">
-                            <i class="feather-x"></i>
-                        </a>
-                    </span>
-                @endif
+                    @if (request('employee') && $selectedEmployee = $employees->firstWhere('id', request('employee')))
+                        <span class="filter-tag">
+                            <i class="feather-user"></i>
+                            Employee: {{ $selectedEmployee->name }}
+                            <a href="{{ route('overtime.view-all', array_merge(request()->except(['employee', 'page']))) }}"
+                                class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
 
-                @if (request('from_date'))
-                    <span class="filter-tag">
-                        <i class="feather-calendar"></i>
-                        From: {{ \Carbon\Carbon::parse(request('from_date'))->format('d M Y') }}
-                        <a href="{{ route('overtime.view-all', array_merge(request()->except(['from_date', 'page']))) }}"
-                           class="remove-tag">
-                            <i class="feather-x"></i>
-                        </a>
-                    </span>
-                @endif
+                    @if (request('from_date'))
+                        <span class="filter-tag">
+                            <i class="feather-calendar"></i>
+                            From: {{ \Carbon\Carbon::parse(request('from_date'))->format('d M Y') }}
+                            <a href="{{ route('overtime.view-all', array_merge(request()->except(['from_date', 'page']))) }}"
+                                class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
 
-                @if (request('to_date'))
-                    <span class="filter-tag">
-                        <i class="feather-calendar"></i>
-                        To: {{ \Carbon\Carbon::parse(request('to_date'))->format('d M Y') }}
-                        <a href="{{ route('overtime.view-all', array_merge(request()->except(['to_date', 'page']))) }}"
-                           class="remove-tag">
-                            <i class="feather-x"></i>
-                        </a>
-                    </span>
-                @endif
+                    @if (request('to_date'))
+                        <span class="filter-tag">
+                            <i class="feather-calendar"></i>
+                            To: {{ \Carbon\Carbon::parse(request('to_date'))->format('d M Y') }}
+                            <a href="{{ route('overtime.view-all', array_merge(request()->except(['to_date', 'page']))) }}"
+                                class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
 
-                <a href="{{ route('overtime.view-all') }}" class="filter-tag clear-all">
-                    <i class="feather-refresh-cw"></i> Clear All Filters
-                </a>
-            </div>
+                    <a href="{{ route('overtime.view-all') }}" class="filter-tag clear-all">
+                        <i class="feather-refresh-cw"></i>
+                        Clear All
+                    </a>
+                </div>
             @endif
         </div>
 
@@ -899,9 +977,27 @@
 
         $(document).ready(function() {
             // Auto-submit on filter change
-            $('.filter-control').on('change', function() {
+            $('.filter-select, .filter-date').on('change', function() {
                 $('#filterForm').submit();
             });
+
+            // Stats card click filter (same pattern as Tasks "Assigned By Me")
+            $('.stats-card').on('click', function() {
+                const status = $(this).data('status');
+                if (status && status !== 'all') {
+                    window.location.href = '{{ route('overtime.view-all') }}?status=' + status;
+                } else if (status === 'all') {
+                    window.location.href = '{{ route('overtime.view-all') }}';
+                }
+            });
+
+            // Highlight active stats card
+            const currentStatus = '{{ request('status') }}';
+            if (currentStatus) {
+                $(`.stats-card[data-status="${currentStatus}"]`).addClass('active');
+            } else {
+                $('.stats-card[data-status="all"]').addClass('active');
+            }
 
             // Approve Form Submit
             $('#approveForm').on('submit', function(e) {
@@ -951,12 +1047,6 @@
                 });
             });
         });
-
-        // Filter by status
-        function filterByStatus(status) {
-            $('#statusFilter').val(status);
-            $('#filterForm').submit();
-        }
 
         // View Request Details
         function viewRequest(id) {

@@ -9,14 +9,14 @@
     .type-reimbursement { background: var(--purple-light); color: var(--purple); }
     .method-pill { font-size: 9px; color: #6b7385; }
 
-    /* active/edit column polish */
+    /* active/edit column polish — sizing only; the blue-gradient checked
+       state and .btn-primary gradient now come from theme-custom.css
+       (app-wide), not a page-local override. */
     .form-check.form-switch .form-check-input.toggle-status { width: 2.2em; height: 1.2em; cursor: pointer; }
-    .form-check.form-switch .form-check-input.toggle-status:checked { background-color: var(--success); border-color: var(--success); }
-    .form-check.form-switch .form-check-input.toggle-status:focus { box-shadow: 0 0 0 .2rem rgba(16, 185, 129, .18); }
     .btn-icon-edit {
         width: 30px; height: 30px; padding: 0;
         display: inline-flex; align-items: center; justify-content: center;
-        border-radius: 8px; border: 1px solid #dfe5f0; background: #f4f6fb; color: #475569;
+        border-radius: var(--radius-md); border: 1px solid #dfe5f0; background: #f4f6fb; color: #475569;
         transition: all .15s;
     }
     .btn-icon-edit:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
@@ -29,11 +29,11 @@
     #addComponentModal .card, #editComponentModal .card { border: none; }
     #addComponentModal .card-body, #editComponentModal .card-body { padding: 0; }
     #addComponentModal .btn, #editComponentModal .btn {
-        padding: 4px 10px; font-size: 11px; border-radius: 7px; border: 1px solid transparent;
+        padding: 4px 10px; font-size: 11px; border-radius: var(--radius-sm); border: 1px solid transparent;
     }
     #addComponentModal .btn-modal-cancel, #editComponentModal .btn-modal-cancel { background: #f4f6fb; border-color: #dfe5f0; color: #475569; }
     #addComponentModal .btn-modal-cancel:hover, #editComponentModal .btn-modal-cancel:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
-    #addComponentModal .form-section, #editComponentModal .form-section { background: #fbfcfe; border: 1px solid #eaeef5; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+    #addComponentModal .form-section, #editComponentModal .form-section { background: #fbfcfe; border: 1px solid #eaeef5; border-radius: var(--radius-md); padding: 10px; margin-bottom: 8px; }
     #addComponentModal .form-section h6, #editComponentModal .form-section h6 { font-size: 10px; font-weight: 700; color: #1a2236; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 7px; }
     #addComponentModal .form-section label, #editComponentModal .form-section label { font-size: 10px; font-weight: 600; margin-bottom: 2px; }
     #addComponentModal .row > [class*="col-"], #editComponentModal .row > [class*="col-"] { flex: 0 0 100%; max-width: 100%; margin-bottom: 6px !important; }
@@ -63,7 +63,7 @@
         <div class="page-header-right ms-auto">
             <div class="hstack gap-2">
                 @if (in_array($role, ['admin', 'hr']))
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="offcanvas" data-bs-target="#addComponentModal">
+                    <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#addComponentModal">
                         <i class="feather-plus me-1"></i>Add Component
                     </a>
                 @endif
@@ -130,7 +130,8 @@
                                         <div class="form-check form-switch mb-0">
                                             <input type="checkbox" class="form-check-input toggle-status"
                                                 data-id="{{ $component->id }}"
-                                                {{ $component->is_active ? 'checked' : '' }}>
+                                                {{ $component->is_active ? 'checked' : '' }}
+                                                {{ $component->code === 'basic' ? 'disabled title="Basic Salary is a fixed component and cannot be disabled"' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-end">
@@ -149,6 +150,7 @@
                                             data-calculation_base_type="{{ $component->calculation_base_type }}"
                                             data-calculation_base="{{ $component->calculation_base }}"
                                             data-calculation_base_component_id="{{ $component->calculation_base_component_id }}"
+                                            data-calculation_base_component_ids="{{ $component->baseComponents->pluck('id')->implode(',') }}"
                                             data-priority="{{ $component->priority }}"
                                             data-proration_rule="{{ $component->proration_rule }}"
                                             data-has_wage_ceiling="{{ $component->has_wage_ceiling ? 1 : 0 }}"
@@ -282,13 +284,13 @@
                                             </select>
                                         </div>
                                         <div class="col-md-6 mb-3" id="calculation_base_component_wrap" style="display:none;">
-                                            <label for="calculation_base_component_id">Base Component</label>
-                                            <select class="form-control" name="calculation_base_component_id" id="calculation_base_component_id">
-                                                <option value="">-- Select Component --</option>
+                                            <label for="calculation_base_component_ids">Base Components (Earnings)</label>
+                                            <select class="form-control select2" name="calculation_base_component_ids[]" id="calculation_base_component_ids" multiple>
                                                 @foreach ($baseComponents as $bc)
                                                     <option value="{{ $bc->id }}">{{ $bc->name }} (priority {{ $bc->priority }})</option>
                                                 @endforeach
                                             </select>
+                                            <small class="text-muted d-block" style="font-size:9px;">The percentage is calculated on the sum of every component selected here.</small>
                                         </div>
 
                                         <div class="col-md-6 mb-3">
@@ -354,6 +356,9 @@
                         <div class="card-body">
                             <div id="edit_system_default_notice" class="alert alert-info d-none" style="font-size:11.5px;">
                                 <i class="feather-info me-1"></i> This is a system-default component. Its code cannot be changed, but you can adjust its calculation rules.
+                            </div>
+                            <div id="edit_basic_locked_notice" class="alert alert-info d-none" style="font-size:11.5px;">
+                                <i class="feather-info me-1"></i> Basic Salary is a fixed component. Its name and type cannot be changed and it cannot be disabled.
                             </div>
                             <form id="editComponentForm">
                                 @csrf
@@ -441,13 +446,13 @@
                                             </select>
                                         </div>
                                         <div class="col-md-6 mb-3" id="edit_calculation_base_component_wrap">
-                                            <label for="edit_calculation_base_component_id">Base Component</label>
-                                            <select class="form-control" name="calculation_base_component_id" id="edit_calculation_base_component_id">
-                                                <option value="">-- Select Component --</option>
+                                            <label for="edit_calculation_base_component_ids">Base Components (Earnings)</label>
+                                            <select class="form-control select2" name="calculation_base_component_ids[]" id="edit_calculation_base_component_ids" multiple>
                                                 @foreach ($baseComponents as $bc)
                                                     <option value="{{ $bc->id }}">{{ $bc->name }} (priority {{ $bc->priority }})</option>
                                                 @endforeach
                                             </select>
+                                            <small class="text-muted d-block" style="font-size:9px;">The percentage is calculated on the sum of every component selected here.</small>
                                         </div>
 
                                         <div class="col-md-6 mb-3">
@@ -526,11 +531,12 @@
                     success: function(response) {
                         if (!response.success) {
                             checkbox.prop('checked', !checkbox.is(':checked'));
+                            toastr.error(response.message || 'Failed to update status.');
                         }
                     },
-                    error: function() {
+                    error: function(xhr) {
                         checkbox.prop('checked', !checkbox.is(':checked'));
-                        alert('Failed to update status.');
+                        toastr.error(xhr.responseJSON?.message || 'Failed to update status.');
                     }
                 });
             });
@@ -628,14 +634,26 @@
                 $('#edit_ceiling_apply_rule').val(d.ceiling_apply_rule);
 
                 // A component can't be based on itself — disable its own option.
-                $('#edit_calculation_base_component_id option').prop('disabled', false);
-                $('#edit_calculation_base_component_id').val(d.calculation_base_component_id || '');
-                $('#edit_calculation_base_component_id option[value="' + d.id + '"]').prop('disabled', true);
+                const editBaseIds = (d.calculation_base_component_ids ? String(d.calculation_base_component_ids) : '')
+                    .split(',').filter(Boolean);
+                $('#edit_calculation_base_component_ids option').prop('disabled', false);
+                $('#edit_calculation_base_component_ids').val(editBaseIds).trigger('change');
+                $('#edit_calculation_base_component_ids option[value="' + d.id + '"]').prop('disabled', true).trigger('change');
 
                 // System-default components can't have their code changed.
                 const isSystemDefault = String(d.is_system_default) === '1';
                 $('#edit_code').prop('readonly', isSystemDefault);
                 $('#edit_system_default_notice').toggleClass('d-none', !isSystemDefault);
+
+                // Basic Salary is fixed: name locked (readonly input still
+                // submits fine); type select is left enabled so it still
+                // serializes with the form, but the server rejects any actual
+                // change (see PayrollComponentController::update()) — the
+                // notice below is what communicates the restriction here.
+                const isBasic = d.code === 'basic';
+                $('#edit_name').prop('readonly', isBasic);
+                $('#edit_basic_locked_notice').toggleClass('d-none', !isBasic);
+                $('#edit_system_default_notice').toggleClass('d-none', !isSystemDefault || isBasic);
 
                 $('.error-text').text('');
                 $('#editComponentFormError').addClass('d-none').text('');

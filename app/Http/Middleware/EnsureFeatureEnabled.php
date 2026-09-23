@@ -9,6 +9,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Gate a route group to a platform feature key, e.g. `feature:payroll`.
+ * Accepts a comma-separated list of keys (`feature:task_single,task_group`) and
+ * passes if ANY of them is enabled — for modules with more than one sub-feature
+ * where having either is enough to reach the shared route group.
  * No tenant context (should not happen on tenant routes) = allow.
  */
 class EnsureFeatureEnabled
@@ -19,7 +22,10 @@ class EnsureFeatureEnabled
 
     public function handle(Request $request, Closure $next, string $key): Response
     {
-        if (! $this->features->enabledForCurrentTenant($key)) {
+        $keys = array_map('trim', explode(',', $key));
+        $allowed = collect($keys)->contains(fn ($k) => $this->features->enabledForCurrentTenant($k));
+
+        if (! $allowed) {
             if ($request->expectsJson()) {
                 abort(403, "The {$key} module is not enabled for your plan.");
             }

@@ -11,10 +11,9 @@
         font-size: 9px; color: #6b7385; margin-top: 3px; display: block;
     }
 
-    /* status toggle */
+    /* status toggle — sizing only; the checked-state color now comes from
+       theme-custom.css's app-wide blue-gradient .form-switch rule. */
     #holidayList .form-check.form-switch .form-check-input { width: 2.2em; height: 1.2em; cursor: pointer; }
-    #holidayList .form-check.form-switch .form-check-input:checked { background-color: #1e3a8a; border-color: #1e3a8a; }
-    #holidayList .form-check.form-switch .form-check-input:focus { box-shadow: 0 0 0 .2rem rgba(30, 58, 138, .18); }
 
     /* single edit icon button */
     .btn-icon-edit {

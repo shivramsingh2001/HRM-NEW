@@ -1,267 +1,8 @@
 @extends('client.layout.master')
 
 @section('style')
+    @include('client.expense._ui')
     <style>
-        /* ==================== EMPLOYEE AVATAR ==================== */
-        .employee-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #4f46e5;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-            flex-shrink: 0;
-        }
-
-        .employee-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .employee-details {
-            line-height: 1.4;
-        }
-
-        .employee-name {
-            font-weight: 600;
-            color: #1e293b;
-            font-size: 14px;
-        }
-
-        .employee-email {
-            font-size: 11px;
-            color: #64748b;
-        }
-
-        /* Simple consistent styling */
-        .custom-employee-dropdown .btn {
-            height: 36px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            color: #1e293b;
-            font-size: 13px;
-            padding: 0 12px;
-        }
-
-        .custom-employee-dropdown .btn:hover {
-            background: #ffffff;
-            border-color: #cbd5e1;
-        }
-
-        .custom-employee-dropdown .btn:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-
-        .employee-initials,
-        .employee-initials-sm {
-            width: 28px;
-            height: 28px;
-            background: #4f46e5;
-            color: white;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 12px;
-            flex-shrink: 0;
-        }
-
-        .employee-initials-sm {
-            width: 24px;
-            height: 24px;
-            font-size: 11px;
-        }
-
-        .custom-employee-dropdown .dropdown-menu {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            padding: 8px;
-            max-height: 300px;
-            overflow-y: auto;
-            min-width: 250px;
-        }
-
-        .custom-employee-dropdown .dropdown-item {
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #1e293b;
-            margin-bottom: 2px;
-        }
-
-        .custom-employee-dropdown .dropdown-item:hover {
-            background: #f1f5f9;
-        }
-
-        .custom-employee-dropdown .dropdown-item.active {
-            background: #eef2ff;
-            color: #4f46e5;
-        }
-
-        /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
-           in client.layout.head (single blue-only theme) — no local copy. */
-
-        /* Filter Section */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-        }
-
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .filter-title i {
-            color: #4f46e5;
-        }
-
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 140px;
-        }
-
-        .filter-select,
-        .filter-input {
-            width: 100%;
-            height: 36px;
-            padding: 6px 28px 6px 10px;
-            font-size: 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-        }
-
-        .apply-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: #4f46e5;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .reset-btn {
-            height: 36px;
-            padding: 0 12px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-        }
-
-        /* Table Styles */
-        .table {
-            margin-bottom: 0;
-        }
-
-        .table th {
-            background: #f8fafc;
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-            padding: 12px 16px;
-            white-space: nowrap;
-        }
-
-        .table td {
-            padding: 12px 16px;
-            vertical-align: middle;
-            font-size: 13px;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .badge {
-            padding: 4px 10px;
-            font-size: 11px;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-
-        .badge.bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
-        }
-
-        .badge.bg-info {
-            background: #e0f2fe !important;
-            color: #0369a1;
-        }
-
-        .badge.bg-warning {
-            background: #fef3c7 !important;
-            color: #92400e;
-        }
-
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s;
-            margin: 0 2px;
-            cursor: pointer;
-        }
-
-        .action-btn:hover {
-            background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
-            transform: translateY(-2px);
-        }
-
-        .action-btn.delete:hover {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
-
         /* Payment Type Card */
         .payment-type-card {
             background: #f8fafc;
@@ -274,13 +15,13 @@
         }
 
         .payment-type-card.active {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             background: white;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.1);
         }
 
         .payment-type-card:hover {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             transform: translateY(-2px);
         }
 
@@ -288,7 +29,7 @@
             width: 50px;
             height: 50px;
             border-radius: 12px;
-            background: rgba(79, 70, 229, 0.1);
+            background: rgba(30, 58, 138, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -297,7 +38,7 @@
 
         .payment-type-icon i {
             font-size: 24px;
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .expense-option {
@@ -308,7 +49,7 @@
         .expense-option:hover {
             background: #f8fafc;
             transform: translateX(4px);
-            border-color: #4f46e5 !important;
+            border-color: #1e3a8a !important;
         }
 
         .cursor-pointer {
@@ -359,13 +100,13 @@
         }
 
         .payment-type-card.active {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             background: white;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.1);
         }
 
         .payment-type-card:hover {
-            border-color: #4f46e5;
+            border-color: #1e3a8a;
             transform: translateY(-2px);
         }
 
@@ -373,7 +114,7 @@
             width: 50px;
             height: 50px;
             border-radius: 12px;
-            background: rgba(79, 70, 229, 0.1);
+            background: rgba(30, 58, 138, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -382,7 +123,7 @@
 
         .payment-type-icon i {
             font-size: 24px;
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         /* Reimbursement Card Specific */
@@ -415,6 +156,14 @@
         </div>
         <div class="page-header-right ms-auto">
             <div class="d-flex gap-2">
+                @if (($bulkEnabled ?? false) && ($canManage ?? false))
+                    <a href="{{ route('expense.payments.batch') }}" class="btn btn-primary btn-sm">
+                        <i class="feather-layers me-2"></i>Pay Batch
+                    </a>
+                    <a href="{{ route('expense.vouchers.index') }}" class="btn btn-light-brand btn-sm">
+                        <i class="feather-file-text me-2"></i>Vouchers
+                    </a>
+                @endif
                 @if (in_array($userRole, ['admin', 'hr']))
                     <button type="button" class="btn btn-primary btn-sm" onclick="openAddPaymentModal()">
                         <i class="feather-plus me-2"></i>Add Payment
@@ -427,50 +176,66 @@
         </div>
     </div>
 
-    <div class="main-content" style="padding: 20px !important;">
+    <div class="main-content ex-page" style="padding: 20px !important;">
         {{-- Success/Error Messages --}}
         @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show mb-4">
+            <div class="alert alert-success alert-dismissible fade show mb-3">
                 <i class="feather-check-circle me-2"></i>{{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
         @if (session('error'))
-            <div class="alert alert-danger alert-dismissible fade show mb-4">
+            <div class="alert alert-danger alert-dismissible fade show mb-3">
                 <i class="feather-alert-circle me-2"></i>{{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
-        {{-- Stats Cards --}}
-        <div class="stats-grid">
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="fas fa-rupee-sign"></i>
-                </div>
-                <div class="stats-info">
-                    <h3>{{ $totalPayments }}</h3>
-                    <p>Total Payments</p>
+        @php
+            $modeIcons = [
+                'cash' => 'fa-rupee-sign',
+                'bank_transfer' => 'fa-university',
+                'cheque' => 'fa-money-check-alt',
+                'upi' => 'fa-mobile-alt',
+                'payroll' => 'fa-briefcase',
+            ];
+            $modeLabel = fn($m) => ucwords(str_replace('_', ' ', (string) $m));
+            $filterModes = array_values(array_unique(array_merge($paymentModes, ['payroll'])));
+            $filterKeys = ['search', 'user_id', 'payment_mode', 'status', 'from_date', 'to_date'];
+            $activeFilterCount = collect(request()->only($filterKeys))->filter()->count();
+            $tagUrl = fn(array $drop) => route('expense.payments.index', request()->except(array_merge($drop, ['page'])));
+        @endphp
+
+        {{-- Overview tiles (same look as the dashboard's Expense Overview) --}}
+        <div class="row ex-tiles">
+            <div class="col-xxl-2 col-xl-3 col-md-4 col-6">
+                <div class="ex-tile">
+                    <div class="ex-tile-icon"><i class="fas fa-receipt"></i></div>
+                    <div>
+                        <h6 class="ex-tile-val">{{ number_format($totalPayments) }}</h6>
+                        <div class="ex-tile-label">Total Payments</div>
+                    </div>
                 </div>
             </div>
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="feather-credit-card"></i>
-                </div>
-                <div class="stats-info">
-                    <h3>₹{{ number_format($totalAmount, 2) }}</h3>
-                    <p>Total Amount</p>
+            <div class="col-xxl-2 col-xl-3 col-md-4 col-6">
+                <div class="ex-tile">
+                    <div class="ex-tile-icon"><i class="fas fa-rupee-sign"></i></div>
+                    <div>
+                        <h6 class="ex-tile-val">₹{{ number_format($totalAmount, 2) }}</h6>
+                        <div class="ex-tile-label">Total Amount</div>
+                    </div>
                 </div>
             </div>
             @foreach ($modeStats as $mode)
-                <div class="stats-card">
-                    <div class="stats-icon">
-                        <i class="fas {{ $mode->payment_mode == 'cash' ? 'fa-rupee-sign' : 'fa-credit-card' }}"></i>
-                    </div>
-                    <div class="stats-info">
-                        <h3>{{ $mode->count }}</h3>
-                        <p>{{ ucfirst($mode->payment_mode) }} (₹{{ number_format($mode->total, 2) }})</p>
+                <div class="col-xxl-2 col-xl-3 col-md-4 col-6">
+                    <div class="ex-tile">
+                        <div class="ex-tile-icon"><i class="fas {{ $modeIcons[$mode->payment_mode] ?? 'fa-credit-card' }}"></i></div>
+                        <div>
+                            <h6 class="ex-tile-val">₹{{ number_format($mode->total, 2) }}</h6>
+                            <div class="ex-tile-label">{{ $modeLabel($mode->payment_mode) }}</div>
+                            <div class="ex-tile-sub">{{ $mode->count }} {{ \Illuminate\Support\Str::plural('payment', $mode->count) }}</div>
+                        </div>
                     </div>
                 </div>
             @endforeach
@@ -479,25 +244,40 @@
         {{-- Filter Section --}}
         <div class="filter-wrapper">
             <div class="filter-header">
-                <div class="filter-title">
-                    <i class="feather-filter"></i>
-                    Filter Payments
+                <div>
+                    <div class="filter-title">
+                        <i class="feather-filter"></i>
+                        Filter Payments
+                        @if ($activeFilterCount > 0)
+                            <span>{{ $activeFilterCount }} active</span>
+                        @endif
+                    </div>
+                    <div class="filter-desc">Search by employee, expense code, voucher or reference, or narrow by mode, status and date — it updates as you choose.</div>
                 </div>
+                @if ($activeFilterCount > 0)
+                    <a href="{{ route('expense.payments.index') }}" class="clear-all-link"><i class="feather-x"></i> Clear All</a>
+                @endif
             </div>
 
             <form action="{{ route('expense.payments.index') }}" method="GET" id="filterForm">
+                <input type="hidden" name="user_id" value="{{ request('user_id') }}">
                 <div class="filter-row">
-                    <div class="filter-item" style="min-width: 220px;">
+                    <div class="filter-item search">
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" name="search" class="form-control" aria-label="Search" value="{{ request('search') }}"
+                                placeholder="Employee, expense code, voucher, reference…" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="filter-item">
                         <div class="custom-employee-dropdown">
                             <button class="btn btn-light w-100 d-flex align-items-center justify-content-between"
                                 type="button" id="employeeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="d-flex align-items-center gap-2" id="selectedEmployeeDisplay">
+                                <span class="d-flex align-items-center gap-2 text-truncate" id="selectedEmployeeDisplay">
                                     @if (request('user_id') && ($selectedEmployee = $employees->firstWhere('id', request('user_id'))))
-                                        @php
-                                            $selectedInitials = strtoupper(substr($selectedEmployee->name, 0, 2));
-                                        @endphp
-                                        <span class="employee-initials-sm">{{ $selectedInitials }}</span>
-                                        <span class="employee-name">{{ $selectedEmployee->name }}</span>
+                                        <span class="employee-initials-sm">{{ strtoupper(substr($selectedEmployee->name, 0, 2)) }}</span>
+                                        <span class="employee-name text-truncate">{{ $selectedEmployee->name }}</span>
                                     @else
                                         <span class="text-muted">All Employees</span>
                                     @endif
@@ -505,21 +285,16 @@
                                 <i class="feather-chevron-down text-muted"></i>
                             </button>
 
-                            <ul class="dropdown-menu w-80 p-2" aria-labelledby="employeeDropdown">
+                            <ul class="dropdown-menu p-2" aria-labelledby="employeeDropdown">
                                 <li>
                                     <a class="dropdown-item rounded {{ !request('user_id') ? 'active' : '' }}"
-                                        href="{{ route('expense.payments.index', array_merge(request()->except(['user_id', 'page']))) }}">
-                                        <span>All Employees</span>
-                                    </a>
+                                        href="{{ $tagUrl(['user_id']) }}"><span>All Employees</span></a>
                                 </li>
                                 @foreach ($employees as $employee)
-                                    @php
-                                        $initials = strtoupper(substr($employee->name, 0, 2));
-                                    @endphp
                                     <li>
                                         <a class="dropdown-item rounded d-flex align-items-center gap-2 {{ request('user_id') == $employee->id ? 'active' : '' }}"
                                             href="{{ route('expense.payments.index', array_merge(request()->except(['page']), ['user_id' => $employee->id])) }}">
-                                            <span class="employee-initials">{{ $initials }}</span>
+                                            <span class="employee-initials">{{ strtoupper(substr($employee->name, 0, 2)) }}</span>
                                             <div class="d-flex flex-column">
                                                 <span>{{ $employee->name }} (<small
                                                         class="text-muted">{{ $employee->employee_id }})</small></span>
@@ -531,64 +306,109 @@
                             </ul>
                         </div>
                     </div>
+
                     <div class="filter-item">
                         <select class="filter-select" name="payment_mode">
                             <option value="">All Modes</option>
-                            @foreach ($paymentModes as $mode)
-                                <option value="{{ $mode }}"
-                                    {{ request('payment_mode') == $mode ? 'selected' : '' }}>
-                                    {{ ucfirst($mode) }}
+                            @foreach ($filterModes as $mode)
+                                <option value="{{ $mode }}" {{ request('payment_mode') == $mode ? 'selected' : '' }}>
+                                    {{ $modeLabel($mode) }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
+
                     <div class="filter-item">
-                        <input type="date" class="filter-input" name="from_date" value="{{ request('from_date') }}">
+                        <select class="filter-select" name="status">
+                            <option value="">All Status</option>
+                            <option value="posted" {{ request('status') == 'posted' ? 'selected' : '' }}>Completed</option>
+                            <option value="voided" {{ request('status') == 'voided' ? 'selected' : '' }}>Voided</option>
+                        </select>
                     </div>
+
                     <div class="filter-item">
-                        <input type="date" class="filter-input" name="to_date" value="{{ request('to_date') }}">
+                        <input type="date" class="filter-select filter-date" name="from_date" value="{{ request('from_date') }}" title="From date" aria-label="From date">
                     </div>
-                    <div class="filter-item" style="min-width: auto;">
-                        <a href="{{ route('expense.payments.index') }}" class="reset-btn">
-                            <i class="feather-refresh-cw"></i> Reset
+
+                    <div class="filter-item">
+                        <input type="date" class="filter-select filter-date" name="to_date" value="{{ request('to_date') }}" title="To date" aria-label="To date">
+                    </div>
+
+                    <div class="filter-item reset">
+                        <a href="{{ route('expense.payments.index') }}" class="reset-btn" title="Reset all filters">
+                            <i class="feather-refresh-cw"></i>
                         </a>
                     </div>
                 </div>
             </form>
+
+            @if ($activeFilterCount > 0)
+                <div class="active-filters">
+                    <span class="active-filters-label">Active:</span>
+                    @if (request('search'))
+                        <span class="filter-tag"><i class="feather-search"></i> "{{ request('search') }}"
+                            <a href="{{ $tagUrl(['search']) }}" class="remove-tag"><i class="feather-x"></i></a></span>
+                    @endif
+                    @if (request('user_id') && ($tagEmployee = $employees->firstWhere('id', request('user_id'))))
+                        <span class="filter-tag"><i class="feather-user"></i> Employee: {{ $tagEmployee->name }}
+                            <a href="{{ $tagUrl(['user_id']) }}" class="remove-tag"><i class="feather-x"></i></a></span>
+                    @endif
+                    @if (request('payment_mode'))
+                        <span class="filter-tag"><i class="feather-credit-card"></i> Mode: {{ $modeLabel(request('payment_mode')) }}
+                            <a href="{{ $tagUrl(['payment_mode']) }}" class="remove-tag"><i class="feather-x"></i></a></span>
+                    @endif
+                    @if (request('status'))
+                        <span class="filter-tag"><i class="feather-activity"></i> Status: {{ request('status') === 'voided' ? 'Voided' : 'Completed' }}
+                            <a href="{{ $tagUrl(['status']) }}" class="remove-tag"><i class="feather-x"></i></a></span>
+                    @endif
+                    @if (request('from_date'))
+                        <span class="filter-tag"><i class="feather-calendar"></i> From: {{ request('from_date') }}
+                            <a href="{{ $tagUrl(['from_date']) }}" class="remove-tag"><i class="feather-x"></i></a></span>
+                    @endif
+                    @if (request('to_date'))
+                        <span class="filter-tag"><i class="feather-calendar"></i> To: {{ request('to_date') }}
+                            <a href="{{ $tagUrl(['to_date']) }}" class="remove-tag"><i class="feather-x"></i></a></span>
+                    @endif
+                    <a href="{{ route('expense.payments.index') }}" class="filter-tag clear-all"><i class="feather-refresh-cw"></i> Clear All</a>
+                </div>
+            @endif
         </div>
 
         {{-- Payments Table --}}
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Payment History</h5>
-                <span class="badge bg-info">Total: {{ $payments->total() }}</span>
+                <span class="badge bg-info"><i class="feather-list"></i> Total: {{ $payments->total() }}</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table" id="paymentTable">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th class="col-sr">Sr. No.</th>
                                 <th>Expense #</th>
                                 <th>Employee</th>
                                 <th>Payment Date</th>
                                 <th>Amount</th>
                                 <th>Mode</th>
                                 <th>Reference</th>
+                                <th>Voucher</th>
                                 <th>Processed By</th>
                                 <th>Status</th>
                                 @if (in_array($userRole, ['admin', 'hr']))
-                                    <th>Actions</th>
+                                    <th class="text-center">Actions</th>
                                 @endif
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($payments as $payment)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td class="col-sr">{{ $payments->firstItem() + $loop->index }}</td>
                                     <td>
-                                        <span
-                                            class="text-primary">{{ $payment->expense_number ?? 'Direct Payment' }}</span>
+                                        <span class="code-link">{{ $payment->expense_number ?? 'Direct Payment' }}</span>
+                                        @if ($payment->requirement_type)
+                                            <div class="employee-email">{{ ucfirst($payment->requirement_type) }}</div>
+                                        @endif
                                     </td>
                                     <td>
                                         <div class="employee-info">
@@ -601,36 +421,54 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td>{{ date('d M Y', strtotime($payment->payment_date)) }}</td>
-                                    <td class="fw-bold">₹{{ number_format($payment->amount, 2) }}</td>
+                                    <td class="text-nowrap">{{ date('d M Y', strtotime($payment->payment_date)) }}</td>
+                                    <td class="fw-bold text-nowrap">₹{{ number_format($payment->amount, 2) }}</td>
+                                    <td><span class="badge bg-primary">{{ $modeLabel($payment->payment_mode) }}</span></td>
+                                    <td>{{ $payment->reference_number ?: '-' }}</td>
                                     <td>
-                                        <span class="badge bg-info">{{ ucfirst($payment->payment_mode) }}</span>
+                                        @if ($payment->voucher_number && ($bulkEnabled ?? false) && ($canManage ?? false))
+                                            <a href="{{ route('expense.vouchers.show', $payment->batch_id) }}"
+                                                class="code-link">{{ $payment->voucher_number }}</a>
+                                        @else
+                                            {{ $payment->voucher_number ?? '-' }}
+                                        @endif
                                     </td>
-                                    <td>{{ $payment->reference_number ?? '-' }}</td>
                                     <td>{{ $payment->payer->name ?? 'N/A' }}</td>
                                     <td>
-                                        <span class="badge bg-success">Completed</span>
+                                        @if ($payment->status === 'voided')
+                                            <span class="badge bg-danger" title="{{ $payment->void_reason }}">Voided</span>
+                                        @else
+                                            <span class="badge bg-success">Completed</span>
+                                        @endif
                                     </td>
 
                                     @if (in_array($userRole, ['admin', 'hr']))
                                         <td>
-                                            <div class="d-flex gap-1">
-                                                <button type="button" class="action-btn"
-                                                    onclick="editPayment({{ $payment->id }})" title="Edit">
-                                                    <i class="feather-edit-3"></i>
-                                                </button>
-                                            </div>
+                                            @if ($payment->status === 'voided')
+                                                <div class="text-center text-muted">—</div>
+                                            @else
+                                                <div class="d-flex gap-2 justify-content-center flex-nowrap">
+                                                    <button type="button" class="action-btn" onclick="editPayment({{ $payment->id }})"
+                                                        title="Edit details">
+                                                        <i class="feather-edit-3"></i>
+                                                    </button>
+                                                    <button type="button" class="action-btn muted"
+                                                        onclick="deletePayment({{ $payment->id }})" title="Void payment">
+                                                        <i class="feather-slash"></i>
+                                                    </button>
+                                                </div>
+                                            @endif
                                         </td>
                                     @endif
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ in_array($userRole, ['admin', 'hr']) ? 10 : 9 }}"
+                                    <td colspan="{{ in_array($userRole, ['admin', 'hr']) ? 11 : 10 }}"
                                         class="text-center py-5">
                                         <div class="empty-state">
-                                            <i class="feather-credit-card" style="font-size: 48px; color: #ccc;"></i>
+                                            <i class="feather-credit-card" style="font-size: 44px; color: #cbd5e1;"></i>
                                             <h6 class="mt-3">No Payments Found</h6>
-                                            <p class="text-muted">No payment records available</p>
+                                            <p class="text-muted mb-0">No payment records match these filters</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -963,12 +801,15 @@
             <div class="modal-content">
                 <div class="modal-body text-center p-4">
                     <i class="feather-alert-triangle text-danger" style="font-size: 48px;"></i>
-                    <h5 class="mt-3">Confirm Delete</h5>
-                    <p class="text-muted">Are you sure you want to delete this payment? This action cannot be undone.</p>
+                    <h5 class="mt-3">Void this payment?</h5>
+                    <p class="text-muted">The payment stays on record as <b>voided</b>, its effect on the employee's
+                        balance is reversed, and the expense is reopened if it was fully paid.</p>
+                    <textarea id="voidReason" class="form-control" rows="2" maxlength="500"
+                        placeholder="Reason (required, min 3 characters)"></textarea>
                 </div>
                 <div class="modal-footer justify-content-center">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">Void payment</button>
                 </div>
             </div>
         </div>
@@ -976,6 +817,7 @@
 @endsection
 
 @section('script-area')
+    @include('client.expense._filter-js')
     <script>
         // Configure toastr
         toastr.options = {
@@ -1058,11 +900,6 @@
             $('#paid_to').val('');
         }
         $(document).ready(function() {
-            // Auto-submit filters
-            $('.filter-select, .filter-input').on('change', function() {
-                $('#filterForm').submit();
-            });
-
             // Set default date to today
             let today = new Date();
             let todayFormatted = today.toISOString().split('T')[0];
@@ -1125,6 +962,11 @@
                 }
             });
 
+            // A closed modal ends the "same payment" session — next open gets a fresh key.
+            $('#paymentModal').on('hidden.bs.modal', function() {
+                window._expensePayKey = null;
+            });
+
             // Direct user selection
             $('#direct_user_id').on('change', function() {
                 let selected = $(this).find(':selected');
@@ -1150,6 +992,18 @@
 
                 // Add payment type
                 formData.append('payment_type', currentPaymentType);
+
+                // Idempotency key for NEW payments: the same key is re-sent on a
+                // double-click / retry of this modal session, so the server records
+                // the payment once. Cleared on success and when the modal closes.
+                if (!paymentId) {
+                    if (!window._expensePayKey) {
+                        window._expensePayKey = (window.crypto && crypto.randomUUID) ?
+                            crypto.randomUUID() :
+                            (Date.now().toString(36) + Math.random().toString(36).slice(2));
+                    }
+                    formData.append('idempotency_key', window._expensePayKey);
+                }
 
                 // Add the correct expense_id based on payment type
                 if (currentPaymentType === 'advance') {
@@ -1180,6 +1034,7 @@
                     },
                     success: function(response) {
                         if (response.success) {
+                            window._expensePayKey = null;
                             toastr.success(response.message);
                             $('#paymentModal').modal('hide');
                             setTimeout(() => location.reload(), 1500);
@@ -1246,9 +1101,18 @@
             $('#confirmDelete').on('click', function() {
                 if (!currentPaymentId) return;
 
+                let reason = ($('#voidReason').val() || '').trim();
+                if (reason.length < 3) {
+                    toastr.error('Please give a reason (at least 3 characters).');
+                    return;
+                }
+
                 $.ajax({
                     url: "{{ route('expense.payments.destroy', '') }}/" + currentPaymentId,
                     type: "DELETE",
+                    data: {
+                        reason: reason
+                    },
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
@@ -1306,7 +1170,9 @@
                             }
                         }
 
-                        $('#edit_payment_amount').val(p.amount);
+                        // A posted payment's amount is fixed: to change it, void the payment and record a new one.
+                        $('#edit_payment_amount').val(p.amount).prop('readonly', true)
+                            .attr('title', 'Void this payment and record a new one to change the amount');
                         $('#edit_payment_mode').val(p.payment_mode);
                         $('#edit_reference_number').val(p.reference_number || '');
                         $('#edit_bank_name').val(p.bank_name || '');
@@ -1367,6 +1233,7 @@
 
         function deletePayment(id) {
             currentPaymentId = id;
+            $('#voidReason').val('');
             $('#deleteModal').modal('show');
         }
 

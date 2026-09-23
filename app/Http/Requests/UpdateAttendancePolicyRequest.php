@@ -37,6 +37,10 @@ class UpdateAttendancePolicyRequest extends FormRequest
             'min_rest_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
             'max_daily_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
             'sandwich_leave' => ['nullable', 'boolean'],
+
+            // Structural mode switch, not a versioned policy value — lives on
+            // tenants only (see App\Http\Controllers\Settings\AttendancePolicyController).
+            'allow_multiple_punches' => ['nullable', 'boolean'],
         ];
     }
 
@@ -47,6 +51,7 @@ class UpdateAttendancePolicyRequest extends FormRequest
         $this->merge([
             'late_halfday_enabled' => $this->boolean('late_halfday_enabled'),
             'sandwich_leave' => $this->boolean('sandwich_leave'),
+            'allow_multiple_punches' => $this->boolean('allow_multiple_punches'),
             // A blank field means "use the default" rather than "unlimited".
             'monthly_late_allowance' => ($allowance === '' || $allowance === null) ? 30 : $allowance,
         ]);

@@ -3,7 +3,7 @@
 @section('style')
     <style>
         /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
-           are centralized in client.layout.head (single blue-only theme) — no local copy. */
+                   are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
         @media (max-width: 1200px) {
             .stats-grid {
@@ -44,7 +44,7 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: var(--primary);
             font-size: 16px;
         }
 
@@ -74,7 +74,7 @@
         .apply-btn {
             height: 36px;
             padding: 0 16px;
-            background: #4f46e5;
+            background: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
@@ -188,8 +188,8 @@
         }
 
         .action-btn.view:hover {
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary);
+            border-color: var(--primary);
         }
 
         .action-btn.edit:hover {
@@ -235,18 +235,6 @@
             justify-content: center;
             background: #fee2e2;
             cursor: pointer;
-        }
-
-        .employee-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
         }
 
         .kpi-preview {
@@ -459,17 +447,21 @@
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>
-                                        <div class="d-flex align-items-center gap-2">
+                                        <div class="employee-info">
                                             <div class="employee-avatar">
-                                                {{ strtoupper(substr($item['employee']->name, 0, 2)) }}
+                                                {{ strtoupper(substr($item['employee']->name ?? 'N/A', 0, 2)) }}
                                             </div>
-                                            <div>
-                                                <div class="fw-semibold">{{ $item['employee']->name }} <small
-                                                        class="text-muted">( {{ $item['employee']->employee_id ?? 'N/A' }}
-                                                        )</small></div>
-                                                <small class="text-muted">{{ $item['employee']->email ?? 'N/A' }}</small>
+                                            <div class="employee-details">
+                                                <div class="employee-name-text">
+                                                    {{ $item['employee']->name ?? 'N/A' }}
+                                                    <small class="employee-id-text">(
+                                                        {{ $item['employee']->employee_id ?? 'N/A' }} )</small>
+                                                </div>
+                                                <div class="employee-email-text">
+                                                    {{ $item['employee']->email ?? 'N/A' }}</div>
                                             </div>
                                         </div>
+
                                     </td>
                                     <td>{{ $item['employee']->jobDetails?->Designation?->name ?? 'N/A' }}</td>
                                     <td>{{ $item['employee']->jobDetails?->Department?->name ?? 'N/A' }}</td>
@@ -496,18 +488,7 @@
                                         @endif
                                     </td>
                                     <td>
-                                        @php
-                                            $statusBadge =
-                                                [
-                                                    'pending' => 'warning',
-                                                    'draft' => 'secondary',
-                                                    'submitted' => 'info',
-                                                    'acknowledged' => 'success',
-                                                ][$item['status']] ?? 'secondary';
-                                        @endphp
-                                        <span class="badge bg-{{ $statusBadge }}">
-                                            {{ ucfirst($item['status']) }}
-                                        </span>
+                                        <x-ui.status-badge :status="$item['status']" />
                                     </td>
                                     <td>
                                         @if ($item['review'] && $item['review']->reviewer)
@@ -553,6 +534,20 @@
                     </table>
                 </div>
             </div>
+
+            @if (method_exists($employees, 'links') && $employees->hasPages())
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted small">
+                            Showing {{ $employees->firstItem() }} to {{ $employees->lastItem() }} of
+                            {{ $employees->total() }} entries
+                        </div>
+                        <div class="remove-internal-para">
+                            {{ $employees->appends(request()->query())->links() }}
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 @endsection
@@ -790,7 +785,8 @@
                 $('#formError').addClass('d-none');
 
                 // Show KPI preview if available
-                if (kpiData && kpiData.attendance_score !== undefined && kpiData.attendance_score !== null) {
+                if (kpiData && kpiData.attendance_score !== undefined && kpiData.attendance_score !==
+                    null) {
                     $('#kpiPreview').show();
                     $('#previewAttendance').text(kpiData.attendance_score + '%');
                     $('#previewTask').text(kpiData.task_completion_score + '%');
@@ -830,7 +826,7 @@
             // Save as Draft - FIXED
             $('#saveDraftBtn').on('click', function(e) {
                 e.preventDefault();
-                
+
                 // For draft, rating is optional
                 let hasRating = $('#overall_rating').val();
                 if (!hasRating) {
@@ -838,14 +834,16 @@
                     // Or you can allow draft without rating
                     console.log('Saving draft without rating');
                 }
-                
+
                 // Create form data manually
                 let formData = new FormData();
-                formData.append('_token', $('meta[name="csrf-token"]').attr('content') || '{{ csrf_token() }}');
+                formData.append('_token', $('meta[name="csrf-token"]').attr('content') ||
+                    '{{ csrf_token() }}');
                 formData.append('user_id', $('#user_id').val());
                 formData.append('month', $('#reviewForm input[name="month"]').val());
                 formData.append('status', 'draft');
-                formData.append('overall_rating', $('#overall_rating').val() || 3); // Default rating 3 if empty
+                formData.append('overall_rating', $('#overall_rating').val() ||
+                    3); // Default rating 3 if empty
                 formData.append('strengths', $('#strengths').val());
                 formData.append('areas_for_improvement', $('#areas_for_improvement').val());
                 formData.append('achievements', $('#achievements').val());
@@ -876,7 +874,8 @@
                                 toastr.error(value[0]);
                             });
                         } else {
-                            $('#formError').removeClass('d-none').text(xhr.responseJSON?.message || 'Something went wrong');
+                            $('#formError').removeClass('d-none').text(xhr.responseJSON
+                                ?.message || 'Something went wrong');
                         }
                     }
                 });
@@ -893,7 +892,8 @@
 
                 // Create form data manually for submission
                 let formData = new FormData();
-                formData.append('_token', $('meta[name="csrf-token"]').attr('content') || '{{ csrf_token() }}');
+                formData.append('_token', $('meta[name="csrf-token"]').attr('content') ||
+                    '{{ csrf_token() }}');
                 formData.append('user_id', $('#user_id').val());
                 formData.append('month', $('#reviewForm input[name="month"]').val());
                 formData.append('status', 'submitted');
@@ -928,7 +928,8 @@
                                 toastr.error(value[0]);
                             });
                         } else {
-                            $('#formError').removeClass('d-none').text(xhr.responseJSON?.message || 'Something went wrong');
+                            $('#formError').removeClass('d-none').text(xhr.responseJSON
+                                ?.message || 'Something went wrong');
                         }
                     }
                 });
@@ -961,10 +962,12 @@
                                 '</div> ' + review.overall_rating + '/5'
                             );
                             $('#viewStrengths').text(review.strengths || 'Not specified');
-                            $('#viewImprovements').text(review.areas_for_improvement || 'Not specified');
+                            $('#viewImprovements').text(review.areas_for_improvement ||
+                                'Not specified');
                             $('#viewAchievements').text(review.achievements || 'Not specified');
                             $('#viewGoals').text(review.goals_next_month || 'Not specified');
-                            $('#viewFeedback').text(review.additional_feedback || 'Not specified');
+                            $('#viewFeedback').text(review.additional_feedback ||
+                                'Not specified');
                             $('#reviewMeta').html(
                                 `Reviewed by ${review.reviewer.name} on ${new Date(review.submitted_at).toLocaleDateString()}`
                             );

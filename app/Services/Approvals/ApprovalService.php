@@ -31,6 +31,11 @@ class ApprovalService
         'payroll_revision' => PayrollRevisionApprovalHandler::class,
         'payroll_bonus' => PayrollBonusApprovalHandler::class,
         'payroll_run' => PayrollRunApprovalHandler::class,
+        // Offboarding — same handler for both; only the seeded workflow
+        // (2-level Manager->HR vs 1-level HR-only) differs. See
+        // OffboardingService::ensureDefaultWorkflow().
+        'offboarding' => OffboardingApprovalHandler::class,
+        'offboarding_termination' => OffboardingApprovalHandler::class,
     ];
 
     /**

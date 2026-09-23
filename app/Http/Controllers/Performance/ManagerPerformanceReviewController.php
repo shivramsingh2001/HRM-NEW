@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\EmployeeKpiScore;
 use App\Models\ManagerPerformanceReview;
 use App\Models\Department;
+use App\Services\Performance\PerformanceRollupService;
+use App\Services\PerformanceNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +42,7 @@ class ManagerPerformanceReviewController extends Controller
         $departmentId = $request->get('department_id');
         $statusFilter = $request->get('status');
         $employeeId = $request->get('employee_id');
-        $perPage = $request->get('per_page', 15);
+        $perPage = $request->get('per_page', 20);
 
         // Build query for employees
         $query = User::where('status', '1')
@@ -134,7 +136,7 @@ class ManagerPerformanceReviewController extends Controller
     /**
      * Store or update performance review (via AJAX modal)
      */
-    public function store(Request $request, $userId)
+    public function store(Request $request, $userId, PerformanceRollupService $rollup, PerformanceNotificationService $notifier)
     {
         $request->validate([
             'overall_rating' => 'required|numeric|min:1|max:5',
@@ -152,6 +154,10 @@ class ManagerPerformanceReviewController extends Controller
 
         // Authorization
         $this->authorizeReview($employee);
+
+        $previousStatus = ManagerPerformanceReview::where('user_id', $employee->id)
+            ->where('review_month', $reportingMonth)
+            ->value('status');
 
         // Get or create KPI score record
         $kpiScore = EmployeeKpiScore::firstOrCreate(
@@ -187,20 +193,21 @@ class ManagerPerformanceReviewController extends Controller
                 ]
             );
 
-            // If submitted, update KPI score with manager rating
+            // If submitted, update KPI score with manager rating via the one
+            // canonical blend formula (exclude-and-renormalize when absent —
+            // this call is what makes it present).
             if ($request->status == 'submitted') {
-                $kpiScore->update([
-                    'manager_rating_score' => $request->overall_rating * 20,
-                    'manager_rating_raw' => $request->overall_rating,
-                    'manager_feedback' => $request->additional_feedback,
-                    'manager_rated_by' => Auth::id(),
-                    'manager_rated_at' => now(),
-                    'overall_score' => $this->recalculateOverallScore($kpiScore, $request->overall_rating),
-                    'grade' => $this->calculateGrade($this->recalculateOverallScore($kpiScore, $request->overall_rating)),
-                ]);
+                $rollup->recalculateMonthlyOverall($kpiScore->fresh());
             }
 
             DB::commit();
+
+            // Notify only on the transition INTO submitted, not every save of
+            // an already-submitted review (e.g. a later correction via update()
+            // re-notifies through that method's own oldStatus check instead).
+            if ($request->status == 'submitted' && $previousStatus !== 'submitted') {
+                $notifier->notifyReviewSubmitted($review->fresh(), $employee);
+            }
 
             $message = $request->status == 'draft'
                 ? 'Review saved as draft successfully!'
@@ -253,7 +260,7 @@ class ManagerPerformanceReviewController extends Controller
     /**
      * Update review (via AJAX modal)
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id, PerformanceRollupService $rollup, PerformanceNotificationService $notifier)
     {
         $request->validate([
             'overall_rating' => 'required|numeric|min:1|max:5',
@@ -286,23 +293,19 @@ class ManagerPerformanceReviewController extends Controller
                 'submitted_at' => ($request->status == 'submitted' && $oldStatus != 'submitted') ? now() : $review->submitted_at,
             ]);
 
-            // If submitted, update KPI score
+            // If submitted, update KPI score via the one canonical blend formula.
             if ($request->status == 'submitted') {
                 $kpiScore = EmployeeKpiScore::find($review->kpi_score_id);
                 if ($kpiScore) {
-                    $kpiScore->update([
-                        'manager_rating_score' => $request->overall_rating * 20,
-                        'manager_rating_raw' => $request->overall_rating,
-                        'manager_feedback' => $request->additional_feedback,
-                        'manager_rated_by' => Auth::id(),
-                        'manager_rated_at' => now(),
-                        'overall_score' => $this->recalculateOverallScore($kpiScore, $request->overall_rating),
-                        'grade' => $this->calculateGrade($this->recalculateOverallScore($kpiScore, $request->overall_rating)),
-                    ]);
+                    $rollup->recalculateMonthlyOverall($kpiScore);
                 }
             }
 
             DB::commit();
+
+            if ($request->status == 'submitted' && $oldStatus !== 'submitted') {
+                $notifier->notifyReviewSubmitted($review->fresh(), $review->user);
+            }
 
             $message = $request->status == 'draft'
                 ? 'Review saved as draft successfully!'
@@ -360,7 +363,13 @@ class ManagerPerformanceReviewController extends Controller
     }
 
     /**
-     * API: Get pending reviews count for dashboard
+     * API: Get pending reviews count for dashboard.
+     *
+     * "Pending" has no matching real status value — the enum is
+     * draft/submitted/acknowledged, so `status='pending'` (the old query)
+     * could never match a row and this endpoint was permanently stuck at 0.
+     * A review is genuinely pending when the employee has no row yet, or
+     * their existing row is still a draft.
      */
     public function pendingCount()
     {
@@ -368,18 +377,20 @@ class ManagerPerformanceReviewController extends Controller
         $month = now()->subMonth()->format('Y-m');
         $reportingMonth = $month . '-01';
 
+        $employeeQuery = User::where('status', '1')->whereIn('role', ['employee', 'manager']);
         if ($user->role == 'manager') {
-            $teamIds = User::managedBy($user->id)->pluck('id');
-
-            $pendingCount = ManagerPerformanceReview::whereIn('user_id', $teamIds)
-                ->where('review_month', $reportingMonth)
-                ->where('status', 'pending')
-                ->count();
-        } else {
-            $pendingCount = ManagerPerformanceReview::where('review_month', $reportingMonth)
-                ->where('status', 'pending')
-                ->count();
+            $employeeQuery->managedBy($user->id);
         }
+        $employeeIds = $employeeQuery->pluck('id');
+
+        $reviewStatusByUser = ManagerPerformanceReview::whereIn('user_id', $employeeIds)
+            ->where('review_month', $reportingMonth)
+            ->pluck('status', 'user_id');
+
+        $pendingCount = $employeeIds->filter(function ($id) use ($reviewStatusByUser) {
+            $status = $reviewStatusByUser->get($id);
+            return $status === null || $status === 'draft';
+        })->count();
 
         return response()->json(['pending_count' => $pendingCount]);
     }
@@ -480,52 +491,4 @@ class ManagerPerformanceReviewController extends Controller
         abort(403, 'You are not authorized to view this review.');
     }
 
-    private function getPerformanceSummary($employee, $month)
-    {
-        $kpiScore = EmployeeKpiScore::where('user_id', $employee->id)
-            ->where('reporting_month', $month . '-01')
-            ->first();
-
-        if (!$kpiScore) {
-            return null;
-        }
-
-        return [
-            'attendance_score' => $kpiScore->attendance_score ?? 0,
-            'task_completion_score' => $kpiScore->task_completion_score ?? 0,
-            'deadline_met_score' => $kpiScore->deadline_met_score ?? 0,
-            'regularization_score' => $kpiScore->regularization_score ?? 100,
-            'regularization_count' => $kpiScore->regularization_count ?? 0,
-            'late_count' => $kpiScore->late_count ?? 0,
-            'overtime_hours' => $kpiScore->overtime_hours ?? 0,
-            'overall_score' => $kpiScore->overall_score ?? 0,
-            'grade' => $kpiScore->grade ?? 'N/A',
-        ];
-    }
-
-    private function recalculateOverallScore($kpiScore, $managerRating)
-    {
-        $scores = [];
-
-        if ($kpiScore->attendance_score !== null) $scores[] = $kpiScore->attendance_score;
-        if ($kpiScore->task_completion_score !== null) $scores[] = $kpiScore->task_completion_score;
-        if ($kpiScore->deadline_met_score !== null) $scores[] = $kpiScore->deadline_met_score;
-        if ($kpiScore->regularization_score !== null) $scores[] = $kpiScore->regularization_score;
-
-        // Add manager rating (convert 1-5 to 0-100)
-        $scores[] = $managerRating * 20;
-
-        return !empty($scores) ? round(array_sum($scores) / count($scores), 2) : 0;
-    }
-
-    private function calculateGrade(float $score): string
-    {
-        if ($score >= 90) return 'A+';
-        if ($score >= 80) return 'A';
-        if ($score >= 70) return 'B+';
-        if ($score >= 60) return 'B';
-        if ($score >= 50) return 'C';
-        if ($score >= 40) return 'D';
-        return 'F';
-    }
 }

@@ -47,6 +47,7 @@ class User extends Authenticatable implements JWTSubject
         'contact',
         'status',
         'company_id',
+        'must_change_password',
          'fcm_tokens' => 'array', // If multi-company SaaS
 
     ];
@@ -71,7 +72,8 @@ class User extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-              'fcm_tokens' => 'array', 
+              'fcm_tokens' => 'array',
+            'must_change_password' => 'boolean',
         ];
     }
     /**
@@ -162,6 +164,11 @@ class User extends Authenticatable implements JWTSubject
     public function documents()
     {
         return $this->hasMany(EmployeeDocument::class, 'user_id');
+    }
+
+    public function assetAssignments()
+    {
+        return $this->hasMany(AssetAssignment::class, 'user_id');
     }
 
     /**

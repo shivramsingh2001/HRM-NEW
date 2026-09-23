@@ -7,6 +7,7 @@ use App\Models\StatutoryPtSlab;
 use App\Models\StatutoryRateConfig;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Expense\ExpenseReimbursementPayrollService;
 use Carbon\Carbon;
 use RuntimeException;
 
@@ -43,30 +44,17 @@ class PayrollCalculationEngine
     {
     }
 
-    public function calculate(User $employee, int $tenantId, string $yearMonth, bool $includeLoanDeductions = true): array
+    public function calculate(User $employee, int $tenantId, string $yearMonth, bool $includeLoanDeductions = true, ?array $dayOverrides = null): array
     {
         $monthEnd = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth()->toDateString();
 
-        $structure = PayrollEmployeeStructure::withoutGlobalScope('tenant')
-            ->where('tenant_id', $tenantId)
-            ->forUser($employee->id)
-            ->effective($monthEnd)
-            ->orderByDesc('effective_from')
-            ->first();
+        [$structure, $components] = $this->loadStructureAndComponents($employee, $tenantId, $monthEnd);
 
         if (! $structure) {
             throw new RuntimeException("No dynamic payroll structure found for user {$employee->id} effective {$monthEnd}.");
         }
 
-        $components = $structure->components()
-            ->with(['component', 'baseComponent'])
-            ->enabled()
-            ->get()
-            ->filter(fn ($ec) => $ec->component && $ec->component->is_active)
-            ->sortBy(fn ($ec) => $ec->component->priority)
-            ->values();
-
-        $context = $this->contextBuilder->build($employee->id, $tenantId, $yearMonth);
+        $context = $this->contextBuilder->build($employee->id, $tenantId, $yearMonth, $dayOverrides);
         $context['ctc'] = (float) $structure->ctc;
         $context['tenant_id'] = $tenantId;
         $context['month_end_date'] = $monthEnd;
@@ -135,6 +123,25 @@ class PayrollCalculationEngine
             ];
         }
 
+        // Expense reimbursements routed through payroll (per company, behind the expense_payroll_link
+        // feature — the service returns nothing when it is off and nothing is linked). One line per
+        // expense. component_type MUST be 'earning': only earning/deduction feed gross_earnings and
+        // net_payable, and payroll_components.component_type cannot store 'reimbursement'. Not taxable
+        // (it repays money the employee spent) and, like arrears, deliberately not a statutory base.
+        // Compute-only: linking to the payslip happens when a payslip is actually persisted
+        // (MonthlyPayrollController -> ExpenseReimbursementPayrollService::applyToPayroll).
+        foreach (app(ExpenseReimbursementPayrollService::class)->linesFor($tenantId, $employee->id, $yearMonth) as $row) {
+            $lineItems[] = [
+                'code' => ExpenseReimbursementPayrollService::CODE,
+                'name' => ExpenseReimbursementPayrollService::lineName($row->expense_number),
+                'component_type' => 'earning',
+                'calculation_method' => 'fixed_amount',
+                'amount' => $row->amount,
+                'is_taxable' => false,
+                'source_id' => $row->expense_id,
+            ];
+        }
+
         // Loan deduction is folded in as a real deduction line item (rather
         // than subtracted separately at the end) so total_deductions and
         // net_payable stay consistent with each other -- previously
@@ -157,6 +164,36 @@ class PayrollCalculationEngine
             ];
         }
 
+        // Late Arrival / Early Leaving deduction — a real deduction amount
+        // (excess_days * daily_rate * multiplier), computed independently of
+        // whether the tenant's attendance-status action is even enabled (see
+        // App\Services\Payroll\LateEarlyDeductionCalculator). Injected as a
+        // hand-added line item, same pattern as loan_deduction above — not a
+        // seeded payroll_components catalog row.
+        $lateEarly = app(\App\Services\Payroll\LateEarlyDeductionCalculator::class)
+            ->calculate($employee, $tenantId, $yearMonth);
+
+        if ($lateEarly['late_deduction_amount'] > 0) {
+            $lineItems[] = [
+                'code' => 'late_deduction',
+                'name' => 'Late Arrival Deduction',
+                'component_type' => 'deduction',
+                'calculation_method' => 'system_computed',
+                'amount' => round($lateEarly['late_deduction_amount'], 2),
+                'is_taxable' => false,
+            ];
+        }
+        if ($lateEarly['early_deduction_amount'] > 0) {
+            $lineItems[] = [
+                'code' => 'early_deduction',
+                'name' => 'Early Leaving Deduction',
+                'component_type' => 'deduction',
+                'calculation_method' => 'system_computed',
+                'amount' => round($lateEarly['early_deduction_amount'], 2),
+                'is_taxable' => false,
+            ];
+        }
+
         $grossEarnings = collect($lineItems)->where('component_type', 'earning')->sum('amount');
         $totalDeductions = collect($lineItems)->where('component_type', 'deduction')->sum('amount');
         $employerContributions = collect($lineItems)->where('component_type', 'employer_contribution')->sum('amount');
@@ -174,10 +211,38 @@ class PayrollCalculationEngine
             'total_deductions' => round($totalDeductions, 2),
             'loan_deduction_due' => round($loanDeductionDue, 2),
             'loan_deduction' => round($appliedLoanDeduction, 2),
+            'late_deduction' => round($lateEarly['late_deduction_amount'], 2),
+            'early_deduction' => round($lateEarly['early_deduction_amount'], 2),
             'employer_contributions_total' => round($employerContributions, 2),
             'net_payable' => $netPayable,
             'line_items' => $lineItems,
             'context' => $context,
+        ];
+    }
+
+    /**
+     * The single reusable "what components apply to this employee, with
+     * computed amounts" resolver — built from calculate()'s own line_items,
+     * not a re-derivation, so the Monthly Payroll Edit dynamic partial, the
+     * salary slip, and any future consumer all agree with calculate() by
+     * construction instead of drifting via independent re-implementations.
+     * Zero/unused components are simply whatever calculate() didn't include
+     * (disabled/unselected components never appear in $components at all —
+     * see the enabled() filter in calculate()); callers that also want to
+     * hide zero-*amount* rows (e.g. a component enabled but computing to 0)
+     * should filter the returned arrays themselves.
+     */
+    public function resolveEmployeeComponents(User $employee, int $tenantId, string $yearMonth, ?array $dayOverrides = null): array
+    {
+        $result = $this->calculate($employee, $tenantId, $yearMonth, true, $dayOverrides);
+
+        $grouped = collect($result['line_items'])->groupBy('component_type');
+
+        return [
+            'earnings' => $grouped->get('earning', collect())->values()->all(),
+            'deductions' => $grouped->get('deduction', collect())->values()->all(),
+            'employer_contributions' => $grouped->get('employer_contribution', collect())->values()->all(),
+            'reimbursements' => $grouped->get('reimbursement', collect())->values()->all(),
         ];
     }
 
@@ -231,6 +296,21 @@ class PayrollCalculationEngine
      */
     private function resolveComponent($ec, array $resolvedSoFar, ?float $grossPass1, array $context): float
     {
+        return $this->prorate(
+            $this->resolveComponentRaw($ec, $resolvedSoFar, $grossPass1, $context),
+            $ec->component->proration_rule,
+            $context
+        );
+    }
+
+    /**
+     * Same as resolveComponent() minus the final proration step — used by
+     * resolveComponent() itself and by rawComponentAmount() (which needs the
+     * stable, un-prorated amount for daily-rate math, e.g.
+     * LateEarlyDeductionCalculator).
+     */
+    private function resolveComponentRaw($ec, array $resolvedSoFar, ?float $grossPass1, array $context): float
+    {
         $master = $ec->component;
 
         $base = $this->resolveBase($ec, $resolvedSoFar, $grossPass1, $context);
@@ -246,7 +326,7 @@ class PayrollCalculationEngine
         // working exactly as before.
         $override = $this->statutoryOverride($master, $ec, $base, $grossPass1, $context);
         if ($override !== null) {
-            return $this->prorate($override, $master->proration_rule, $context);
+            return $override;
         }
 
         $raw = match ($ec->calculation_method) {
@@ -268,7 +348,80 @@ class PayrollCalculationEngine
             }
         }
 
-        return $this->prorate($raw, $master->proration_rule, $context);
+        return $raw;
+    }
+
+    /**
+     * Structure + enabled/active components for one employee/month — shared
+     * by calculate() and rawComponentAmount() so both load identically.
+     *
+     * @return array{0: ?PayrollEmployeeStructure, 1: \Illuminate\Support\Collection}
+     */
+    private function loadStructureAndComponents(User $employee, int $tenantId, string $monthEnd): array
+    {
+        $structure = PayrollEmployeeStructure::withoutGlobalScope('tenant')
+            ->where('tenant_id', $tenantId)
+            ->forUser($employee->id)
+            ->effective($monthEnd)
+            ->orderByDesc('effective_from')
+            ->first();
+
+        if (! $structure) {
+            return [null, collect()];
+        }
+
+        $components = $structure->components()
+            ->with(['component', 'baseComponent', 'baseComponents'])
+            ->enabled()
+            ->get()
+            ->filter(fn ($ec) => $ec->component && $ec->component->is_active)
+            ->sortBy(fn ($ec) => $ec->component->priority)
+            ->values();
+
+        return [$structure, $components];
+    }
+
+    /**
+     * Raw (pre-proration) monthly amount for one catalog component code —
+     * used by LateEarlyDeductionCalculator to get a stable, un-prorated
+     * 'basic' for daily-rate math (mirrors the legacy engine's use of the
+     * full, unprorated UserPayroll::basic_salary for the same purpose in
+     * MonthlyPayrollController::overtimeHourlyRate()). Returns 0.0 if the
+     * employee has no dynamic structure or no such component — the caller
+     * only reaches this after already confirming no legacy UserPayroll
+     * exists, so 0.0 here is a real "nothing to compute from", not a masked
+     * error.
+     *
+     * KNOWN LIMITATION: if the requested component's own
+     * calculation_base_type is 'component' referencing another
+     * not-yet-resolved component, this returns 0 for that dependency
+     * ($resolvedSoFar starts empty here — no full Pass-1 run). In every
+     * real catalog in this codebase 'basic' is the priority-first root
+     * component, so this is a flagged theoretical edge case, not a silently
+     * risked one.
+     */
+    public function rawComponentAmount(User $employee, int $tenantId, string $yearMonth, string $code): float
+    {
+        $monthEnd = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth()->toDateString();
+        [$structure, $components] = $this->loadStructureAndComponents($employee, $tenantId, $monthEnd);
+
+        if (! $structure) {
+            return 0.0;
+        }
+
+        $ec = $components->first(fn ($c) => $c->component->code === $code);
+        if (! $ec) {
+            return 0.0;
+        }
+
+        $context = [
+            'ctc' => (float) $structure->ctc,
+            'tenant_id' => $tenantId,
+            'month_end_date' => $monthEnd,
+            'state_code' => Tenant::withoutGlobalScopes()->whereKey($tenantId)->value('state'),
+        ];
+
+        return $this->resolveComponentRaw($ec, [], null, $context);
     }
 
     /**
@@ -350,8 +503,20 @@ class PayrollCalculationEngine
 
     private function resolveBase($ec, array $resolvedSoFar, ?float $grossPass1, array $context): float
     {
-        if ($ec->calculation_base_type === 'component' && $ec->calculation_base_component_id && $ec->baseComponent) {
-            return $resolvedSoFar[$ec->baseComponent->code] ?? 0.0;
+        if ($ec->calculation_base_type === 'component') {
+            $baseComponents = $ec->relationLoaded('baseComponents') ? $ec->baseComponents : $ec->baseComponents()->get();
+
+            if ($baseComponents->isNotEmpty()) {
+                return $baseComponents->sum(fn ($base) => $resolvedSoFar[$base->code] ?? 0.0);
+            }
+
+            // Legacy single-FK fallback for snapshots created before the
+            // multi-base pivot existed (payroll_employee_component_bases).
+            if ($ec->calculation_base_component_id && $ec->baseComponent) {
+                return $resolvedSoFar[$ec->baseComponent->code] ?? 0.0;
+            }
+
+            return 0.0;
         }
 
         return match ($ec->calculation_base) {

@@ -1184,7 +1184,7 @@
     <!-- Bulk Update Form -->
     <form id="bulkForm" method="POST" style="display: none;">
         @csrf
-        <input type="hidden" name="ids" id="bulkIds">
+        <div id="bulkIdsContainer"></div>
         <input type="hidden" name="payment_status" id="bulkStatus">
     </form>
 @endsection
@@ -1359,7 +1359,13 @@
             }
             let statusText = status.charAt(0).toUpperCase() + status.slice(1);
             if (confirm(`Are you sure you want to mark ${selectedIds.length} record(s) as ${statusText}?`)) {
-                $('#bulkIds').val(JSON.stringify(selectedIds));
+                // Real ids[] hidden inputs (not a JSON-encoded string) so
+                // Laravel parses `ids` as an actual array server-side,
+                // matching the controller's 'ids' => 'required|array' rule.
+                const container = $('#bulkIdsContainer').empty();
+                selectedIds.forEach(function(id) {
+                    container.append($('<input>', {type: 'hidden', name: 'ids[]', value: id}));
+                });
                 $('#bulkStatus').val(status);
                 $('#bulkForm').attr('action', '{{ route('monthly-payrolls.bulk-update') }}').submit();
             }

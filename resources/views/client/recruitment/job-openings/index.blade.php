@@ -35,7 +35,7 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: var(--primary);
             font-size: 16px;
         }
 
@@ -85,8 +85,8 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-focus);
             outline: none;
         }
 
@@ -111,17 +111,6 @@
             background: #f8fafc;
             border-color: #94a3b8;
             color: #1e293b;
-        }
-
-        .btn-apply {
-            background: #4f46e5;
-            color: white;
-            border-color: #4f46e5;
-        }
-
-        .btn-apply:hover {
-            background: #4338ca;
-            color: white;
         }
 
         /* Active Filter Tags */
@@ -174,12 +163,65 @@
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
+        }
+
+        /* ==================== ADD/EDIT JOB DRAWER ====================
+           Same .ui-drawer pattern as client/user/view-user.blade.php's
+           employee drawer — .form-row/.form-group/.required have no
+           built-in styling in this app (Bootstrap 5, not the Bootstrap 4
+           classes they're named after), so without this block the paired
+           fields (Department/Designation, etc.) just stack full-width. */
+        .ui-drawer,
+        .ui-drawer .form-control,
+        .ui-drawer .form-select,
+        .ui-drawer label {
+            font-size: 12.5px;
+        }
+
+        .ui-drawer .form-label {
+            font-weight: 400;
+            margin-bottom: 4px;
+            display: inline-block;
+        }
+
+        .ui-drawer .form-group {
+            margin-bottom: 10px;
+        }
+
+        .ui-drawer .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .ui-drawer .required {
+            color: #ef4444;
+            margin-left: 2px;
+        }
+
+        @media (max-width: 480px) {
+            .ui-drawer .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* theme.min.css's .btn-primary sets background/border-color with
+           !important (vendor default), so the override needs !important too
+           — see the identical note in client/user/view-user.blade.php. */
+        .add-job-btn {
+            background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
+            border-color: #1e3a8a !important;
+        }
+
+        .add-job-btn:hover {
+            background: linear-gradient(135deg, #16306f, #1e40af) !important;
+            border-color: #16306f !important;
         }
 
         /* ==================== JOB STATUS BADGES ==================== */
@@ -207,8 +249,8 @@
         }
 
         .status-on-hold {
-            background-color: #f3e8ff;
-            color: #5b21b6;
+            background-color: #dbeafe;
+            color: #1e40af;
         }
 
         /* Employment Type Badges */
@@ -289,8 +331,13 @@
 
         .action-btn:hover {
             background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .action-btn.text-danger:hover {
+            color: #ef4444 !important;
+            border-color: #ef4444;
         }
 
         .dropdown-item {
@@ -307,8 +354,8 @@
 
         /* Application Count Badge */
         .app-count {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: var(--primary-light);
+            color: var(--primary);
             padding: 4px 8px;
             border-radius: 16px;
             font-size: 11px;
@@ -320,7 +367,7 @@
         }
 
         .app-count:hover {
-            background: #4f46e5;
+            background: var(--primary);
             color: white;
         }
 
@@ -379,8 +426,8 @@
         }
 
         .page-item.active .page-link {
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: var(--primary);
+            border-color: var(--primary);
         }
 
         /* Responsive */
@@ -458,10 +505,10 @@
             </ul>
         </div>
         <div class="page-header-right ms-auto">
-            <a href="{{ route('job-openings.create') }}" class="btn btn-primary btn-sm">
+            <button type="button" class="btn btn-primary btn-sm add-job-btn" onclick="openAddJobDrawer()">
                 <i class="feather-plus me-1"></i>
                 <span>New Job Opening</span>
-            </a>
+            </button>
         </div>
     </div>
 
@@ -595,14 +642,6 @@
                     <div class="filter-item" style="flex: 1; min-width: 200px;">
                         <input type="text" name="search" class="filter-select" placeholder="Search by title, code or location..."
                                value="{{ request('search') }}" style="background-image: none; padding-left: 32px;">
-                    </div>
-
-                    <!-- Apply Button -->
-                    <div class="filter-item" style="min-width: auto;">
-                        <button type="submit" class="reset-btn btn-apply">
-                            <i class="feather-filter"></i>
-                            Apply
-                        </button>
                     </div>
 
                     <!-- Reset Button -->
@@ -796,64 +835,43 @@
                                                 </small>
                                             </td>
                                             <td class="text-center">
-                                                <div class="dropdown">
-                                                    <a href="#" class="action-btn" data-bs-toggle="dropdown"
-                                                        data-bs-offset="0,5" onclick="event.stopPropagation();">
-                                                        <i class="feather-more-vertical"></i>
+                                                <div class="d-flex justify-content-center gap-1">
+                                                    <a href="{{ route('job-openings.show', $job->id) }}"
+                                                        class="action-btn" title="View Details"
+                                                        data-bs-toggle="tooltip" onclick="event.stopPropagation();">
+                                                        <i class="feather-eye"></i>
                                                     </a>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li>
-                                                            <a class="dropdown-item"
-                                                                href="{{ route('job-openings.show', $job->id) }}">
-                                                                <i class="feather-eye me-2"></i>
-                                                                View Details
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item"
-                                                                href="{{ route('job-openings.edit', $job->id) }}">
-                                                                <i class="feather-edit me-2"></i>
-                                                                Edit Job
-                                                            </a>
-                                                        </li>
-                                                        @if ($job->status == 'draft')
-                                                            <li>
-                                                                <button type="button" class="dropdown-item text-success"
-                                                                    onclick="event.stopPropagation(); publishJob({{ $job->id }})">
-                                                                    <i class="feather-paper-plane me-2"></i>
-                                                                    Publish
-                                                                </button>
-                                                            </li>
-                                                        @endif
-                                                        @if ($job->status == 'published')
-                                                            <li>
-                                                                <button type="button" class="dropdown-item text-warning"
-                                                                    onclick="event.stopPropagation(); closeJob({{ $job->id }})">
-                                                                    <i class="feather-x-circle me-2"></i>
-                                                                    Close Job
-                                                                </button>
-                                                            </li>
-                                                        @endif
-                                                        <li>
-                                                            <button type="button" class="dropdown-item text-info"
-                                                                onclick="event.stopPropagation(); duplicateJob({{ $job->id }})">
-                                                                <i class="feather-copy me-2"></i>
-                                                                Duplicate
-                                                            </button>
-                                                        </li>
-                                                        @if ($job->status == 'draft' && ($job->applications_count ?? 0) == 0)
-                                                            <li>
-                                                                <hr class="dropdown-divider">
-                                                            </li>
-                                                            <li>
-                                                                <button type="button" class="dropdown-item text-danger"
-                                                                    onclick="event.stopPropagation(); deleteJob({{ $job->id }}, '{{ addslashes($job->title) }}')">
-                                                                    <i class="feather-trash-2 me-2"></i>
-                                                                    Delete
-                                                                </button>
-                                                            </li>
-                                                        @endif
-                                                    </ul>
+                                                    <button type="button" class="action-btn" title="Edit Job"
+                                                        data-bs-toggle="tooltip"
+                                                        onclick="event.stopPropagation(); openEditJobDrawer({{ $job->id }})">
+                                                        <i class="feather-edit"></i>
+                                                    </button>
+                                                    @if ($job->status == 'draft')
+                                                        <button type="button" class="action-btn" title="Publish"
+                                                            data-bs-toggle="tooltip"
+                                                            onclick="event.stopPropagation(); publishJob({{ $job->id }})">
+                                                            <i class="feather-send"></i>
+                                                        </button>
+                                                    @endif
+                                                    @if ($job->status == 'published')
+                                                        <button type="button" class="action-btn" title="Close Job"
+                                                            data-bs-toggle="tooltip"
+                                                            onclick="event.stopPropagation(); closeJob({{ $job->id }})">
+                                                            <i class="feather-x-circle"></i>
+                                                        </button>
+                                                    @endif
+                                                    <button type="button" class="action-btn" title="Duplicate"
+                                                        data-bs-toggle="tooltip"
+                                                        onclick="event.stopPropagation(); duplicateJob({{ $job->id }})">
+                                                        <i class="feather-copy"></i>
+                                                    </button>
+                                                    @if ($job->status == 'draft' && ($job->applications_count ?? 0) == 0)
+                                                        <button type="button" class="action-btn text-danger" title="Delete"
+                                                            data-bs-toggle="tooltip"
+                                                            onclick="event.stopPropagation(); deleteJob({{ $job->id }}, '{{ addslashes($job->title) }}')">
+                                                            <i class="feather-trash-2"></i>
+                                                        </button>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -864,10 +882,10 @@
                                                     <i class="feather-inbox"></i>
                                                     <h4>No Job Openings Found</h4>
                                                     <p>No job openings match the selected filters.</p>
-                                                    <a href="{{ route('job-openings.create') }}"
-                                                        class="btn btn-primary btn-sm mt-2">
+                                                    <button type="button" class="btn btn-primary btn-sm mt-2 add-job-btn"
+                                                        onclick="openAddJobDrawer()">
                                                         <i class="feather-plus me-1"></i>Create New Job Opening
-                                                    </a>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -961,7 +979,6 @@
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                     <form id="deleteForm" method="POST" style="display: inline;">
                         @csrf
-                        @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                     </form>
                 </div>
@@ -975,6 +992,13 @@
     </form>
 @endsection
 
+@section('create-modal')
+    <!-- Add/Edit Job Opening Drawer (shared instance, mode toggled via JS) -->
+    <x-ui.drawer id="jobDrawer" title="Add Job Opening" width="480px">
+        @include('client.recruitment.job-openings.partials.form')
+    </x-ui.drawer>
+@endsection
+
 @section('script-area')
     <script>
         // Row click handler
@@ -986,8 +1010,18 @@
             });
 
             // Auto-submit on filter change
-            $('.filter-select').on('change', function() {
+            $('.filter-select').not('input[type="text"]').on('change', function() {
                 $('#filterForm').submit();
+            });
+
+            // Search box: debounce instead of a submit-on-every-keystroke,
+            // now that the Apply button is gone.
+            let searchTimeout;
+            $('input[name="search"]').on('keyup', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    $('#filterForm').submit();
+                }, 500);
             });
 
             // Stats card click filter
@@ -1014,7 +1048,75 @@
             } else if (!currentStatus || currentStatus === 'all') {
                 $('.stats-card[data-status="all"]').addClass('active');
             }
+
+            // Initialize tooltips for the icon-only action buttons
+            [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(function (el) {
+                new bootstrap.Tooltip(el);
+            });
+
+            // Deep link support (e.g. a link from job-openings/show.blade.php):
+            // ?edit={id} opens the Edit drawer pre-filled for that job.
+            const deepLinkParams = new URLSearchParams(window.location.search);
+            if (deepLinkParams.get('edit')) {
+                openEditJobDrawer(deepLinkParams.get('edit'));
+            }
         });
+
+        // ─────────────────────────────────────────────
+        //  ADD / EDIT JOB DRAWER
+        // ─────────────────────────────────────────────
+
+        const jobDrawerFields = [
+            'title', 'department_id', 'designation_id', 'employment_type', 'location',
+            'no_of_vacancies', 'status', 'description', 'experience_required',
+            'qualification_required', 'skills_required', 'responsibilities', 'requirements',
+            'salary_range_min', 'salary_range_max', 'hiring_lead',
+        ];
+
+        function resetJobDrawerForm() {
+            const form = document.getElementById('jobDrawerForm');
+            form.reset();
+            jobDrawerFields.forEach(f => {
+                const el = document.getElementById('jf_' + f);
+                if (el) el.value = '';
+            });
+            document.getElementById('jf_status').value = 'draft';
+            document.getElementById('jf_no_of_vacancies').value = 1;
+        }
+
+        function getJobDrawerInstance() {
+            return bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('jobDrawer'));
+        }
+
+        function openAddJobDrawer() {
+            resetJobDrawerForm();
+            document.getElementById('jobDrawerLabel').textContent = 'Add Job Opening';
+            document.getElementById('jobDrawerForm').action = "{{ route('job-openings.store') }}";
+            document.getElementById('jobDrawerSubmitBtn').textContent = 'Create Job';
+            getJobDrawerInstance().show();
+        }
+
+        function openEditJobDrawer(id) {
+            fetch("{{ url('job-openings/edit') }}/" + id, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(res => res.json())
+                .then(res => {
+                    if (!res.success) {
+                        showToast(res.message || 'Job opening not found', 'error');
+                        return;
+                    }
+                    resetJobDrawerForm();
+                    const job = res.data;
+                    jobDrawerFields.forEach(f => {
+                        const el = document.getElementById('jf_' + f);
+                        if (el && job[f] !== null && job[f] !== undefined) el.value = job[f];
+                    });
+                    document.getElementById('jobDrawerLabel').textContent = 'Edit Job Opening';
+                    document.getElementById('jobDrawerForm').action = "{{ url('job-openings/update') }}/" + id;
+                    document.getElementById('jobDrawerSubmitBtn').textContent = 'Update Job';
+                    getJobDrawerInstance().show();
+                })
+                .catch(() => showToast('Failed to load job opening', 'error'));
+        }
 
         // CRUD Functions
         function publishJob(id) {
@@ -1032,7 +1134,7 @@
         function deleteJob(id, title) {
             document.getElementById('deleteJobTitle').textContent = title;
             const form = document.getElementById('deleteForm');
-            form.action = "{{ url('job-openings') }}/" + id;
+            form.action = "{{ url('job-openings/destroy') }}/" + id;
             new bootstrap.Modal(document.getElementById('deleteModal')).show();
         }
 

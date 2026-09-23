@@ -47,10 +47,11 @@ class TeamController extends Controller
             $dayName = Carbon::now()->format('l');
 
             $statusFilter = $request->get('status');
-            
-            
+            $search = $request->get('search');
+            $branchId = $request->get('branch_id');
+
             // Get team members based on user role
-            $teamData = $this->getTeamMembers($authUser, $currentDate);
+            $teamData = $this->getTeamMembers($authUser, $currentDate, null, $search, $branchId);
             if ($statusFilter && in_array($statusFilter, ['present', 'absent', 'on_leave', 'holiday', 'weekoff','halfday','checked_in_only'])) {
                 $teamData = $teamData->filter(function ($member) use ($statusFilter) {
                     $memberStatus = strtolower($member->status ?? 'absent');
@@ -130,6 +131,13 @@ class TeamController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name']);
 
+            // Branches dropdown for the branch filter
+            $allBranches = DB::table('company_branches')
+                ->where('tenant_id', $authUser->tenant_id)
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
+
             // Prepare data for view
             $data = [
                 'teamData' => $teamDataPaginated,
@@ -138,6 +146,9 @@ class TeamController extends Controller
                 'dayName' => $dayName,
                 'authUser' => $authUser,
                 'leaveTypes' => $leaveTypes,
+                'allBranches' => $allBranches,
+                'search' => $search,
+                'branchId' => $branchId,
             ];
 
             return view('client.team.view-team-member', $data);
@@ -154,19 +165,39 @@ class TeamController extends Controller
     /**
      * Get team members based on user role
      */
-    private function getTeamMembers($authUser, $currentDate)
+    private function getTeamMembers($authUser, $currentDate, $managerId = null, $search = null, $branchId = null)
     {
         $query = User::query()
-            ->with(['jobDetails.department', 'jobDetails.designation', 'basicDetails'])
+            ->with(['jobDetails.department', 'jobDetails.designation', 'jobDetails.branch', 'basicDetails'])
             ->where('status', 1)
             ->where('role', "!=", "admin");
 
-        // Permission-based filtering
-        $teamScope = app(RbacService::class)->scopeFor($authUser, 'team', 'view');
-        if ($teamScope === 'team') {
-            $query->managedBy($authUser->id);
-        } elseif ($teamScope !== 'company') {
-            return collect([]);
+        if ($managerId !== null) {
+            // Explicit target manager (e.g. viewing another manager's direct
+            // reports from their profile page) — access to that page is
+            // already gated by canViewUserProfile()/scopeCoversOwner(), so
+            // the RBAC "my team" scope below doesn't apply here.
+            $query->managedBy($managerId);
+        } else {
+            // Permission-based filtering
+            $teamScope = app(RbacService::class)->scopeFor($authUser, 'team', 'view');
+            if ($teamScope === 'team') {
+                $query->managedBy($authUser->id);
+            } elseif ($teamScope !== 'company') {
+                return collect([]);
+            }
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('employee_id', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($branchId) {
+            $query->whereHas('jobDetails', fn ($q) => $q->where('branch_id', $branchId));
         }
 
         $users = $query->get();
@@ -231,6 +262,7 @@ class TeamController extends Controller
             $member->email = $user->email;
             $member->designation = $user->jobDetails->Designation->name ?? null;
             $member->department = $user->jobDetails->Department->name ?? null;
+            $member->branch = $user->jobDetails->branch->name ?? null;
             $member->profile_image = $user->basicDetails->profile_image ?? null;
             $member->punch_in = $attendance ? $attendance->clock_in : null;
             $member->punch_out = $attendance ? $attendance->clock_out : null;
@@ -506,6 +538,12 @@ class TeamController extends Controller
             // Get today's attendance status
             $todayAttendance = $this->getTodayAttendance($attendanceData, $today);
 
+            // If this employee is a manager, show their direct reports'
+            // basic details + today's attendance status.
+            $directReports = ($userInfo->role === 'manager')
+                ? $this->getTeamMembers($authUser, $today, $userInfo->id)
+                : collect();
+
             // Format profile image URL
             $profileImage = $userInfo->profile_image
                 ? asset($userInfo->profile_image)
@@ -529,6 +567,7 @@ class TeamController extends Controller
                 'calendarData',
                 'attendanceSummary',
                 'todayAttendance',
+                'directReports',
                 'profileImage',
                 'documents',
                 'age',
@@ -1105,10 +1144,13 @@ class TeamController extends Controller
 
                 if (!$dateStr || !$status) continue;
 
-                $bgColor = '#9ca3af';
-                $borderColor = '#9ca3af';
+                // Single-color (blue) theme, matching the app's blue-only
+                // convention (see the Team Attendance .stats-card family) —
+                // statuses are distinguished by shade/fill intensity, not hue.
+                $bgColor = '#eff6ff';
+                $borderColor = '#dbeafe';
                 $title = $status;
-                $color = '#ffffff';
+                $color = '#475569';
 
                 // Add hours to title for Present and halfday
                 $hoursText = '';
@@ -1119,47 +1161,53 @@ class TeamController extends Controller
                 $statusLower = strtolower($status);
                 switch ($statusLower) {
                     case 'present':
-                        $bgColor = '#28a745';
-                        $borderColor = '#28a745';
+                        $bgColor = '#2563eb';
+                        $borderColor = '#1d4ed8';
+                        $color = '#ffffff';
                         $title = 'Present' . $hoursText;
                         break;
                     case 'halfday':
-                        $bgColor = '#ffc107';
-                        $borderColor = '#ffc107';
+                        $bgColor = '#60a5fa';
+                        $borderColor = '#3b82f6';
+                        $color = '#ffffff';
                         $title = 'halfday' . $hoursText;
-                        $color = '#000000';
                         break;
                     case 'absent':
-                        $bgColor = '#dc3545';
-                        $borderColor = '#dc3545';
+                        $bgColor = '#1e3a8a';
+                        $borderColor = '#1e293b';
+                        $color = '#ffffff';
                         $title = 'Absent';
                         break;
                     case 'first half leave':
                     case 'second half leave':
                     case 'full day leave':
-                        $bgColor = '#fd7e14';
-                        $borderColor = '#fd7e14';
+                        $bgColor = '#dbeafe';
+                        $borderColor = '#93c5fd';
+                        $color = '#1d4ed8';
                         $title = 'Leave';
                         break;
                     case 'holiday':
-                        $bgColor = '#0d6efd';
-                        $borderColor = '#0d6efd';
+                        $bgColor = '#bfdbfe';
+                        $borderColor = '#93c5fd';
+                        $color = '#1d4ed8';
                         $title = $record->holiday_name ?? 'Holiday';
                         break;
                     case 'week off':
-                        $bgColor = '#6c757d';
-                        $borderColor = '#6c757d';
+                        $bgColor = '#eff6ff';
+                        $borderColor = '#dbeafe';
+                        $color = '#475569';
                         $title = 'Week Off';
                         break;
                     case 'checked in only':
-                        $bgColor = '#ffc107';
-                        $borderColor = '#ffc107';
+                        $bgColor = '#93c5fd';
+                        $borderColor = '#60a5fa';
+                        $color = '#1e3a8a';
                         $title = 'Checked In Only';
-                        $color = '#000000';
                         break;
                     case 'upcoming':
-                        $bgColor = '#6f42c1';
-                        $borderColor = '#6f42c1';
+                        $bgColor = '#f8fafc';
+                        $borderColor = '#cbd5e1';
+                        $color = '#64748b';
                         $title = 'Upcoming';
                         break;
                 }
