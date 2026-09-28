@@ -63,6 +63,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute($perMin)->by($key);
         });
 
+        // FkWeb terminal push — a device polls every ~10s but uploads enroll
+        // templates in bursts of ~30 x 1 KB blocks; cap runaway devices only.
+        RateLimiter::for('biometric-push', function ($request) {
+            return Limit::perMinute((int) config('biometric.fkweb.throttle_per_minute', 600))
+                ->by('fkweb:' . $request->route('token'));
+        });
+
         // GPS ingest safety cap — set well above the real cadence; catches
         // runaway clients only, never legitimate traffic.
         RateLimiter::for('location-ingest', function ($request) {

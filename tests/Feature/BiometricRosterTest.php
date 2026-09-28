@@ -28,7 +28,7 @@ class BiometricRosterTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenantId = (int) DB::table('users')->value('tenant_id');
+        $this->tenantId = (int) DB::table('users')->whereNotNull('tenant_id')->value('tenant_id');
 
         // tenant_id is guarded on User; forceCreate so it persists.
         $this->emp = User::withoutGlobalScopes()->forceCreate([

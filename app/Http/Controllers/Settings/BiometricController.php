@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Biometric\BiometricRosterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 /**
  * Tenant admin for biometric terminals: register devices, mint the bridge's API
@@ -135,6 +136,27 @@ class BiometricController extends Controller
         return back()
             ->with('success', 'Bridge key generated. Copy the secret now — it is shown only once.')
             ->with('new_api_secret', $issued['secret']);
+    }
+
+    /**
+     * FkWeb direct push: mint (or, with rotate=1, replace) the device's secret
+     * push token and show the Webserver URL to type into the terminal.
+     */
+    public function pushUrl(Request $request, BiometricDevice $device)
+    {
+        $this->authorizeTenant($device);
+
+        if (! $device->push_token || $request->boolean('rotate')) {
+            $device->update(['push_token' => Str::random(40)]);
+        }
+
+        $url = rtrim(config('biometric.fkweb.base_url'), '/') . '/api/v1/biometric/fkweb/' . $device->push_token;
+
+        return back()
+            ->with('success', $request->boolean('rotate')
+                ? 'Push URL rotated — the old URL stops working now; update the terminal.'
+                : 'Push URL ready.')
+            ->with('push_url', ['device' => $device->id, 'name' => $device->name, 'url' => $url]);
     }
 
     public function downloadConfig(BiometricDevice $device)

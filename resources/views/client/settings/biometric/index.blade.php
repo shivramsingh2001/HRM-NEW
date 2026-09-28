@@ -24,6 +24,23 @@
         </div>
     @endif
 
+    @if (session('push_url'))
+        @php($push = session('push_url'))
+        <div class="alert alert-info">
+            <strong>Push URL for {{ $push['name'] }}:</strong><br>
+            <code class="key">{{ $push['url'] }}</code>
+            <div class="mt-1" style="font-size:12px">
+                On the terminal: Comm → server-client mode <code>FkWeb</code> → Webserver URL = this value.
+                Plain <code>http://</code> only — the terminal cannot do HTTPS. Treat it like a password.
+            </div>
+            <form method="POST" action="{{ route('settings.biometric.devices.push-url', $push['device']) }}" class="mt-2">
+                @csrf
+                <input type="hidden" name="rotate" value="1">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Rotate URL</button>
+            </form>
+        </div>
+    @endif
+
     <div class="stats-grid">
         <div class="stats-card">
             <div class="stats-icon"><i class="feather-cpu"></i></div>
@@ -105,6 +122,12 @@
                                         @csrf
                                         <button type="submit" class="action-btn" title="Bridge key" data-bs-toggle="tooltip">
                                             <i class="feather-key"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ route('settings.biometric.devices.push-url', $d) }}" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="action-btn" title="Push URL (FkWeb direct)" data-bs-toggle="tooltip">
+                                            <i class="feather-link"></i>
                                         </button>
                                     </form>
                                     <a href="{{ route('settings.biometric.devices.config', $d) }}"

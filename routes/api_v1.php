@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AnalyticsV1Controller;
 use App\Http\Controllers\Api\V1\AttendanceV1Controller;
+use App\Http\Controllers\Api\V1\BiometricFkWebController;
 use App\Http\Controllers\Api\V1\BiometricV1Controller;
 use App\Http\Controllers\Api\V1\PingController;
 use App\Http\Controllers\Api\V1\RegularizationV1Controller;
@@ -15,6 +16,14 @@ use Illuminate\Support\Facades\Route;
 | writes. Mounted at /api/v1 by bootstrap/app.php. This surface is
 | additive-only — breaking changes go to /api/v2.
 */
+
+// Biometric terminals in "FkWeb" mode push punches straight here (plain HTTP,
+// no headers we control). Outside `apiv1`/`apikey`: the device reads only the
+// response_code header, and the per-device push_token in the path is the auth.
+Route::post('/biometric/fkweb/{token}', [BiometricFkWebController::class, 'handle'])
+    ->middleware('throttle:biometric-push')
+    ->where('token', '[A-Za-z0-9]{32,64}')
+    ->name('biometric.fkweb');
 
 Route::middleware('apiv1')->group(function () {
     // Unauthenticated liveness probe.

@@ -22,6 +22,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | FkWeb direct push
+    |--------------------------------------------------------------------------
+    | Terminals in "FkWeb" mode POST to /api/v1/biometric/fkweb/{push_token}.
+    | They speak plain HTTP only (no TLS), so base_url must be an http:// origin
+    | the device can reach WITHOUT an https redirect.
+    */
+    'fkweb' => [
+        'base_url' => env('BIOMETRIC_PUSH_BASE_URL', preg_replace('#^https://#', 'http://', (string) env('APP_URL', 'http://localhost'))),
+
+        'throttle_per_minute' => (int) env('BIOMETRIC_PUSH_THROTTLE', 600),
+
+        // realtime_glog verify_mode -> punch method (face|card|fingerprint|password).
+        // Codes are firmware-specific and not yet confirmed on hardware (seen: 2, 10),
+        // so unmapped codes store method=null (attendance_type falls back to fingerprint).
+        'verify_mode_methods' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Retention
     |--------------------------------------------------------------------------
     | biometric:prune deletes processed/skipped biometric_punches older than

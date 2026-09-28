@@ -26,7 +26,7 @@ class BiometricIngestTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenantId = (int) DB::table('users')->value('tenant_id');
+        $this->tenantId = (int) DB::table('users')->whereNotNull('tenant_id')->value('tenant_id');
         $this->employee = User::where('tenant_id', $this->tenantId)->where('status', 1)
             ->where('role', '!=', 'admin')->firstOrFail();
 

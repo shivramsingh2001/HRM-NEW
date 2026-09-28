@@ -828,6 +828,7 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::put('/biometric/devices/{device}', [\App\Http\Controllers\Settings\BiometricController::class, 'updateDevice'])->name('biometric.devices.update');
                 Route::delete('/biometric/devices/{device}', [\App\Http\Controllers\Settings\BiometricController::class, 'destroyDevice'])->name('biometric.devices.destroy');
                 Route::post('/biometric/devices/{device}/bridge-key', [\App\Http\Controllers\Settings\BiometricController::class, 'generateBridgeKey'])->name('biometric.devices.bridge-key');
+                Route::post('/biometric/devices/{device}/push-url', [\App\Http\Controllers\Settings\BiometricController::class, 'pushUrl'])->name('biometric.devices.push-url');
                 Route::get('/biometric/devices/{device}/config', [\App\Http\Controllers\Settings\BiometricController::class, 'downloadConfig'])->name('biometric.devices.config');
                 Route::get('/biometric/devices/{device}/enrollments', [\App\Http\Controllers\Settings\BiometricController::class, 'enrollments'])->name('biometric.enrollments');
                 Route::post('/biometric/devices/{device}/enrollments', [\App\Http\Controllers\Settings\BiometricController::class, 'mapEnrollment'])->name('biometric.enrollments.map');
