@@ -540,7 +540,7 @@
                             <div class="profile-upload mb-4">
                                 <div class="profile-image-container">
                                     @if ($user->basicDetails && $user->basicDetails->profile_image)
-                                        <img src="{{ asset($user->basicDetails->profile_image) }}"
+                                        <img src="{{ file_url($user->basicDetails->profile_image, 'profile_photo') }}"
                                             class="profile-image-preview" id="profileImagePreview" alt="Profile Image">
                                     @else
                                         <img src="{{ asset('assets/images/avatar/1.png') }}" class="profile-image-preview"
@@ -1519,7 +1519,7 @@
                                 @if ($user->basicDetails && $user->basicDetails->experience_letter)
                                     <div class="file-preview">
                                         <span>Current file:</span>
-                                        <a href="{{ asset($user->basicDetails->experience_letter) }}" target="_blank"
+                                        <a href="{{ file_url($user->basicDetails->experience_letter, 'employee_document') }}" target="_blank"
                                             class="existing-file">
                                             <i class="feather-file-text"></i> View Document
                                         </a>
@@ -1536,7 +1536,7 @@
                                 @if ($user->basicDetails && $user->basicDetails->tenth_marksheet)
                                     <div class="file-preview">
                                         <span>Current file:</span>
-                                        <a href="{{ asset($user->basicDetails->tenth_marksheet) }}" target="_blank"
+                                        <a href="{{ file_url($user->basicDetails->tenth_marksheet, 'employee_document') }}" target="_blank"
                                             class="existing-file">
                                             <i class="feather-file-text"></i> View Document
                                         </a>
@@ -1553,7 +1553,7 @@
                                 @if ($user->basicDetails && $user->basicDetails->twelfth_marksheet)
                                     <div class="file-preview">
                                         <span>Current file:</span>
-                                        <a href="{{ asset($user->basicDetails->twelfth_marksheet) }}" target="_blank"
+                                        <a href="{{ file_url($user->basicDetails->twelfth_marksheet, 'employee_document') }}" target="_blank"
                                             class="existing-file">
                                             <i class="feather-file-text"></i> View Document
                                         </a>
@@ -1570,7 +1570,7 @@
                                 @if ($user->basicDetails && $user->basicDetails->highest_qualification_certificate)
                                     <div class="file-preview">
                                         <span>Current file:</span>
-                                        <a href="{{ asset($user->basicDetails->highest_qualification_certificate) }}"
+                                        <a href="{{ file_url($user->basicDetails->highest_qualification_certificate, 'employee_document') }}"
                                             target="_blank" class="existing-file">
                                             <i class="feather-file-text"></i> View Document
                                         </a>

@@ -80,7 +80,7 @@ class TaskController extends Controller
                     'email' => $member->email,
                     'contact' => $member->contact,
                     'profile_image' => $member->basicDetails?->profile_image
-                        ? $baseUrl . $member->basicDetails->profile_image
+                        ? file_url($member->basicDetails->profile_image, 'profile_photo')
                         : $baseUrl . '/profile2.jpg',
 
                 ];
@@ -407,32 +407,14 @@ class TaskController extends Controller
             $taskCode = $this->generateUniqueTaskCode();
 
             // Handle file upload
-            $filePath = null;
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/task/document');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                $file->move($destinationPath, $filename);
-                $filePath = 'uploads/task/document/' . $filename;
-            }
+            $filePath = $request->hasFile('file')
+                ? file_storage()->upload($request->file('file'), 'task_document', ['tenant' => $authUser->tenant_id])->path
+                : null;
 
             // Handle voice file upload
-            $voiceFilePath = null;
-            if ($request->hasFile('voice_file')) {
-                $voiceFile = $request->file('voice_file');
-                $extension = strtolower($voiceFile->getClientOriginalExtension());
-                $voiceFileName = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/task/voice');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                $voiceFile->move($destinationPath, $voiceFileName);
-                $voiceFilePath = 'uploads/task/voice/' . $voiceFileName;
-            }
+            $voiceFilePath = $request->hasFile('voice_file')
+                ? file_storage()->upload($request->file('voice_file'), 'task_voice', ['tenant' => $authUser->tenant_id])->path
+                : null;
 
             $isGroup = $request->self_assigned == 2;
             $isSelf = $request->self_assigned == 1;
@@ -971,8 +953,8 @@ class TaskController extends Controller
                 'priority' => $task->priority,
                 'status' => $task->status,
                 'task_date' => $task->task_date,
-                'voice_file' => $task->voice_file ? asset($task->voice_file) : null,
-                'file' => $task->file ? asset($task->file) : null,
+                'voice_file' => file_url($task->voice_file, 'task_voice'),
+                'file' => file_url($task->file, 'task_document'),
                 'deadline_date' => $task->deadline_date,
                 'is_overdue' => now()->gt($task->deadline_date) && !in_array($task->status, ['completed', 'cancelled']),
                 'assigned_by' => $assignerDetails->assigned_by_name ?? null,
@@ -1014,7 +996,7 @@ class TaskController extends Controller
                     'name' => $assignerDetails->assigned_by_name ?? null,
                     'email' => $assignerDetails->assigned_by_email ?? null,
                     'employee_id' => $assignerDetails->assigned_by_employee_id ?? null,
-                    'profile_image' => $assignerDetails->assigned_by_image ? asset($assignerDetails->assigned_by_image) : null,
+                    'profile_image' => file_url($assignerDetails->assigned_by_image, 'profile_photo'),
                 ],
 
                 // Primary assignee details (only for individual tasks)
@@ -1023,7 +1005,7 @@ class TaskController extends Controller
                     'name' => $firstMember->name,
                     'email' => $firstMember->email,
                     'employee_id' => $firstMember->employee_id,
-                    'profile_image' => $firstMember->profile_image ? asset($firstMember->profile_image) : null,
+                    'profile_image' => file_url($firstMember->profile_image, 'profile_photo'),
                     'member_role' => $firstMember->member_role,
                     'individual_status' => $firstMember->individual_status,
                 ] : null,
@@ -1035,7 +1017,7 @@ class TaskController extends Controller
                         'name' => $member->name,
                         'email' => $member->email,
                         'employee_id' => $member->employee_id,
-                        'profile_image' => $member->profile_image ? asset($member->profile_image) : null,
+                        'profile_image' => file_url($member->profile_image, 'profile_photo'),
                         'member_role' => $member->member_role,
                         'individual_status' => $member->individual_status,
                         'individual_remarks' => $member->individual_remarks,

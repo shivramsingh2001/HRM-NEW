@@ -198,7 +198,7 @@
                 @forelse ($asset->attachments as $att)
                     <div class="fs-card d-flex justify-content-between align-items-center">
                         <div>
-                            <a href="{{ asset($att->file_path) }}" target="_blank">{{ $att->original_filename ?? $att->file_path }}</a>
+                            <a href="{{ file_url($att->file_path, 'asset_attachment') }}" target="_blank">{{ $att->original_filename ?? $att->file_path }}</a>
                             <div class="fs-meta">{{ ucfirst(str_replace('_', ' ', $att->context ?? 'general')) }} &middot; {{ $att->uploadedBy->name ?? '-' }} &middot; {{ $att->created_at?->format('d M Y') }}</div>
                         </div>
                         <button class="btn btn-sm btn-light text-danger" onclick="deleteAttachment('{{ encrypt($att->id) }}')">

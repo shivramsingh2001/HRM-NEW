@@ -16,7 +16,6 @@ class ExpenseController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = config('app.url');
 
             // Base query
             $query = Expense::join('users', 'expenses.user_id', '=', 'users.id')
@@ -31,13 +30,7 @@ class ExpenseController extends Controller
                     'users.name as employee_name',
                     'users.id as user_id',
                     'users.role as user_role',
-                    DB::raw("
-                    CASE 
-                        WHEN user_basic_details.profile_image IS NULL OR user_basic_details.profile_image = '' 
-                        THEN NULL
-                        ELSE CONCAT('$baseUrl', user_basic_details.profile_image)
-                    END as employee_profile_image
-                "),
+                    'user_basic_details.profile_image as employee_profile_image',
                     'expense_types.name as expense_type',
                     'expense_types.id as expense_type_id',
                     'expenses.date as expense_date',
@@ -50,13 +43,7 @@ class ExpenseController extends Controller
                     'expenses.status',
                     'expenses.is_billable',
                     'expenses.created_at',
-                    DB::raw("
-                    CASE 
-                        WHEN expenses.file IS NULL OR expenses.file = '' 
-                        THEN NULL
-                        ELSE CONCAT('$baseUrl/', expenses.file)
-                    END as file_url
-                ")
+                    'expenses.file as file_url'
                 );
 
             // Permission-based filtering (was a fixed role switch that
@@ -90,7 +77,11 @@ class ExpenseController extends Controller
             // Order by
             $query->orderBy('expenses.created_at', 'desc');
 
-            $expenses = $query->get();
+            $expenses = $query->get()->each(function ($expense) {
+                // Receipts are private: short-lived signed link; avatar via the storage service.
+                $expense->file_url = app(\App\Services\Expense\ExpenseAttachmentService::class)->url($expense->file_url, (int) $expense->id);
+                $expense->employee_profile_image = file_url($expense->employee_profile_image, 'profile_photo');
+            });
 
             // Calculate summary statistics
             $summary = [

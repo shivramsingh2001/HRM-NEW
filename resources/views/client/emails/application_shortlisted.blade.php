@@ -183,7 +183,7 @@
         <div class="company-footer">
             <div class="company-logo">
                 @if($company->logo)
-                    <img src="{{ asset($company->logo) }}" alt="{{ $company->company_name }}" style="max-width: 120px;">
+                    <img src="{{ file_url($company->logo, 'tenant_logo') }}" alt="{{ $company->company_name }}" style="max-width: 120px;">
                 @endif
             </div>
             <p><strong>{{ $company->company_name }}</strong></p>

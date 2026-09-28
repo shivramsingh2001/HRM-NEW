@@ -811,7 +811,7 @@
                                                 <div class="d-flex align-items-center gap-2">
                                                     <div class="tbl-avatar bg-soft-primary">
                                                         @if ($employee->profile_image)
-                                                            <img src="{{ $employee->profile_image }}">
+                                                            <img src="{{ file_url($employee->profile_image, 'profile_photo') }}">
                                                         @else
                                                             {{ strtoupper(substr($employee->name, 0, 2)) }}
                                                         @endif
@@ -856,7 +856,7 @@
                                                 <div class="d-flex align-items-center gap-2">
                                                     <div class="tbl-avatar bg-soft-success">
                                                         @if ($employee->profile_image)
-                                                            <img src="{{ $employee->profile_image }}">
+                                                            <img src="{{ file_url($employee->profile_image, 'profile_photo') }}">
                                                         @else
                                                             {{ strtoupper(substr($employee->name, 0, 2)) }}
                                                         @endif
@@ -897,7 +897,7 @@
                                                 <div class="d-flex align-items-center gap-2">
                                                     <div class="tbl-avatar bg-soft-warning">
                                                         @if ($employee->profile_image)
-                                                            <img src="{{ $employee->profile_image }}">
+                                                            <img src="{{ file_url($employee->profile_image, 'profile_photo') }}">
                                                         @else
                                                             {{ strtoupper(substr($employee->name, 0, 2)) }}
                                                         @endif

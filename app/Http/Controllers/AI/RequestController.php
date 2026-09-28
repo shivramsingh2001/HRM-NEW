@@ -17,7 +17,6 @@ class RequestController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = config('app.url');
 
             // Base query with joins
             $query = DBRequest::query()
@@ -33,13 +32,7 @@ class RequestController extends Controller
                     'users.name as employee_name',
                     'users.id as user_id',
                     'users.role as user_role',
-                    DB::raw("
-                    CASE 
-                        WHEN user_basic_details.profile_image IS NULL OR user_basic_details.profile_image = '' 
-                        THEN NULL
-                        ELSE CONCAT('$baseUrl', user_basic_details.profile_image)
-                    END as employee_profile_image
-                "),
+                    'user_basic_details.profile_image as employee_profile_image',
                     'request_types.type_name as request_type',
                     'request_types.id as request_type_id',
                     'requests.start_date',
@@ -150,9 +143,9 @@ class RequestController extends Controller
 
             // Get paginated results or all
             if ($request->filled('per_page')) {
-                $requests = $query->paginate($request->per_page);
+                $requests = file_storage()->mapUrls($query->paginate($request->per_page), ['employee_profile_image' => 'profile_photo']);
             } else {
-                $requests = $query->get();
+                $requests = file_storage()->mapUrls($query->get(), ['employee_profile_image' => 'profile_photo']);
             }
 
             // Calculate summary statistics

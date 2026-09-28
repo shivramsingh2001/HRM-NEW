@@ -197,7 +197,7 @@
                                     </div>
                                 </div>
                                 <div class="d-flex gap-1">
-                                    <a href="{{ asset($doc->file_url) }}" target="_blank" class="action-btn" title="View" data-bs-toggle="tooltip">
+                                    <a href="{{ file_url($doc->file_url, 'candidate_document') }}" target="_blank" class="action-btn" title="View" data-bs-toggle="tooltip">
                                         <i class="feather-eye"></i>
                                     </a>
                                     @unless ($doc->is_verified)

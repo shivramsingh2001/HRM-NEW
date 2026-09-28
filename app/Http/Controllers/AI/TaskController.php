@@ -203,8 +203,8 @@ class TaskController extends Controller
                 'is_assigned_to_me' => $assignee && $assignee->id == $authUser->id,
 
                 // Files
-                'file' => $task->file ? asset($task->file) : null,
-                'voice_file' => $task->voice_file ? asset($task->voice_file) : null,
+                'file' => file_url($task->file, 'task_document'),
+                'voice_file' => file_url($task->voice_file, 'task_voice'),
 
                 // Status info
                 'deadline_status' => $deadlineStatus,

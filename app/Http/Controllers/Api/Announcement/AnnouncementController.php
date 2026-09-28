@@ -17,7 +17,6 @@ class AnnouncementController extends Controller
     public function index(Request $request)
     {
         try {
-            $baseUrl = config('app.url');
             $userId = Auth::id();
 
             $announcements = Announcement::notExpired()
@@ -33,25 +32,17 @@ class AnnouncementController extends Controller
                     'announcements.expire_date',
                     'announcement_acknowledgments.acknowledged_at',
                     DB::raw('(announcement_acknowledgments.id IS NOT NULL) as is_acknowledged'),
-                    DB::raw("
-                        CASE
-                            WHEN announcements.file IS NULL OR announcements.file = ''
-                            THEN NULL
-                            ELSE CONCAT('$baseUrl/', announcements.file)
-                        END as file_url
-                    "),
-                    DB::raw("
-                        CASE
-                            WHEN announcements.image IS NULL OR announcements.image = ''
-                            THEN NULL
-                            ELSE CONCAT('$baseUrl/', announcements.image)
-                        END as image_url
-                    ")
+                    'announcements.file as stored_file',
+                    'announcements.image as stored_image'
                 )
                 ->orderBy('announcements.id', 'DESC')
                 ->get()
                 ->map(function ($item) {
                     $item->is_acknowledged = (bool) $item->is_acknowledged;
+                    // Stored paths → loadable URLs (signed when on cloud storage).
+                    $item->file_url = file_url($item->stored_file, 'announcement_file');
+                    $item->image_url = file_url($item->stored_image, 'announcement_image');
+                    unset($item->stored_file, $item->stored_image);
                     return $item;
                 });
 
@@ -71,7 +62,6 @@ class AnnouncementController extends Controller
     {
         try {
             $userId = Auth::id();
-            $baseUrl = config('app.url');
 
             $announcements = Announcement::where('announcements.user_id', $userId)
                 ->whereDate('announcements.created_at', '>=', now())
@@ -88,24 +78,16 @@ class AnnouncementController extends Controller
                     'announcements.expire_date',
                     'announcement_acknowledgments.acknowledged_at',
                     DB::raw('(announcement_acknowledgments.id IS NOT NULL) as is_acknowledged'),
-                    DB::raw("
-                        CASE
-                            WHEN announcements.file IS NULL OR announcements.file = ''
-                            THEN NULL
-                            ELSE CONCAT('$baseUrl/', announcements.file)
-                        END as file_url
-                    "),
-                    DB::raw("
-                        CASE
-                            WHEN announcements.image IS NULL OR announcements.image = ''
-                            THEN NULL
-                            ELSE CONCAT('$baseUrl/', announcements.image)
-                        END as image_url
-                    ")
+                    'announcements.file as stored_file',
+                    'announcements.image as stored_image'
                 )
                 ->get()
                 ->map(function ($item) {
                     $item->is_acknowledged = (bool) $item->is_acknowledged;
+                    // Stored paths → loadable URLs (signed when on cloud storage).
+                    $item->file_url = file_url($item->stored_file, 'announcement_file');
+                    $item->image_url = file_url($item->stored_image, 'announcement_image');
+                    unset($item->stored_file, $item->stored_image);
                     return $item;
                 });
 
@@ -147,28 +129,16 @@ class AnnouncementController extends Controller
             // --------------------------
             // Upload image
             // --------------------------
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $file = $request->file('image');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/announcement/image');
-                $file->move($destinationPath, $filename);
-                $imagePath = 'uploads/announcement/image/' . $filename;
-            }
+            $imagePath = $request->hasFile('image')
+                ? file_storage()->upload($request->file('image'), 'announcement_image')->path
+                : null;
 
             // --------------------------
             // Upload file (optional)
             // --------------------------
-            $filePath = null;
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/announcement/file');
-                $file->move($destinationPath, $filename);
-                $filePath = 'uploads/announcement/file/' . $filename;
-            }
+            $filePath = $request->hasFile('file')
+                ? file_storage()->upload($request->file('file'), 'announcement_file')->path
+                : null;
 
             // --------------------------
             // Create Announcement

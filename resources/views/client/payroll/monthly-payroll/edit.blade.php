@@ -831,7 +831,7 @@
                     <div class="employee-header">
                         <div class="employee-avatar" style="overflow:hidden;">
                             @if ($monthlyPayroll->user->profile_image ?? null)
-                                <img src="{{ asset($monthlyPayroll->user->profile_image) }}" alt=""
+                                <img src="{{ file_url($monthlyPayroll->user->profile_image, 'profile_photo') }}" alt=""
                                     style="width:100%;height:100%;object-fit:cover;">
                             @else
                                 {{ strtoupper(substr($monthlyPayroll->user->name ?? 'NA', 0, 2)) }}

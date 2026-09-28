@@ -380,7 +380,7 @@
                 @if ($candidate->resume_url)
                     <div class="info-card">
                         <div class="info-title"><i class="feather-file-text"></i> Resume</div>
-                        <a href="{{ asset($candidate->resume_url) }}" target="_blank"
+                        <a href="{{ file_url($candidate->resume_url, 'candidate_resume') }}" target="_blank"
                             class="btn btn-outline-primary btn-sm w-100">
                             <i class="feather-download"></i> Download / View Resume
                         </a>

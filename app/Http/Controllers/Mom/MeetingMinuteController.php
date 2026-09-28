@@ -137,15 +137,7 @@ class MeetingMinuteController extends Controller
                     // Handle file attachment
                     $attachmentPath = null;
                     if (isset($taskData['attachment']) && $taskData['attachment'] instanceof \Illuminate\Http\UploadedFile) {
-                        $file = $taskData['attachment'];
-                        $extension = strtolower($file->getClientOriginalExtension());
-                        $filename = time() . '_' . uniqid() . '.' . $extension;
-                        $destinationPath = public_path('uploads/task/document');
-                        if (!file_exists($destinationPath)) {
-                            mkdir($destinationPath, 0755, true);
-                        }
-                        $file->move($destinationPath, $filename);
-                        $attachmentPath = 'uploads/task/document/' . $filename;
+                        $attachmentPath = file_storage()->upload($taskData['attachment'], 'task_document')->path;
                     }
 
                     // Handle voice data (base64 from recording)
@@ -156,13 +148,7 @@ class MeetingMinuteController extends Controller
                         if (strpos($voiceData, 'data:audio/') === 0) {
                             $voiceData = explode(',', $voiceData)[1] ?? '';
                             $voiceBinary = base64_decode($voiceData);
-                            $voiceFileName = time() . '_' . uniqid() . '.wav';
-                            $destinationPath = public_path('uploads/task/voice');
-                            if (!file_exists($destinationPath)) {
-                                mkdir($destinationPath, 0755, true);
-                            }
-                            file_put_contents($destinationPath . '/' . $voiceFileName, $voiceBinary);
-                            $voiceFilePath = 'uploads/task/voice/' . $voiceFileName;
+                            $voiceFilePath = file_storage()->storeContents((string) $voiceBinary, 'task_voice', 'wav')->path;
                         }
                     }
 

@@ -132,7 +132,7 @@
                                             <div class="audio-preview-modern" id="audio_preview_{{ $index }}">
                                                 @if ($task->voice_file)
                                                     <audio controls style="width: 100%; margin-top: 10px;">
-                                                        <source src="{{ asset($task->voice_file) }}" type="audio/wav">
+                                                        <source src="{{ file_url($task->voice_file, 'task_voice') }}" type="audio/wav">
                                                         Your browser does not support the audio element.
                                                     </audio>
                                                     <small class="text-muted">Existing voice note</small>
@@ -146,7 +146,7 @@
                                                 @if ($task->file)
                                                     <div class="existing-file">
                                                         <i class="feather-paperclip"></i>
-                                                        <a href="{{ asset($task->file) }}" target="_blank">View existing file</a>
+                                                        <a href="{{ file_url($task->file, 'task_document') }}" target="_blank">View existing file</a>
                                                         <small class="text-muted">(Upload a new file to replace)</small>
                                                     </div>
                                                 @endif

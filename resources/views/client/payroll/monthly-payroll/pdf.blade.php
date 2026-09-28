@@ -35,18 +35,13 @@
                 <tbody>
                     <tr>
                         @php
-                            $logoPath = null;
-                            if(!empty($company->logo)) {
-                                $fullPath = public_path($company->logo);
-                                if(file_exists($fullPath)) {
-                                    $logoPath = $company->logo;
-                                }
-                            }
+                            // dompdf can't fetch signed cloud URLs: embed the logo bytes instead.
+                            $logoPath = !empty($company->logo) ? file_storage()->dataUri($company->logo, 'tenant_logo') : null;
 
                         @endphp
                         <td style="padding: 8px; padding-bottom: 0px; text-align: center; width: 10%;">
                             @if($logoPath)
-                                <img src="{{ $company->logo }}" alt="{{ $company->company_name ?? 'Logo' }}" style="width: 48px; height: 48px; object-fit: contain;">
+                                <img src="{{ $logoPath }}" alt="{{ $company->company_name ?? 'Logo' }}" style="width: 48px; height: 48px; object-fit: contain;">
                             @else
                                 <img src="{{ asset('assets/images/logo/shurt_logo_black.png') }}" alt="Default Logo" style="width: 48px; height: 48px; object-fit: contain;">
                             @endif

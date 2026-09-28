@@ -62,7 +62,7 @@ class LeaveController extends Controller
 
             // Transform file URLs
             $leaves->transform(function ($leave) {
-                $leave->file = $leave->file ? asset($leave->file) : null;
+                $leave->file = file_url($leave->file, 'leave');
                 return $leave;
             });
 
@@ -249,17 +249,9 @@ class LeaveController extends Controller
 
     private function handleFileUpload($request)
     {
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $directory = public_path('uploads/leave');
-            if (!file_exists($directory)) {
-                mkdir($directory, 0755, true);
-            }
-            $file->move($directory, $filename);
-            return 'uploads/leave/' . $filename;
-        }
-        return null;
+        return $request->hasFile('file')
+            ? file_storage()->upload($request->file('file'), 'leave')->path
+            : null;
     }
 
     public function update(Request $request, $id)
@@ -362,6 +354,10 @@ class LeaveController extends Controller
             DB::beginTransaction();
 
             $filePath = $this->handleFileUpload($request);
+            if ($filePath) {
+                // Replaced document: drop the old one once this update commits.
+                file_storage()->deleteAfterCommit($leave->file, 'leave');
+            }
 
             $leave->update([
                 'leave_type' => $leaveTypeId,
@@ -497,7 +493,7 @@ class LeaveController extends Controller
 
         // Transform file URLs
         $leaves->getCollection()->transform(function ($leave) {
-            $leave->file = $leave->file ? asset($leave->file) : null;
+            $leave->file = file_url($leave->file, 'leave');
             return $leave;
         });
 

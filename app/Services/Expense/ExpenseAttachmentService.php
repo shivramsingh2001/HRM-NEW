@@ -3,20 +3,21 @@
 namespace App\Services\Expense;
 
 use App\Exceptions\ExpenseException;
+use App\Exceptions\FileStorageException;
 use App\Models\Expense;
 use App\Models\ExpenseAttachment;
+use App\Services\Storage\FileStorageService;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The one place expense receipts are stored, referenced and served.
  *
- * - Files go to the PRIVATE `local` disk (storage/app/private), never under
- *   public/, so nothing an employee uploads can ever be executed or fetched
- *   without going through the signed download route.
+ * - Files are stored through FileStorageService (module 'expense'): the private
+ *   Google Cloud Storage bucket, or the PRIVATE `local` disk (storage/app/private)
+ *   when not on the cloud — never under public/, so nothing an employee uploads
+ *   can be executed or fetched without going through the signed download route.
  * - The stored name AND extension are generated server-side (a UUID plus the
  *   extension guessed from the file's real content). The client-supplied
  *   name/extension is never used, so a script/HTML payload cannot be stored
@@ -29,7 +30,10 @@ class ExpenseAttachmentService
 {
     public const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
     public const MAX_KB = 5120;
+    /** Local (non-cloud) disk — only used by expense:migrate-uploads. Storage itself goes through FileStorageService. */
     public const DISK = 'local';
+    /** config/file_storage.php module key. */
+    public const MODULE = 'expense';
     /** Types the OLD upload code accepted — the only legacy files we will ever serve or delete. */
     private const LEGACY_SERVABLE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx'];
     private const URL_TTL_MINUTES = 30;
@@ -40,20 +44,27 @@ class ExpenseAttachmentService
         return 'mimes:' . implode(',', self::ALLOWED_EXTENSIONS) . '|max:' . self::MAX_KB;
     }
 
-    /** @return string path relative to the private disk root, to store in expenses.file */
+    /**
+     * Stored through FileStorageService (module 'expense'): Google Cloud Storage when
+     * FILE_STORAGE_DISK=gcs, otherwise the private local disk.
+     *
+     * @return string relative path, to store in expenses.file
+     */
     public function store(UploadedFile $file, int $tenantId): string
     {
-        $extension = strtolower((string) $file->guessExtension());
-        if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
-            throw new ExpenseException('Unsupported file type. Allowed: ' . implode(', ', self::ALLOWED_EXTENSIONS) . '.', 422);
+        try {
+            return $this->files()->upload($file, self::MODULE, ['tenant' => $tenantId])->path;
+        } catch (FileStorageException $e) {
+            throw new ExpenseException(
+                $e->httpStatus() === 422 ? $e->getMessage() : 'The attachment could not be saved. Please try again.',
+                $e->httpStatus()
+            );
         }
+    }
 
-        $path = $file->storeAs("expense/{$tenantId}/" . date('Y'), Str::uuid() . '.' . $extension, self::DISK);
-        if ($path === false) {
-            throw new ExpenseException('The attachment could not be saved. Please try again.', 500);
-        }
-
-        return $path;
+    private function files(): FileStorageService
+    {
+        return app(FileStorageService::class);
     }
 
     public function delete(?string $path): void
@@ -71,7 +82,7 @@ class ExpenseAttachmentService
             return;
         }
 
-        Storage::disk(self::DISK)->delete($path);
+        $this->files()->delete($path, self::MODULE);
     }
 
     /**
@@ -159,9 +170,7 @@ class ExpenseAttachmentService
 
     public function streamAttachment(ExpenseAttachment $attachment): Response
     {
-        abort_unless($attachment->file_path && Storage::disk(self::DISK)->exists($attachment->file_path), 404);
-
-        return Storage::disk(self::DISK)->response($attachment->file_path, null, ['X-Content-Type-Options' => 'nosniff']);
+        return $this->files()->stream($attachment->file_path, self::MODULE, $attachment->file_name ?: null);
     }
 
     /** Remove only the stored FILE (the row is deleted by the caller inside its transaction). */
@@ -230,9 +239,7 @@ class ExpenseAttachmentService
             return response()->file($full, ['X-Content-Type-Options' => 'nosniff']);
         }
 
-        abort_unless(Storage::disk(self::DISK)->exists($path), 404);
-
-        return Storage::disk(self::DISK)->response($path, null, ['X-Content-Type-Options' => 'nosniff']);
+        return $this->files()->stream($path, self::MODULE);
     }
 
     /**

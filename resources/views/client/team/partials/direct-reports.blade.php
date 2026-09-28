@@ -28,7 +28,7 @@
                     <a href="{{ route('team.member-detail', encrypt($report->id)) }}"
                         class="text-decoration-none d-block report-row-card">
                         <div class="d-flex align-items-center gap-2 p-2">
-                            <img src="{{ $report->profile_image ? asset($report->profile_image) : asset('/profile2.jpg') }}"
+                            <img src="{{ $report->profile_image ? file_url($report->profile_image, 'profile_photo') : asset('/profile2.jpg') }}"
                                 alt="{{ $report->name }}" class="report-row-avatar">
                             <div class="flex-grow-1 min-w-0">
                                 <div class="fw-semibold fs-12 text-truncate" style="color: #1a2236;">

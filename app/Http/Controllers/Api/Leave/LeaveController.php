@@ -71,7 +71,6 @@ class LeaveController extends Controller
     {
         try {
             $userId = Auth::id();
-            $baseUrl = config('app.url');
             $balanceRow = LeaveBalance::where('user_id', $userId)->first();
             
             $leaves = Leave::where('leaves.user_id', $userId)
@@ -90,15 +89,10 @@ class LeaveController extends Controller
                     'leaves.end_date',
                     'leaves.end_session',
                     'leaves.total_days',
-                    DB::raw("
-                        CASE
-                            WHEN leaves.file IS NULL OR leaves.file = ''
-                            THEN NULL
-                            ELSE CONCAT('$baseUrl/', leaves.file)
-                        END as file_url
-                    ")
+                    'leaves.file as file_url'
                 )
                 ->get();
+            file_storage()->mapUrls($leaves, ['file_url' => 'leave']);
             $allTransactions = LeaveTransaction::with('leaveType')
             ->where('user_id', $userId)
             ->get();
@@ -209,21 +203,9 @@ class LeaveController extends Controller
             /**----------------------------------------------------
              * FILE UPLOAD
              *----------------------------------------------------*/
-            $filePath = null;
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/leave/document');
-
-                // Create directory if not exists
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-
-                $file->move($destinationPath, $filename);
-                $filePath = 'uploads/leave/document/' . $filename;
-            }
+            $filePath = $request->hasFile('file')
+                ? file_storage()->upload($request->file('file'), 'leave', ['tenant' => $user->tenant_id])->path
+                : null;
 
             $insertedLeave = Leave::create([
                 'user_id' => $user->id,
@@ -267,7 +249,6 @@ class LeaveController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = config('app.url');
     
             // Permission-based access (was a fixed role allowlist that
             // silently locked out any custom role holding a real
@@ -306,16 +287,11 @@ class LeaveController extends Controller
                 'leaves.reason',
                 'leaves.status',
                 'leaves.created_at',
-                DB::raw("
-                    CASE 
-                        WHEN leaves.file IS NULL OR leaves.file = '' 
-                        THEN NULL
-                        ELSE CONCAT('$baseUrl/', leaves.file)
-                    END as file_url
-                ")
+                'leaves.file as file_url'
             )
             ->orderBy('leaves.created_at', 'desc')
             ->get();
+            file_storage()->mapUrls($leaves, ['file_url' => 'leave']);
     
             return response()->json([
                 'success' => true,
@@ -462,7 +438,6 @@ class LeaveController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = config('app.url');
             
             // Base query
             $query = Leave::join('users', 'leaves.user_id', '=', 'users.id')
@@ -478,13 +453,7 @@ class LeaveController extends Controller
                     'leaves.start_session as session',
                     'leaves.reason',
                     'leaves.status',
-                    DB::raw("
-                        CASE 
-                            WHEN leaves.file IS NULL OR leaves.file = '' 
-                            THEN NULL
-                            ELSE CONCAT('$baseUrl/', leaves.file)
-                        END as file_url
-                    ")
+                    'leaves.file as file_url'
                 );
     
             // Role-based filtering
@@ -510,7 +479,7 @@ class LeaveController extends Controller
                     ], 200);
             }
     
-            $leaves = $query->get();
+            $leaves = file_storage()->mapUrls($query->get(), ['file_url' => 'leave']);
     
             return response()->json([
                 'success' => true,

@@ -224,10 +224,10 @@
                     @if ($task->file || $task->voice_file)
                         <div class="d-flex gap-2 flex-wrap mb-2">
                             @if ($task->file)
-                                <a href="{{ asset($task->file) }}" class="btn btn-light btn-sm border" target="_blank"><i class="feather-paperclip me-1"></i> Document</a>
+                                <a href="{{ file_url($task->file, 'task_document') }}" class="btn btn-light btn-sm border" target="_blank"><i class="feather-paperclip me-1"></i> Document</a>
                             @endif
                             @if ($task->voice_file)
-                                <a href="{{ asset($task->voice_file) }}" class="btn btn-light btn-sm border" target="_blank"><i class="feather-headphones me-1"></i> Voice Note</a>
+                                <a href="{{ file_url($task->voice_file, 'task_voice') }}" class="btn btn-light btn-sm border" target="_blank"><i class="feather-headphones me-1"></i> Voice Note</a>
                             @endif
                         </div>
                     @endif

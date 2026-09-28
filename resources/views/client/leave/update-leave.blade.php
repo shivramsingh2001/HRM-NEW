@@ -251,7 +251,7 @@
                                                     class="alert alert-light d-flex align-items-center justify-content-between">
                                                     <div>
                                                         <i class="feather-paperclip me-2"></i>
-                                                        <a href="{{ asset('storage/' . $leave->file) }}" target="_blank"
+                                                        <a href="{{ file_url($leave->file, 'leave') }}" target="_blank"
                                                             class="text-primary">
                                                             View Current File
                                                         </a>

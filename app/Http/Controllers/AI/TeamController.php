@@ -115,7 +115,7 @@ class TeamController extends Controller
 
                     // Profile Image
                     'profile_image' => $member->basicDetails?->profile_image
-                        ? $baseUrl . $member->basicDetails->profile_image
+                        ? file_url($member->basicDetails->profile_image, 'profile_photo')
                         : $baseUrl . '/profile2.jpg',
 
                     // Personal Information
@@ -182,10 +182,10 @@ class TeamController extends Controller
 
                     // Documents
                     'documents' => [
-                        'experience_letter' => $member->basicDetails?->experience_letter ? $baseUrl . $member->basicDetails->experience_letter : null,
-                        'tenth_marksheet' => $member->basicDetails?->tenth_marksheet ? $baseUrl . $member->basicDetails->tenth_marksheet : null,
-                        'twelfth_marksheet' => $member->basicDetails?->twelfth_marksheet ? $baseUrl . $member->basicDetails->twelfth_marksheet : null,
-                        'highest_qualification' => $member->basicDetails?->highest_qualification_certificate ? $baseUrl . $member->basicDetails->highest_qualification_certificate : null,
+                        'experience_letter' => $member->basicDetails?->experience_letter ? file_url($member->basicDetails->experience_letter, 'employee_document') : null,
+                        'tenth_marksheet' => $member->basicDetails?->tenth_marksheet ? file_url($member->basicDetails->tenth_marksheet, 'employee_document') : null,
+                        'twelfth_marksheet' => $member->basicDetails?->twelfth_marksheet ? file_url($member->basicDetails->twelfth_marksheet, 'employee_document') : null,
+                        'highest_qualification' => $member->basicDetails?->highest_qualification_certificate ? file_url($member->basicDetails->highest_qualification_certificate, 'employee_document') : null,
                     ],
                 ];
             }

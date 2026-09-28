@@ -435,25 +435,13 @@ class TaskController extends Controller
             $taskCode = $this->generateUniqueTaskCode();
 
             // File uploads (unchanged from your code)
-            $filePath = null;
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $filename = time() . '_' . uniqid() . '.' . strtolower($file->getClientOriginalExtension());
-                $dest = public_path('uploads/task/document');
-                if (!file_exists($dest)) mkdir($dest, 0755, true);
-                $file->move($dest, $filename);
-                $filePath = 'uploads/task/document/' . $filename;
-            }
+            $filePath = $request->hasFile('file')
+                ? file_storage()->upload($request->file('file'), 'task_document')->path
+                : null;
 
-            $voiceFilePath = null;
-            if ($request->hasFile('voice_file')) {
-                $voiceFile = $request->file('voice_file');
-                $voiceFileName = time() . '_' . uniqid() . '.' . strtolower($voiceFile->getClientOriginalExtension());
-                $dest = public_path('uploads/task/voice');
-                if (!file_exists($dest)) mkdir($dest, 0755, true);
-                $voiceFile->move($dest, $voiceFileName);
-                $voiceFilePath = 'uploads/task/voice/' . $voiceFileName;
-            }
+            $voiceFilePath = $request->hasFile('voice_file')
+                ? file_storage()->upload($request->file('voice_file'), 'task_voice')->path
+                : null;
 
             // Decide task_mode + who is assigner
             $isGroup    = $request->self_assigned == 2;
@@ -1510,23 +1498,22 @@ class TaskController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $dest = public_path('uploads/task/attachments');
-        if (!file_exists($dest)) {
-            mkdir($dest, 0755, true);
+        try {
+            // All-or-nothing: if one file fails, the ones already stored are removed.
+            $storedFiles = file_storage()->uploadMany($request->file('files'), 'task_attachment');
+        } catch (\App\Exceptions\FileStorageException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
         }
 
         $created = [];
-        foreach ($request->file('files') as $file) {
-            $filename = time() . '_' . uniqid() . '.' . strtolower($file->getClientOriginalExtension());
-            $file->move($dest, $filename);
-
+        foreach ($storedFiles as $stored) {
             $attachment = TaskAttachment::create([
                 'task_id' => $taskId,
                 'uploaded_by' => $authUser->id,
-                'file_path' => 'uploads/task/attachments/' . $filename,
-                'file_name' => $file->getClientOriginalName(),
-                'file_type' => $file->getClientOriginalExtension(),
-                'file_size' => $file->getSize(),
+                'file_path' => $stored->path,
+                'file_name' => $stored->originalName,
+                'file_type' => $stored->extension,
+                'file_size' => $stored->size,
                 'created_at' => now(),
             ]);
             $attachment->load('uploadedBy');
@@ -1560,9 +1547,7 @@ class TaskController extends Controller
             return response()->json(['success' => false, 'message' => 'You cannot delete this attachment.'], 403);
         }
 
-        if ($attachment->file_path && file_exists(public_path($attachment->file_path))) {
-            @unlink(public_path($attachment->file_path));
-        }
+        file_storage()->delete($attachment->file_path, 'task_attachment');
 
         $attachment->delete();
 

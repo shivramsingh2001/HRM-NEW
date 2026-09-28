@@ -1993,7 +1993,7 @@
                 $('textarea[name="about"]').val(data.basic.about);
 
                 if (data.basic.profile_image) {
-                    $('#profileImagePreview').attr('src', '/' + data.basic.profile_image);
+                    $('#profileImagePreview').attr('src', data.profile_image_url || ('/' + data.basic.profile_image));
                 }
             }
 

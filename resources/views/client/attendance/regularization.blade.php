@@ -888,12 +888,12 @@
                                                     @endphp
 
                                                     @if (in_array($extension, $imageExtensions))
-                                                        <a href="{{ asset($filePath) }}" target="_blank" class="file-preview">
-                                                            <img src="{{ asset($filePath) }}" alt="Attachment"
+                                                        <a href="{{ file_url($filePath, 'regularization') }}" target="_blank" class="file-preview">
+                                                            <img src="{{ file_url($filePath, 'regularization') }}" alt="Attachment"
                                                                 style="width:30px; height:30px; border-radius:4px; object-fit: cover;">
                                                         </a>
                                                     @else
-                                                        <a href="{{ asset($filePath) }}" class="btn btn-sm btn-light" download>
+                                                        <a href="{{ file_url($filePath, 'regularization') }}" class="btn btn-sm btn-light" download>
                                                             <i class="fa fa-download"></i>
                                                         </a>
                                                     @endif

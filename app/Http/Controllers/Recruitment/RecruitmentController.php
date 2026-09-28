@@ -279,21 +279,6 @@ class RecruitmentController extends Controller
      */
     private function uploadResume($file)
     {
-        if ($file) {
-
-            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-    
-            $directory = public_path('uploads/candidate_resumes');
-    
-            if (!file_exists($directory)) {
-                mkdir($directory, 0755, true);
-            }
-    
-            $file->move($directory, $filename);
-    
-            return 'uploads/candidate_resumes/' . $filename;
-        }
-
-        return null;
+        return $file ? file_storage()->upload($file, 'candidate_resume')->path : null;
     }
 }

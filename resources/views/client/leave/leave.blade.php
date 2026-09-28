@@ -533,7 +533,7 @@
                                                 @if ($leave->file)
                                                     @php
                                                         $fileUrl = $leave->file;
-                                                        $extension = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
+                                                        $extension = strtolower(pathinfo((string) parse_url($fileUrl, PHP_URL_PATH), PATHINFO_EXTENSION));
 
                                                         $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
                                                     @endphp

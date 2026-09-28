@@ -217,7 +217,7 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
-                                            <img src="{{ $emp->basicDetails->profile_image ?? asset('assets/images/avatar/default.png') }}" 
+                                            <img src="{{ file_url($emp->basicDetails->profile_image ?? null, 'profile_photo') ?? asset('assets/images/avatar/default.png') }}" 
                                                  alt="" width="32" height="32" class="rounded-circle">
                                             <span>{{ $emp->name }}</span>
                                         </div>

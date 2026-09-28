@@ -91,7 +91,7 @@ class UserController extends Controller
                     'dob' => $user->basicDetails?->dob,
                     'gender' => $user->basicDetails?->gender,
                     'profile_image' => $user->basicDetails?->profile_image
-                        ? $baseUrl . $user->basicDetails->profile_image
+                        ? file_url($user->basicDetails->profile_image, 'profile_photo')
                         : $baseUrl . '/profile2.jpg',
                     'blood_group' => $user->basicDetails?->blood_group,
                     'marital_status' => $user->basicDetails?->marital_status,
@@ -139,16 +139,16 @@ class UserController extends Controller
 
                 'documents' => [
                     'experience_letter' => $user->basicDetails?->experience_letter
-                        ? $baseUrl . $user->basicDetails->experience_letter
+                        ? file_url($user->basicDetails->experience_letter, 'employee_document')
                         : null,
                     'tenth_marksheet' => $user->basicDetails?->tenth_marksheet
-                        ? $baseUrl . $user->basicDetails->tenth_marksheet
+                        ? file_url($user->basicDetails->tenth_marksheet, 'employee_document')
                         : null,
                     'twelfth_marksheet' => $user->basicDetails?->twelfth_marksheet
-                        ? $baseUrl . $user->basicDetails->twelfth_marksheet
+                        ? file_url($user->basicDetails->twelfth_marksheet, 'employee_document')
                         : null,
                     'highest_qualification_certificate' => $user->basicDetails?->highest_qualification_certificate
-                        ? $baseUrl . $user->basicDetails->highest_qualification_certificate
+                        ? file_url($user->basicDetails->highest_qualification_certificate, 'employee_document')
                         : null,
                 ],
                 // Full dynamic document list (any number, any type incl. "other").
@@ -157,7 +157,7 @@ class UserController extends Controller
                     'document_type' => $document->document_type,
                     'document_type_label' => $document->document_type_label,
                     'document_name' => $document->document_name,
-                    'file_url' => $baseUrl . $document->file_path,
+                    'file_url' => file_url($document->file_path, 'employee_document'),
                 ])->values(),
             ];
 
@@ -295,7 +295,7 @@ class UserController extends Controller
                     'designation' => $member->jobDetails?->designationRel?->name,
                     'department' => $member->jobDetails?->departmentRel?->name,
                     'profile_image' => $member->basicDetails?->profile_image
-                        ? $baseUrl . $member->basicDetails->profile_image
+                        ? file_url($member->basicDetails->profile_image, 'profile_photo')
                         : $baseUrl . '/profile2.jpg',
                     'punch_in' => $attendance?->clock_in,
                     'punch_out' => $attendance?->clock_out,
@@ -453,7 +453,7 @@ class UserController extends Controller
                         'designation' => $member->jobDetails?->designationRel?->name ?? 'N/A',
                         'department' => $member->jobDetails?->departmentRel?->name ?? 'N/A',
                         'profile_image' => $member->basicDetails?->profile_image
-                            ? asset($member->basicDetails->profile_image)
+                            ? file_url($member->basicDetails->profile_image, 'profile_photo')
                             : asset('/profile2.jpg'),
                         'punch_in' => $attendance?->clock_in,
                         'punch_out' => $attendance?->clock_out,
@@ -742,7 +742,7 @@ class UserController extends Controller
                     'dob' => $user->basicDetails?->dob,
                     'gender' => $user->basicDetails?->gender,
                     'profile_image' => $user->basicDetails?->profile_image
-                        ? asset($user->basicDetails->profile_image)
+                        ? file_url($user->basicDetails->profile_image, 'profile_photo')
                         : asset('/profile2.jpg'),
                     'blood_group' => $user->basicDetails?->blood_group,
                     'marital_status' => $user->basicDetails?->marital_status,
@@ -805,10 +805,10 @@ class UserController extends Controller
                 ],
 
                 'documents' => [
-                    'experience_letter' => $user->basicDetails?->experience_letter ? asset($user->basicDetails->experience_letter) : null,
-                    'tenth_marksheet' => $user->basicDetails?->tenth_marksheet ? asset($user->basicDetails->tenth_marksheet) : null,
-                    'twelfth_marksheet' => $user->basicDetails?->twelfth_marksheet ? asset($user->basicDetails->twelfth_marksheet) : null,
-                    'highest_qualification_certificate' => $user->basicDetails?->highest_qualification_certificate ? asset($user->basicDetails->highest_qualification_certificate) : null,
+                    'experience_letter' => $user->basicDetails?->experience_letter ? file_url($user->basicDetails->experience_letter, 'employee_document') : null,
+                    'tenth_marksheet' => $user->basicDetails?->tenth_marksheet ? file_url($user->basicDetails->tenth_marksheet, 'employee_document') : null,
+                    'twelfth_marksheet' => $user->basicDetails?->twelfth_marksheet ? file_url($user->basicDetails->twelfth_marksheet, 'employee_document') : null,
+                    'highest_qualification_certificate' => $user->basicDetails?->highest_qualification_certificate ? file_url($user->basicDetails->highest_qualification_certificate, 'employee_document') : null,
                 ],
                 // Full dynamic document list (any number, any type incl. "other").
                 'documents_list' => $user->documents->map(fn ($document) => [
@@ -816,7 +816,7 @@ class UserController extends Controller
                     'document_type' => $document->document_type,
                     'document_type_label' => $document->document_type_label,
                     'document_name' => $document->document_name,
-                    'file_url' => asset($document->file_path),
+                    'file_url' => file_url($document->file_path, 'employee_document'),
                 ])->values(),
             ];
 
@@ -868,23 +868,13 @@ class UserController extends Controller
         try {
             // Handle profile photo upload
             if ($request->hasFile('profile_photo')) {
-                $uploadPath = public_path('uploads/users');
-                if (!File::exists($uploadPath)) {
-                    File::makeDirectory($uploadPath, 0755, true, true);
-                }
-
-                // Delete old file if exists
-                if ($user->basicDetails && $user->basicDetails->profile_image) {
-                    $oldFilePath = public_path($user->basicDetails->profile_image);
-                    if (File::exists($oldFilePath)) {
-                        File::delete($oldFilePath);
-                    }
-                }
-
-                // Upload new file
-                $fileName = time() . '_' . $user->employee_id . '_profile.' . $request->file('profile_photo')->getClientOriginalExtension();
-                $request->file('profile_photo')->move($uploadPath, $fileName);
-                $profileImage = 'uploads/users/' . $fileName;
+                // New photo stored first; the old one is removed after commit.
+                $profileImage = file_storage()->replace(
+                    $user->basicDetails?->profile_image,
+                    $request->file('profile_photo'),
+                    'profile_photo',
+                    ['tenant' => $user->tenant_id]
+                )->path;
             }
 
             // Update or create basic details
@@ -934,6 +924,12 @@ class UserController extends Controller
                 'success' => true,
                 'message' => 'Profile updated successfully',
             ], 200);
+        } catch (\App\Exceptions\FileStorageException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], $e->httpStatus() === 422 ? 200 : 500);
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -1337,7 +1333,7 @@ class UserController extends Controller
                     'contact' => $user->contact,
                     // 'gender' => $user->basicDetails?->gender,
                     'profile_image' => $user->basicDetails?->profile_image
-                        ? $baseUrl . $user->basicDetails->profile_image
+                        ? file_url($user->basicDetails->profile_image, 'profile_photo')
                         : $baseUrl . '/profile2.jpg',
                     'designation' => $user->jobDetails?->designationRel?->name,
                     'department' => $user->jobDetails?->departmentRel?->name,

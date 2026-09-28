@@ -546,7 +546,7 @@ class TeamController extends Controller
 
             // Format profile image URL
             $profileImage = $userInfo->profile_image
-                ? asset($userInfo->profile_image)
+                        ? file_url($userInfo->profile_image, 'profile_photo')
                 : asset('/profile2.jpg');
 
             // Format documents
@@ -683,10 +683,10 @@ class TeamController extends Controller
     private function getUserDocuments($userInfo)
     {
         return [
-            'experience_letter' => $userInfo->experience_letter ? asset($userInfo->experience_letter) : null,
-            'tenth_marksheet' => $userInfo->tenth_marksheet ? asset($userInfo->tenth_marksheet) : null,
-            'twelfth_marksheet' => $userInfo->twelfth_marksheet ? asset($userInfo->twelfth_marksheet) : null,
-            'highest_qualification_certificate' => $userInfo->highest_qualification_certificate ? asset($userInfo->highest_qualification_certificate) : null,
+            'experience_letter' => file_url($userInfo->experience_letter, 'employee_document'),
+            'tenth_marksheet' => file_url($userInfo->tenth_marksheet, 'employee_document'),
+            'twelfth_marksheet' => file_url($userInfo->twelfth_marksheet, 'employee_document'),
+            'highest_qualification_certificate' => file_url($userInfo->highest_qualification_certificate, 'employee_document'),
         ];
     }
 

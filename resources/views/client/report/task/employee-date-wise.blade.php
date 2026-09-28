@@ -571,7 +571,7 @@
                                 <div class="employee-info">
                                     <div class="employee-avatar">
                                         @if(!empty($u->profile_image))
-                                            <img src="{{ asset($u->profile_image) }}" alt="{{ $u->name }}">
+                                            <img src="{{ file_url($u->profile_image, 'profile_photo') }}" alt="{{ $u->name }}">
                                         @else
                                             {{ strtoupper(substr($u->name, 0, 2)) }}
                                         @endif

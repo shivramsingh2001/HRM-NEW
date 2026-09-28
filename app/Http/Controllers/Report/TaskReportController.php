@@ -581,12 +581,18 @@ class TaskReportController extends Controller
             ->get()
             ->groupBy('task_id');
 
+        // Loadable URLs next to the stored paths (the detail modal's JS reads the *_url fields).
+        $files = file_storage();
+        $withAvatar = fn ($people) => $people->each(fn ($p) => $p->profile_image_url = $files->url($p->profile_image, 'profile_photo'));
+
         foreach ($tasks as $task) {
-            $task->assigners    = $assignersMap->get($task->id, collect());
-            $task->assignees    = $assigneesMap->get($task->id, collect());
+            $task->assigners    = $withAvatar($assignersMap->get($task->id, collect()));
+            $task->assignees    = $withAvatar($assigneesMap->get($task->id, collect()));
             $task->updates      = $updatesMap->get($task->id, collect());
             $task->approvals    = $approvalsMap->get($task->id, collect());
             $task->update_count = $task->updates->count();
+            $task->file_url       = $files->url($task->file ?? null, 'task_document');
+            $task->voice_file_url = $files->url($task->voice_file ?? null, 'task_voice');
         }
 
         return [$tasks, $from, $to];
@@ -839,8 +845,9 @@ class TaskReportController extends Controller
                     $lastUpdate   = $t->updates->sortByDesc('created_at')->first();
                     $lastApproval = $t->approvals->sortByDesc('created_at')->first();
 
-                    $fileUrl      = !empty($t->file)       ? url($t->file)       : '';
-                    $voiceFileUrl = !empty($t->voice_file) ? url($t->voice_file) : '';
+                    // Exported links must outlive the download: use the 7-day signed-URL lifetime.
+                    $fileUrl      = file_url($t->file, 'task_document', 10080) ?? '';
+                    $voiceFileUrl = file_url($t->voice_file, 'task_voice', 10080) ?? '';
 
                     fputcsv($out, [
                         $t->task_code,

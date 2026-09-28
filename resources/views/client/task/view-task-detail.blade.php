@@ -653,7 +653,7 @@
                                             <div class="update-meta">
                                                 <div class="employee-info">
                                                     @if ($update->updated_by_image)
-                                                        <img src="{{ $update->updated_by_image }}" alt="Avatar"
+                                                        <img src="{{ file_url($update->updated_by_image, 'profile_photo') }}" alt="Avatar"
                                                             class="employee-avatar">
                                                     @else
                                                         <img src="{{ asset('assets/images/avatar/1.png') }}" alt="Avatar"
@@ -707,7 +707,7 @@
                             <div class="mb-3">
                                 <div class="detail-label mb-2">Assigned By</div>
                                 <div class="employee-info">
-                                    <img src="{{ $task->assigned_by_image ?: asset('assets/images/avatar/1.png') }}"
+                                    <img src="{{ file_url($task->assigned_by_image, 'profile_photo') ?: asset('assets/images/avatar/1.png') }}"
                                         class="employee-avatar">
                                     <div class="employee-details">
                                         <div class="employee-name">{{ $task->assigned_by_name }}</div>
@@ -744,7 +744,7 @@
                                         <div class="d-flex align-items-center justify-content-between mb-2 p-2"
                                             style="background:#f9fafb;border-radius:6px;">
                                             <div class="employee-info">
-                                                <img src="{{ $m->profile_image ?: asset('assets/images/avatar/1.png') }}"
+                                                <img src="{{ file_url($m->profile_image, 'profile_photo') ?: asset('assets/images/avatar/1.png') }}"
                                                     class="employee-avatar">
                                                 <div class="employee-details">
                                                     <div class="employee-name">
@@ -766,7 +766,7 @@
                                 <div>
                                     <div class="detail-label mb-2">Assigned To</div>
                                     <div class="employee-info">
-                                        <img src="{{ $task->assigned_to_image ?: asset('assets/images/avatar/1.png') }}"
+                                        <img src="{{ file_url($task->assigned_to_image, 'profile_photo') ?: asset('assets/images/avatar/1.png') }}"
                                             class="employee-avatar">
                                         <div class="employee-details">
                                             <div class="employee-name">{{ $task->assigned_to_name }}</div>
@@ -790,7 +790,7 @@
                         <div class="detail-section">
                             @if ($task->file)
                                 @php
-                                    $filePath = asset($task->file);
+                                    $filePath = file_url($task->file, 'task_document');
                                     $fileName = basename($task->file);
                                 @endphp
                                 <div class="mb-3">
@@ -803,7 +803,7 @@
 
                             @if ($task->voice_file)
                                 @php
-                                    $voicePath = asset($task->voice_file);
+                                    $voicePath = file_url($task->voice_file, 'task_voice');
                                 @endphp
                                 <div class="mb-3">
                                     <div class="detail-label mb-2">Voice Message</div>
@@ -910,7 +910,7 @@
                                             <td class="detail-value">
                                                 <div class="employee-info">
                                                     @if ($approval->approved_by_image)
-                                                        <img src="{{ $approval->approved_by_image }}" alt="Avatar"
+                                                        <img src="{{ file_url($approval->approved_by_image, 'profile_photo') }}" alt="Avatar"
                                                             class="employee-avatar">
                                                     @else
                                                         <img src="{{ asset('assets/images/avatar/1.png') }}"

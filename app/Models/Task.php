@@ -84,7 +84,7 @@ class Task extends Model
      */
     public function getFileUrlAttribute()
     {
-        return $this->file ? asset($this->file) : null;
+        return file_url($this->file, 'task_document');
     }
 
     /**
@@ -92,7 +92,7 @@ class Task extends Model
      */
     public function getVoiceFileUrlAttribute()
     {
-        return $this->voice_file ? asset($this->voice_file) : null;
+        return file_url($this->voice_file, 'task_voice');
     }
 
     /**

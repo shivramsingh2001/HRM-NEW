@@ -579,7 +579,7 @@ $role = $user->role;
                 <div class="announcement-card">
                     <div class="announcement-image-wrapper">
                         @if($announcement->image)
-                            <img src="{{ asset($announcement->image) }}" 
+                            <img src="{{ file_url($announcement->image, 'announcement_image') }}" 
                                  alt="{{ $announcement->title }}" 
                                  class="announcement-image">
                         @else
@@ -621,7 +621,7 @@ $role = $user->role;
                         <div class="announcement-footer">
                             <div class="d-flex align-items-center gap-2">
                                 @if($announcement->file)
-                                    <a href="{{ asset($announcement->file) }}" 
+                                    <a href="{{ file_url($announcement->file, 'announcement_file') }}" 
                                        download 
                                        class="file-attachment">
                                         <i class="feather-paperclip"></i>
@@ -646,8 +646,8 @@ $role = $user->role;
                                            data-id="{{ $announcement->id }}"
                                            data-title="{{ $announcement->title }}"
                                            data-description="{{ $announcement->description }}"
-                                           data-image="{{ $announcement->image }}"
-                                           data-file="{{ $announcement->file }}"
+                                           data-image="{{ file_url($announcement->image, 'announcement_image') }}"
+                                           data-file="{{ file_url($announcement->file, 'announcement_file') }}"
                                            data-acknowledge="{{ $announcement->acknowledge }}"
                                            data-status="{{ $announcement->status }}"
                                            data-expire-date="{{ $announcement->expire_date ? \Carbon\Carbon::parse($announcement->expire_date)->format('Y-m-d') : '' }}">

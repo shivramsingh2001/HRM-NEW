@@ -243,21 +243,9 @@ class LoanController extends Controller
                     'message' => "Amount exceeds maximum limit of ₹" . number_format($category->max_amount, 2),
                 ], 200);
             }
-            $filePath= null;
-            if ($request->hasFile('document_path')) {
-                $file = $request->file('document_path');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/loan');
-
-                // Create directory if not exists
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-
-                $file->move($destinationPath, $filename);
-                $filePath = 'uploads/loan/' . $filename;
-            }
+            $filePath = $request->hasFile('document_path')
+                ? file_storage()->upload($request->file('document_path'), 'loan')->path
+                : null;
 
 
             // ========== LUMP SUM LOAN ==========

@@ -1478,7 +1478,7 @@
                                                 <a href="{{ route('employee.show', ['id' => encrypt($user->id)]) }}">
                                                 <div class="employee-info">
                                                     @if ($user->profile_image)
-                                                        <img src="{{ asset($user->profile_image) }}"
+                                                        <img src="{{ file_url($user->profile_image, 'profile_photo') }}"
                                                             class="employee-avatar" alt="{{ $user->name }}">
                                                     @else
                                                         <div class="employee-avatar">
@@ -2903,7 +2903,7 @@
                 $('#employeeForm textarea[name="about"]').val(data.basic.about);
 
                 if (data.basic.profile_image) {
-                    $('#profileImagePreview').attr('src', '/' + data.basic.profile_image);
+                    $('#profileImagePreview').attr('src', data.profile_image_url || ('/' + data.basic.profile_image));
                 }
             }
 

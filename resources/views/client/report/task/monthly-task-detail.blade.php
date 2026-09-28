@@ -802,9 +802,9 @@
                                             $ext = strtolower(pathinfo($task->file, PATHINFO_EXTENSION));
                                             $isImage = in_array($ext, ['jpg','jpeg','png','gif','webp']);
                                         @endphp
-                                        <a href="{{ asset($task->file) }}" target="_blank" class="media-chip file" title="Open document">
+                                        <a href="{{ file_url($task->file, 'task_document') }}" target="_blank" class="media-chip file" title="Open document">
                                             @if($isImage)
-                                                <img src="{{ asset($task->file) }}" alt="file">
+                                                <img src="{{ file_url($task->file, 'task_document') }}" alt="file">
                                             @else
                                                 <i class="feather-paperclip"></i>
                                             @endif
@@ -813,7 +813,7 @@
                                     @endif
 
                                     @if(!empty($task->voice_file))
-                                        <a href="{{ asset($task->voice_file) }}" target="_blank" class="media-chip voice" title="Play voice note">
+                                        <a href="{{ file_url($task->voice_file, 'task_voice') }}" target="_blank" class="media-chip voice" title="Play voice note">
                                             <i class="feather-mic"></i>
                                             Voice Note
                                         </a>
@@ -866,7 +866,7 @@
                                 <div class="person-chip">
                                     <div class="person-avatar">
                                         @if(!empty($a->profile_image))
-                                            <img src="{{ asset($a->profile_image) }}" alt="{{ $a->name }}">
+                                            <img src="{{ file_url($a->profile_image, 'profile_photo') }}" alt="{{ $a->name }}">
                                         @else
                                             {{ strtoupper(substr($a->name, 0, 2)) }}
                                         @endif
@@ -887,7 +887,7 @@
                                 <div class="person-chip">
                                     <div class="person-avatar">
                                         @if(!empty($a->profile_image))
-                                            <img src="{{ asset($a->profile_image) }}" alt="{{ $a->name }}">
+                                            <img src="{{ file_url($a->profile_image, 'profile_photo') }}" alt="{{ $a->name }}">
                                         @else
                                             {{ strtoupper(substr($a->name, 0, 2)) }}
                                         @endif
@@ -1060,7 +1060,7 @@
 
             function personChip(person) {
                 const name   = esc(person.name || '-');
-                const img    = person.profile_image ? '{{ asset("") }}' + person.profile_image : null;
+                const img    = person.profile_image_url || null;
                 const initials = (person.name || '??').substring(0, 2).toUpperCase();
 
                 const avatar = img
@@ -1113,7 +1113,7 @@
                     if (task.file) {
                         const ext = (task.file.split('.').pop() || '').toLowerCase();
                         const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext);
-                        const url = '{{ asset("") }}' + task.file;
+                        const url = task.file_url;
 
                         html += '<div class="detail-media-card">';
                         if (isImg) {
@@ -1127,7 +1127,7 @@
                     }
 
                     if (task.voice_file) {
-                        const vurl = '{{ asset("") }}' + task.voice_file;
+                        const vurl = task.voice_file_url;
                         html += '<div class="detail-media-card">';
                         html += '<div class="media-icon"><i class="feather-mic"></i></div>';
                         html += '<div class="media-label">Voice Note</div>';

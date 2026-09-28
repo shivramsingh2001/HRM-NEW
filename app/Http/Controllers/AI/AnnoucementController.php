@@ -16,7 +16,6 @@ class AnnoucementController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = config('app.url');
 
             // Base query with JOIN to users table
             $query = Announcement::select(
@@ -30,20 +29,8 @@ class AnnoucementController extends Controller
                 'users.name as user_name',
                 'users.employee_id as user_employee_id',
                 'users.role as user_role',
-                DB::raw("
-                    CASE 
-                        WHEN announcements.file IS NULL OR announcements.file = '' 
-                        THEN NULL
-                        ELSE CONCAT('$baseUrl/', announcements.file)
-                    END as file_url
-                "),
-                DB::raw("
-                    CASE 
-                        WHEN announcements.image IS NULL OR announcements.image = '' 
-                        THEN NULL
-                        ELSE CONCAT('$baseUrl/', announcements.image)
-                    END as image_url
-                ")
+                'announcements.file as file_url',
+                'announcements.image as image_url'
             )
             ->leftJoin('users', 'announcements.user_id', '=', 'users.id'); // JOIN with users table
 
@@ -78,7 +65,7 @@ class AnnoucementController extends Controller
             // Order by
             $query->orderBy('announcements.id', 'DESC');
 
-            $announcements = $query->get();
+            $announcements = file_storage()->mapUrls($query->get(), ['file_url' => 'announcement_file', 'image_url' => 'announcement_image']);
 
             // Enhance announcements with additional data
             $enhancedAnnouncements = $announcements->map(function ($announcement) use ($authUser) {

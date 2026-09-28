@@ -22,7 +22,6 @@ class LeaveController extends Controller
     {
         try {
             $authUser = Auth::user();
-            $baseUrl = config('app.url');
             $currentYear = date('Y');
 
             // Base query for leaves
@@ -50,13 +49,7 @@ class LeaveController extends Controller
                     'leaves.status',
                     'leaves.created_at',
                     'leaves.updated_at',
-                    DB::raw("
-                    CASE 
-                        WHEN leaves.file IS NULL OR leaves.file = '' 
-                        THEN NULL
-                        ELSE CONCAT('$baseUrl/', leaves.file)
-                    END as file_url
-                ")
+                    'leaves.file as file_url'
                 );
 
             // Permission-based filtering (was a fixed role switch that
@@ -113,7 +106,7 @@ class LeaveController extends Controller
                 $query->whereYear('leaves.start_date', $currentYear);
             }
 
-            $leaves = $query->orderBy('leaves.created_at', 'desc')->get();
+            $leaves = file_storage()->mapUrls($query->orderBy('leaves.created_at', 'desc')->get(), ['file_url' => 'leave']);
 
             // Get all user IDs from leaves
             $userIds = $leaves->pluck('user_id')->unique()->toArray();

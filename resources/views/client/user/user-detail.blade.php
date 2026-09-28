@@ -467,7 +467,7 @@
                         <div class="text-center">
                             <div class="wd-140 ht-140 mx-auto mb-3">
                                 @if ($user->basicDetails && $user->basicDetails->profile_image)
-                                    <img src="{{ asset($user->basicDetails->profile_image) }}"
+                                    <img src="{{ file_url($user->basicDetails->profile_image, 'profile_photo') }}"
                                         class="profile-image-large" alt="{{ $user->name }}">
                                 @else
                                     <img src="{{ asset('assets/images/avatar/1.png') }}"
@@ -1008,8 +1008,8 @@
                                                 <div class="card-body text-center p-3">
                                                     <div class="document-preview-container">
                                                         @if ($isImage)
-                                                            <a href="{{ asset($path) }}" target="_blank">
-                                                                <img src="{{ asset($path) }}" class="document-thumb"
+                                                            <a href="{{ file_url($path, 'employee_document') }}" target="_blank">
+                                                                <img src="{{ file_url($path, 'employee_document') }}" class="document-thumb"
                                                                     alt="{{ $document['label'] }}">
                                                             </a>
                                                         @elseif($isPdf)
@@ -1037,11 +1037,11 @@
                                                     @endif
 
                                                     <div class="d-flex gap-2 justify-content-center">
-                                                        <a href="{{ asset($path) }}" target="_blank"
+                                                        <a href="{{ file_url($path, 'employee_document') }}" target="_blank"
                                                             class="btn btn-sm btn-light-brand">
                                                             <i class="feather-eye"></i>
                                                         </a>
-                                                        <a href="{{ asset($path) }}" download="{{ $filename }}"
+                                                        <a href="{{ file_url($path, 'employee_document') }}" download="{{ $filename }}"
                                                             class="btn btn-sm btn-primary">
                                                             <i class="feather-download"></i>
                                                         </a>

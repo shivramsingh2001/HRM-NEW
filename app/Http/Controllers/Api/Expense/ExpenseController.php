@@ -295,7 +295,6 @@ class ExpenseController extends Controller
             // Summary numbers for the (previously empty) `statistics` block: one grouped query.
             $matrix = $this->stats->matrix($expenseQuery);
 
-            $baseUrl = config('app.url');
             $expenses = $expenseQuery
                 ->select(
                     'expenses.id',
@@ -303,13 +302,7 @@ class ExpenseController extends Controller
                     'users.employee_id',
                     'users.name as employee_name',
                     'users.email as employee_email',
-                    DB::raw("
-                        CASE
-                            WHEN user_basic_details.profile_image IS NULL OR user_basic_details.profile_image = ''
-                            THEN NULL
-                            ELSE CONCAT('$baseUrl', user_basic_details.profile_image)
-                        END as employee_profile_image
-                    "),
+                    'user_basic_details.profile_image as employee_profile_image',
                     'expense_types.name as expense_type',
                     'expenses.date',
                     'projects.name as project_name',
@@ -325,6 +318,7 @@ class ExpenseController extends Controller
                 ->get()
                 ->each(function ($expense) {
                     $expense->file_url = $this->attachments->url($expense->file, (int) $expense->id);
+                    $expense->employee_profile_image = file_url($expense->employee_profile_image, 'profile_photo');
                     $expense->makeHidden('file');
                 });
 

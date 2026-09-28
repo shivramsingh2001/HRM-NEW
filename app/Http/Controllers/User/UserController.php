@@ -490,26 +490,16 @@ class UserController extends Controller
     private function handleFileUploads($request, $employeeId)
     {
         $filePaths = [];
-        $fileFields = [
-            'profile_photo',
-        ];
 
-        $uploadPath = public_path('uploads/users/' . $employeeId);
+        if ($request->hasFile('profile_photo')) {
+            // Replace: the new photo is stored first, the old one removed after commit.
+            $oldPhoto = $employeeId
+                ? UserBasicDetail::whereHas('user', fn ($q) => $q->where('employee_id', $employeeId))->value('profile_image')
+                : null;
 
-        if (!File::exists($uploadPath)) {
-            File::makeDirectory($uploadPath, 0755, true, true);
-        }
-
-        foreach ($fileFields as $field) {
-            if ($request->hasFile($field)) {
-                // Delete old file if exists
-                $oldFile = $uploadPath . '/' . $field . '.*';
-                array_map('unlink', glob($oldFile));
-
-                $fileName = $field . '.' . $request->file($field)->getClientOriginalExtension();
-                $request->file($field)->move($uploadPath, $fileName);
-                $filePaths[$field] = 'uploads/users/' . $employeeId . '/' . $fileName;
-            }
+            $filePaths['profile_photo'] = file_storage()
+                ->replace($oldPhoto, $request->file('profile_photo'), 'profile_photo')
+                ->path;
         }
 
         return $filePaths;
@@ -550,11 +540,6 @@ class UserController extends Controller
      */
     private function saveEmployeeDocuments(User $user, array $rows): void
     {
-        $uploadPath = public_path('uploads/users/' . $user->employee_id . '/documents');
-        if (!File::exists($uploadPath)) {
-            File::makeDirectory($uploadPath, 0755, true, true);
-        }
-
         $keptIds = [];
 
         foreach ($rows as $row) {
@@ -580,15 +565,14 @@ class UserController extends Controller
             $document->document_name = $row['document_name'] ?? null;
 
             if ($file) {
-                if ($document->file_path && File::exists(public_path($document->file_path))) {
-                    File::delete(public_path($document->file_path));
-                }
-                $fileName = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
-                $file->move($uploadPath, $fileName);
-                $document->file_path = 'uploads/users/' . $user->employee_id . '/documents/' . $fileName;
-                $document->original_filename = $file->getClientOriginalName();
-                $document->mime_type = $file->getClientMimeType();
-                $document->file_size = $file->getSize();
+                $stored = file_storage()->replace($document->file_path, $file, 'employee_document', [
+                    'tenant' => $user->tenant_id,
+                    'user' => $user->id,
+                ]);
+                $document->file_path = $stored->path;
+                $document->original_filename = $stored->originalName;
+                $document->mime_type = $stored->mimeType;
+                $document->file_size = $stored->size;
             }
 
             $document->tenant_id = $document->tenant_id ?? $user->tenant_id;
@@ -603,9 +587,7 @@ class UserController extends Controller
             ->whereNotIn('id', $keptIds)
             ->get()
             ->each(function (EmployeeDocument $document) {
-                if ($document->file_path && File::exists(public_path($document->file_path))) {
-                    File::delete(public_path($document->file_path));
-                }
+                file_storage()->deleteAfterCommit($document->file_path, 'employee_document');
                 $document->delete();
             });
     }
@@ -1072,13 +1054,15 @@ class UserController extends Controller
                 'document_type' => $document->document_type,
                 'document_type_other' => $document->document_type_other,
                 'document_name' => $document->document_name,
-                'file_path' => asset($document->file_path),
+                'file_path' => file_url($document->file_path, 'employee_document'),
                 'filename' => $document->original_filename ?: basename($document->file_path),
             ])->values();
 
             $data = [
                 'user' => $user,
                 'basic' => $user->basicDetails,
+                // Loadable URL for the stored photo (signed when on cloud storage).
+                'profile_image_url' => file_url($user->basicDetails?->profile_image, 'profile_photo'),
                 'job' => $jobData,
                 'bank' => $user->bankDetails,
                 'location' => $user->location,

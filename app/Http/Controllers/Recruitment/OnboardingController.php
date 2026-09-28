@@ -76,20 +76,14 @@ class OnboardingController extends Controller
 
             $assignment = OnboardingAssignment::findOrFail($assignmentId);
 
-            $file = $request->file('file');
-            $directory = public_path('uploads/candidate_documents/' . $assignment->candidate_id);
-            if (!File::exists($directory)) {
-                File::makeDirectory($directory, 0755, true, true);
-            }
-            $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->move($directory, $fileName);
+            $stored = file_storage()->upload($request->file('file'), 'candidate_document', ['id' => $assignment->candidate_id]);
 
             $document = $this->onboarding->uploadDocument($assignment, [
                 'document_type' => $data['document_type'],
-                'document_name' => $data['document_name'] ?? $file->getClientOriginalName(),
-                'file_url' => 'uploads/candidate_documents/' . $assignment->candidate_id . '/' . $fileName,
-                'file_size' => $file->getSize(),
-                'mime_type' => $file->getClientMimeType(),
+                'document_name' => $data['document_name'] ?? $stored->originalName,
+                'file_url' => $stored->path,
+                'file_size' => $stored->size,
+                'mime_type' => $stored->mimeType,
             ]);
 
             return response()->json(['success' => true, 'message' => 'Document uploaded.', 'data' => $document]);

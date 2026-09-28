@@ -11,10 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 /**
- * Mirrors ProjectController::storeAttachment()/destroyAttachment() exactly:
- * public_path('uploads/...') + UploadedFile::move(), UUID filename, no
- * Storage::disk() facade (not used anywhere else in this codebase for
- * writes).
+ * Mirrors ProjectController::storeAttachment()/destroyAttachment(): files go
+ * through the shared FileStorageService (module 'asset_attachment').
  */
 class AssetAttachmentController extends Controller
 {
@@ -28,26 +26,21 @@ class AssetAttachmentController extends Controller
                 'context' => 'nullable|string|max:40',
             ]);
 
-            $file = $request->file('file');
-            $relativeDir = 'uploads/assets/' . $asset->id . '/attachments';
-            $fullDir = public_path($relativeDir);
-            if (!is_dir($fullDir)) {
-                mkdir($fullDir, 0755, true);
-            }
-            $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
-            $file->move($fullDir, $filename);
+            $stored = file_storage()->upload($request->file('file'), 'asset_attachment', ['id' => $asset->id]);
 
             $attachment = AssetAttachment::create([
                 'asset_id' => $asset->id,
                 'uploaded_by' => Auth::id(),
-                'file_path' => $relativeDir . '/' . $filename,
+                'file_path' => $stored->path,
                 'context' => $request->context,
-                'original_filename' => $file->getClientOriginalName(),
-                'mime_type' => $file->getClientMimeType(),
-                'file_size' => $file->getSize(),
+                'original_filename' => $stored->originalName,
+                'mime_type' => $stored->mimeType,
+                'file_size' => $stored->size,
             ]);
 
             return response()->json(['success' => true, 'message' => 'File uploaded.', 'data' => $attachment]);
+        } catch (\App\Exceptions\FileStorageException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
@@ -60,10 +53,7 @@ class AssetAttachmentController extends Controller
         try {
             $attachment = AssetAttachment::findOrFail(decrypt($attachmentId));
 
-            $fullPath = public_path($attachment->file_path);
-            if (is_file($fullPath)) {
-                @unlink($fullPath);
-            }
+            file_storage()->delete($attachment->file_path, 'asset_attachment');
 
             $attachment->delete();
 

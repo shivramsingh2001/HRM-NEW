@@ -124,38 +124,14 @@ class AnnouncementController extends Controller
             DB::beginTransaction();
 
             // Upload image
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $file = $request->file('image');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/announcement/image');
-                
-                // Create directory if it doesn't exist
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                
-                $file->move($destinationPath, $filename);
-                $imagePath = 'uploads/announcement/image/' . $filename;
-            }
+            $imagePath = $request->hasFile('image')
+                ? file_storage()->upload($request->file('image'), 'announcement_image')->path
+                : null;
 
             // Upload file (optional)
-            $filePath = null;
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/announcement/file');
-                
-                // Create directory if it doesn't exist
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                
-                $file->move($destinationPath, $filename);
-                $filePath = 'uploads/announcement/file/' . $filename;
-            }
+            $filePath = $request->hasFile('file')
+                ? file_storage()->upload($request->file('file'), 'announcement_file')->path
+                : null;
 
             // Create Announcement
             $announcement = Announcement::create([
@@ -248,42 +224,14 @@ class AnnouncementController extends Controller
 
             // Upload new image if provided
             if ($request->hasFile('image')) {
-                // Delete old image
-                if ($announcement->image && file_exists(public_path($announcement->image))) {
-                    unlink(public_path($announcement->image));
-                }
-                
-                $file = $request->file('image');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/announcement/image');
-                
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                
-                $file->move($destinationPath, $filename);
-                $announcement->image = 'uploads/announcement/image/' . $filename;
+                $announcement->image = file_storage()
+                    ->replace($announcement->image, $request->file('image'), 'announcement_image')->path;
             }
 
             // Upload new file if provided
             if ($request->hasFile('file')) {
-                // Delete old file
-                if ($announcement->file && file_exists(public_path($announcement->file))) {
-                    unlink(public_path($announcement->file));
-                }
-                
-                $file = $request->file('file');
-                $extension = strtolower($file->getClientOriginalExtension());
-                $filename = time() . '_' . uniqid() . '.' . $extension;
-                $destinationPath = public_path('uploads/announcement/file');
-                
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                
-                $file->move($destinationPath, $filename);
-                $announcement->file = 'uploads/announcement/file/' . $filename;
+                $announcement->file = file_storage()
+                    ->replace($announcement->file, $request->file('file'), 'announcement_file')->path;
             }
 
             // Update announcement
@@ -322,15 +270,9 @@ class AnnouncementController extends Controller
 
             $announcement = Announcement::findOrFail($id);
             
-            // Delete image file
-            if ($announcement->image && file_exists(public_path($announcement->image))) {
-                unlink(public_path($announcement->image));
-            }
-            
-            // Delete file attachment
-            if ($announcement->file && file_exists(public_path($announcement->file))) {
-                unlink(public_path($announcement->file));
-            }
+            // Stored image + attachment are removed once the delete commits.
+            file_storage()->deleteAfterCommit($announcement->image, 'announcement_image');
+            file_storage()->deleteAfterCommit($announcement->file, 'announcement_file');
             
             // Delete acknowledgments
             DB::table('announcement_acknowledgments')

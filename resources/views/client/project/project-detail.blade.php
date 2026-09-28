@@ -408,7 +408,7 @@
                                     @forelse ($project->attachments as $a)
                                         <div class="fs-card d-flex justify-content-between align-items-center">
                                             <div>
-                                                <a href="{{ asset($a->file_path) }}" target="_blank"><i class="feather-paperclip me-1"></i>{{ $a->original_filename }}</a>
+                                                <a href="{{ file_url($a->file_path, 'project_attachment') }}" target="_blank"><i class="feather-paperclip me-1"></i>{{ $a->original_filename }}</a>
                                                 <div class="fs-meta">{{ $a->uploadedBy->name ?? 'Unknown' }} — {{ $a->created_at->format('d M Y') }}</div>
                                             </div>
                                         </div>

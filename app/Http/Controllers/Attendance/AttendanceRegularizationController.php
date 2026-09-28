@@ -154,15 +154,9 @@ class AttendanceRegularizationController extends Controller
             }
 
             // Handle file upload
-            $filePath = null;
-             if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $path = public_path('uploads/regularizations');
-
-                $file->move($path, $filename);
-                $filePath = 'uploads/regularizations/' . $filename;
-            }
+            $filePath = $request->hasFile('file')
+                ? file_storage()->upload($request->file('file'), 'regularization', ['tenant' => $tenant_id])->path
+                : null;
 
             // Create regularization request
             $regularization = AttendanceRegularization::create([
@@ -271,15 +265,10 @@ class AttendanceRegularizationController extends Controller
             // Handle file upload
             $filePath = null;
             if ($request->hasFile('file')) {
-                // Delete old file
-                if ($regularization->file) {
-                    Storage::disk('public')->delete($regularization->file);
-                }
-                $file = $request->file('file');
-                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $path = public_path('uploads/regularizations');
-                $file->move($path, $filename);
-                $filePath = 'uploads/regularizations/' . $filename;
+                // New file stored first; the old one is removed after commit.
+                $filePath = file_storage()
+                    ->replace($regularization->file, $request->file('file'), 'regularization', ['tenant' => $regularization->tenant_id])
+                    ->path;
             }
 
             // Update regularization
@@ -339,9 +328,7 @@ class AttendanceRegularizationController extends Controller
 
         try {
             // Delete associated file
-            if ($regularization->file) {
-                Storage::disk('public')->delete($regularization->file);
-            }
+            file_storage()->delete($regularization->file, 'regularization');
 
             $regularization->delete();
 
@@ -762,7 +749,7 @@ class AttendanceRegularizationController extends Controller
                 'out_time' => $regularization->out_time ? date('h:i A', strtotime($regularization->out_time)) : null,
                 'reason' => $regularization->reason,
                 'file' => $regularization->file,
-                'file_url' => $regularization->file ? asset('storage/' . $regularization->file) : null,
+                'file_url' => file_url($regularization->file, 'regularization'),
                 'status' => $regularization->status,
                 'approved_by' => $regularization->approved_by,
                 'approver_name' => $regularization->approver->name ?? null,

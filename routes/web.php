@@ -111,6 +111,14 @@ Route::get('/expense/attachment/{id}', [ExpenseController::class, 'attachment'])
     ->whereNumber('id')
     ->name('expense.attachment');
 
+// Stored-file safety net (config/file_storage.php): an /uploads/... link whose file is no
+// longer on local disk (moved to Google Cloud Storage) redirects a logged-in user to a
+// short-lived signed URL. Files still in public/uploads are served by the web server first.
+Route::get('/uploads/{path}', [\App\Http\Controllers\FileController::class, 'uploads'])
+    ->where('path', '.*')
+    ->middleware('auth')
+    ->name('files.uploads');
+
 Route::group(['middleware' => ['tenant']], function () {
       Route::prefix('careers')->name('public.jobs.')->middleware('feature:recruitment')->group(function () {
             Route::get('/', [RecruitmentController::class, 'index'])->name('list');

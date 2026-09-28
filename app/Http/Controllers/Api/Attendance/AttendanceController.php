@@ -379,7 +379,7 @@ class AttendanceController extends Controller
                 'total_hours' => $attendance->total_hours ?? "",
                 'status' => $attendance->status ?? 0,
                 'user_name' => $user->name,
-                'profile_image' => $baseUrl . ($user->profile_image ?? "/profile2.jpg"),
+                'profile_image' => file_url($user->profile_image, 'profile_photo') ?? $baseUrl . '/profile2.jpg',
                 'attendance_type' => $attendanceType,
                 'user_email' => $user->email,
                 'designation' => $user->designation_name,
@@ -1574,10 +1574,9 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
-            $filePath = null;
-            if ($request->hasFile('file')) {
-                $filePath = $request->file('file')->store('attendance_files', 'public');
-            }
+            $filePath = $request->hasFile('file')
+                ? file_storage()->upload($request->file('file'), 'regularization', ['tenant' => $authUser->tenant_id])->path
+                : null;
 
             $reg = AttendanceRegularization::create([
                 'tenant_id' => $authUser->tenant_id,
@@ -1680,14 +1679,14 @@ class AttendanceController extends Controller
                     'in_time' => $request->in_time,
                     'out_time' => $request->out_time,
                     'reason' => $request->reason,
-                    'file' => $request->file ? asset($request->file) : null,
+                    'file' => file_url($request->file, 'regularization'),
                     'status' => $request->status,
                     'submit_date' => $request->created_at,
                     'user_id' => $request->user_id,
                     'employee_id' => $request->employee_id,
                     'user_name' => $request->user_name,
                     'user_email' => $request->user_email,
-                    'profile_image' => $request->profile_image ? asset($request->profile_image) : null,
+                    'profile_image' => file_url($request->profile_image, 'profile_photo'),
                     'designation' => $request->designation,
                     'approved_by' => $request->approved_by,
                     'approved_date' => $request->approved_date
@@ -1831,14 +1830,14 @@ class AttendanceController extends Controller
                     'in_time' => $request->in_time,
                     'out_time' => $request->out_time,
                     'reason' => $request->reason,
-                    'file' => $request->file ? asset($request->file) : null,
+                    'file' => file_url($request->file, 'regularization'),
                     'status' => $request->status,
                     'submit_date' => $request->created_at,
                     'user_id' => $request->user_id,
                     'employee_id' => $request->employee_id,
                     'user_name' => $request->user_name,
                     'user_email' => $request->user_email,
-                    'profile_image' => $request->profile_image ? asset($request->profile_image) : null,
+                    'profile_image' => file_url($request->profile_image, 'profile_photo'),
                     'designation' => $request->designation,
                     'approved_by' => $request->approved_by,
                     'approved_date' => $request->approved_date

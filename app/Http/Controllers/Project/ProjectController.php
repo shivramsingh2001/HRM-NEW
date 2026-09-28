@@ -613,25 +613,20 @@ class ProjectController extends Controller
         try {
             $request->validate(['file' => 'required|file|max:10240']);
 
-            $file = $request->file('file');
-            $relativeDir = 'uploads/projects/' . $project->id . '/attachments';
-            $fullDir = public_path($relativeDir);
-            if (!is_dir($fullDir)) {
-                mkdir($fullDir, 0755, true);
-            }
-            $filename = (string) Str::uuid() . '.' . $file->getClientOriginalExtension();
-            $file->move($fullDir, $filename);
+            $stored = file_storage()->upload($request->file('file'), 'project_attachment', ['id' => $project->id]);
 
             $attachment = ProjectAttachment::create([
                 'project_id' => $project->id,
                 'user_id' => auth()->id(),
-                'file_path' => $relativeDir . '/' . $filename,
-                'original_filename' => $file->getClientOriginalName(),
-                'mime_type' => $file->getClientMimeType(),
-                'file_size' => $file->getSize(),
+                'file_path' => $stored->path,
+                'original_filename' => $stored->originalName,
+                'mime_type' => $stored->mimeType,
+                'file_size' => $stored->size,
             ]);
 
             return response()->json(['success' => true, 'message' => 'File uploaded.', 'data' => $attachment]);
+        } catch (\App\Exceptions\FileStorageException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
@@ -647,10 +642,7 @@ class ProjectController extends Controller
                 return response()->json(['success' => false, 'message' => 'You can only delete your own attachments.'], 403);
             }
 
-            $fullPath = public_path($attachment->file_path);
-            if (file_exists($fullPath)) {
-                @unlink($fullPath);
-            }
+            file_storage()->delete($attachment->file_path, 'project_attachment');
             $attachment->delete();
 
             return response()->json(['success' => true, 'message' => 'Attachment deleted.']);

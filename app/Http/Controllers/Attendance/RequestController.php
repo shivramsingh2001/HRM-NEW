@@ -170,22 +170,14 @@ class RequestController extends Controller
                         throw new \Exception('Uploaded file is not valid');
                     }
                     
-                    $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                    $path = public_path('uploads/requests/attachments');
+                    $stored = file_storage()->upload($file, 'request');
 
-                    $file->move($path, $filename);
-                    $filePath = 'uploads/requests/attachments/' . $filename;
-                    
-                    if (!$path) {
-                        throw new \Exception('Failed to store file');
-                    }
-                    
                     RequestAttachment::create([
                         'request_id' => $newRequest->id,
-                        'file_name' => $file->getClientOriginalName(),
-                        'file_path' => $filePath,
-                        'file_type' => $file->getMimeType(),
-                        'file_size' => $file->getSize(),
+                        'file_name' => $stored->originalName,
+                        'file_path' => $stored->path,
+                        'file_type' => $stored->mimeType,
+                        'file_size' => $stored->size,
                         'uploaded_by' => $user->id
                     ]);
                     
@@ -291,17 +283,13 @@ class RequestController extends Controller
                     throw new \Exception('Uploaded file is not valid');
                 }
                     
-                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $path = public_path('uploads/requests/attachments');
-
-                $file->move($path, $filename);
-                $filePath = 'uploads/requests/attachments/' . $filename;
+                $stored = file_storage()->upload($file, 'request');
                 RequestAttachment::create([
                     'request_id' => $existingRequest->id,
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_path' => $filePath,
-                    'file_type' => $file->getMimeType(),
-                    'file_size' => $file->getSize(),
+                    'file_name' => $stored->originalName,
+                    'file_path' => $stored->path,
+                    'file_type' => $stored->mimeType,
+                    'file_size' => $stored->size,
                     'uploaded_by' => Auth::id()
                 ]);
                 
@@ -425,10 +413,7 @@ class RequestController extends Controller
                 ], 400);
             }
 
-            $filePath = public_path($attachment->file_path);
-            if (file_exists($filePath)) {
-                @unlink($filePath);
-            }
+            file_storage()->delete($attachment->file_path, 'request');
             $attachmentId = $attachment->id;
             $attachment->delete();
 
@@ -458,12 +443,7 @@ class RequestController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
-        $filePath = public_path($attachment->file_path);
-        if (!file_exists($filePath)) {
-            abort(404, 'File not found.');
-        }
-
-        return response()->download($filePath, $attachment->file_name);
+        return file_storage()->stream($attachment->file_path, 'request', $attachment->file_name, attachment: true);
     }
 
     /**

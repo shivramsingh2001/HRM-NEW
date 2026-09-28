@@ -116,7 +116,6 @@ class ProjectController extends Controller
         try {
             $authUser = Auth::user();
 
-            $baseUrl = config('app.url');
             $projects = DB::table('projects as p')
                 ->where('p.id', $id)
                 ->select([
@@ -141,7 +140,7 @@ class ProjectController extends Controller
                     'u.name',
                     'u.email',
                     'pa.is_head',
-                    DB::raw("CONCAT('$baseUrl', bd.profile_image) as profile_image"),
+                    'bd.profile_image',
                     'd.name as designation',
                     'dep.name as department',
                     'pa.created_at as assigned_at',
@@ -159,6 +158,7 @@ class ProjectController extends Controller
                 ->where('pa.project_id', $id)
                 ->orderBy('u.name')
                 ->get();
+            file_storage()->mapUrls($assigns, ['profile_image' => 'profile_photo']);
             return response()->json([
                 'success' => true,
                 'message' => "Data fetched Successfully",

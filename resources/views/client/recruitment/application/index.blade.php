@@ -601,7 +601,7 @@
                                     </td>
                                     <td>
                                         @if ($candidate->resume_url)
-                                            <a href="{{ asset($candidate->resume_url) }}" target="_blank" class="resume-link">
+                                            <a href="{{ file_url($candidate->resume_url, 'candidate_resume') }}" target="_blank" class="resume-link">
                                                 <i class="feather-file-text"></i> View
                                             </a>
                                         @else

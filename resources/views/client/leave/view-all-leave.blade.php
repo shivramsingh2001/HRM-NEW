@@ -1089,20 +1089,20 @@
                                                         @php
                                                             $fileUrl = $leave->file;
                                                             $extension = strtolower(
-                                                                pathinfo($fileUrl, PATHINFO_EXTENSION),
+                                                                pathinfo((string) parse_url($fileUrl, PHP_URL_PATH), PATHINFO_EXTENSION),
                                                             );
                                                             $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
                                                         @endphp
                                                         @if (in_array($extension, $imageExtensions))
-                                                            <a href="{{ asset($fileUrl) }}" target="_blank"
+                                                            <a href="{{ file_url($fileUrl, 'leave') }}" target="_blank"
                                                                 class="file-attachment"
                                                                 style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
-                                                                <img src="{{ asset($fileUrl) }}" alt="Attachment"
+                                                                <img src="{{ file_url($fileUrl, 'leave') }}" alt="Attachment"
                                                                     height="30" width="30"
                                                                     style="border-radius: 50%; object-fit: cover;">
                                                             </a>
                                                         @else
-                                                            <a href="{{ asset($fileUrl) }}" download
+                                                            <a href="{{ file_url($fileUrl, 'leave') }}" download
                                                                 class="file-attachment"
                                                                 style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none; color: #475569;">
                                                                 <i class="feather-paperclip"></i>
@@ -1395,7 +1395,8 @@
                         fileUrl = baseUrl + '/' + fileUrl;
                     }
 
-                    let extension = file.split('.').pop().toLowerCase();
+                    // Signed URLs carry a query string: read the extension from the path only.
+                    let extension = file.split('?')[0].split('.').pop().toLowerCase();
                     let imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
                     if (imageExtensions.includes(extension)) {

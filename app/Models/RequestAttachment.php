@@ -38,7 +38,7 @@ class RequestAttachment extends Model
     // Accessors
     public function getFileUrlAttribute()
     {
-        return asset($this->file_path);
+        return file_url($this->file_path, 'request');
     }
 
     public function getFormattedFileSizeAttribute()

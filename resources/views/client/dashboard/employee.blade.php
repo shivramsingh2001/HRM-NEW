@@ -229,7 +229,7 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                             <div class="d-flex align-items-center gap-3">
-                                <img src="{{ $profile_image ?? asset('assets/images/avatar/default.png') }}" alt=""
+                                <img src="{{ file_url($profile_image ?? null, 'profile_photo') ?? asset('assets/images/avatar/default.png') }}" alt=""
                                     class="rounded-circle" width="52" height="52"
                                     style="object-fit:cover;border:2px solid rgba(255,255,255,.4);">
                                 <div>

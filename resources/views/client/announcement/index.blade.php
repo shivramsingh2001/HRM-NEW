@@ -260,7 +260,7 @@ $role = $user->role;
                                             <td>{{ $announcement->title ?? '' }}</td>
                                             <td>
                                                 @if($announcement->image)
-                                                    <img src="{{ asset($announcement->image) }}" 
+                                                    <img src="{{ file_url($announcement->image, 'announcement_image') }}" 
                                                          alt="Announcement" 
                                                          style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
                                                 @else
@@ -277,26 +277,26 @@ $role = $user->role;
                                                     
                                                     @if(in_array(strtolower($fileExtension), $imageExtensions))
                                                         <div class="d-flex align-items-center">
-                                                            <a href="{{ asset($announcement->file) }}" 
+                                                            <a href="{{ file_url($announcement->file, 'announcement_file') }}" 
                                                                target="_blank" 
                                                                class="me-2"
                                                                data-lightbox="announcement-image"
                                                                data-title="Announcement Image">
-                                                                <img src="{{ asset($announcement->file) }}" 
+                                                                <img src="{{ file_url($announcement->file, 'announcement_file') }}" 
                                                                      alt="Announcement Image" 
                                                                      style="max-width: 50px; max-height: 50px; object-fit: cover;"
                                                                      class="img-thumbnail">
                                                             </a>
                                                         </div>
                                                     @elseif(in_array(strtolower($fileExtension), $documentExtensions) || $fileExtension == 'pdf')
-                                                        <a href="{{ asset($announcement->file) }}" 
+                                                        <a href="{{ file_url($announcement->file, 'announcement_file') }}" 
                                                            download 
                                                            class="text-primary">
                                                             <i class="feather-download"></i> 
                                                             <span class="text-uppercase small">({{ $fileExtension }})</span>
                                                         </a>
                                                     @else
-                                                        <a href="{{ asset($announcement->file) }}" 
+                                                        <a href="{{ file_url($announcement->file, 'announcement_file') }}" 
                                                            download 
                                                            class="text-primary">
                                                             <i class="feather-download"></i> File
@@ -343,8 +343,8 @@ $role = $user->role;
                                                                data-id="{{ $announcement->id }}"
                                                                data-title="{{ $announcement->title }}"
                                                                data-description="{{ $announcement->description }}"
-                                                               data-image="{{ $announcement->image }}"
-                                                               data-file="{{ $announcement->file }}"
+                                                               data-image="{{ file_url($announcement->image, 'announcement_image') }}"
+                                                               data-file="{{ file_url($announcement->file, 'announcement_file') }}"
                                                                data-acknowledge="{{ $announcement->acknowledge }}"
                                                                data-status="{{ $announcement->status }}"
                                                                data-expire-date="{{ $announcement->expire_date ? \Carbon\Carbon::parse($announcement->expire_date)->format('Y-m-d') : '' }}">

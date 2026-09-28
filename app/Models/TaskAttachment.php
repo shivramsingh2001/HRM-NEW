@@ -30,7 +30,7 @@ class TaskAttachment extends Model
 
     public function getFileUrlAttribute()
     {
-        return $this->file_path ? asset($this->file_path) : null;
+        return file_url($this->file_path, 'task_attachment');
     }
 
     public function getFormattedSizeAttribute()

@@ -24,7 +24,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Central upload/storage service (config/file_storage.php) — one instance per request.
+        $this->app->singleton(\App\Services\Storage\FileStorageService::class);
     }
 
     /**

@@ -29,3 +29,8 @@ yarn-error.log
 # User-uploaded content -- already present in earlier git history (kept as-is);
 # excluded going forward so new uploads don't keep growing the repo.
 /public/uploads
+
+# Google Cloud service-account keys (file storage) — never commit
+*-gcs*.json
+gcs-key*.json
+*service-account*.json

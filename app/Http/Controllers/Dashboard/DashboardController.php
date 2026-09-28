@@ -1958,7 +1958,7 @@ class DashboardController extends Controller
 
         // Transform file URLs
         $expenses->getCollection()->transform(function ($expense) {
-            $expense->file = $expense->file ? asset($expense->file) : null;
+            $expense->file = app(\App\Services\Expense\ExpenseAttachmentService::class)->url($expense->file, (int) $expense->id);
             return $expense;
         });
 
