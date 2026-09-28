@@ -30,6 +30,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\UserLocation;
+use App\Models\EmployeeKpiScore;
 use App\Services\RbacService;
 
 class DashboardController extends Controller
@@ -462,6 +463,9 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         $today = Carbon::today();
+        $currentMonth = Carbon::now()->month;
+        $currentYear = Carbon::now()->year;
+        $startOfMonth = Carbon::now()->startOfMonth();
 
         // Get team members (any reporting head)
         $teamIds = User::managedBy($user->id)
@@ -478,11 +482,88 @@ class DashboardController extends Controller
 
         // Team on leave today
         $teamOnLeave = $this->getTeamOnLeaveToday($teamIds);
+        $teamAbsent = max(0, $teamSize - $teamPresent - $teamOnLeave);
 
-        // Pending approvals
+        // ============ FEATURE FLAGS (gate the extra widgets — same pattern
+        // as employeeDashboard(), team-scoped instead of self-scoped) ============
+        $featureService = app(\App\Services\FeatureService::class);
+        $showOvertime = $featureService->enabledForCurrentTenant('overtime');
+        $showWfhTravel = $featureService->enabledForCurrentTenant('wfh_travel');
+        $showMeetings = $featureService->enabledForCurrentTenant('meetings');
+        $showRegularization = $featureService->enabledForCurrentTenant('regularization');
+        $showExpenses = $featureService->enabledForCurrentTenant('expense_management');
+        $showTasks = $featureService->enabledForCurrentTenant('task_single') || $featureService->enabledForCurrentTenant('task_group');
+        $showHolidays = $featureService->enabledForCurrentTenant('holiday');
+        $showAnnouncements = $featureService->enabledForCurrentTenant('announcements');
+        $showProjects = $featureService->enabledForCurrentTenant('project_management');
+        $showPerformance = $featureService->enabledForCurrentTenant('kpi_performance');
+
+        // ============ PROJECTS (company-wide, same anatomy as the Admin
+        // Dashboard's Total Projects KPI card — config('rbac.php')'s manager
+        // 'projects' => ['view', ...] grant is unscoped, same visibility as
+        // admin/hr, so no team-filtering is applied here) ============
+        $totalProjects = 0;
+        $ongoingProjects = 0;
+        $completedProjects = 0;
+        if ($showProjects) {
+            $totalProjects = Project::count();
+            $ongoingProjects = Project::where('status', 'ongoing')->count();
+            $completedProjects = Project::where('status', 'completed')->count();
+        }
+
+        // ============ PENDING APPROVALS — only modules a manager can actually
+        // act on (config('rbac.php') 'manager' role: leave/attendance/expenses/
+        // overtime/requests/offboarding approve => team scope; loans/payroll/
+        // company-wide modules are admin/hr-only and deliberately excluded) ============
         $pendingLeaveRequests = Leave::whereIn('user_id', $teamIds)
             ->where('status', 'pending')
             ->count();
+
+        $pendingRegularizations = 0;
+        if ($showRegularization) {
+            $pendingRegularizations = AttendanceRegularization::whereIn('user_id', $teamIds)
+                ->where('status', 'pending')
+                ->count();
+        }
+
+        $pendingOvertimeRequests = 0;
+        if ($showOvertime) {
+            $pendingOvertimeRequests = \App\Models\OvertimeRequest::whereIn('user_id', $teamIds)
+                ->where('status', 'pending')
+                ->count();
+        }
+
+        $pendingExpenseApprovals = 0;
+        if ($showExpenses) {
+            $pendingExpenseApprovals = Expense::whereIn('user_id', $teamIds)
+                ->where('status', 'pending')
+                ->count();
+        }
+
+        $pendingWfhTravelRequests = 0;
+        if ($showWfhTravel) {
+            $pendingWfhTravelRequests = \App\Models\Request::whereIn('user_id', $teamIds)
+                ->where('status', 'PENDING')
+                ->count();
+        }
+
+        $pendingOffboardingRequests = \App\Models\OffboardingRequest::whereIn('employee_id', $teamIds)
+            ->where('status', 'pending_approval')
+            ->count();
+
+        $totalPendingApprovals = $pendingLeaveRequests + $pendingRegularizations + $pendingOvertimeRequests
+            + $pendingExpenseApprovals + $pendingWfhTravelRequests + $pendingOffboardingRequests;
+
+        // Kept for back-compat with the old "Task Approvals" card wording —
+        // count of team tasks marked completed, awaiting the manager's review.
+        $pendingTaskApprovals = 0;
+        if ($showTasks) {
+            $pendingTaskApprovals = Task::join('task_assigns', 'tasks.id', '=', 'task_assigns.task_id')
+                ->whereIn('task_assigns.assigned_to', $teamIds)
+                ->where('tasks.status', 'completed')
+                ->distinct('tasks.id')
+                ->count('tasks.id');
+        }
 
         // Team members list
         $teamMembers = User::leftJoin('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
@@ -538,19 +619,184 @@ class DashboardController extends Controller
                 'projects.name as project_name'
             )
             ->orderBy('tasks.created_at', 'desc')
-            ->limit(10)
+            ->limit(8)
             ->get();
+
+        // ============ TEAM TASK STATUS BREAKDOWN (funnel widget, same anatomy
+        // as the employee dashboard's Task Overview) ============
+        $teamTaskStatusCounts = collect();
+        $totalTeamTasks = 0;
+        if ($showTasks) {
+            $teamTaskStatusCounts = Task::join('task_assigns', 'tasks.id', '=', 'task_assigns.task_id')
+                ->whereIn('task_assigns.assigned_to', $teamIds)
+                ->select('tasks.status', DB::raw('count(distinct tasks.id) as cnt'))
+                ->groupBy('tasks.status')
+                ->pluck('cnt', 'status');
+            $totalTeamTasks = (int) $teamTaskStatusCounts->sum();
+        }
+
+        // ============ TEAM ATTENDANCE TREND (cumulative-by-day this month so
+        // far, aggregated across the whole team — same chart anatomy as the
+        // employee dashboard's per-user trend, but count-based not per-user) ============
+        $attendanceByDate = Attendance::whereIn('user_id', $teamIds)
+            ->whereMonth('date', $currentMonth)
+            ->whereYear('date', $currentYear)
+            ->whereDate('date', '<=', $today)
+            ->whereNotNull('clock_in')
+            ->select('date', DB::raw('count(distinct user_id) as cnt'))
+            ->groupBy('date')
+            ->get()
+            ->keyBy(fn ($row) => Carbon::parse($row->date)->format('Y-m-d'));
+
+        $teamLeaveRowsThisMonth = Leave::whereIn('user_id', $teamIds)
+            ->where('status', 'approved')
+            ->where(function ($query) use ($startOfMonth, $today) {
+                $query->whereBetween('start_date', [$startOfMonth, $today])
+                    ->orWhereBetween('end_date', [$startOfMonth, $today])
+                    ->orWhere(function ($q) use ($startOfMonth, $today) {
+                        $q->where('start_date', '<=', $startOfMonth)
+                            ->where('end_date', '>=', $today);
+                    });
+            })
+            ->get();
+
+        $attendanceTrendLabels = [];
+        $attendanceTrendPresent = [];
+        $attendanceTrendAbsent = [];
+        $attendanceTrendLeave = [];
+        $trendDate = $startOfMonth->copy();
+        while ($trendDate <= $today) {
+            $dateString = $trendDate->format('Y-m-d');
+            $presentCount = (int) ($attendanceByDate->get($dateString)->cnt ?? 0);
+
+            $leaveCount = 0;
+            foreach ($teamLeaveRowsThisMonth as $leaveRow) {
+                if ($trendDate->between(Carbon::parse($leaveRow->start_date), Carbon::parse($leaveRow->end_date ?? $leaveRow->start_date))) {
+                    $leaveCount++;
+                }
+            }
+
+            $attendanceTrendLabels[] = $trendDate->day;
+            $attendanceTrendPresent[] = $presentCount;
+            $attendanceTrendLeave[] = $leaveCount;
+            $attendanceTrendAbsent[] = max(0, $teamSize - $presentCount - $leaveCount);
+
+            $trendDate->addDay();
+        }
+
+        // ============ RECENT TEAM OVERTIME / WFH-TRAVEL / REGULARIZATION ============
+        $recentTeamOvertime = collect();
+        if ($showOvertime) {
+            $recentTeamOvertime = \App\Models\OvertimeRequest::whereIn('user_id', $teamIds)
+                ->leftJoin('users', 'overtime_requests.user_id', '=', 'users.id')
+                ->select('overtime_requests.*', 'users.name as user_name', 'users.employee_id as user_employee_id')
+                ->orderByDesc('overtime_requests.date')
+                ->limit(5)
+                ->get();
+        }
+
+        $recentTeamRequests = collect();
+        if ($showWfhTravel) {
+            $recentTeamRequests = \App\Models\Request::whereIn('user_id', $teamIds)
+                ->with(['requestType', 'user:id,name,employee_id'])
+                ->latest()
+                ->limit(5)
+                ->get();
+        }
+
+        $recentTeamRegularizations = collect();
+        if ($showRegularization) {
+            $recentTeamRegularizations = AttendanceRegularization::whereIn('user_id', $teamIds)
+                ->leftJoin('users', 'attendance_regularizations.user_id', '=', 'users.id')
+                ->select('attendance_regularizations.*', 'users.name as user_name', 'users.employee_id as user_employee_id')
+                ->orderByDesc('attendance_regularizations.date')
+                ->limit(5)
+                ->get();
+        }
+
+        // ============ TEAM PERFORMANCE (this month's already-rolled-up KPI
+        // scores — never recomputed here, same as the employee dashboard) ============
+        $teamKpiAvg = null;
+        $teamTopPerformer = null;
+        if ($showPerformance && $teamSize > 0) {
+            $teamKpiRows = EmployeeKpiScore::whereIn('user_id', $teamIds)
+                ->whereMonth('reporting_month', $currentMonth)
+                ->whereYear('reporting_month', $currentYear)
+                ->get();
+
+            if ($teamKpiRows->isNotEmpty()) {
+                $teamKpiAvg = round($teamKpiRows->avg('overall_score'));
+                $best = $teamKpiRows->sortByDesc('overall_score')->first();
+                $teamTopPerformer = optional(User::find($best->user_id))->name;
+            }
+        }
+
+        // ============ UPCOMING HOLIDAYS / RECENT ANNOUNCEMENTS (org-wide,
+        // same queries as the employee dashboard — not team-scoped) ============
+        $upcomingHolidays = collect();
+        if ($showHolidays) {
+            $upcomingHolidays = Holiday::where('start_date', '>=', $today)
+                ->where('status', 1)
+                ->orderBy('start_date')
+                ->limit(4)
+                ->get();
+        }
+
+        $recentAnnouncements = collect();
+        if ($showAnnouncements) {
+            $recentAnnouncements = Announcement::leftJoin('users', 'announcements.user_id', '=', 'users.id')
+                ->select('announcements.*', 'users.name as user_name')
+                ->where('announcements.status', 1)
+                ->notExpired()
+                ->orderBy('announcements.created_at', 'desc')
+                ->limit(4)
+                ->get();
+        }
 
         $data = [
             'page_title' => 'Manager Dashboard',
+            'user' => $user,
             'team_size' => $teamSize,
             'team_present' => $teamPresent,
-            'team_absent' => $teamSize - $teamPresent - $teamOnLeave,
+            'team_absent' => $teamAbsent,
             'team_on_leave' => $teamOnLeave,
             'pending_leave_requests' => $pendingLeaveRequests,
+            'pending_regularizations' => $pendingRegularizations,
+            'pending_overtime_requests' => $pendingOvertimeRequests,
+            'pending_expense_approvals' => $pendingExpenseApprovals,
+            'pending_wfh_travel_requests' => $pendingWfhTravelRequests,
+            'pending_offboarding_requests' => $pendingOffboardingRequests,
+            'pending_task_approvals' => $pendingTaskApprovals,
+            'total_pending_approvals' => $totalPendingApprovals,
             'team_members' => $teamMembers,
             'recent_team_leaves' => $recentTeamLeaves,
             'team_tasks' => $teamTasks,
+            'team_task_status_counts' => $teamTaskStatusCounts,
+            'total_team_tasks' => $totalTeamTasks,
+            'attendance_trend_labels' => $attendanceTrendLabels,
+            'attendance_trend_present' => $attendanceTrendPresent,
+            'attendance_trend_absent' => $attendanceTrendAbsent,
+            'attendance_trend_leave' => $attendanceTrendLeave,
+            'recent_team_overtime' => $recentTeamOvertime,
+            'recent_team_requests' => $recentTeamRequests,
+            'recent_team_regularizations' => $recentTeamRegularizations,
+            'team_kpi_avg' => $teamKpiAvg,
+            'team_top_performer' => $teamTopPerformer,
+            'upcoming_holidays' => $upcomingHolidays,
+            'recent_announcements' => $recentAnnouncements,
+            'show_overtime' => $showOvertime,
+            'show_wfh_travel' => $showWfhTravel,
+            'show_meetings' => $showMeetings,
+            'show_regularization' => $showRegularization,
+            'show_expenses' => $showExpenses,
+            'show_tasks' => $showTasks,
+            'show_holidays' => $showHolidays,
+            'show_announcements' => $showAnnouncements,
+            'show_projects' => $showProjects,
+            'total_projects' => $totalProjects,
+            'ongoing_projects' => $ongoingProjects,
+            'completed_projects' => $completedProjects,
+            'show_performance' => $showPerformance,
         ];
 
         return view('client.dashboard.manager', $data);
@@ -567,13 +813,15 @@ class DashboardController extends Controller
         // Get user job details
         $jobDetail = UserJobDetail::leftJoin('designations', 'user_job_details.designation', '=', 'designations.id')
             ->leftJoin('departments', 'user_job_details.department', '=', 'departments.id')
+            ->leftJoin('users as reporting_heads', 'user_job_details.reporting_head', '=', 'reporting_heads.id')
             ->where('user_job_details.user_id', $user->id)
             ->select(
                 'user_job_details.joining_date',
                 'user_job_details.type', // office/remote
                 'user_job_details.office_branch',
                 'designations.name as designation_name',
-                'departments.name as department_name'
+                'departments.name as department_name',
+                'reporting_heads.name as reporting_head_name'
             )
             ->first();
 
@@ -621,6 +869,7 @@ class DashboardController extends Controller
                 'tasks.description',
                 'tasks.deadline_date',
                 'tasks.status',
+                'tasks.priority',
                 'projects.name as project_name'
             )
             ->orderBy('tasks.created_at', 'desc')
@@ -773,6 +1022,69 @@ class DashboardController extends Controller
         // Calculate absent days (working days - present - leave days)
         $absentDays = $workingDays - $monthlyAttendance - $leaveDays;
 
+        // ============ ATTENDANCE OVERVIEW TREND (cumulative Present/Absent/Leave, this month so far) ============
+        $monthAttendanceRows = Attendance::where('user_id', $user->id)
+            ->whereMonth('date', $month->month)
+            ->whereYear('date', $month->year)
+            ->whereNotNull('clock_in')
+            ->get()
+            ->keyBy(fn($a) => Carbon::parse($a->date)->format('Y-m-d'));
+
+        $attendanceTrendLabels = [];
+        $attendanceTrendPresent = [];
+        $attendanceTrendAbsent = [];
+        $attendanceTrendLeave = [];
+        $cumPresent = 0;
+        $cumAbsent = 0;
+        $cumLeave = 0;
+        $trendDate = $startOfMonth->copy();
+        while ($trendDate <= $today) {
+            $dateString = $trendDate->format('Y-m-d');
+            $dayName = $trendDate->format('l');
+
+            $isHolidayDay = false;
+            foreach ($holidays as $holiday) {
+                if ($trendDate->between($holiday->start_date, $holiday->end_date)) {
+                    $isHolidayDay = true;
+                    break;
+                }
+            }
+
+            $isWeekoffDay = false;
+            foreach ($weekoffs as $weekoff) {
+                if ($weekoff->off_type == 'date_based' && $trendDate->between($weekoff->start_date, $weekoff->end_date)) {
+                    $isWeekoffDay = true;
+                    break;
+                } elseif ($weekoff->off_type == 'day_based' && $weekoff->day_name == $dayName) {
+                    $isWeekoffDay = true;
+                    break;
+                }
+            }
+
+            $isLeaveDay = false;
+            foreach ($approvedLeaves as $leave) {
+                if ($trendDate->between($leave->start_date, $leave->end_date)) {
+                    $isLeaveDay = true;
+                    break;
+                }
+            }
+
+            if ($monthAttendanceRows->has($dateString)) {
+                $cumPresent++;
+            } elseif ($isLeaveDay) {
+                $cumLeave++;
+            } elseif (!$isHolidayDay && !$isWeekoffDay) {
+                $cumAbsent++;
+            }
+
+            $attendanceTrendLabels[] = $trendDate->day;
+            $attendanceTrendPresent[] = $cumPresent;
+            $attendanceTrendAbsent[] = $cumAbsent;
+            $attendanceTrendLeave[] = $cumLeave;
+
+            $trendDate->addDay();
+        }
+
         // Check if today is a holiday
         $isTodayHoliday = false;
         foreach ($holidays as $holiday) {
@@ -802,11 +1114,306 @@ class DashboardController extends Controller
         // Get upcoming week-offs
         $upcomingWeekoffs = $this->getUpcomingWeekoffs($user->id);
 
+        // ============ TASK STATUS BREAKDOWN (for KPI card + pie chart) ============
+        $taskStatusCounts = Task::join('task_assigns', 'tasks.id', '=', 'task_assigns.task_id')
+            ->where('task_assigns.assigned_to', $user->id)
+            ->select('tasks.status', DB::raw('count(*) as cnt'))
+            ->groupBy('tasks.status')
+            ->pluck('cnt', 'status');
+        $totalTasksAssigned = (int) $taskStatusCounts->sum();
+        $completedTasksCount = (int) ($taskStatusCounts->get('completed', 0));
+
+        // ============ PENDING LEAVE REQUESTS (for KPI card footer) ============
+        $pendingLeaveCount = Leave::where('user_id', $user->id)->where('status', 'pending')->count();
+
+        // ============ WORKING HOURS TODAY (derived, no query) ============
+        $workingHoursToday = null;
+        if ($todayAttendance && $todayAttendance->clock_in) {
+            $clockIn = Carbon::parse($todayAttendance->clock_in);
+            $clockOutOrNow = $todayAttendance->clock_out ? Carbon::parse($todayAttendance->clock_out) : Carbon::now();
+            $minutes = max(0, $clockIn->diffInMinutes($clockOutOrNow));
+            $workingHoursToday = sprintf('%d:%02d', intdiv($minutes, 60), $minutes % 60);
+        }
+
+        // ============ FEATURE FLAGS (gate the extra widgets) ============
+        $featureService = app(\App\Services\FeatureService::class);
+        $showOvertime = $featureService->enabledForCurrentTenant('overtime');
+        $showWfhTravel = $featureService->enabledForCurrentTenant('wfh_travel');
+        $showMeetings = $featureService->enabledForCurrentTenant('meetings');
+        $showPayroll = $featureService->enabledForCurrentTenant('payroll');
+        $showAttendance = $featureService->enabledForCurrentTenant('attendance');
+        $showTasks = $featureService->enabledForCurrentTenant('task_single') || $featureService->enabledForCurrentTenant('task_group');
+        $showRegularization = $featureService->enabledForCurrentTenant('regularization');
+        $showExpenses = $featureService->enabledForCurrentTenant('expense_management');
+        $showHolidays = $featureService->enabledForCurrentTenant('holiday');
+        $showAnnouncements = $featureService->enabledForCurrentTenant('announcements');
+        $showPerformance = $featureService->enabledForCurrentTenant('kpi_performance');
+
+        // ============ RECENT REGULARIZATION REQUESTS ============
+        $recentRegularizations = collect();
+        if ($showRegularization) {
+            $recentRegularizations = AttendanceRegularization::where('user_id', $user->id)
+                ->orderByDesc('date')
+                ->limit(3)
+                ->get();
+        }
+
+        // ============ PERFORMANCE (reads the already-rolled-up monthly KPI score — never recomputed here) ============
+        $kpiScore = null;
+        if ($showPerformance) {
+            $kpiScore = EmployeeKpiScore::where('user_id', $user->id)
+                ->whereMonth('reporting_month', $currentMonth)
+                ->whereYear('reporting_month', $currentYear)
+                ->first();
+        }
+
+        // ============ EXPENSES ============
+        $expenseBalance = null;
+        $pendingExpenseCount = 0;
+        $recentExpenses = collect();
+        if ($showExpenses) {
+            $expenseBalance = UserExpenseBalance::where('user_id', $user->id)->first();
+
+            $pendingExpenseCount = Expense::where('user_id', $user->id)->where('status', 'pending')->count();
+
+            $recentExpenses = Expense::where('expenses.user_id', $user->id)
+                ->leftJoin('expense_types', 'expenses.expense_type', '=', 'expense_types.id')
+                ->select('expenses.*', 'expense_types.name as expense_type_name')
+                ->orderByDesc('expenses.date')
+                ->limit(3)
+                ->get();
+        }
+
+        // ============ OVERTIME THIS MONTH ============
+        $overtimeThisMonth = null;
+        $recentOvertime = collect();
+        if ($showOvertime) {
+            $overtimeQuery = \App\Models\OvertimeRequest::where('user_id', $user->id)
+                ->whereMonth('date', $currentMonth)
+                ->whereYear('date', $currentYear);
+
+            $overtimeRows = (clone $overtimeQuery)->get();
+            $overtimeThisMonth = [
+                'approved_hours' => $overtimeRows->where('status', 'approved')->sum(fn($o) => $o->approved_hours ?? $o->overtime_hours),
+                'pending_hours' => $overtimeRows->where('status', 'pending')->sum('overtime_hours'),
+                'pending_count' => $overtimeRows->where('status', 'pending')->count(),
+            ];
+            $recentOvertime = \App\Models\OvertimeRequest::where('user_id', $user->id)
+                ->orderBy('date', 'desc')
+                ->limit(3)
+                ->get();
+        }
+
+        // ============ WFH / TRAVEL REQUESTS ============
+        $myRequests = collect();
+        $requestCounts = null;
+        $wfhDaysThisMonth = 0;
+        $travelDaysThisMonth = 0;
+        if ($showWfhTravel) {
+            $myRequests = \App\Models\Request::where('user_id', $user->id)
+                ->with('requestType')
+                ->latest()
+                ->limit(3)
+                ->get();
+
+            $requestCounts = [
+                'pending' => \App\Models\Request::where('user_id', $user->id)->where('status', 'PENDING')->count(),
+                'approved_this_month' => \App\Models\Request::where('user_id', $user->id)
+                    ->where('status', 'APPROVED')
+                    ->whereMonth('start_date', $currentMonth)
+                    ->whereYear('start_date', $currentYear)
+                    ->count(),
+            ];
+
+            $approvedRequestsThisMonth = \App\Models\Request::where('user_id', $user->id)
+                ->where('status', 'APPROVED')
+                ->whereMonth('start_date', $currentMonth)
+                ->whereYear('start_date', $currentYear)
+                ->with('requestType')
+                ->get();
+
+            foreach ($approvedRequestsThisMonth as $reqRow) {
+                $days = Carbon::parse($reqRow->start_date)->diffInDays(Carbon::parse($reqRow->end_date ?? $reqRow->start_date)) + 1;
+                $typeName = $reqRow->requestType->type_name ?? '';
+                if ($typeName === 'WFH') {
+                    $wfhDaysThisMonth += $days;
+                } elseif ($typeName === 'TRAVEL') {
+                    $travelDaysThisMonth += $days;
+                }
+            }
+        }
+
+        // ============ UPCOMING MEETINGS ============
+        $upcomingMeetings = collect();
+        if ($showMeetings) {
+            $upcomingMeetings = \App\Models\MeetingParticipant::where('user_id', $user->id)
+                ->whereHas('meeting', function ($q) use ($today) {
+                    $q->where('meeting_date', '>=', $today);
+                })
+                ->with('meeting')
+                ->get()
+                ->sortBy(fn($p) => $p->meeting?->meeting_date . ' ' . $p->meeting?->start_time)
+                ->take(3)
+                ->values();
+        }
+
+        // ============ LATEST PAYSLIP ============
+        $latestPayslip = null;
+        $payrollBreakdown = null;
+        if ($showPayroll) {
+            $latestPayslip = MonthlyPayroll::where('user_id', $user->id)
+                ->orderByDesc('payroll_month')
+                ->first();
+
+            if ($latestPayslip) {
+                $payrollBreakdown = [
+                    'basic' => $latestPayslip->basic_salary,
+                    'allowances' => max(0, $latestPayslip->gross_earnings - $latestPayslip->basic_salary - $latestPayslip->overtime_amount),
+                    'deductions' => max(0, $latestPayslip->gross_earnings - $latestPayslip->net_payable),
+                ];
+            }
+        }
+
+        // ============ ATTENDANCE CALENDAR (per-day P/A/H/L/W status map, prev/current/next month) ============
+        $calWindowStart = $today->copy()->subMonthNoOverflow()->startOfMonth();
+        $calWindowEnd = $today->copy()->addMonthNoOverflow()->endOfMonth();
+
+        $calHolidays = Holiday::where('status', 1)
+            ->where(function ($q) use ($calWindowStart, $calWindowEnd) {
+                $q->whereBetween('start_date', [$calWindowStart, $calWindowEnd])
+                    ->orWhereBetween('end_date', [$calWindowStart, $calWindowEnd])
+                    ->orWhere(function ($qq) use ($calWindowStart, $calWindowEnd) {
+                        $qq->where('start_date', '<=', $calWindowStart)->where('end_date', '>=', $calWindowEnd);
+                    });
+            })
+            ->get();
+
+        $calLeaves = Leave::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where(function ($q) use ($calWindowStart, $calWindowEnd) {
+                $q->whereBetween('start_date', [$calWindowStart, $calWindowEnd])
+                    ->orWhereBetween('end_date', [$calWindowStart, $calWindowEnd])
+                    ->orWhere(function ($qq) use ($calWindowStart, $calWindowEnd) {
+                        $qq->where('start_date', '<=', $calWindowStart)->where('end_date', '>=', $calWindowEnd);
+                    });
+            })
+            ->get();
+
+        $calAttendanceRows = Attendance::where('user_id', $user->id)
+            ->whereBetween('date', [$calWindowStart->format('Y-m-d'), $calWindowEnd->format('Y-m-d')])
+            ->whereNotNull('clock_in')
+            ->get()
+            ->keyBy(fn($a) => Carbon::parse($a->date)->format('Y-m-d'));
+
+        $calendarStatusMap = [];
+        $calWalk = $calWindowStart->copy();
+        while ($calWalk <= $calWindowEnd) {
+            $dateKey = $calWalk->format('Y-m-d');
+            $dayName = $calWalk->format('l');
+
+            $holidayName = null;
+            foreach ($calHolidays as $h) {
+                if ($calWalk->between($h->start_date, $h->end_date)) {
+                    $holidayName = $h->name;
+                    break;
+                }
+            }
+
+            $isWeekoffDay = false;
+            foreach ($weekoffs as $weekoff) {
+                if ($weekoff->off_type == 'date_based' && $calWalk->between($weekoff->start_date, $weekoff->end_date)) {
+                    $isWeekoffDay = true;
+                    break;
+                }
+                if ($weekoff->off_type == 'day_based' && $weekoff->day_name == $dayName) {
+                    $isWeekoffDay = true;
+                    break;
+                }
+            }
+
+            $isLeaveDay = false;
+            foreach ($calLeaves as $lv) {
+                if ($calWalk->between($lv->start_date, $lv->end_date)) {
+                    $isLeaveDay = true;
+                    break;
+                }
+            }
+
+            if ($holidayName) {
+                $calendarStatusMap[$dateKey] = ['code' => 'H', 'title' => $holidayName];
+            } elseif ($isWeekoffDay) {
+                $calendarStatusMap[$dateKey] = ['code' => 'W', 'title' => 'Week Off'];
+            } elseif ($calAttendanceRows->has($dateKey)) {
+                $calendarStatusMap[$dateKey] = ['code' => 'P', 'title' => 'Present'];
+            } elseif ($isLeaveDay) {
+                $calendarStatusMap[$dateKey] = ['code' => 'L', 'title' => 'On Leave'];
+            } elseif ($calWalk->lt($today)) {
+                $calendarStatusMap[$dateKey] = ['code' => 'A', 'title' => 'Absent'];
+            }
+            // future working days (no holiday/weekoff/leave/attendance yet) get no entry
+
+            $calWalk->addDay();
+        }
+
+        // ============ RECENT ACTIVITY (merged from already-fetched data) ============
+        $recentActivity = collect();
+
+        foreach ($recentLeaves as $leave) {
+            $recentActivity->push([
+                'type' => 'Leave',
+                'icon' => 'calendar',
+                'title' => ($leave->leave_type_name ?? 'Leave') . ' — ' . \Carbon\Carbon::parse($leave->start_date)->format('d M'),
+                'status' => $leave->status,
+                'date' => $leave->created_at,
+            ]);
+        }
+
+        foreach ($recentTasks as $task) {
+            $recentActivity->push([
+                'type' => 'Task',
+                'icon' => 'check-square',
+                'title' => $task->title,
+                'status' => $task->status,
+                'date' => $task->deadline_date,
+            ]);
+        }
+
+        foreach ($myRequests as $reqRow) {
+            $recentActivity->push([
+                'type' => $reqRow->requestType->type_name ?? 'Request',
+                'icon' => 'send',
+                'title' => ($reqRow->requestType->type_name ?? 'Request') . ' — ' . \Carbon\Carbon::parse($reqRow->start_date)->format('d M'),
+                'status' => strtolower($reqRow->status),
+                'date' => $reqRow->applied_date ?? $reqRow->created_at,
+            ]);
+        }
+
+        foreach ($recentOvertime as $ot) {
+            $recentActivity->push([
+                'type' => 'Overtime',
+                'icon' => 'clock',
+                'title' => ($ot->overtime_hours ?? 0) . ' hrs — ' . \Carbon\Carbon::parse($ot->date)->format('d M'),
+                'status' => $ot->status,
+                'date' => $ot->created_at,
+            ]);
+        }
+
+        $recentActivity = $recentActivity
+            ->sortByDesc(fn($item) => (string) $item['date'])
+            ->take(6)
+            ->values();
+
+        // ============ PENDING APPROVALS (sum of the employee's own items still awaiting a decision) ============
+        $pendingApprovalsCount = $pendingLeaveCount
+            + ($requestCounts['pending'] ?? 0)
+            + ($overtimeThisMonth['pending_count'] ?? 0);
+
         $data = [
             'page_title' => 'My Dashboard',
             'user' => $user,
             'designation' => $jobDetail->designation_name ?? 'N/A',
             'department' => $jobDetail->department_name ?? 'N/A',
+            'reporting_head_name' => $jobDetail->reporting_head_name ?? null,
             'joining_date' => $jobDetail->joining_date ?? null,
             'profile_image' => $basicDetail->profile_image ?? null,
             'today_attendance' => $todayAttendance,
@@ -838,6 +1445,43 @@ class DashboardController extends Controller
             'holidays' => $holidays,
             'weekoffs' => $weekoffs,
             'recent_leaves' => $recentLeaves,
+            'working_hours_today' => $workingHoursToday,
+            'show_overtime' => $showOvertime,
+            'show_wfh_travel' => $showWfhTravel,
+            'show_meetings' => $showMeetings,
+            'show_payroll' => $showPayroll,
+            'show_attendance' => $showAttendance,
+            'show_tasks' => $showTasks,
+            'show_regularization' => $showRegularization,
+            'show_performance' => $showPerformance,
+            'kpi_score' => $kpiScore,
+            'recent_regularizations' => $recentRegularizations,
+            'expense_balance' => $expenseBalance,
+            'pending_expense_count' => $pendingExpenseCount,
+            'recent_expenses' => $recentExpenses,
+            'show_expenses' => $showExpenses,
+            'show_holidays' => $showHolidays,
+            'show_announcements' => $showAnnouncements,
+            'overtime_this_month' => $overtimeThisMonth,
+            'recent_overtime' => $recentOvertime,
+            'my_requests' => $myRequests,
+            'request_counts' => $requestCounts,
+            'upcoming_meetings' => $upcomingMeetings,
+            'latest_payslip' => $latestPayslip,
+            'recent_activity' => $recentActivity,
+            'task_status_counts' => $taskStatusCounts,
+            'total_tasks_assigned' => $totalTasksAssigned,
+            'completed_tasks_count' => $completedTasksCount,
+            'pending_leave_count' => $pendingLeaveCount,
+            'pending_approvals_count' => $pendingApprovalsCount,
+            'payroll_breakdown' => $payrollBreakdown,
+            'attendance_trend_labels' => $attendanceTrendLabels,
+            'attendance_trend_present' => $attendanceTrendPresent,
+            'attendance_trend_absent' => $attendanceTrendAbsent,
+            'attendance_trend_leave' => $attendanceTrendLeave,
+            'calendar_status_map' => $calendarStatusMap,
+            'wfh_days_this_month' => $wfhDaysThisMonth,
+            'travel_days_this_month' => $travelDaysThisMonth,
         ];
 
         return view('client.dashboard.employee', $data);

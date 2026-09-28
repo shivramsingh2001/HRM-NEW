@@ -118,23 +118,6 @@
             transition: all 0.2s;
         }
 
-        .apply-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: var(--primary-mid);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-
         .reset-btn {
             height: 36px;
             padding: 0 12px;
@@ -224,8 +207,10 @@
         }
 
         /* ==================== BADGES ====================
-           Status badges use the ui.status-badge component (theme-custom.css)
-           instead of local bg-* overrides. */
+           Status badges use the ui.status-badge component, but its
+           centralized CSS (theme-custom.css) colors pending/approved/
+           rejected/cancelled as amber/green/red by default — override here
+           so this page stays single-blue, same as Leave/Overtime. */
         .badge {
             padding: 4px 10px;
             font-weight: 500;
@@ -234,6 +219,26 @@
             display: inline-flex;
             align-items: center;
             gap: 4px;
+        }
+
+        .status-badge[data-status="pending"] {
+            background: #dbeafe !important;
+            color: #1e40af !important;
+        }
+
+        .status-badge[data-status="approved"] {
+            background: #e3edfe !important;
+            color: #1e3a8a !important;
+        }
+
+        .status-badge[data-status="rejected"] {
+            background: #1e3a8a !important;
+            color: #ffffff !important;
+        }
+
+        .status-badge[data-status="cancelled"] {
+            background: #f1f5f9 !important;
+            color: #475569 !important;
         }
 
         .badge.bg-info {
@@ -419,7 +424,6 @@
                 gap: 8px;
             }
 
-            .apply-btn,
             .reset-btn {
                 width: 100%;
                 justify-content: center;
@@ -608,13 +612,6 @@
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="filter-item" style="min-width: auto;">
-                        <button type="submit" class="apply-btn">
-                            <i class="feather-search"></i>
-                            Apply
-                        </button>
-                    </div>
-
                     <div class="filter-item" style="min-width: auto;">
                         <a href="{{ route('requests.index') }}" class="reset-btn">
                             <i class="feather-refresh-cw"></i>
@@ -1047,6 +1044,20 @@
         $(document).ready(function() {
             // Auto-submit on select change
             $('.filter-select').on('change', function() {
+                $('#filterForm').submit();
+            });
+
+            // Filter date range — validate then auto-submit (no Apply button in this filter bar)
+            $('#filterForm input[name="from_date"], #filterForm input[name="to_date"]').on('change', function() {
+                let fromDate = $('#filterForm input[name="from_date"]').val();
+                let toDate = $('#filterForm input[name="to_date"]').val();
+
+                if (fromDate && toDate && fromDate > toDate) {
+                    toastr.error('From date cannot be greater than To date');
+                    $(this).val('');
+                    return;
+                }
+
                 $('#filterForm').submit();
             });
 

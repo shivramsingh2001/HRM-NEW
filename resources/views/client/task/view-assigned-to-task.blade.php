@@ -198,21 +198,23 @@
             font-size: 14px;
         }
 
-        /* Filter Row */
+        /* Filter Row — all filters on one row on desktop; the media queries
+           below re-enable wrapping for tablet/mobile widths. */
         .filter-row {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             align-items: flex-end;
-            gap: 12px;
+            gap: 8px;
         }
 
         .filter-item {
-            flex: 0 0 auto;
-            min-width: 160px;
+            flex: 1 1 100px;
+            min-width: 90px;
         }
 
         .filter-item.date-range {
-            min-width: 160px;
+            flex: 1 1 110px;
+            min-width: 100px;
         }
 
         .filter-item .form-label {
@@ -488,6 +490,7 @@
         /* Responsive */
         @media (max-width: 992px) {
             .filter-row {
+                flex-wrap: wrap;
                 gap: 10px;
             }
 
@@ -727,7 +730,7 @@
                     </div>
 
                     <!-- Reset Button -->
-                    <div class="filter-item" style="min-width: auto;">
+                    <div class="filter-item" style="flex: 0 0 auto; min-width: auto;">
                         <a href="{{ route('task.assigned-to-me') }}" class="reset-btn">
                             <i class="feather-refresh-cw"></i>
                             Reset
@@ -971,29 +974,17 @@
                                                 </div>
                                             </td>
                                             <td class="text-center">
-                                                <div class="dropdown">
-                                                    <a href="#" class="action-btn" data-bs-toggle="dropdown"
-                                                        data-bs-offset="0,5">
-                                                        <i class="feather-more-vertical"></i>
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    @if (!in_array($task['status'], ['completed', 'approved', 'rejected']))
+                                                        <button type="button" class="action-btn" title="Update Status"
+                                                            onclick="showStatusUpdateModal({{ $task['id'] }})">
+                                                            <i class="feather-edit"></i>
+                                                        </button>
+                                                    @endif
+                                                    <a href="{{ route('task.view-detail', ['id' => $task['id']]) }}"
+                                                        class="action-btn" title="View Details">
+                                                        <i class="feather-eye"></i>
                                                     </a>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        @if (!in_array($task['status'], ['completed', 'approved', 'rejected']))
-                                                            <li>
-                                                                <button type="button" class="dropdown-item"
-                                                                    onclick="showStatusUpdateModal({{ $task['id'] }})">
-                                                                    <i class="feather-edit text-warning me-2"></i>
-                                                                    Update Status
-                                                                </button>
-                                                            </li>
-                                                        @endif
-                                                        <li>
-                                                            <a class="dropdown-item"
-                                                                href="{{ route('task.view-detail', ['id' => $task['id']]) }}">
-                                                                <i class="feather-eye me-2"></i>
-                                                                View Details
-                                                            </a>
-                                                        </li>
-                                                    </ul>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1187,7 +1178,7 @@
     <!-- Status Update Modal -->
     <div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="statusUpdateModalLabel">Update Task Status</h5>

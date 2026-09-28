@@ -56,6 +56,8 @@
                          </a>
                      </div>
                  </div>
+                 @include('client.layout.partials.notification-bell')
+
                  <div class="nxl-h-item dark-light-theme">
                      <a href="javascript:void(0);" class="nxl-head-link me-0 dark-button">
                          <i class="feather-moon"></i>

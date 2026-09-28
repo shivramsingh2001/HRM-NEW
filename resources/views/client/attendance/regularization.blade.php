@@ -321,6 +321,26 @@
         color: #1e3a8a;
     }
 
+    /* Status column — the shared status-badge Blade component's centralized
+       CSS (theme-custom.css) colors pending/approved/rejected as
+       amber/green/red; override here so this page stays single-blue, using
+       a distinct shade per status (same idea as the Request Type badges
+       below) instead of collapsing them all into one indistinguishable color. */
+    .status-badge[data-status="pending"] {
+        background: #dbeafe !important;
+        color: #1e40af !important;
+    }
+
+    .status-badge[data-status="approved"] {
+        background: #e3edfe !important;
+        color: #1e3a8a !important;
+    }
+
+    .status-badge[data-status="rejected"] {
+        background: #1e3a8a !important;
+        color: #ffffff !important;
+    }
+
     /* Request Type Badges - single blue theme */
     .badge-type-in {
         background: #e3edfe !important;
@@ -454,27 +474,6 @@
         color: #64748b;
         font-size: 14px;
         margin-bottom: 20px;
-    }
-
-    /* ==================== APPROVAL INFO ==================== */
-    .approval-info {
-        background: #f8fafc;
-        border-radius: 8px;
-        padding: 8px 12px;
-        margin-top: 8px;
-        border-left: 2px solid #1e3a8a;
-        font-size: 12px;
-    }
-
-    .approval-info p {
-        margin-bottom: 4px;
-    }
-
-    .approval-info .label {
-        font-weight: 600;
-        color: #475569;
-        width: 70px;
-        display: inline-block;
     }
 
     /* ==================== RESPONSIVE ==================== */
@@ -828,7 +827,6 @@
                                         <th>Reason</th>
                                         <th>Attachment</th>
                                         <th>Status</th>
-                                        <th>Approval Info</th>
                                         <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
@@ -876,10 +874,10 @@
                                                     <span class="text-muted">—</span>
                                                 @endif
                                             </td>
-                                            <td style="max-width: 200px;">
-                                                <div style="white-space: normal; word-wrap: break-word;">
-                                                    {{ Str::limit($regularization->reason ?? 'No reason provided', 50) }}
-                                                </div>
+                                            <td style="max-width: 140px;">
+                                                <small class="text-muted" title="{{ $regularization->reason ?? '' }}">
+                                                    {{ Str::limit($regularization->reason ?? 'No reason provided', 20) }}
+                                                </small>
                                             </td>
                                             <td>
                                                 @if (!empty($regularization->file))
@@ -906,61 +904,31 @@
                                             <td>
                                                 <x-ui.status-badge :status="$regularization->status" />
                                             </td>
-                                            <td>
-                                                @if($regularization->status == 'approved' && $regularization->approved_by)
-                                                    <div class="approval-info">
-                                                        <p><span class="label">By:</span> {{ $regularization->approver->name ?? 'N/A' }}</p>
-                                                        <p><span class="label">On:</span> {{ date('d M Y', strtotime($regularization->approved_date)) }}</p>
-                                                    </div>
-                                                @elseif($regularization->status == 'rejected' && $regularization->approved_by)
-                                                    <div class="approval-info" style="border-left-color: #ef4444;">
-                                                        <p><span class="label">By:</span> {{ $regularization->approver->name ?? 'N/A' }}</p>
-                                                        <p><span class="label">On:</span> {{ date('d M Y', strtotime($regularization->approved_date)) }}</p>
-                                                    </div>
-                                                @else
-                                                    <span class="text-muted">—</span>
-                                                @endif
-                                            </td>
                                             <td class="text-center">
                                                 @if ($regularization->status == 'pending')
-                                                    <div class="dropdown">
-                                                        <a href="#" class="action-btn" data-bs-toggle="dropdown"
-                                                            data-bs-offset="0,5">
-                                                            <i class="feather-more-vertical"></i>
+                                                    <div class="d-flex justify-content-center gap-2">
+                                                        <a href="#" class="action-btn edit-regularization" title="Edit"
+                                                            data-id="{{ $regularization->id }}"
+                                                            data-request_type="{{ $regularization->request_type }}"
+                                                            data-date="{{ $regularization->date }}"
+                                                            data-in_time="{{ $regularization->in_time }}"
+                                                            data-out_time="{{ $regularization->out_time }}"
+                                                            data-reason="{{ $regularization->reason }}">
+                                                            <i class="feather-edit-3"></i>
                                                         </a>
-                                                        <ul class="dropdown-menu dropdown-menu-end">
-                                                            <li>
-                                                                <a class="dropdown-item edit-regularization" href="#"
-                                                                    data-id="{{ $regularization->id }}"
-                                                                    data-request_type="{{ $regularization->request_type }}"
-                                                                    data-date="{{ $regularization->date }}"
-                                                                    data-in_time="{{ $regularization->in_time }}"
-                                                                    data-out_time="{{ $regularization->out_time }}"
-                                                                    data-reason="{{ $regularization->reason }}">
-                                                                    <i class="feather-edit-3"></i>
-                                                                    <span>Edit</span>
-                                                                </a>
-                                                            </li>
-                                                            <li>
-                                                                <a class="dropdown-item delete-regularization" href="#"
-                                                                    data-id="{{ $regularization->id }}">
-                                                                    <i class="feather-trash-2"></i>
-                                                                    <span>Delete</span>
-                                                                </a>
-                                                            </li>
-                                                        </ul>
+                                                        <a href="#" class="action-btn delete delete-regularization" title="Delete"
+                                                            data-id="{{ $regularization->id }}">
+                                                            <i class="feather-trash-2"></i>
+                                                        </a>
                                                     </div>
                                                 @else
-                                                    <button class="action-btn info" onclick="toggleDetails({{ $regularization->id }})" 
-                                                            title="Toggle Details">
-                                                        <i class="feather-chevron-down" id="toggle-icon-{{ $regularization->id }}"></i>
-                                                    </button>
+                                                    <span class="text-muted">&mdash;</span>
                                                 @endif
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="10" class="text-center py-5">
+                                            <td colspan="9" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="feather-clock"></i>
                                                     <h4>No Regularization Requests Found</h4>
@@ -983,7 +951,7 @@
 @section('create-modal')
     <!-- Add Regularization Modal -->
     <div class="modal fade-scale" id="addRegularizationModal" tabindex="-1" aria-labelledby="addRegularizationModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
+        <div class="modal-dialog modal-dialog-centered compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -1001,7 +969,7 @@
                                 @csrf
                                 <div id="addFormError" class="alert alert-danger d-none"></div>
                                 <div class="row">
-                                    <div class="col-md-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="request_type">Request Type *</label>
                                             <select class="form-control" name="request_type" required id="request_type">
@@ -1016,7 +984,7 @@
                                             <small class="text-danger error-text request_type_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-md-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="date">Date *</label>
                                             <input type="date" class="form-control" name="date" required
@@ -1024,14 +992,14 @@
                                             <small class="text-danger error-text date_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-12 mb-3" id="in_time_container">
+                                    <div class="col-md-6 mb-3" id="in_time_container">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="in_time">In Time</label>
                                             <input type="time" class="form-control" name="in_time" id="in_time">
                                             <small class="text-danger error-text in_time_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-12 mb-3" id="out_time_container">
+                                    <div class="col-md-6 mb-3" id="out_time_container">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="out_time">Out Time</label>
                                             <input type="time" class="form-control" name="out_time" id="out_time">
@@ -1075,7 +1043,7 @@
     <!-- Edit Regularization Modal -->
     <div class="modal fade-scale" id="editRegularizationModal" tabindex="-1" aria-labelledby="editRegularizationModal"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
+        <div class="modal-dialog modal-dialog-centered compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -1094,7 +1062,7 @@
                                 <div id="editFormError" class="alert alert-danger d-none"></div>
                                 <input type="hidden" name="id" id="edit_id">
                                 <div class="row">
-                                    <div class="col-md-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_request_type">Request Type *</label>
                                             <select class="form-control" name="request_type" required id="edit_request_type">
@@ -1109,7 +1077,7 @@
                                             <small class="text-danger error-text edit_request_type_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-md-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_date">Date *</label>
                                             <input type="date" class="form-control" name="date" required
@@ -1117,14 +1085,14 @@
                                             <small class="text-danger error-text edit_date_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-12 mb-3" id="edit_in_time_container">
+                                    <div class="col-md-6 mb-3" id="edit_in_time_container">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_in_time">In Time</label>
                                             <input type="time" class="form-control" name="in_time" id="edit_in_time">
                                             <small class="text-danger error-text edit_in_time_error"></small>
                                         </div>
                                     </div>
-                                    <div class="col-12 mb-3" id="edit_out_time_container">
+                                    <div class="col-md-6 mb-3" id="edit_out_time_container">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_out_time">Out Time</label>
                                             <input type="time" class="form-control" name="out_time" id="edit_out_time">
@@ -1406,20 +1374,6 @@
                 $('#in_time_container, #out_time_container, #edit_in_time_container, #edit_out_time_container').hide();
             });
         });
-
-        // Function to toggle details with chevron icon
-        function toggleDetails(id) {
-            // You can implement this to show/hide additional details if needed
-            let icon = document.getElementById('toggle-icon-' + id);
-            
-            if (icon.className.includes('chevron-down')) {
-                icon.className = 'feather-chevron-up';
-                // Show additional details logic here
-            } else {
-                icon.className = 'feather-chevron-down';
-                // Hide additional details logic here
-            }
-        }
 
         // Export to CSV
         function exportToCSV() {

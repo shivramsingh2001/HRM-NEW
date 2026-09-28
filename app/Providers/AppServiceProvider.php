@@ -5,11 +5,13 @@ namespace App\Providers;
 use App\Models\Task;
 use App\Models\User;
 use App\Observers\BiometricRosterObserver;
+use App\Observers\DatabaseNotificationObserver;
 use App\Observers\TaskProgressObserver;
 use App\Observers\UserRoleObserver;
 use App\Services\FeatureService;
 use App\Services\RbacService;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\RateLimiter;
@@ -40,6 +42,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Keep projects.progress_percentage in sync as tasks change.
         Task::observe(TaskProgressObserver::class);
+
+        // Broadcast module: propagate a mobile-driven notifications.read_at
+        // change back onto broadcast_recipients.read_at.
+        DatabaseNotification::observe(DatabaseNotificationObserver::class);
 
         // @feature('payroll') ... @endfeature — platform feature gating in views.
         Blade::if('feature', fn (string $key) => app(FeatureService::class)->enabledForCurrentTenant($key));

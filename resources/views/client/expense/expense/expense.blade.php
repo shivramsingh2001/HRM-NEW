@@ -2,26 +2,33 @@
 
 @section('style')
     <style>
-        /* Mini Stat Icon Styles */
+        /* ==================== EXPENSE OVERVIEW — same card anatomy as the
+           Admin Dashboard's Expense Overview section (section-hdr + flat
+           mini-stat-icon chips + .exp-card breakdown cards), same blue-only
+           design tokens (--d-success/--d-warning/--d-danger/--d-info). ==================== */
+        .row.g-compact { --bs-gutter-x: 10px; --bs-gutter-y: 10px; }
+
+
         .mini-stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            font-size: 13px;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
-        .bg-soft-primary {
-            background: rgba(79, 70, 229, 0.1);
-        }
-
-        .bg-soft-success {
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .bg-soft-info {
-            background: rgba(99, 102, 241, 0.1);
+        /* One theme color: every icon chip gets the same light-blue background,
+           no per-tone variation (bg-soft-danger left alone — shared with the
+           app-wide red modal close-icon convention, untouched here). */
+        .bg-soft-primary,
+        .bg-soft-success,
+        .bg-soft-info,
+        .bg-soft-dark {
+            background: #e3edfe !important;
+            color: #1e3a8a !important;
         }
 
         .bg-soft-warning {
@@ -32,9 +39,43 @@
             background: rgba(239, 68, 68, 0.1);
         }
 
-        .bg-soft-dark {
-            background: rgba(30, 41, 59, 0.1);
+        .stat-card {
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+            border: 1px solid #eaeef5;
         }
+        .stat-card .card-body { padding: 10px; }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 22px rgba(30, 50, 110, .10);
+            border-color: #dfe5f0;
+        }
+
+        .stat-value-sm { font-size: 14px; font-weight: 800; color: #1a2236; line-height: 1.1; margin: 0; }
+        .stat-label { font-size: 10px; font-weight: 600; color: #6b7385; }
+        .stat-sub { font-size: 9.5px; color: #9aa1b1; }
+
+        .exp-card .breakdown-row { padding: 0; }
+        .exp-card .breakdown-row + .breakdown-row { border-top: 1px dashed #eaeef5; }
+        .exp-card a { transition: color .15s ease; }
+
+        /* Pending/Approved/Completed/Cancelled breakdown counts — the exact
+           blue shades the Admin Dashboard uses (--d-warning/success/info/danger),
+           scoped to the breakdown cards only (form validation still needs real red). */
+        .stat-card .text-warning { color: #60a5fa !important; }
+        .stat-card .text-success { color: #3b82f6 !important; }
+        .stat-card .text-info    { color: #0ea5e9 !important; }
+        .stat-card .text-danger  { color: #1d4ed8 !important; }
+        .stat-card .text-primary { color: #1e3a8a !important; }
+        .stat-card .text-dark    { color: #1e3a8a !important; }
+
+        /* Amount column in the table uses the same 4-way status coloring —
+           same blue shades, scoped to .table so form-validation text-danger
+           elsewhere on the page stays real red. */
+        .table .text-warning { color: #2563eb !important; }
+        .table .text-success { color: #1e3a8a !important; }
+        .table .text-info    { color: #1d4ed8 !important; }
+        .table .text-danger  { color: #64748b !important; }
+        .table .text-primary { color: #1e3a8a !important; }
 
         /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
            are centralized in client.layout.head (single blue-only theme —
@@ -84,13 +125,13 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 16px;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -111,8 +152,8 @@
         }
 
         .clear-all-link:hover {
-            background: #fee2e2;
-            color: #ef4444;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .clear-all-link i {
@@ -164,28 +205,11 @@
             font-size: 12px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            background: #f8fafc url("datAdvance:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center;
+            background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center;
             background-size: 14px;
             appearance: none;
             cursor: pointer;
             transition: all 0.2s;
-        }
-
-        .apply-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: #4f46e5;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
         }
 
         .reset-btn {
@@ -240,7 +264,7 @@
         }
 
         .filter-tag i {
-            color: #4f46e5;
+            color: #1e3a8a;
             font-size: 11px;
         }
 
@@ -256,9 +280,9 @@
         }
 
         .filter-tag.clear-all {
-            background: #eef2ff;
-            border-color: #4f46e5;
-            color: #4f46e5;
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
@@ -304,34 +328,34 @@
         }
 
         .badge.bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
+            background: #e3edfe !important;
+            color: #1e3a8a;
         }
 
         .badge.bg-danger {
-            background: #fee2e2 !important;
-            color: #991b1b;
+            background: #f1f5f9 !important;
+            color: #475569;
         }
 
         .badge.bg-info {
-            background: #e0f2fe !important;
-            color: #0369a1;
+            background: #dbeafe !important;
+            color: #1e40af;
         }
 
         .badge.bg-warning {
-            background: #fef3c7 !important;
-            color: #92400e;
+            background: #bfd3f7 !important;
+            color: #1e3a8a;
         }
 
-        .badge.bg-purple {
-            background: #e0e7ff !important;
-            color: #4f46e5;
+        .badge.bg-primary {
+            background: #1e3a8a !important;
+            color: #fff;
         }
 
         /* ==================== PAYMENT DETAILS BUTTON ==================== */
         .payment-info-btn {
-            background: #e0e7ff;
-            color: #4f46e5;
+            background: #dbeafe;
+            color: #1e3a8a;
             border: none;
             border-radius: 20px;
             padding: 4px 12px;
@@ -345,7 +369,7 @@
         }
 
         .payment-info-btn:hover {
-            background: #4f46e5;
+            background: #1e3a8a;
             color: white;
             transform: translateY(-1px);
         }
@@ -360,7 +384,7 @@
             border-radius: 12px;
             padding: 16px;
             margin-top: 10px;
-            border-left: 3px solid #4f46e5;
+            border-left: 3px solid #1e3a8a;
         }
 
         .payment-detail-row {
@@ -388,23 +412,23 @@
         }
 
         .mode-cash {
-            background: #d1fae5;
-            color: #065f46;
+            background: #dbeafe;
+            color: #1e40af;
         }
 
         .mode-bank {
-            background: #e0f2fe;
-            color: #0369a1;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .mode-cheque {
-            background: #fef3c7;
-            color: #92400e;
+            background: #bfd3f7;
+            color: #1e3a8a;
         }
 
         .mode-upi {
-            background: #e0e7ff;
-            color: #4f46e5;
+            background: #93c5fd;
+            color: #1e3a8a;
         }
 
         /* ==================== ACTION BUTTONS ==================== */
@@ -424,8 +448,8 @@
 
         .action-btn:hover {
             background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
             transform: translateY(-2px);
         }
 
@@ -439,24 +463,8 @@
         }
 
         .action-btn.info:hover {
-            color: #4f46e5;
-            border-color: #4f46e5;
-        }
-
-        /* ==================== AMOUNT STYLING ==================== */
-        .amount-positive {
-            font-weight: 600;
-            color: #059669;
-        }
-
-        .amount-pending {
-            font-weight: 600;
-            color: #d97706;
-        }
-
-        .amount-completed {
-            font-weight: 600;
-            color: #4f46e5;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         /* ==================== EMPTY STATE ==================== */
@@ -524,7 +532,6 @@
                 gap: 8px;
             }
 
-            .apply-btn,
             .reset-btn {
                 width: 100%;
                 justify-content: center;
@@ -533,6 +540,54 @@
             .stats-grid {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* ==================== ADD/EDIT EXPENSE MODALS - small font,
+           small margin/padding, same treatment as the Overtime modals ==================== */
+        #addexpenseModal .modal-header,
+        #editexpenseModal .modal-header {
+            background: #fff !important;
+            border-bottom: 1px solid #edf2f7 !important;
+            padding: 10px 16px !important;
+        }
+
+        #addexpenseModal .modal-header .fs-18,
+        #editexpenseModal .modal-header .fs-18 {
+            font-size: 13px !important;
+            color: #1e293b !important;
+        }
+
+        #addexpenseModal .modal-header .close-icon,
+        #editexpenseModal .modal-header .close-icon {
+            width: 26px;
+            height: 26px;
+        }
+
+        #addexpenseModal .form-group label,
+        #editexpenseModal .form-group label {
+            font-size: 11px !important;
+        }
+
+        #addexpenseModal .form-control,
+        #editexpenseModal .form-control {
+            font-size: 11.5px !important;
+            padding: 6px 10px !important;
+        }
+
+        #addexpenseModal .mb-3,
+        #editexpenseModal .mb-3 {
+            margin-bottom: 10px !important;
+        }
+
+        #addexpenseModal small,
+        #editexpenseModal small {
+            font-size: 10.5px !important;
+        }
+
+        #addexpenseModal .btn,
+        #editexpenseModal .btn {
+            font-size: 11.5px !important;
+            padding: 6px 14px !important;
         }
     </style>
 @endsection
@@ -587,7 +642,8 @@
 
     <div class="main-content" style="padding: 20px !important;">
 
-        <div class="row g-3 mb-3">
+
+        <div class="row g-compact mb-2">
             <!-- Current Balance Card -->
             <div class="col-xl-3 col-md-6">
                 <div class="stats-card balance-card">
@@ -641,290 +697,72 @@
             </div>
         </div>
 
-        <!-- Advance Card with Status Breakdown -->
-        <div class="row g-3 mb-2">
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-primary" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'advance'])) }}"
-                                class="text-decoration-none flex-grow-1">
+        <!-- Expense Statistics with breakdown (same anatomy as the Admin
+             Dashboard's Expense Overview breakdown cards) -->
+        <div class="row g-compact mb-2">
+            @php
+                $expenseCards = [
+                    ['title' => 'Advance', 'amount' => $totalAdvanceAmount ?? 0, 'count' => $totalAdvanceCount ?? 0, 'icon' => 'fa-arrow-up', 'tone' => 'primary', 'type' => 'advance',
+                        'pending' => ['c' => $pendingAdvanceCount ?? 0, 'a' => $pendingAdvanceAmount ?? 0], 'approved' => ['c' => $approvedAdvanceCount ?? 0, 'a' => $approvedAdvanceAmount ?? 0],
+                        'completed' => ['c' => $completedAdvanceCount ?? 0, 'a' => $completedAdvanceAmount ?? 0], 'cancelled' => ['c' => $cancelledAdvanceCount ?? 0, 'a' => $cancelledAdvanceAmount ?? 0]],
+                    ['title' => 'Settlement', 'amount' => $totalSettlementAmount ?? 0, 'count' => $totalSettlementCount ?? 0, 'icon' => 'fa-arrow-down', 'tone' => 'success', 'type' => 'settlement',
+                        'pending' => ['c' => $pendingSettlementCount ?? 0, 'a' => $pendingSettlementAmount ?? 0], 'approved' => ['c' => $approvedSettlementCount ?? 0, 'a' => $approvedSettlementAmount ?? 0],
+                        'completed' => ['c' => $completedSettlementCount ?? 0, 'a' => $completedSettlementAmount ?? 0], 'cancelled' => ['c' => $cancelledSettlementCount ?? 0, 'a' => $cancelledSettlementAmount ?? 0]],
+                    ['title' => 'Reimbursement', 'amount' => $totalReimbursementAmount ?? 0, 'count' => $totalReimbursementCount ?? 0, 'icon' => 'fa-exchange-alt', 'tone' => 'info', 'type' => 'reimbursement',
+                        'pending' => ['c' => $pendingReimbursementCount ?? 0, 'a' => $pendingReimbursementAmount ?? 0], 'approved' => ['c' => $approvedReimbursementCount ?? 0, 'a' => $approvedReimbursementAmount ?? 0],
+                        'completed' => ['c' => $completedReimbursementCount ?? 0, 'a' => $completedReimbursementAmount ?? 0], 'cancelled' => ['c' => $cancelledReimbursementCount ?? 0, 'a' => $cancelledReimbursementAmount ?? 0]],
+                    ['title' => 'Total Expenses', 'amount' => $totalAmount ?? 0, 'count' => $totalExpenses ?? 0, 'icon' => 'fa-chart-pie', 'tone' => 'dark', 'type' => null,
+                        'pending' => ['c' => $pendingCount ?? 0, 'a' => $pendingAmount ?? 0], 'approved' => ['c' => $approvedCount ?? 0, 'a' => $approvedAmount ?? 0],
+                        'completed' => ['c' => $completedCount ?? 0, 'a' => $completedAmount ?? 0], 'cancelled' => ['c' => $cancelledCount ?? 0, 'a' => $cancelledAmount ?? 0]],
+                ];
+            @endphp
+            @foreach ($expenseCards as $ec)
+                @php
+                    $baseParams = request()->except(['page']);
+                    $allParams = $ec['type'] ? array_merge($baseParams, ['requirement_type' => $ec['type']]) : $baseParams;
+                    $mk = function ($status) use ($baseParams, $ec) {
+                        $p = $ec['type']
+                            ? array_merge($baseParams, ['requirement_type' => $ec['type'], 'status' => $status])
+                            : array_merge($baseParams, ['status' => $status]);
+                        return route('expense.index', $p);
+                    };
+                @endphp
+                <div class="col-xxl-3 col-md-6">
+                    <div class="card stat-card exp-card stretch-full">
+                        <div class="card-body">
+                            <a href="{{ route('expense.index', $allParams) }}" class="d-block mb-2">
                                 <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-primary">
-                                        <i class="fas fa-arrow-up text-primary fs-5"></i>
-                                    </div>
+                                    <div class="mini-stat-icon bg-soft-{{ $ec['tone'] }}"><i class="fas {{ $ec['icon'] }}"></i></div>
                                     <div>
-                                        <span class="fs-12 text-muted">Advance</span>
-                                        <h6 class="fw-bold mb-0">₹{{ number_format($totalAdvanceAmount ?? 0, 2) }}</h6>
-                                        <span class="fs-11 text-muted">{{ $totalAdvanceCount ?? 0 }} total requests</span>
+                                        <span class="stat-label d-block">{{ $ec['title'] }}</span>
+                                        <h6 class="stat-value-sm">₹{{ number_format($ec['amount'], 2) }}</h6>
+                                        <span class="stat-sub">{{ $ec['count'] }} total requests</span>
                                     </div>
                                 </div>
                             </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Pending:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'advance', 'status' => 'pending'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-warning">{{ $pendingAdvanceCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($pendingAdvanceAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Approved:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'advance', 'status' => 'approved'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-success">{{ $approvedAdvanceCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($approvedAdvanceAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Completed:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'advance', 'status' => 'complete'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completedAdvanceCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($completedAdvanceAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Cancelled:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'advance', 'status' => 'cancelled'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-danger">{{ $cancelledAdvanceCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($cancelledAdvanceAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
+                            <div class="border-top pt-2">
+                                <div class="breakdown-row d-flex justify-content-between align-items-center">
+                                    <span class="stat-sub">Pending</span>
+                                    <a href="{{ $mk('pending') }}"><span class="fw-bold text-warning fs-12">{{ $ec['pending']['c'] }}</span> <span class="stat-sub">(₹{{ number_format($ec['pending']['a'], 2) }})</span></a>
+                                </div>
+                                <div class="breakdown-row d-flex justify-content-between align-items-center">
+                                    <span class="stat-sub">Approved</span>
+                                    <a href="{{ $mk('approved') }}"><span class="fw-bold text-success fs-12">{{ $ec['approved']['c'] }}</span> <span class="stat-sub">(₹{{ number_format($ec['approved']['a'], 2) }})</span></a>
+                                </div>
+                                <div class="breakdown-row d-flex justify-content-between align-items-center">
+                                    <span class="stat-sub">Completed</span>
+                                    <a href="{{ $mk('complete') }}"><span class="fw-bold text-info fs-12">{{ $ec['completed']['c'] }}</span> <span class="stat-sub">(₹{{ number_format($ec['completed']['a'], 2) }})</span></a>
+                                </div>
+                                <div class="breakdown-row d-flex justify-content-between align-items-center">
+                                    <span class="stat-sub">Cancelled</span>
+                                    <a href="{{ $mk('cancelled') }}"><span class="fw-bold text-danger fs-12">{{ $ec['cancelled']['c'] }}</span> <span class="stat-sub">(₹{{ number_format($ec['cancelled']['a'], 2) }})</span></a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Settlement Card with Status Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-success" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'settlement'])) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-success">
-                                        <i class="fas fa-arrow-down text-success fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Settlement</span>
-                                        <h6 class="fw-bold mb-0">₹{{ number_format($totalSettlementAmount ?? 0, 2) }}</h6>
-                                        <span class="fs-11 text-muted">{{ $totalSettlementCount ?? 0 }} total
-                                            requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Pending:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'settlement', 'status' => 'pending'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-warning">{{ $pendingSettlementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($pendingSettlementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Approved:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'settlement', 'status' => 'approved'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-success">{{ $approvedSettlementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($approvedSettlementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Completed:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'settlement', 'status' => 'complete'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completedSettlementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($completedSettlementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Cancelled:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'settlement', 'status' => 'cancelled'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-danger">{{ $cancelledSettlementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($cancelledSettlementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reimbursement Card with Status Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-info" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement'])) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-info">
-                                        <i class="fas fa-exchange-alt text-info fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Reimbursement</span>
-                                        <h6 class="fw-bold mb-0">₹{{ number_format($totalReimbursementAmount ?? 0, 2) }}
-                                        </h6>
-                                        <span class="fs-11 text-muted">{{ $totalReimbursementCount ?? 0 }} total
-                                            requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Pending:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement', 'status' => 'pending'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span
-                                            class="fw-semibold text-warning">{{ $pendingReimbursementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($pendingReimbursementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Approved:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement', 'status' => 'approved'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span
-                                            class="fw-semibold text-success">{{ $approvedReimbursementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($approvedReimbursementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Completed:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement', 'status' => 'complete'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completedReimbursementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($completedReimbursementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Cancelled:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['requirement_type' => 'reimbursement', 'status' => 'cancelled'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span
-                                            class="fw-semibold text-danger">{{ $cancelledReimbursementCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($cancelledReimbursementAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Total Card with Status Breakdown -->
-            <div class="col-xxl-3 col-md-6">
-                <div class="card stretch stretch-full stat-card border-dark" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <a href="{{ route('expense.index', array_merge(request()->except(['page']))) }}"
-                                class="text-decoration-none flex-grow-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="mini-stat-icon bg-soft-dark">
-                                        <i class="fas fa-chart-pie text-dark fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fs-12 text-muted">Total Expenses</span>
-                                        <h6 class="fw-bold mb-0">₹{{ number_format($totalAmount ?? 0, 2) }}</h6>
-                                        <span class="fs-11 text-muted">{{ $totalExpenses ?? 0 }} total requests</span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="border-top pt-2 mt-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Pending:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['status' => 'pending'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-warning">{{ $pendingCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($pendingAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Approved:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['status' => 'approved'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-success">{{ $approvedCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($approvedAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Completed:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['status' => 'complete'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-info">{{ $completedCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($completedAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fs-11 text-muted">Cancelled:</span>
-                                <a href="{{ route('expense.index', array_merge(request()->except(['page']), ['status' => 'cancelled'])) }}"
-                                    class="text-decoration-none">
-                                    <div>
-                                        <span class="fw-semibold text-danger">{{ $cancelledCount ?? 0 }}</span>
-                                        <span
-                                            class="fs-11 text-muted">(₹{{ number_format($cancelledAmount ?? 0, 2) }})</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @endforeach
         </div>
-
 
         <!-- Filter Section -->
         <div class="filter-wrapper">
@@ -1021,14 +859,6 @@
                             style="padding: .375rem .75rem !important;" value="{{ request('to_date') }}"
                             placeholder="To Date">
                     </div>
-
-                    <!-- Action Buttons -->
-                    {{-- <div class="filter-item" style="min-width: auto;">
-                        <button type="submit" class="apply-btn">
-                            <i class="feather-search"></i>
-                            Apply
-                        </button>
-                    </div> --}}
 
                     <div class="filter-item" style="min-width: auto;">
                         <a href="{{ route('expense.index') }}" class="reset-btn">
@@ -1257,44 +1087,31 @@
                                                         (float) $expense->paid_amount === 0.0;
                                                 @endphp
                                                 @if ($expense->status == 'pending' || $canWithdrawApproved)
-                                                    <div class="dropdown">
-                                                        <a href="#" class="action-btn" data-bs-toggle="dropdown"
-                                                            data-bs-offset="0,5">
-                                                            <i class="feather-more-vertical"></i>
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        <a href="#" class="action-btn info withdraw-expense"
+                                                            data-id="{{ $expense->id }}"
+                                                            data-number="{{ $expense->expense_number }}"
+                                                            title="Withdraw">
+                                                            <i class="feather-corner-up-left"></i>
                                                         </a>
-                                                        <ul class="dropdown-menu dropdown-menu-end">
-                                                            <li>
-                                                                <a class="dropdown-item withdraw-expense" href="#"
-                                                                    data-id="{{ $expense->id }}"
-                                                                    data-number="{{ $expense->expense_number }}">
-                                                                    <i class="feather-corner-up-left"></i>
-                                                                    <span>Withdraw</span>
-                                                                </a>
-                                                            </li>
-                                                            @if ($expense->status == 'pending')
-                                                            <li>
-                                                                <a class="dropdown-item edit-expense" href="#"
-                                                                    data-id="{{ $expense->id }}"
-                                                                    data-expense_type="{{ $expense->expense_type }}"
-                                                                    data-requirement_type="{{ $expense->requirement_type }}"
-                                                                    data-project_id="{{ $expense->project_id }}"
-                                                                    data-date="{{ $expense->date }}"
-                                                                    data-amount="{{ $expense->amount }}"
-                                                                    data-description="{{ $expense->description }}"
-                                                                    data-receipts="{{ json_encode($expense->receipt_list ?? []) }}">
-                                                                    <i class="feather-edit-3"></i>
-                                                                    <span>Edit</span>
-                                                                </a>
-                                                            </li>
-                                                            <li>
-                                                                <a class="dropdown-item delete-expense" href="#"
-                                                                    data-id="{{ $expense->id }}">
-                                                                    <i class="feather-trash-2"></i>
-                                                                    <span>Delete</span>
-                                                                </a>
-                                                            </li>
-                                                            @endif
-                                                        </ul>
+                                                        @if ($expense->status == 'pending')
+                                                            <a class="action-btn edit-expense" href="#"
+                                                                data-id="{{ $expense->id }}"
+                                                                data-expense_type="{{ $expense->expense_type }}"
+                                                                data-requirement_type="{{ $expense->requirement_type }}"
+                                                                data-project_id="{{ $expense->project_id }}"
+                                                                data-date="{{ $expense->date }}"
+                                                                data-amount="{{ $expense->amount }}"
+                                                                data-description="{{ $expense->description }}"
+                                                                data-receipts="{{ json_encode($expense->receipt_list ?? []) }}"
+                                                                title="Edit">
+                                                                <i class="feather-edit-3"></i>
+                                                            </a>
+                                                            <a class="action-btn delete delete-expense" href="#"
+                                                                data-id="{{ $expense->id }}" title="Delete">
+                                                                <i class="feather-trash-2"></i>
+                                                            </a>
+                                                        @endif
                                                     </div>
                                                 @else
                                                     <span class="text-muted">—</span>
@@ -1326,7 +1143,7 @@
     <!-- Add Expense Modal -->
     <div class="modal fade-scale" id="addexpenseModal" tabindex="-1" aria-labelledby="addexpenseModal"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -1450,7 +1267,7 @@
     <!-- Edit Expense Modal (keep your existing) -->
     <div class="modal fade-scale" id="editexpenseModal" tabindex="-1" aria-labelledby="editexpenseModal"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">

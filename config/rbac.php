@@ -11,7 +11,7 @@ return [
         'employee', 'attendance', 'leave', 'payroll', 'tasks', 'projects', 'recruitment',
         'onboarding', 'offboarding', 'expenses', 'loans', 'meetings',
         'announcements', 'reports', 'settings', 'performance', 'performance_reviews', 'overtime', 'team',
-        'requests', 'branches', 'assets',
+        'requests', 'branches', 'assets', 'broadcasts',
     ],
 
     'actions' => ['view', 'create', 'edit', 'delete', 'approve', 'export', 'manage'],
@@ -36,6 +36,7 @@ return [
             'expenses' => 'all', 'loans' => 'all', 'meetings' => 'all', 'announcements' => 'all',
             'reports' => 'all', 'settings' => 'all', 'performance' => 'all', 'performance_reviews' => 'all',
             'overtime' => 'all', 'team' => 'all', 'requests' => 'all', 'branches' => 'all', 'assets' => 'all',
+            'broadcasts' => 'all',
         ]],
         'hr' => ['HR', true, [
             // tasks/projects => 'all': matches the pre-RBAC
@@ -74,6 +75,7 @@ return [
             // inventory (registration, assignment, disposal) the same way
             // they own Branch org-setup data.
             'assets' => 'all',
+            'broadcasts' => 'all',
         ]],
         'manager' => ['Manager', true, [
             'employee' => ['view' => 'team'],
@@ -150,6 +152,10 @@ return [
             // company-wide, never create-on-behalf, never the clearance/
             // settlement 'edit' actions (those stay HR/Finance-only below).
             'offboarding' => ['view' => 'team', 'approve' => 'team'],
+            // broadcasts => view only: a manager can see broadcasts targeted
+            // to them (the notification center); composing/sending is
+            // admin/hr only, same split as every other communication module.
+            'broadcasts' => ['view'],
         ]],
         'employee' => ['Employee', true, [
             'employee' => ['view' => 'own'],
@@ -189,6 +195,9 @@ return [
             // StoreOffboardingRequest, not by this scope — RBAC only proves
             // "can touch the offboarding module at all".
             'offboarding' => ['view' => 'own', 'create' => 'own'],
+            // broadcasts => view only: an employee sees broadcasts targeted
+            // to them (the notification center) but can never compose/send.
+            'broadcasts' => ['view'],
         ]],
     ],
 ];

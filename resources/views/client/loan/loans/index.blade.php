@@ -6,14 +6,15 @@
     <style>
         /* Loan-specific statuses beyond the shared .status-badge mapping in
            theme-custom.css (pending/approved/active/cancelled already map
-           there — this only adds the two loan-only words it doesn't know). */
+           there — this only adds the two loan-only words it doesn't know),
+           kept single-blue instead of gray/red. */
         .status-badge[data-status="closed"] {
-            background: var(--gray-200);
-            color: var(--gray-700);
+            background: #f1f5f9;
+            color: #475569;
         }
         .status-badge[data-status="default"] {
-            background: var(--danger-light);
-            color: var(--danger);
+            background: #1e3a8a;
+            color: #ffffff;
         }
 
         .action-btn {
@@ -35,13 +36,13 @@
         }
 
         .action-btn.view:hover {
-            color: var(--primary-mid);
-            border-color: var(--primary-mid);
+            color: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         .action-btn.edit:hover {
-            color: #10b981;
-            border-color: #10b981;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         .action-btn.delete:hover {
@@ -50,14 +51,188 @@
         }
 
         .action-btn.pay {
-            background: #e0f2fe;
-            color: #0369a1;
-            border-color: #bae6fd;
+            background: #dbeafe;
+            color: #1e40af;
+            border-color: #bfd3f7;
         }
 
         .action-btn.pay:hover {
-            background: #0284c7;
+            background: #1e3a8a;
             color: white;
+        }
+
+        .badge.bg-info {
+            background: #dbeafe !important;
+            color: #1e40af;
+        }
+
+        /* ==================== FILTER SECTION (matches Attendance Regularizations) ==================== */
+        .filter-wrapper {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #edf2f7;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .filter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .filter-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a2236;
+        }
+
+        .filter-title i { color: #1e3a8a; font-size: 13px; }
+
+        .filter-title span {
+            background: #e3edfe;
+            color: #1e3a8a;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 6px;
+        }
+
+        .clear-all-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #6b7385;
+            font-size: 12px;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .clear-all-link:hover { background: #e3edfe; color: #1e3a8a; }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-item { flex: 0 0 auto; min-width: 160px; }
+        .filter-item.narrow { min-width: auto; }
+
+        .filter-select,
+        .filter-item .form-control {
+            width: 100%;
+            height: 36px;
+            padding: 6px 28px 6px 10px;
+            font-size: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            transition: all 0.2s;
+        }
+
+        .filter-select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .filter-item .form-control { padding: 6px 10px; }
+
+        .filter-select:focus,
+        .filter-item .form-control:focus {
+            background-color: white;
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            outline: none;
+        }
+
+        .filter-select:hover,
+        .filter-item .form-control:hover { background-color: white; border-color: #94a3b8; }
+
+        .reset-btn {
+            height: 36px;
+            padding: 0 12px;
+            background: white;
+            color: #6b7385;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .reset-btn:hover { background: #f8fafc; border-color: #94a3b8; color: #1a2236; }
+
+        .active-filters {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .active-filters-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7385;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .filter-tag {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            padding: 3px 10px 3px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .filter-tag i { color: #1e3a8a; font-size: 11px; }
+
+        .filter-tag .remove-tag {
+            color: #94a3b8;
+            margin-left: 2px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .filter-tag .remove-tag:hover { color: #1e3a8a; }
+
+        .filter-tag.clear-all {
+            background: #e3edfe;
+            border-color: #1e3a8a;
+            color: #1e3a8a;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 3px 10px;
         }
 
         .emi-preview {
@@ -75,7 +250,7 @@
         }
 
         .approval-note {
-            background: #e0f2fe;
+            background: #dbeafe;
             padding: 10px 15px;
             border-radius: 8px;
             font-size: 12px;
@@ -119,7 +294,7 @@
 
         .progress-fill {
             height: 100%;
-            background: #10b981;
+            background: #1e3a8a;
             border-radius: 10px;
             transition: width 0.3s ease;
         }
@@ -144,18 +319,77 @@
         }
 
         .repayment-paid {
-            background: #d1fae5;
-            color: #065f46;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .repayment-pending {
-            background: #fef3c7;
-            color: #92400e;
+            background: #dbeafe;
+            color: #1e40af;
         }
 
         .repayment-overdue {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #1e3a8a;
+            color: #ffffff;
+        }
+
+        /* ==================== ADD/EDIT LOAN MODALS - small font,
+           small margin/padding, same treatment as the Overtime modals ==================== */
+        #addLoanModal .modal-header,
+        #editLoanModal .modal-header {
+            background: #fff !important;
+            border-bottom: 1px solid #edf2f7 !important;
+            padding: 10px 16px !important;
+        }
+
+        #addLoanModal .modal-header .fs-18,
+        #editLoanModal .modal-header .fs-18 {
+            font-size: 13px !important;
+            color: #1e293b !important;
+        }
+
+        #addLoanModal .modal-header .close-icon,
+        #editLoanModal .modal-header .close-icon {
+            width: 26px;
+            height: 26px;
+        }
+
+        #addLoanModal label,
+        #editLoanModal label {
+            font-size: 11px !important;
+        }
+
+        #addLoanModal .form-control,
+        #editLoanModal .form-control {
+            font-size: 11.5px !important;
+            padding: 6px 10px !important;
+        }
+
+        #addLoanModal .mb-3,
+        #editLoanModal .mb-3 {
+            margin-bottom: 10px !important;
+        }
+
+        #addLoanModal small,
+        #editLoanModal small {
+            font-size: 10.5px !important;
+        }
+
+        #addLoanModal .btn,
+        #editLoanModal .btn {
+            font-size: 11.5px !important;
+            padding: 6px 14px !important;
+        }
+
+        #addLoanModal .emi-preview,
+        #editLoanModal .emi-preview {
+            padding: 10px !important;
+            margin-top: 10px !important;
+        }
+
+        #addLoanModal .emi-amount,
+        #editLoanModal .emi-amount {
+            font-size: 15px !important;
         }
     </style>
 @endsection
@@ -182,65 +416,128 @@
 
 
     <div class="main-content" style="padding: 20px !important;">
-        <div class="row mb-2">
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1">Total EMI Loans</h6>
-                                <h4 class="mb-0">{{ $statistics['emi_loans'] ?? 0 }}</h4>
-                            </div>
-                            <i class="feather-calendar text-primary" style="font-size: 32px;"></i>
-                        </div>
-                    </div>
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stats-card">
+                <div class="stats-icon-wrapper">
+                    <i class="feather-calendar"></i>
+                </div>
+                <div class="stats-content">
+                    <div class="stats-amount-main">{{ $statistics['emi_loans'] ?? 0 }}</div>
+                    <div class="stats-label">Total EMI Loans</div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1">Total Lump Sum Loans</h6>
-                                <h4 class="mb-0">{{ $statistics['lumpsum_loans'] ?? 0 }}</h4>
-                            </div>
-                            <i class="feather-zap text-warning" style="font-size: 32px;"></i>
-                        </div>
-                    </div>
+            <div class="stats-card">
+                <div class="stats-icon-wrapper">
+                    <i class="feather-zap"></i>
+                </div>
+                <div class="stats-content">
+                    <div class="stats-amount-main">{{ $statistics['lumpsum_loans'] ?? 0 }}</div>
+                    <div class="stats-label">Total Lump Sum Loans</div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1">Total EMI Collected</h6>
-                                <h5 class="mb-0 text-success">₹ {{ number_format($statistics['total_emi_paid'] ?? 0, 2) }}
-                                </h5>
-                            </div>
-                            <i class="feather-credit-card text-success" style="font-size: 32px;"></i>
-                        </div>
-                    </div>
+            <div class="stats-card">
+                <div class="stats-icon-wrapper">
+                    <i class="feather-credit-card"></i>
+                </div>
+                <div class="stats-content">
+                    <div class="stats-amount-main">₹{{ number_format($statistics['total_emi_paid'] ?? 0, 2) }}</div>
+                    <div class="stats-label">Total EMI Collected</div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="text-muted mb-1">Outstanding Amount</h6>
-                                <h5 class="mb-0 text-danger">₹
-                                    {{ number_format($statistics['outstanding_amount'] ?? 0, 2) }}</h5>
-                            </div>
-                            <i class="feather-alert-circle text-danger" style="font-size: 32px;"></i>
-                        </div>
-                    </div>
+            <div class="stats-card">
+                <div class="stats-icon-wrapper">
+                    <i class="feather-alert-circle"></i>
+                </div>
+                <div class="stats-content">
+                    <div class="stats-amount-main">₹{{ number_format($statistics['outstanding_amount'] ?? 0, 2) }}</div>
+                    <div class="stats-label">Outstanding Amount</div>
                 </div>
             </div>
         </div>
+
+        <!-- Compact Filter Section -->
+        <div class="filter-wrapper">
+            <div class="filter-header">
+                <div class="filter-title">
+                    <i class="feather-filter"></i>
+                    Filter Loan Requests
+                    @php
+                        $activeFilterCount = collect(request()->only(['status', 'search']))->filter()->count();
+                    @endphp
+                    @if ($activeFilterCount > 0)
+                        <span>{{ $activeFilterCount }} active</span>
+                    @endif
+                </div>
+                @if (request()->hasAny(['status', 'search']))
+                    <a href="{{ route('loan.requests.index') }}" class="clear-all-link">
+                        <i class="feather-x"></i>
+                        Clear All
+                    </a>
+                @endif
+            </div>
+
+            <form method="GET" action="{{ route('loan.requests.index') }}" id="filterForm">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <select name="status" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                            <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
+                            <option value="closed" {{ request('status') == 'closed' ? 'selected' : '' }}>Closed</option>
+                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                            <option value="default" {{ request('status') == 'default' ? 'selected' : '' }}>Default</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <input type="text" class="form-control" name="search" placeholder="Search loan number..."
+                            value="{{ request('search') }}">
+                    </div>
+                    <div class="filter-item narrow">
+                        <a href="{{ route('loan.requests.index') }}" class="reset-btn">
+                            <i class="feather-refresh-cw"></i>
+                            Reset
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            @if (request()->hasAny(['status', 'search']))
+                <div class="active-filters">
+                    <span class="active-filters-label">Active:</span>
+
+                    @if (request('status'))
+                        <span class="filter-tag">
+                            <i class="feather-activity"></i>
+                            Status: {{ ucfirst(request('status')) }}
+                            <a href="{{ route('loan.requests.index', request()->except(['status', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    @if (request('search'))
+                        <span class="filter-tag">
+                            <i class="feather-search"></i>
+                            Search: {{ request('search') }}
+                            <a href="{{ route('loan.requests.index', request()->except(['search', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    <a href="{{ route('loan.requests.index') }}" class="filter-tag clear-all">
+                        <i class="feather-refresh-cw"></i>
+                        Clear All
+                    </a>
+                </div>
+            @endif
+        </div>
+
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
@@ -355,7 +652,7 @@
 @section('create-modal')
     <!-- ==================== ADD LOAN MODAL ==================== -->
     <div class="modal fade-scale" id="addLoanModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -532,7 +829,7 @@
 
     <!-- ==================== EDIT LOAN MODAL ==================== -->
     <div class="modal fade-scale" id="editLoanModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">
@@ -990,6 +1287,20 @@
             let addSelectedInterest = 0;
             let editSelectedInterest = 0;
             let lumpsumLoanId = null;
+
+            // Auto-submit on filter select change
+            $('.filter-select').on('change', function() {
+                $('#filterForm').submit();
+            });
+
+            // Debounced auto-submit for the loan-number search box
+            let searchTimeout;
+            $('#filterForm input[name="search"]').on('keyup', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    $('#filterForm').submit();
+                }, 500);
+            });
 
             // ==================== ADD MODAL FUNCTIONS ====================
             function toggleAddRepaymentType() {

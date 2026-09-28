@@ -20,7 +20,7 @@ class TrackingPointIngestService
     private const FUTURE_TOLERANCE_MINUTES = 5;
 
     /**
-     * @param  array<int,array{point_id:string,lat:mixed,long:mixed,track_time:mixed,accuracy_meters?:mixed,address?:mixed,battery_per?:mixed}>  $points
+     * @param  array<int,array{point_id?:?string,lat:mixed,long:mixed,track_time:mixed,accuracy_meters?:mixed,address?:mixed,battery_per?:mixed}>  $points
      * @return array{saved:int, rejected:int, duplicates:int, session_id:?int, no_session:bool}
      */
     public function ingestBatch(int $tenantId, int $userId, array $points): array
@@ -76,7 +76,7 @@ class TrackingPointIngestService
                 'tenant_id' => $tenantId,
                 'user_id' => $userId,
                 'session_id' => $session->id,
-                'point_id' => (string) $p['point_id'],
+                'point_id' => $this->resolvePointId($p, $t),
                 'track_time' => $t->format('Y-m-d H:i:s'),
                 'lat' => $p['lat'],
                 'long' => $p['long'],
@@ -135,6 +135,27 @@ class TrackingPointIngestService
                 'last_point_at' => DB::table('attendance_tracking_points')->where('session_id', $sessionId)->max('track_time'),
             ]);
         }
+    }
+
+    /**
+     * Client-sent point_id wins. Without one, derive a deterministic id from the
+     * reading itself (coords at the column's 7-decimal precision + epoch second)
+     * so a retried batch of the same readings maps to the same ids and is
+     * deduped by atp_session_point_uq — a random server id would not be.
+     */
+    private function resolvePointId(array $p, Carbon $t): string
+    {
+        $clientId = trim((string) ($p['point_id'] ?? ''));
+        if ($clientId !== '') {
+            return $clientId;
+        }
+
+        return sha1(sprintf(
+            '%s|%s|%d',
+            number_format((float) $p['lat'], 7, '.', ''),
+            number_format((float) $p['long'], 7, '.', ''),
+            $t->getTimestamp()
+        ));
     }
 
     private function parseTrackTime(mixed $value): ?Carbon

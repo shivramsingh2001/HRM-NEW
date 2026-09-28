@@ -2,33 +2,43 @@
 
 @section('style')
     <style>
-        /* Simplified Card Design */
+        /* Simplified Card Design — compact, attractive: small font/padding/margin,
+           subtle shadow + hover lift (same anatomy as .stats-card elsewhere). */
         .main-card {
             background: white;
             border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            margin-bottom: 16px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+            transition: box-shadow .2s, border-color .2s;
+        }
+
+        .main-card:hover {
+            box-shadow: 0 4px 12px -4px rgba(30, 50, 110, .12);
+            border-color: #dfe5f0;
         }
 
         .card-header-custom {
             background: #f9fafb;
             border-bottom: 1px solid #e5e7eb;
-            padding: 12px 16px;
+            padding: 8px 12px;
             font-weight: 600;
+            font-size: 12.5px;
             color: #374151;
+            border-radius: 10px 10px 0 0;
         }
 
         .card-body-custom {
-            padding: 16px;
+            padding: 12px;
         }
 
         /* Task Header */
         .task-header {
             background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 10px;
         }
 
         .deadline-pill {
@@ -49,7 +59,7 @@
         .group-progress-fill { background: #1e3a8a; height: 100%; border-radius: 999px; transition: width .3s; }
 
         .task-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             margin-bottom: 4px;
         }
@@ -70,9 +80,9 @@
         /* Badge Styles */
         .status-badge,
         .priority-badge {
-            padding: 3px 8px;
+            padding: 2px 7px;
             border-radius: 12px;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
@@ -171,7 +181,7 @@
 
         /* Detail Items */
         .detail-section {
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .detail-section:last-child {
@@ -179,18 +189,18 @@
         }
 
         .detail-section-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: #6b7280;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             border-bottom: 1px solid #e5e7eb;
             padding-bottom: 4px;
         }
 
         .detail-item {
             display: flex;
-            padding: 8px 0;
+            padding: 6px 0;
             border-bottom: 1px solid #f3f4f6;
             align-items: center;
         }
@@ -202,15 +212,15 @@
         .detail-label {
             font-weight: 500;
             color: #4b5563;
-            width: 120px;
-            min-width: 120px;
-            font-size: 13px;
+            width: 110px;
+            min-width: 110px;
+            font-size: 12px;
         }
 
         .detail-value {
             flex: 1;
             color: #374151;
-            font-size: 13px;
+            font-size: 12px;
             line-height: 1.5;
         }
 
@@ -221,9 +231,9 @@
         /* Updates Section */
         .update-card {
             background: #f9fafb;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 8px;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 6px;
             border: 1px solid #e5e7eb;
         }
 
@@ -245,7 +255,7 @@
         }
 
         .update-date {
-            font-size: 11px;
+            font-size: 10.5px;
             color: #6b7280;
             background: #e5e7eb;
             padding: 2px 6px;
@@ -253,9 +263,34 @@
         }
 
         .update-remarks {
-            color: #4b5563;
-            font-size: 13px;
+            display: flex;
+            gap: 6px;
+            color: #374151;
+            font-size: 12px;
             line-height: 1.5;
+            background: white;
+            border: 1px solid #eef0f3;
+            border-left: 2px solid #1e3a8a;
+            border-radius: 4px;
+            padding: 6px 8px;
+            margin-top: 4px;
+        }
+
+        .update-remarks i {
+            color: #1e3a8a;
+            font-size: 11px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .update-remarks.is-empty {
+            color: #9ca3af;
+            font-style: italic;
+            border-left-color: #d1d5db;
+        }
+
+        .update-remarks.is-empty i {
+            color: #9ca3af;
         }
 
         /* Attachments */
@@ -325,10 +360,10 @@
 
         /* Buttons */
         .btn-custom {
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 6px;
             font-weight: 500;
-            font-size: 13px;
+            font-size: 12px;
             display: inline-flex;
             align-items: center;
             gap: 4px;
@@ -337,18 +372,18 @@
         /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 24px 16px;
+            padding: 18px 16px;
             color: #9ca3af;
         }
 
         .empty-state i {
-            font-size: 32px;
-            margin-bottom: 8px;
+            font-size: 26px;
+            margin-bottom: 6px;
             color: #d1d5db;
         }
 
         .empty-state p {
-            font-size: 13px;
+            font-size: 12px;
             margin-bottom: 0;
         }
 
@@ -636,9 +671,15 @@
                                                 {{ ucfirst(str_replace('_', ' ', $update->status ?? 'pending')) }}
                                             </span>
                                         </div>
-                                        @if ($update->remarks)
-                                            <div class="update-remarks small">
-                                                {{ $update->remarks }}
+                                        @if (trim((string) $update->remarks) !== '')
+                                            <div class="update-remarks">
+                                                <i class="feather-message-square"></i>
+                                                <span>{{ $update->remarks }}</span>
+                                            </div>
+                                        @else
+                                            <div class="update-remarks is-empty">
+                                                <i class="feather-message-square"></i>
+                                                <span>No remarks added</span>
                                             </div>
                                         @endif
                                     </div>
@@ -923,7 +964,7 @@
 @section('create-modal')
     <!-- Update Status Drawer -->
     <div class="modal fade-scale" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModal" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered compact-modal" role="document">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="d-flex flex-column mb-0">

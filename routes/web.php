@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Announcement\AnnouncementController;
+use App\Http\Controllers\Broadcast\BroadcastController;
+use App\Http\Controllers\Broadcast\BroadcastNotificationCenterController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Department\DepartmentController;
@@ -648,6 +650,23 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::delete('/delete/{id}', [AnnouncementController::class, 'destroy'])->name('destroy')->middleware('permission:announcements,delete');
             Route::post('/toggle-status/{id}', [AnnouncementController::class, 'toggleStatus'])->name('toggle-status')->middleware('permission:announcements,edit');
             Route::get('/{id}/acknowledgments', [AnnouncementController::class, 'acknowledgments'])->name('acknowledgments')->middleware('permission:announcements,view');
+        });
+
+        Route::prefix('broadcast')->name('broadcast.')->middleware('feature:broadcast_notifications')->group(function () {
+            // "Send Broadcast" is now a drawer on the index/history page
+            // itself (see resources/views/client/broadcast/partials/
+            // send-drawer.blade.php) — no separate /create page.
+            Route::get('/', [BroadcastController::class, 'index'])->name('index');
+            Route::post('/store', [BroadcastController::class, 'store'])->name('store')->middleware('permission:broadcasts,create');
+            Route::post('/preview-count', [BroadcastController::class, 'previewCount'])->name('preview-count')->middleware(['permission:broadcasts,create', 'throttle:30,1']);
+            Route::get('/{id}', [BroadcastController::class, 'show'])->name('show')->middleware('permission:broadcasts,view');
+            Route::post('/{id}/cancel', [BroadcastController::class, 'cancel'])->name('cancel')->middleware('permission:broadcasts,edit');
+
+            // recipient-facing web notification center — every authenticated user
+            Route::get('/notifications/list', [BroadcastNotificationCenterController::class, 'index'])->name('notifications.index');
+            Route::get('/notifications/unread-count', [BroadcastNotificationCenterController::class, 'unreadCount'])->name('notifications.unread-count');
+            Route::post('/notifications/{id}/read', [BroadcastNotificationCenterController::class, 'markAsRead'])->name('notifications.read');
+            Route::post('/notifications/mark-all-read', [BroadcastNotificationCenterController::class, 'markAllAsRead'])->name('notifications.read-all');
         });
 
         Route::prefix('leave-credit')->name('leave-credit.')->middleware('feature:leave_management')->group(function () {

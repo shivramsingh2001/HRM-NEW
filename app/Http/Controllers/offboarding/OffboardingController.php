@@ -145,7 +145,22 @@ class OffboardingController extends Controller
                 ->latest('created_at')
                 ->first();
 
-            return view('client.offboarding.index_employee', ['activeRequest' => $activeRequest]);
+            // For the "Submit Resignation" side drawer on this page — same
+            // reason-rule filtering as create()/adminIndex(), scoped to the
+            // logged-in employee only (they can't file on anyone else's behalf).
+            $role = Auth::user()->role ?? 'employee';
+            $employees = User::where('id', Auth::id())->get();
+            $selectedEmployee = Auth::user();
+            $allowedReasons = collect(config('offboarding.reason_rules'))
+                ->filter(fn ($rules) => in_array($role, $rules['creatable_by'], true))
+                ->keys();
+            $reasons = collect(OffboardingRequest::$reasons)->only($allowedReasons);
+            $noticeDays = $this->offboarding->requiredNoticeDays((int) Auth::user()->tenant_id);
+            $reasonRules = config('offboarding.reason_rules');
+
+            return view('client.offboarding.index_employee', compact(
+                'activeRequest', 'employees', 'selectedEmployee', 'reasons', 'noticeDays', 'reasonRules'
+            ));
         } catch (\Exception $e) {
             Log::error('Failed to fetch employee offboarding: ' . $e->getMessage());
             return back()->with('error', 'Failed to load your offboarding request.');

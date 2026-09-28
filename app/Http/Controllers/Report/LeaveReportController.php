@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Report;
 use App\Http\Controllers\Concerns\SanitizesCsv;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceRegularization;
+use App\Models\CompanyBranch;
 use App\Models\Department;
 use App\Models\Leave;
 use App\Models\LeaveBalance;
@@ -12,6 +13,7 @@ use App\Models\LeaveType;
 use App\Models\Request as WorkRequest;
 use App\Models\RequestType;
 use App\Models\User;
+use App\Services\FeatureService;
 use App\Services\RbacService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -53,12 +55,16 @@ class LeaveReportController extends Controller
             return $this->csv($report, $data);
         }
 
+        $branchesEnabled = app(FeatureService::class)->enabledForCurrentTenant('branches');
+
         return view('client.report.leave.reports', $data + [
             'report' => $report,
             'reports' => self::REPORTS,
             'filters' => $request->query(),
             'departments' => Department::where('status', 1)->orderBy('name')->get(['id', 'name']),
             'leaveTypes' => LeaveType::where('status', 1)->orderBy('name')->get(['id', 'name']),
+            'branchesEnabled' => $branchesEnabled,
+            'branches' => $branchesEnabled ? CompanyBranch::where('status', 1)->orderBy('name')->get(['id', 'name']) : collect(),
         ]);
     }
 
@@ -66,10 +72,14 @@ class LeaveReportController extends Controller
 
     private function balance(Request $request, User $user): array
     {
+        $branchesEnabled = app(FeatureService::class)->enabledForCurrentTenant('branches');
+
         $query = LeaveBalance::query()
             ->join('users', 'users.id', '=', 'leave_balances.user_id')
             ->leftJoin('user_job_details as ujd', 'ujd.user_id', '=', 'users.id')
             ->leftJoin('departments as d', 'd.id', '=', 'ujd.department')
+            ->leftJoin('designations as des', 'des.id', '=', 'ujd.designation')
+            ->leftJoin('company_branches as cb', 'cb.id', '=', 'ujd.branch_id')
             ->join('leave_types as lt', 'lt.id', '=', 'leave_balances.leave_type_id');
 
         $this->scopeByUser($query, 'leave_balances.user_id', $user, 'leave');
@@ -80,18 +90,81 @@ class LeaveReportController extends Controller
         if ($request->filled('leave_type_id')) {
             $query->where('leave_balances.leave_type_id', (int) $request->query('leave_type_id'));
         }
+        if ($branchesEnabled && $request->filled('branch_id')) {
+            $query->where('ujd.branch_id', (int) $request->query('branch_id'));
+        }
+        if ($request->filled('search')) {
+            $search = trim($request->query('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('users.name', 'like', "%{$search}%")
+                    ->orWhere('users.employee_id', 'like', "%{$search}%")
+                    ->orWhere('users.email', 'like', "%{$search}%");
+            });
+        }
 
-        $rows = $query->orderBy('users.name')->orderBy('lt.name')
-            ->get(['users.name', 'users.employee_id', 'd.name as department', 'lt.name as leave_type', 'leave_balances.balance']);
+        // Aggregates over the full filtered set (not just the current page).
+        $statsSource = (clone $query)->get(['users.id as user_id', 'd.name as department', 'lt.name as leave_type', 'leave_balances.balance']);
+        $employees = $statsSource->pluck('user_id')->unique()->count();
+        $totalBalance = (float) $statsSource->sum('balance');
+        $balanceStats = [
+            'employees' => $employees,
+            'totalBalance' => $totalBalance,
+            'avgBalance' => $employees > 0 ? $totalBalance / $employees : 0,
+            'leaveTypesCount' => $statsSource->pluck('leave_type')->unique()->count(),
+            'departmentsCount' => $statsSource->pluck('department')->filter()->unique()->count(),
+        ];
+
+        $selectColumns = ['users.name', 'users.employee_id', 'users.email', 'd.name as department', 'des.name as designation', 'lt.name as leave_type', 'leave_balances.balance'];
+        if ($branchesEnabled) {
+            $selectColumns[] = 'cb.name as branch';
+        }
+
+        $headers = array_filter([
+            'Employee ID', 'Employee', 'Department', 'Designation',
+            $branchesEnabled ? 'Branch' : null,
+            'Leave Type', 'Balance',
+        ]);
+
+        if ($request->query('export') === 'csv') {
+            $rows = (clone $query)->orderBy('users.name')->orderBy('lt.name')->get($selectColumns);
+
+            return [
+                'title' => 'Leave Balance',
+                'headers' => array_values($headers),
+                'rows' => $rows->map(function ($r) use ($branchesEnabled) {
+                    $row = [$r->employee_id, $r->name, $r->department ?? '—', $r->designation ?? '—'];
+                    if ($branchesEnabled) {
+                        $row[] = $r->branch ?? '—';
+                    }
+                    $row[] = $r->leave_type;
+                    $row[] = number_format((float) $r->balance, 1);
+
+                    return $row;
+                })->all(),
+                'balanceRows' => collect(),
+                'balanceStats' => $balanceStats,
+                'summary' => [
+                    'Employees' => $employees,
+                    'Rows' => $rows->count(),
+                    'Total balance days' => number_format($totalBalance, 1),
+                ],
+            ];
+        }
+
+        $balanceRows = $query->orderBy('users.name')->orderBy('lt.name')
+            ->paginate(15, $selectColumns)
+            ->withQueryString();
 
         return [
             'title' => 'Leave Balance',
-            'headers' => ['Employee ID', 'Employee', 'Department', 'Leave Type', 'Balance'],
-            'rows' => $rows->map(fn ($r) => [$r->employee_id, $r->name, $r->department ?? '—', $r->leave_type, number_format((float) $r->balance, 1)])->all(),
+            'headers' => array_values($headers),
+            'rows' => [],
+            'balanceRows' => $balanceRows,
+            'balanceStats' => $balanceStats,
             'summary' => [
-                'Employees' => $rows->pluck('name')->unique()->count(),
-                'Rows' => $rows->count(),
-                'Total balance days' => number_format((float) $rows->sum('balance'), 1),
+                'Employees' => $employees,
+                'Rows' => $balanceRows->total(),
+                'Total balance days' => number_format($totalBalance, 1),
             ],
         ];
     }

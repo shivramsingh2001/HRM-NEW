@@ -238,15 +238,17 @@ class TaskController extends Controller
                         ELSE NULL 
                     END as days_remaining')
             ])
-                ->join('task_assigns', 'tasks.id', '=', 'task_assigns.task_id')
+                // Join task_assigns filtered to this user's own row directly —
+                // a group task has one task_assigns row per member, so joining
+                // unfiltered (and only checking membership via a separate
+                // whereExists) produced one duplicate result row per member.
+                ->join('task_assigns', function ($join) use ($authUser) {
+                    $join->on('tasks.id', '=', 'task_assigns.task_id')
+                        ->where('task_assigns.assigned_to', $authUser->id);
+                })
                 ->leftJoin('users', 'task_assigns.assigned_by', '=', 'users.id')
                 ->leftJoin('user_basic_details', 'task_assigns.assigned_by', '=', 'user_basic_details.user_id')
-                ->leftJoin('projects', 'tasks.project_id', '=', 'projects.id')
-                ->whereExists(function ($q) use ($authUser) {
-                    $q->select(DB::raw(1))->from('task_assigns')
-                        ->whereColumn('task_assigns.task_id', 'tasks.id')
-                        ->where('task_assigns.assigned_to', $authUser->id);
-                });
+                ->leftJoin('projects', 'tasks.project_id', '=', 'projects.id');
 
             // Apply filters
             if ($request->has('status') && $request->status != 'all') {

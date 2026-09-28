@@ -13,68 +13,192 @@
             margin-top: 4px;
         }
 
-        /* Filter Section */
-        .filter-bar {
+        /* ==================== COMPACT FILTER SECTION (matches Leave Management) ==================== */
+        .filter-wrapper {
             background: white;
             border-radius: 12px;
             border: 1px solid #edf2f7;
             padding: 16px 20px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
-        .filter-form {
+        .filter-header {
             display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: flex-end;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
         }
 
-        .filter-group {
-            flex: 1;
-            min-width: 150px;
+        .filter-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a2236;
         }
 
-        .filter-group label {
+        .filter-title i { color: var(--primary); font-size: 13px; }
+
+        .filter-title span {
+            background: var(--primary-light);
+            color: var(--primary);
             font-size: 11px;
             font-weight: 600;
-            text-transform: uppercase;
-            color: #64748b;
-            margin-bottom: 4px;
-            display: block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 6px;
         }
 
-        .filter-control {
+        .clear-all-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #6b7385;
+            font-size: 12px;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .clear-all-link:hover { background: var(--primary-light); color: var(--primary); }
+        .clear-all-link i { font-size: 12px; }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-item { flex: 0 0 auto; min-width: 160px; }
+        .filter-item.narrow { min-width: auto; }
+
+        .filter-select,
+        .filter-item .form-control {
             width: 100%;
-            padding: 8px 12px;
+            height: 36px;
+            padding: 6px 28px 6px 10px;
+            font-size: 12px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            font-size: 13px;
-            background: #f8fafc;
+            background-color: #f8fafc;
+            transition: all 0.2s;
         }
 
-        .filter-control:focus {
-            border-color: var(--primary-mid);
+        .filter-select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .filter-select:focus,
+        .filter-item .form-control:focus {
+            background-color: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
             outline: none;
-            background: white;
         }
 
-        .btn-filter {
-            background: var(--primary-mid);
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 8px;
-            font-size: 13px;
-            cursor: pointer;
-        }
+        .filter-select:hover,
+        .filter-item .form-control:hover { background-color: white; border-color: #94a3b8; }
 
-        .btn-reset {
+        .reset-btn {
+            height: 36px;
+            padding: 0 12px;
             background: white;
+            color: #6b7385;
             border: 1px solid #e2e8f0;
-            padding: 8px 20px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .reset-btn:hover { background: #f8fafc; border-color: #94a3b8; color: #1a2236; }
+
+        .active-filters {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .active-filters-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7385;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .filter-tag {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            padding: 3px 10px 3px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .filter-tag i { color: var(--primary); font-size: 11px; }
+
+        .filter-tag .remove-tag {
+            color: #94a3b8;
+            margin-left: 2px;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .filter-tag .remove-tag:hover { color: var(--primary); }
+
+        .filter-tag.clear-all {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+            padding: 3px 10px;
+        }
+
+        .filter-tag.clear-all:hover { background: var(--primary); color: white; }
+        .filter-tag.clear-all i { color: currentColor; }
+
+        /* Status column — single-blue theme override (the shared status-badge
+           component's centralized CSS colors these amber/green/red by default). */
+        .status-badge[data-status="pending"] {
+            background: #dbeafe !important;
+            color: #1e40af !important;
+        }
+
+        .status-badge[data-status="approved"] {
+            background: #e3edfe !important;
+            color: #1e3a8a !important;
+        }
+
+        .status-badge[data-status="rejected"] {
+            background: #1e3a8a !important;
+            color: #ffffff !important;
         }
 
         /* Table Styles */
@@ -99,21 +223,6 @@
             border-radius: 20px;
             font-size: 11px;
             font-weight: 500;
-        }
-
-        .badge-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .badge-approved {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .badge-rejected {
-            background: #fee2e2;
-            color: #991b1b;
         }
 
         .action-btn {
@@ -160,14 +269,66 @@
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            
-            .filter-form {
-                flex-direction: column;
-            }
-            
-            .filter-group {
-                width: 100%;
-            }
+
+            .filter-wrapper { padding: 12px; }
+            .filter-row { flex-direction: column; align-items: stretch; }
+            .filter-item { width: 100%; }
+            .filter-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+        }
+
+        /* ==================== ADD/EDIT MODALS - small font, small margin/padding ==================== */
+        #addOvertimeModal .modal-header,
+        #editOvertimeModal .modal-header {
+            background: #fff !important;
+            border-bottom: 1px solid #edf2f7 !important;
+            padding: 10px 16px !important;
+        }
+
+        #addOvertimeModal .modal-title,
+        #editOvertimeModal .modal-title {
+            font-size: 13px !important;
+            color: #1e293b !important;
+        }
+
+        #addOvertimeModal .modal-body,
+        #editOvertimeModal .modal-body {
+            padding: 14px 16px !important;
+        }
+
+        #addOvertimeModal .mb-3,
+        #editOvertimeModal .mb-3 {
+            margin-bottom: 10px !important;
+        }
+
+        #addOvertimeModal .form-label,
+        #editOvertimeModal .form-label {
+            font-size: 11px !important;
+            margin-bottom: 4px !important;
+        }
+
+        #addOvertimeModal .form-control,
+        #editOvertimeModal .form-control {
+            font-size: 11.5px !important;
+            padding: 6px 10px !important;
+        }
+
+        #addOvertimeModal .text-danger.error-date,
+        #addOvertimeModal .text-danger.error-hours,
+        #addOvertimeModal .text-danger.error-reason,
+        #addOvertimeModal small,
+        #editOvertimeModal small {
+            font-size: 10.5px !important;
+        }
+
+        #addOvertimeModal .modal-footer,
+        #editOvertimeModal .modal-footer {
+            padding: 10px 16px !important;
+        }
+
+        #addOvertimeModal .btn,
+        #editOvertimeModal .btn {
+            font-size: 11.5px !important;
+            padding: 6px 14px !important;
         }
     </style>
 @endsection
@@ -239,13 +400,33 @@
             </div>
         </div>
 
-        <!-- Filter Bar -->
-        <div class="filter-bar">
+        <!-- Compact Filter Section -->
+        <div class="filter-wrapper">
+            <div class="filter-header">
+                <div class="filter-title">
+                    <i class="feather-filter"></i>
+                    Filter Overtime Requests
+                    @php
+                        $activeFilterCount = collect(request()->only(['status', 'from_date', 'to_date']))
+                            ->filter()
+                            ->count();
+                    @endphp
+                    @if ($activeFilterCount > 0)
+                        <span>{{ $activeFilterCount }} active</span>
+                    @endif
+                </div>
+                @if (request()->hasAny(['status', 'from_date', 'to_date']))
+                    <a href="{{ route('overtime.index') }}" class="clear-all-link">
+                        <i class="feather-x"></i>
+                        Clear All
+                    </a>
+                @endif
+            </div>
+
             <form action="{{ route('overtime.index') }}" method="GET" id="filterForm">
-                <div class="filter-form">
-                    <div class="filter-group">
-                        <label>Status</label>
-                        <select name="status" class="filter-control">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <select name="status" class="filter-select">
                             <option value="">All Status</option>
                             <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                             <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
@@ -253,33 +434,70 @@
                         </select>
                     </div>
 
-                    <div class="filter-group">
-                        <label>From Date</label>
-                        <input type="date" name="from_date" class="filter-control" value="{{ request('from_date') }}">
+                    <div class="filter-item">
+                        <input type="date" class="form-control" name="from_date" value="{{ request('from_date') }}">
                     </div>
 
-                    <div class="filter-group">
-                        <label>To Date</label>
-                        <input type="date" name="to_date" class="filter-control" value="{{ request('to_date') }}">
+                    <div class="filter-item">
+                        <input type="date" class="form-control" name="to_date" value="{{ request('to_date') }}">
                     </div>
 
-                    {{-- <div class="filter-group">
-                        <button type="submit" class="btn-filter">
-                            <i class="feather-search me-1"></i> Apply
-                        </button>
-                    </div> --}}
-
-                    <div class="filter-group">
-                        <a href="{{ route('overtime.index') }}" class="btn-reset d-inline-block text-center">
-                            <i class="feather-refresh-cw me-1"></i> Reset
+                    <div class="filter-item narrow">
+                        <a href="{{ route('overtime.index') }}" class="reset-btn">
+                            <i class="feather-refresh-cw"></i>
+                            Reset
                         </a>
                     </div>
                 </div>
             </form>
+
+            @if (request()->hasAny(['status', 'from_date', 'to_date']))
+                <div class="active-filters">
+                    <span class="active-filters-label">Active:</span>
+
+                    @if (request('status'))
+                        <span class="filter-tag">
+                            <i class="feather-activity"></i>
+                            Status: {{ ucfirst(request('status')) }}
+                            <a href="{{ route('overtime.index', request()->except(['status', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    @if (request('from_date'))
+                        <span class="filter-tag">
+                            <i class="feather-calendar"></i>
+                            From: {{ request('from_date') }}
+                            <a href="{{ route('overtime.index', request()->except(['from_date', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    @if (request('to_date'))
+                        <span class="filter-tag">
+                            <i class="feather-calendar"></i>
+                            To: {{ request('to_date') }}
+                            <a href="{{ route('overtime.index', request()->except(['to_date', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    <a href="{{ route('overtime.index') }}" class="filter-tag clear-all">
+                        <i class="feather-refresh-cw"></i>
+                        Clear All
+                    </a>
+                </div>
+            @endif
         </div>
 
         <!-- Requests Table -->
         <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Overtime Requests</h5>
+            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table">
@@ -364,7 +582,7 @@
 @section('create-modal')
     <!-- Add Overtime Modal -->
     <div class="modal fade" id="addOvertimeModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Request Overtime</h5>
@@ -400,7 +618,7 @@
 
     <!-- Edit Overtime Modal -->
     <div class="modal fade" id="editOvertimeModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Overtime Request</h5>
@@ -458,8 +676,22 @@
     let cancelId = null;
 
     $(document).ready(function() {
-        // Auto-submit filter on change
-        $('.filter-control').on('change', function() {
+        // Auto-submit on filter select change
+        $('.filter-select').on('change', function() {
+            $('#filterForm').submit();
+        });
+
+        // Date range validation, then auto-submit (no Apply button in this filter bar)
+        $('input[name="from_date"], input[name="to_date"]').on('change', function() {
+            let fromDate = $('input[name="from_date"]').val();
+            let toDate = $('input[name="to_date"]').val();
+
+            if (fromDate && toDate && fromDate > toDate) {
+                toastr.error('From date cannot be greater than To date');
+                $(this).val('');
+                return;
+            }
+
             $('#filterForm').submit();
         });
 

@@ -42,12 +42,12 @@
         }
 
         .filter-title i {
-            color: #4f46e5;
+            color: #1e3a8a;
         }
 
         .filter-title span {
-            background: #eef2ff;
-            color: #4f46e5;
+            background: #e3edfe;
+            color: #1e3a8a;
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
@@ -66,8 +66,8 @@
         }
 
         .clear-all-link:hover {
-            background: #fee2e2;
-            color: #ef4444;
+            background: #e3edfe;
+            color: #1e3a8a;
         }
 
         .filter-row {
@@ -89,27 +89,23 @@
             font-size: 12px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            background: #f8fafc;
+            background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center;
+            background-size: 14px;
+            appearance: none;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .apply-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: #4f46e5;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
+        .filter-select:focus {
+            background-color: white;
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            outline: none;
         }
 
-        .apply-btn:hover {
-            background: #4338ca;
+        .filter-select:hover {
+            background-color: white;
+            border-color: #94a3b8;
         }
 
         .reset-btn {
@@ -202,13 +198,27 @@
         }
 
         .badge.bg-success {
-            background: #d1fae5 !important;
-            color: #065f46;
+            background: #e3edfe !important;
+            color: #1e3a8a;
         }
 
         .badge.bg-info {
-            background: #e0f2fe !important;
-            color: #0369a1;
+            background: #dbeafe !important;
+            color: #1e40af;
+        }
+
+        .badge.bg-warning {
+            background: #bfd3f7 !important;
+            color: #1e3a8a;
+        }
+
+        .badge.bg-danger {
+            background: #f1f5f9 !important;
+            color: #475569;
+        }
+
+        .table .text-success {
+            color: #1e3a8a !important;
         }
 
         /* Action Buttons */
@@ -228,8 +238,8 @@
 
         .action-btn:hover {
             background: white;
-            color: #4f46e5;
-            border-color: #4f46e5;
+            color: #1e3a8a;
+            border-color: #1e3a8a;
         }
 
         /* Empty State */
@@ -374,13 +384,6 @@
                         </select>
                     </div>
 
-                    <!--<div class="filter-item" style="min-width: auto;">-->
-                    <!--    <button type="submit" class="apply-btn">-->
-                    <!--        <i class="feather-search"></i>-->
-                    <!--        Apply-->
-                    <!--    </button>-->
-                    <!--</div>-->
-
                     <div class="filter-item" style="min-width: auto;">
                         <a href="{{ route('my-payroll.my-salary-slips') }}" class="reset-btn">
                             <i class="feather-refresh-cw"></i>
@@ -459,14 +462,10 @@
                                                 <strong>{{ \Carbon\Carbon::createFromFormat('Y-m', $slip->payroll_month)->format('F Y') }}</strong>
                                                 <br>
                                                 <small class="text-muted">{{ $slip->payroll_month }}</small>
-                                             </div>
                                             </td>
-                                            <td>₹ {{ number_format($slip->gross_earnings, 2) }}</div>
-                                            </td>
-                                            <td>₹ {{ number_format($slip->total_deductions, 2) }}</div>
-                                            </td>
-                                            <td class="fw-bold text-success">₹ {{ number_format($slip->net_payable, 2) }}</div>
-                                            </td>
+                                            <td>₹ {{ number_format($slip->gross_earnings, 2) }}</td>
+                                            <td>₹ {{ number_format($slip->total_deductions, 2) }}</td>
+                                            <td class="fw-bold text-success">₹ {{ number_format($slip->net_payable, 2) }}</td>
                                             <td>
                                                 @php
                                                     $statusClass = [
@@ -479,27 +478,26 @@
                                                 <span class="badge bg-{{ $statusClass }}">
                                                     {{ ucfirst($slip->payment_status) }}
                                                 </span>
-                                             </div>
                                             </td>
                                             <td>
                                                 {{ $slip->payment_date ? \Carbon\Carbon::parse($slip->payment_date)->format('d M Y') : 'N/A' }}
-                                             </div>
+                                            </td>
                                             <td>
                                                 <div class="d-flex gap-1 justify-content-center">
-                                                    <a href="{{ route('my-payroll.view-salary-slip', $slip->id) }}" 
-                                                       class="action-btn" 
+                                                    <a href="{{ route('my-payroll.view-salary-slip', $slip->id) }}"
+                                                       class="action-btn"
                                                        target="_blank"
                                                        title="View Slip">
                                                         <i class="feather-eye"></i>
                                                     </a>
-                                                    <a href="{{ route('my-payroll.download-salary-slip', $slip->id) }}" 
-                                                       class="action-btn" 
+                                                    <a href="{{ route('my-payroll.download-salary-slip', $slip->id) }}"
+                                                       class="action-btn"
                                                        title="Download PDF">
                                                         <i class="feather-download"></i>
                                                     </a>
                                                 </div>
-                                             </div>
-                                         </div>
+                                            </td>
+                                        </tr>
                                     @empty
                                         <tr>
                                             <td colspan="8" class="text-center py-5">

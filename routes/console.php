@@ -165,3 +165,20 @@ Schedule::command('expense:purge-deleted')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/expense-purge-deleted.log'));
+
+// Broadcast — fire every scheduled broadcast whose scheduled_at has arrived. everyMinute() (not the more
+// common 5-minute cadence) because a broadcast scheduled for "9:00am" should land at ~9:00-9:01, not up
+// to five minutes late.
+Schedule::command('broadcast:send-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/broadcast-send-scheduled.log'));
+
+// Broadcast — flip sent broadcasts past their expires_at to expired, and refresh the list-page stat
+// snapshots (delivered/read/click counts) from the live broadcast_recipients rows.
+Schedule::command('broadcast:expire')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/broadcast-expire.log'));

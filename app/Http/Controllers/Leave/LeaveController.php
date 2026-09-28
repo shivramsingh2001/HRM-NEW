@@ -53,6 +53,10 @@ class LeaveController extends Controller
                 $leaveQuery->whereDate('start_date', '<=', $request->to_date);
             }
 
+            if ($request->filled('leave_type')) {
+                $leaveQuery->where('leave_type', $request->leave_type);
+            }
+
             // Get filtered leaves
             $leaves = $leaveQuery->orderBy('created_at', 'desc')->get();
 
@@ -75,6 +79,10 @@ class LeaveController extends Controller
                 $statsQuery->whereDate('start_date', '<=', $request->to_date);
             }
 
+            if ($request->filled('leave_type')) {
+                $statsQuery->where('leave_type', $request->leave_type);
+            }
+
             $stats = $statsQuery->selectRaw("
                 COALESCE(SUM(leave_count), 0) as total_leave,
                 COALESCE(SUM(CASE WHEN status = 'pending' THEN leave_count ELSE 0 END), 0) as pending_leave,
@@ -90,10 +98,12 @@ class LeaveController extends Controller
                 'unpaidLeave' => $available < 0 ? abs($available) : 0,
                 'rejectLeave' => $stats->reject_leave,
                 'leaves' => $leaves,
+                'leaveTypes' => LeaveType::where('status', 1)->where('tenant_id', Auth::user()->tenant_id)->get(),
                 'filters' => [
                     'status' => $request->status,
                     'from_date' => $request->from_date,
                     'to_date' => $request->to_date,
+                    'leave_type' => $request->leave_type,
                 ]
             ];
 

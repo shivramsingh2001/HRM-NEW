@@ -108,30 +108,23 @@ class AttendanceContoller extends Controller
                 ->get()
                 ->keyBy('date');
 
-            // Get all approved leaves for this user in date range
+            // Get all approved leaves overlapping this date range
+            // (start <= range end AND end >= range start covers every overlap
+            // case, including leaves that began before the range).
             $leaves = Leave::where('user_id', $userId)
                 ->where('status', 'approved')
-                ->where(function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('start_date', [$startDate, $endDate])
-                        ->orWhereBetween('start_date', [$startDate, $endDate])
-                        ->orWhere(function ($q2) use ($startDate, $endDate) {
-                            $q2->where('start_date', '<=', $startDate)
-                                ->where('start_date', '>=', $endDate);
-                        });
-                })
+                ->where('start_date', '<=', $endDate)
+                ->where('end_date', '>=', $startDate)
                 ->get();
 
-            // Get all holidays for tenant in date range
-            $holidays = Holiday::where('tenant_id', $tenantId)
-                ->where(function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('start_date', [$startDate, $endDate])
-                        ->orWhereBetween('start_date', [$startDate, $endDate])
-                        ->orWhere(function ($q2) use ($startDate, $endDate) {
-                            $q2->where('start_date', '<=', $startDate)
-                                ->where('start_date', '>=', $endDate);
-                        });
-                })
-                ->get();
+            // Get all holidays for this tenant. Not filtered by date range at
+            // the SQL level: a handful of real holiday rows have end_date
+            // entered before start_date, and an overlap filter using end_date
+            // would silently drop those from the result set before the
+            // per-day loop below gets a chance to apply its own fallback.
+            // The holiday table is small (tenant-scoped, a few dozen rows at
+            // most), so fetching all of them and filtering in PHP is cheap.
+            $holidays = Holiday::where('tenant_id', $tenantId)->get();
 
             // Get all weekoffs for this user
             $weekoffs = UserWeekoffs::where('user_id', $userId)
@@ -159,7 +152,13 @@ class AttendanceContoller extends Controller
                 $holiday = null;
                 foreach ($holidays as $h) {
                     $holidayStart = Carbon::parse($h->start_date);
-                    $holidayEnd = Carbon::parse($h->start_date);
+                    $holidayEnd = Carbon::parse($h->end_date);
+                    // Guard against a mis-entered end_date before start_date
+                    // (seen in real data) so a bad record degrades to a
+                    // single-day holiday instead of vanishing entirely.
+                    if ($holidayEnd->lt($holidayStart)) {
+                        $holidayEnd = $holidayStart;
+                    }
                     if ($currentDate->between($holidayStart, $holidayEnd)) {
                         $holiday = $h;
                         break;
@@ -231,11 +230,23 @@ class AttendanceContoller extends Controller
                     }
                 } else {
                     // Handle past and today dates (existing logic)
+                    $manualSecondaryStatus = null;
+
                     if ($attendance) {
                         if ($attendance->clock_in && $attendance->clock_out) {
                             $primaryStatus = 'Present';
                         } elseif ($attendance->clock_in) {
                             $primaryStatus = 'Checked In Only';
+                        } else {
+                            // No punches at all — this row exists only because
+                            // it was marked by hand (Team screen manual
+                            // marking / AttendanceStatus enum). Fall back to
+                            // that persisted status instead of leaving the
+                            // day with no status at all.
+                            [$manualPrimary, $manualSecondaryStatus, $manualFallback] =
+                                $this->mapManualAttendanceStatus($attendance);
+                            $primaryStatus = $manualPrimary;
+                            $fallbackStatus = $manualFallback;
                         }
                     } elseif ($leave) {
                         $startSession = $leave->start_session;
@@ -254,6 +265,8 @@ class AttendanceContoller extends Controller
                         $secondaryStatus = 'Holiday';
                     } elseif ($weekoff) {
                         $secondaryStatus = 'Week Off';
+                    } elseif ($manualSecondaryStatus) {
+                        $secondaryStatus = $manualSecondaryStatus;
                     }
 
                     if (!$attendance && !$leave && !$holiday && !$weekoff) {
@@ -344,6 +357,33 @@ class AttendanceContoller extends Controller
         }
     }
 
+    /**
+     * A row with no clock_in/clock_out only exists because it was marked by
+     * hand (Team screen manual marking, see App\Enums\AttendanceStatus) — the
+     * clock-time check above has nothing to go on, so read the persisted
+     * status directly instead of leaving the day with no status at all.
+     *
+     * @return array{0: ?string, 1: ?string, 2: ?string} [primary, secondary, fallback]
+     */
+    private function mapManualAttendanceStatus($attendance): array
+    {
+        $status = $attendance->effective_status ?: $attendance->attendance_status;
+
+        return match ($status) {
+            'present', 'late', 'overtime', 'early_departure' => ['Present', null, null],
+            'half_day' => ['Half Day', null, null],
+            'on_leave' => ['Full Day Leave', null, null],
+            'first_half_leave' => ['First Half Leave', null, null],
+            'second_half_leave' => ['Second Half Leave', null, null],
+            'holiday' => [null, 'Holiday', null],
+            'weekoff' => [null, 'Week Off', null],
+            'absent' => [null, null, 'Absent'],
+            // Unrecognized/blank persisted status — still resolve to
+            // something rather than silently showing no status at all.
+            default => [null, null, 'Absent'],
+        };
+    }
+
     private function initializeSummary()
     {
         return [
@@ -369,6 +409,9 @@ class AttendanceContoller extends Controller
                     break;
                 case 'Checked In Only':
                     $summary['checked_in_only']++;
+                    $summary['present']++;
+                    break;
+                case 'Half Day':
                     $summary['present']++;
                     break;
                 case 'First Half Leave':
@@ -483,19 +526,23 @@ class AttendanceContoller extends Controller
 
     private function getEventColor($status)
     {
+        // Single-blue theme: every status is a shade of the app's primary
+        // blue (--primary #1e3a8a / --primary-mid #2563eb) instead of the
+        // usual green/red/amber semantic colors, matching the rest of the app.
         $colorMap = [
-            'Present' => '#28a745',
-            'Checked In Only' => '#ffc107',
-            'Holiday' => '#0d6efd',
-            'First Half Leave' => '#fd7e14',
-            'Second Half Leave' => '#fd7e14',
-            'Full Day Leave' => '#fd7e14',
-            'Week Off' => '#6c757d',
-            'Absent' => '#dc3545',
-            'Upcoming' => '#17a2b8'
+            'Absent' => '#172554',
+            'Present' => '#1e3a8a',
+            'Checked In Only' => '#1e40af',
+            'Half Day' => '#1e40af',
+            'Holiday' => '#1d4ed8',
+            'First Half Leave' => '#2563eb',
+            'Second Half Leave' => '#2563eb',
+            'Full Day Leave' => '#2563eb',
+            'Week Off' => '#3b82f6',
+            'Upcoming' => '#60a5fa',
         ];
 
-        return $colorMap[$status] ?? '#6f42c1';
+        return $colorMap[$status] ?? '#1e3a8a';
     }
 
     public function calendarData(Request $request)

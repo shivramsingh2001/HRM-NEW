@@ -502,6 +502,11 @@
             border-color: #1e3a8a;
         }
 
+        .action-btn.delete:hover {
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+
         .dropdown-item {
             font-size: 12px;
             padding: 6px 12px;
@@ -1249,47 +1254,29 @@
                                                 </div>
                                             </td>
                                             <td class="text-center">
-                                                <div class="dropdown">
-                                                    <a href="#" class="action-btn" data-bs-toggle="dropdown"
-                                                        data-bs-offset="0,5" onclick="event.stopPropagation();">
-                                                        <i class="feather-more-vertical"></i>
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    @if (in_array($task->status, ['completed']))
+                                                        <button type="button" class="action-btn" title="Update Status"
+                                                            onclick="event.stopPropagation(); showStatusUpdateModal({{ $task->id }})">
+                                                            <i class="feather-edit"></i>
+                                                        </button>
+                                                    @endif
+                                                    <a href="{{ route('task.view-detail', ['id' => $task->id]) }}"
+                                                        class="action-btn" title="View Details">
+                                                        <i class="feather-eye"></i>
                                                     </a>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        @if (in_array($task->status, ['completed']))
-                                                            <li>
-                                                                <button type="button" class="dropdown-item"
-                                                                    onclick="event.stopPropagation(); showStatusUpdateModal({{ $task->id }})">
-                                                                    <i class="feather-edit text-warning me-2"></i>
-                                                                    Update Status
-                                                                </button>
-                                                            </li>
-                                                        @endif
-                                                        <li>
-                                                            <a class="dropdown-item"
-                                                                href="{{ route('task.view-detail', ['id' => $task->id]) }}">
-                                                                <i class="feather-eye me-2"></i>
-                                                                View Details
-                                                            </a>
-                                                        </li>
-                                                        @if (in_array($task->status, ['pending', 'in_progress', 'hold']))
-                                                            <li>
-                                                                <button type="button" class="dropdown-item"
-                                                                    onclick="event.stopPropagation(); openEditTaskDrawer({{ $task->id }})">
-                                                                    <i class="feather-edit-2 me-2"></i>
-                                                                    Edit Task
-                                                                </button>
-                                                            </li>
-                                                        @endif
-                                                        @if (in_array($task->status, ['pending', 'in_progress']))
-                                                            <li>
-                                                                <a class="dropdown-item text-danger" href="#"
-                                                                    onclick="event.stopPropagation(); confirmDelete({{ $task->id }})">
-                                                                    <i class="feather-trash-2 me-2"></i>
-                                                                    Delete
-                                                                </a>
-                                                            </li>
-                                                        @endif
-                                                    </ul>
+                                                    @if (in_array($task->status, ['pending', 'in_progress', 'hold']))
+                                                        <button type="button" class="action-btn" title="Edit Task"
+                                                            onclick="event.stopPropagation(); openEditTaskDrawer({{ $task->id }})">
+                                                            <i class="feather-edit-2"></i>
+                                                        </button>
+                                                    @endif
+                                                    @if (in_array($task->status, ['pending', 'in_progress']))
+                                                        <a href="#" class="action-btn delete" title="Delete"
+                                                            onclick="event.stopPropagation(); confirmDelete({{ $task->id }})">
+                                                            <i class="feather-trash-2"></i>
+                                                        </a>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -1316,7 +1303,7 @@
                                         Showing {{ $tasks->firstItem() }} to {{ $tasks->lastItem() }} of
                                         {{ $tasks->total() }} entries
                                     </div>
-                                    <div>
+                                    <div class="remove-internal-para">
                                         {{ $tasks->appends(request()->query())->links() }}
                                     </div>
                                 </div>
@@ -1592,7 +1579,7 @@
     <!-- Status Update Modal -->
     <div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="statusUpdateModalLabel">Update Task Status</h5>

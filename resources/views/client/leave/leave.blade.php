@@ -33,6 +33,267 @@
     .btn-primary { background: var(--lv-primary-2); border-color: var(--lv-primary-2); }
     .btn-primary:hover { background: var(--lv-primary); border-color: var(--lv-primary); }
     .form-label { font-size: 11.5px; font-weight: 600; color: var(--lv-text-soft); }
+
+    /* ==================== COMPACT FILTER SECTION (matches Team Leave Applications) ==================== */
+    .filter-wrapper {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--lv-border);
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .filter-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .filter-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--lv-text);
+    }
+
+    .filter-title i { color: var(--lv-primary); font-size: 13px; }
+
+    .filter-title span {
+        background: var(--lv-soft);
+        color: var(--lv-primary);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 20px;
+        margin-left: 6px;
+    }
+
+    .clear-all-link {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--lv-text-soft);
+        font-size: 12px;
+        text-decoration: none;
+        padding: 4px 10px;
+        border-radius: 20px;
+        transition: all 0.2s;
+    }
+
+    .clear-all-link:hover { background: var(--lv-soft); color: var(--lv-primary); }
+    .clear-all-link i { font-size: 12px; }
+
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .filter-item { flex: 0 0 auto; min-width: 160px; }
+    .filter-item.narrow { min-width: auto; }
+
+    .filter-select,
+    .filter-item .form-control {
+        width: 100%;
+        height: 36px;
+        padding: 6px 28px 6px 10px;
+        font-size: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background-color: #f8fafc;
+        transition: all 0.2s;
+    }
+
+    .filter-select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 14px;
+        appearance: none;
+        cursor: pointer;
+    }
+
+    .filter-select:focus,
+    .filter-item .form-control:focus {
+        background-color: white;
+        border-color: var(--lv-primary);
+        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        outline: none;
+    }
+
+    .filter-select:hover,
+    .filter-item .form-control:hover { background-color: white; border-color: #94a3b8; }
+
+    .reset-btn {
+        height: 36px;
+        padding: 0 12px;
+        background: white;
+        color: var(--lv-text-soft);
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .reset-btn:hover { background: #f8fafc; border-color: #94a3b8; color: var(--lv-text); }
+
+    .active-filters {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed #e2e8f0;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .active-filters-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--lv-text-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        background: #f1f5f9;
+        padding: 2px 8px;
+        border-radius: 20px;
+    }
+
+    .filter-tag {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 30px;
+        padding: 3px 10px 3px 8px;
+        font-size: 11px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .filter-tag i { color: var(--lv-primary); font-size: 11px; }
+
+    .filter-tag .remove-tag {
+        color: #94a3b8;
+        margin-left: 2px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .filter-tag .remove-tag:hover { color: var(--lv-primary); }
+
+    .filter-tag.clear-all {
+        background: var(--lv-soft);
+        border-color: var(--lv-primary);
+        color: var(--lv-primary);
+        font-weight: 600;
+        text-decoration: none;
+        padding: 3px 10px;
+    }
+
+    .filter-tag.clear-all:hover { background: var(--lv-primary); color: white; }
+    .filter-tag.clear-all i { color: currentColor; }
+
+    /* ==================== DIRECT ACTION ICONS (no 3-dot dropdown) ==================== */
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        color: var(--lv-text-soft);
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+        background: white;
+        color: var(--lv-primary);
+        border-color: var(--lv-primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(30, 58, 138, 0.1);
+    }
+
+    .action-btn i { font-size: 12px; }
+
+    /* ==================== STATS CARDS (matches Team Leave Applications) ==================== */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: .75rem;
+        margin-bottom: 1rem;
+    }
+
+    .stats-card {
+        background: white;
+        border: 1px solid var(--lv-border);
+        border-radius: 10px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.2s;
+        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+    }
+
+    .stats-card:hover {
+        box-shadow: 0 4px 12px -4px rgba(30, 50, 110, .12);
+        border-color: #dfe5f0;
+        transform: translateY(-1px);
+    }
+
+    .stats-icon {
+        width: 32px;
+        height: 32px;
+        background: var(--lv-soft);
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+    }
+
+    .stats-icon i { font-size: 12px; color: var(--lv-primary); }
+
+    .stats-info h3 {
+        font-size: 15px;
+        font-weight: 800;
+        margin: 0 0 1px 0;
+        color: var(--lv-text);
+        line-height: 1.2;
+    }
+
+    .stats-info p {
+        font-size: 9.5px;
+        font-weight: 600;
+        color: var(--lv-text-soft);
+        margin: 0;
+    }
+
+    @media (max-width: 992px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+        .filter-wrapper { padding: 12px; }
+        .filter-row { flex-direction: column; align-items: stretch; }
+        .filter-item { width: 100%; }
+        .filter-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+        .stats-grid { grid-template-columns: 1fr; }
+    }
 </style>
 @endsection
 
@@ -57,22 +318,10 @@
                     </a>
                 </div>
                 <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                    <a href="#" class="btn btn-icon btn-light-brand" data-bs-toggle="collapse"
-                        data-bs-target="#collapseOne">
-                        <i class="feather-bar-chart"></i>
+                    <a href="{{ route('leave-credit.my-transactions') }}" class="btn btn-primary">
+                        <i class="feather-file-text me-2"></i>
+                        <span>My Leave Report</span>
                     </a>
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
-                            data-bs-auto-close="outside">
-                            <i class="feather-paperclip"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a href="#" class="dropdown-item">
-                                <i class="bi bi-filetype-csv me-3"></i>
-                                <span>CSV</span>
-                            </a>
-                        </div>
-                    </div>
                     <a href="{{ route('leave.apply') }}" class="btn btn-primary">
                         <i class="feather-plus me-2"></i>
                         <span>Apply Leave</span>
@@ -86,134 +335,159 @@
             </div>
         </div>
     </div>
-    <div id="collapseOne" class="accordion-collapse collapse page-header-collapse">
-        <div class="accordion-body pb-2">
-            <div class="row">
-                <div class="col-xxl-3 col-md-6">
-                    <div class="card stretch stretch-full">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-text avatar-xl rounded">
-                                        <i class="feather-users"></i>
-                                    </div>
-                                    <a href="#" class="fw-bold d-block">
-                                        <span class="text-truncate-1-line">Balance leave</span>
-                                        <span class="fs-24 fw-bolder d-block">{{ $balanceLeave }}</span>
-                                    </a>
-                                </div>
-                                {{-- <div class="badge bg-soft-success text-success">
-                                    <i class="feather-arrow-up fs-10 me-1"></i>
-                                    <span>36.85%</span>
-                                </div> --}}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xxl-3 col-md-6">
-                    <div class="card stretch stretch-full">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-text avatar-xl rounded">
-                                        <i class="feather-users"></i>
-                                    </div>
-                                    <a href="#" class="fw-bold d-block">
-                                        <span class="text-truncate-1-line">Leave Request</span>
-                                        <span class="fs-24 fw-bolder d-block">{{ $totalLeave }}</span>
-                                    </a>
-                                </div>
-                                {{-- <div class="badge bg-soft-success text-success">
-                                    <i class="feather-arrow-up fs-10 me-1"></i>
-                                    <span>36.85%</span>
-                                </div> --}}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xxl-3 col-md-6">
-                    <div class="card stretch stretch-full">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-text avatar-xl rounded">
-                                        <i class="feather-user-check"></i>
-                                    </div>
-                                    <a href="#" class="fw-bold d-block">
-                                        <span class="text-truncate-1-line">Approved Leave</span>
-                                        <span class="fs-24 fw-bolder d-block">{{ $approvedLeave }}</span>
-                                    </a>
-                                </div>
-                                {{-- <div class="badge bg-soft-danger text-danger">
-                                    <i class="feather-arrow-down fs-10 me-1"></i>
-                                    <span>24.56%</span>
-                                </div> --}}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xxl-3 col-md-6">
-                    <div class="card stretch stretch-full">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-text avatar-xl rounded">
-                                        <i class="feather-user-plus"></i>
-                                    </div>
-                                    <a href="#" class="fw-bold d-block">
-                                        <span class="text-truncate-1-line">Unpaid Leave</span>
-                                        <span class="fs-24 fw-bolder d-block">{{ $unpaidLeave }}</span>
-                                    </a>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
     <!-- [ page-header ] end -->
     <!-- [ Main Content ] start -->
     <div class="main-content" style="padding: 20px !important;">
-        <!-- Filter Form -->
-        <div class="card stretch stretch-full mb-4">
-            <div class="card-body">
-                <form method="GET" action="{{ route('leave.view') }}" id="filterForm">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Status</label>
-                            <select name="status" class="form-control">
-                                <option value="">All Status</option>
-                                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending
-                                </option>
-                                <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved
-                                </option>
-                                <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>
-                                    Cancelled</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">From Date</label>
-                            <input type="date" name="from_date" class="form-control"
-                                value="{{ request('from_date') }}">
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">To Date</label>
-                            <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
-                        </div>
-                        <div class="col-md-3 mb-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary me-2">
-                                <i class="feather-filter me-2"></i> Filter
-                            </button>
-                            <button type="button" id="resetFilter" class="btn btn-light">
-                                <i class="feather-refresh-cw me-2"></i> Reset
-                            </button>
-                        </div>
-                    </div>
-                </form>
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="feather-users"></i>
+                </div>
+                <div class="stats-info">
+                    <h3>{{ $balanceLeave }}</h3>
+                    <p>Balance Leave</p>
+                </div>
             </div>
+            <div class="stats-card">
+                <div class="stats-icon" style="background: rgba(96, 165, 250, 0.15);">
+                    <i class="feather-calendar" style="color: #60a5fa;"></i>
+                </div>
+                <div class="stats-info">
+                    <h3>{{ $totalLeave }}</h3>
+                    <p>Leave Request</p>
+                </div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-icon" style="background: rgba(59, 130, 246, 0.15);">
+                    <i class="feather-user-check" style="color: #3b82f6;"></i>
+                </div>
+                <div class="stats-info">
+                    <h3>{{ $approvedLeave }}</h3>
+                    <p>Approved Leave</p>
+                </div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-icon" style="background: rgba(30, 58, 138, 0.15);">
+                    <i class="feather-user-plus" style="color: #1e3a8a;"></i>
+                </div>
+                <div class="stats-info">
+                    <h3>{{ $unpaidLeave }}</h3>
+                    <p>Unpaid Leave</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact Filter Section -->
+        <div class="filter-wrapper">
+            <div class="filter-header">
+                <div class="filter-title">
+                    <i class="feather-filter"></i>
+                    Filter Leave Applications
+                    @php
+                        $activeFilterCount = collect(request()->only(['status', 'leave_type', 'from_date', 'to_date']))
+                            ->filter()
+                            ->count();
+                    @endphp
+                    @if ($activeFilterCount > 0)
+                        <span>{{ $activeFilterCount }} active</span>
+                    @endif
+                </div>
+                @if (request()->hasAny(['status', 'leave_type', 'from_date', 'to_date']))
+                    <a href="{{ route('leave.view') }}" class="clear-all-link">
+                        <i class="feather-x"></i>
+                        Clear All
+                    </a>
+                @endif
+            </div>
+
+            <form method="GET" action="{{ route('leave.view') }}" id="filterForm">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <select name="status" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending
+                            </option>
+                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved
+                            </option>
+                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>
+                                Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <select name="leave_type" class="filter-select">
+                            <option value="">All Leave Types</option>
+                            @foreach ($leaveTypes ?? [] as $type)
+                                <option value="{{ $type->id }}" {{ request('leave_type') == $type->id ? 'selected' : '' }}>
+                                    {{ $type->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <input type="date" class="form-control" name="from_date" value="{{ request('from_date') }}">
+                    </div>
+                    <div class="filter-item">
+                        <input type="date" class="form-control" name="to_date" value="{{ request('to_date') }}">
+                    </div>
+                    <div class="filter-item narrow">
+                        <a href="{{ route('leave.view') }}" class="reset-btn">
+                            <i class="feather-refresh-cw"></i>
+                            Reset
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            @if (request()->hasAny(['status', 'leave_type', 'from_date', 'to_date']))
+                <div class="active-filters">
+                    <span class="active-filters-label">Active:</span>
+
+                    @if (request('status'))
+                        <span class="filter-tag">
+                            <i class="feather-activity"></i>
+                            Status: {{ ucfirst(request('status')) }}
+                            <a href="{{ route('leave.view', request()->except(['status', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    @if (request('leave_type') && ($selectedType = ($leaveTypes ?? collect())->firstWhere('id', request('leave_type'))))
+                        <span class="filter-tag">
+                            <i class="feather-tag"></i>
+                            Type: {{ $selectedType->name }}
+                            <a href="{{ route('leave.view', request()->except(['leave_type', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    @if (request('from_date'))
+                        <span class="filter-tag">
+                            <i class="feather-calendar"></i>
+                            From: {{ request('from_date') }}
+                            <a href="{{ route('leave.view', request()->except(['from_date', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    @if (request('to_date'))
+                        <span class="filter-tag">
+                            <i class="feather-calendar"></i>
+                            To: {{ request('to_date') }}
+                            <a href="{{ route('leave.view', request()->except(['to_date', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
+
+                    <a href="{{ route('leave.view') }}" class="filter-tag clear-all">
+                        <i class="feather-refresh-cw"></i>
+                        Clear All
+                    </a>
+                </div>
+            @endif
         </div>
 
         <div class="row">
@@ -296,38 +570,21 @@
                                                 </span>
                                             </td>
                                             <td>
-
-                                                <div class="dropdown">
-                                                    <a href="#" class="avatar-text avatar-md"
-                                                        data-bs-toggle="dropdown" data-bs-offset="0,21">
-                                                        <i class="feather feather-more-horizontal"></i>
-                                                    </a>
-                                                    <ul class="dropdown-menu">
-                                                        @if ($leave->status == 'pending')
-                                                            <li>
-                                                                <a class="dropdown-item"
-                                                                    href="{{ route('leave.update', ['id' => encrypt($leave->id)]) }}">
-                                                                    <i class="feather feather-edit-3 me-3"></i>
-                                                                    <span>Edit</span>
-                                                                </a>
-                                                            </li>
-                                                            <li>
-                                                                <a class="dropdown-item"
-                                                                    href="{{ route('leave.delete', ['id' => encrypt($leave->id)]) }}">
-                                                                    <i class="feather feather-trash-2 me-3"></i>
-                                                                    <span>Delete</span>
-                                                                </a>
-                                                            </li>
-                                                        @else
-                                                            <li>
-                                                                <a class="dropdown-item" href="#">
-                                                                    <i class="feather feather-trash-2 me-3"></i>
-                                                                    <span>No Action Performed</span>
-                                                                </a>
-                                                            </li>
-                                                        @endif
-                                                    </ul>
-                                                </div>
+                                                @if ($leave->status == 'pending')
+                                                    <div class="d-flex justify-content-center gap-2">
+                                                        <a href="{{ route('leave.update', ['id' => encrypt($leave->id)]) }}"
+                                                            class="action-btn" title="Edit">
+                                                            <i class="feather-edit-3"></i>
+                                                        </a>
+                                                        <a href="{{ route('leave.delete', ['id' => encrypt($leave->id)]) }}"
+                                                            class="action-btn" title="Delete"
+                                                            onclick="return confirm('Are you sure you want to delete this leave application?')">
+                                                            <i class="feather-trash-2"></i>
+                                                        </a>
+                                                    </div>
+                                                @else
+                                                    <span class="text-muted">&mdash;</span>
+                                                @endif
                                             </td>
                                         </tr>
                                     @endforeach
@@ -352,26 +609,23 @@
 @section('script-area')
     <script>
         $(document).ready(function() {
-            // Reset filter button
-            $('#resetFilter').click(function() {
-                // Clear all filter inputs
-                $('select[name="status"]').val('');
-                $('input[name="from_date"]').val('');
-                $('input[name="to_date"]').val('');
-
-                // Submit the form to reset
+            // Auto-submit on filter select change
+            $('.filter-select').on('change', function() {
                 $('#filterForm').submit();
             });
 
-            // Optional: Date range validation
-            $('input[name="from_date"], input[name="to_date"]').change(function() {
+            // Date range validation, then auto-submit (no Apply button in this filter bar)
+            $('input[name="from_date"], input[name="to_date"]').on('change', function() {
                 let fromDate = $('input[name="from_date"]').val();
                 let toDate = $('input[name="to_date"]').val();
 
                 if (fromDate && toDate && fromDate > toDate) {
                     alert('From date cannot be greater than To date');
                     $(this).val('');
+                    return;
                 }
+
+                $('#filterForm').submit();
             });
 
             // Add Department Form submission (existing code)

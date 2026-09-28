@@ -43,7 +43,7 @@
         .fc .fc-toolbar {
             padding: 24px 24px 16px;
             margin-bottom: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
             border-radius: 10px 12px 0 0;
         }
@@ -87,7 +87,7 @@
         .fc .fc-button-primary:not(:disabled):active {
             background: white;
             border-color: white;
-            color: #667eea;
+            color: #1e3a8a;
         }
 
         /* Calendar Grid Enhancements */
@@ -111,7 +111,7 @@
         }
 
         .fc .fc-daygrid-day.fc-day-today {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
             position: relative;
         }
 
@@ -122,7 +122,7 @@
             right: 4px;
             width: 6px;
             height: 6px;
-            background: #667eea;
+            background: #1e3a8a;
             border-radius: 50%;
         }
 
@@ -135,7 +135,7 @@
         }
 
         .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-            color: #667eea;
+            color: #1e3a8a;
             font-weight: 700;
             font-size: 1rem;
         }
@@ -170,34 +170,41 @@
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
         }
 
-        /* Enhanced Status Colors */
-        .fc-event[style*="rgb(40, 167, 69)"],
-        .fc-event[style*="#28a745"] {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        /* Enhanced Status Colors — single-blue theme: every status is a
+           shade of the app's primary blue instead of green/red/amber,
+           matching the hex values returned by getEventColor(). */
+        .fc-event[style*="#172554"] {
+            background: linear-gradient(135deg, #172554 0%, #0f172a 100%) !important;
             border: none !important;
         }
 
-        .fc-event[style*="rgb(220, 53, 69)"],
-        .fc-event[style*="#dc3545"] {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        .fc-event[style*="#1e3a8a"] {
+            background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%) !important;
             border: none !important;
         }
 
-        .fc-event[style*="rgb(253, 126, 20)"],
-        .fc-event[style*="#fd7e14"] {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+        .fc-event[style*="#1e40af"] {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
             border: none !important;
         }
 
-        .fc-event[style*="rgb(13, 110, 253)"],
-        .fc-event[style*="#0d6efd"] {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+        .fc-event[style*="#1d4ed8"] {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
             border: none !important;
         }
 
-        .fc-event[style*="rgb(108, 117, 125)"],
-        .fc-event[style*="#6c757d"] {
-            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+        .fc-event[style*="#2563eb"] {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            border: none !important;
+        }
+
+        .fc-event[style*="#3b82f6"] {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+            border: none !important;
+        }
+
+        .fc-event[style*="#60a5fa"] {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
             border: none !important;
         }
 
@@ -217,7 +224,7 @@
         .stats-badge:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            border-color: #667eea;
+            border-color: #1e3a8a;
         }
 
         .stats-badge .badge-icon {
@@ -231,18 +238,18 @@
         }
 
         .stats-badge.present .badge-icon {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
-            color: #10b981;
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.15) 0%, rgba(30, 58, 138, 0.05) 100%);
+            color: #1e3a8a;
         }
 
         .stats-badge.absent .badge-icon {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
-            color: #ef4444;
+            background: linear-gradient(135deg, rgba(23, 37, 84, 0.15) 0%, rgba(23, 37, 84, 0.05) 100%);
+            color: #172554;
         }
 
         .stats-badge.leave .badge-icon {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
-            color: #f59e0b;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.05) 100%);
+            color: #2563eb;
         }
 
         .stats-badge.holiday .badge-icon {
@@ -278,7 +285,7 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
             border: none;
         }
 
@@ -330,7 +337,7 @@
 
         .custom-dropdown .dropdown-toggle:hover {
             background: #f9fafb;
-            border-color: #667eea;
+            border-color: #1e3a8a;
         }
 
         .custom-dropdown .dropdown-menu {
@@ -341,7 +348,7 @@
         }
 
         .custom-dropdown .dropdown-item:hover {
-            background: #667eea;
+            background: #1e3a8a;
             color: white;
         }
 
@@ -354,7 +361,7 @@
         }
 
         .attendance-details-modal .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
             padding: 24px;
             border-bottom: none;
@@ -543,7 +550,7 @@
                         </button>
                     </div>
                     <h3 class="m-0 fw-bold" id="currentMonthName"
-                        style="color: #667eea; text-transform: uppercase; letter-spacing: 1px;"></h3>
+                        style="color: #1e3a8a; text-transform: uppercase; letter-spacing: 1px;"></h3>
 
                     <div class="d-flex align-items-center gap-3">
                         <!--<div id="calendarDateRange" class="date-range-display d-none d-lg-flex">-->
@@ -577,37 +584,49 @@
                 <!-- Calendar Container -->
                 <div id="calendar"></div>
 
-                <!-- Calendar Legend -->
+                <!-- Calendar Legend (single-blue theme — darker = needs attention, lighter = less urgent) -->
                 <div class="d-flex justify-content-center gap-4 mt-4 flex-wrap">
                     <div class="d-flex align-items-center gap-2">
                         <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                        </div>
-                        <span class="text-muted small fw-500">Present</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #172554 0%, #0f172a 100%);">
                         </div>
                         <span class="text-muted small fw-500">Absent</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);">
                         </div>
-                        <span class="text-muted small fw-500">Leave</span>
+                        <span class="text-muted small fw-500">Present</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);">
+                        </div>
+                        <span class="text-muted small fw-500">Checked In Only</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div
+                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);">
                         </div>
                         <span class="text-muted small fw-500">Holiday</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
                         </div>
-                        <span class="text-muted small fw-500">Weekend</span>
+                        <span class="text-muted small fw-500">Leave</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div
+                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        </div>
+                        <span class="text-muted small fw-500">Week Off</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div
+                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+                        </div>
+                        <span class="text-muted small fw-500">Upcoming</span>
                     </div>
                 </div>
             </div>

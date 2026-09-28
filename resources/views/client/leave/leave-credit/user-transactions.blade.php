@@ -380,7 +380,6 @@
 
 @section('content-area')
     <x-ui.page-header title="Employee Transactions" :parent="['label' => 'Reports', 'route' => 'leave-credit.reports']" />
-    </div>
 
     <div class="main-content" style="padding: 18px !important;">
         <!-- Stats Cards -->
@@ -650,7 +649,7 @@
     </div>
 @endsection
 
-@section('scripts')
+@section('script-area')
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>

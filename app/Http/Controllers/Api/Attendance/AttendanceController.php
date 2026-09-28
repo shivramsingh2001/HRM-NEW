@@ -1432,15 +1432,16 @@ class AttendanceController extends Controller
     /**
      * Buffered GPS upload — the app collects points locally and flushes a batch
      * every few minutes. One request + one bulk insert instead of one per ping.
-     * points[].point_id is a client-generated idempotency key: a retried batch
-     * (same point_ids) is safe by construction via the atp_session_point_uq
+     * points[].point_id is an optional idempotency key: when omitted the server
+     * derives one from lat/long/track_time, so a retried batch (same readings or
+     * same client point_ids) is safe by construction via the atp_session_point_uq
      * DB constraint — see TrackingPointIngestService.
      */
     public function trackBatch(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'points' => 'required|array|min:1|max:' . (int) config('location.batch_max', 60),
-            'points.*.point_id' => 'required|string|max:64',
+            'points.*.point_id' => 'nullable|string|max:64',
             'points.*.lat' => 'required|numeric',
             'points.*.long' => 'required|numeric',
             'points.*.accuracy_meters' => 'nullable|numeric|min:0|max:1000',

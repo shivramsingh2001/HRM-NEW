@@ -227,6 +227,32 @@ class AttendanceTrackingSessionsTest extends TestCase
         $this->assertSame(1, $count);
     }
 
+    public function test_missing_point_id_is_derived_server_side_and_retry_is_idempotent(): void
+    {
+        $this->punch('in', '09:00:00');
+        $ingest = app(TrackingPointIngestService::class);
+        Carbon::setTestNow(Carbon::parse($this->date . ' 09:05:00'));
+
+        $first = $ingest->ingestBatch($this->tenantId, $this->userId, [
+            ['lat' => 28.6, 'long' => 77.2, 'track_time' => $this->date . ' 09:01:00'],
+            ['point_id' => '', 'lat' => 28.61, 'long' => 77.21, 'track_time' => $this->date . ' 09:02:00'],
+        ]);
+        $this->assertSame(2, $first['saved']);
+
+        // Same readings re-sent, one with its time as epoch ms and coords formatted differently.
+        $second = $ingest->ingestBatch($this->tenantId, $this->userId, [
+            ['lat' => '28.6000000', 'long' => 77.2, 'track_time' => Carbon::parse($this->date . ' 09:01:00')->getTimestampMs()],
+            ['lat' => 28.61, 'long' => 77.21, 'track_time' => $this->date . ' 09:02:00'],
+        ]);
+        $this->assertSame(0, $second['saved']);
+        $this->assertSame(2, $second['duplicates']);
+
+        $sessionId = $this->sessionsForDate()->first()->id;
+        $ids = AttendanceTrackingPoint::withoutGlobalScopes()->where('session_id', $sessionId)->pluck('point_id');
+        $this->assertCount(2, $ids);
+        $ids->each(fn ($id) => $this->assertMatchesRegularExpression('/^[0-9a-f]{40}$/', $id));
+    }
+
     public function test_partial_duplicate_batch_only_inserts_new_points(): void
     {
         $this->punch('in', '09:00:00');
