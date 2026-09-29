@@ -103,7 +103,9 @@ class AuthService
                     'created_at'    => $user->created_at,
                     'updated_at'    => $user->updated_at,
                     'face_register' => $user->jobDetails->face_register ?? 0,
-                    'role'          => $user->role,]
+                    'role'          => $user->role,],
+                // Plan modules + role permissions, so the app shows only what the company bought.
+                'access' => app(AppAccessService::class)->forUser($user),
             ]
         ];
     }

@@ -26,8 +26,15 @@ class EnsureFeatureEnabled
         $allowed = collect($keys)->contains(fn ($k) => $this->features->enabledForCurrentTenant($k));
 
         if (! $allowed) {
-            if ($request->expectsJson()) {
-                abort(403, "The {$key} module is not enabled for your plan.");
+            // Mobile API (routes/api.php) — always JSON in the app's {success, message} shape,
+            // even when the app doesn't send Accept: application/json.
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'feature_disabled',
+                    'feature' => $key,
+                    'message' => 'This module is not included in your company\'s plan.',
+                ], 403);
             }
 
             return redirect()->route('dashboard')

@@ -39,6 +39,22 @@ class FeatureService
         return $this->enabled((int) $tenant->id, $key);
     }
 
+    /**
+     * Every feature key with its on/off state for a tenant — what the mobile app
+     * reads after login to show only the modules the company's plan includes.
+     *
+     * @return array<string,bool>
+     */
+    public function allForTenant(int $tenantId): array
+    {
+        $out = [];
+        foreach ($this->allKeys() as $key) {
+            $out[$key] = $this->enabled($tenantId, $key);
+        }
+
+        return $out;
+    }
+
     public function bust(int $tenantId): void
     {
         foreach ($this->allKeys() as $key) {

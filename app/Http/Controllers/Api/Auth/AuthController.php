@@ -611,7 +611,8 @@ class AuthController extends Controller
                         'updated_at'    => $user->updated_at,
                         'face_register' => $user->jobDetails->face_register ?? 0,
                         'role'          => $user->role,
-                    ]
+                    ],
+                    'access' => app(\App\Services\AppAccessService::class)->forUser($user),
                 ]
             ], 200);
         } catch (Exception $e) {

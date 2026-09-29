@@ -91,6 +91,26 @@ class RbacService
     }
 
     /**
+     * Full effective matrix for a user: every config('rbac.modules') module and
+     * every action, resolved through scopeFor() (so admin god-mode and
+     * manage-implies-view/create/edit/delete apply). null = not allowed.
+     * Used by the mobile app to hide buttons the user can't use.
+     *
+     * @return array<string,array<string,?string>> module => [action => own|team|company|null]
+     */
+    public function effectiveMatrix(User $user): array
+    {
+        $out = [];
+        foreach ((array) config('rbac.modules', []) as $module) {
+            foreach ((array) config('rbac.actions', []) as $action) {
+                $out[$module][$action] = $this->scopeFor($user, $module, $action);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * @return array<string,array<string,string>> module => [action => scope]
      */
     private function permissionMatrix(User $user): array

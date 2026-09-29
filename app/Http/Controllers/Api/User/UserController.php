@@ -175,6 +175,24 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * GET /api/user/features — the company's plan modules and the user's role
+     * permissions. The app calls this after login / on resume to decide which
+     * menus and buttons to show (the same data is in the login response).
+     */
+    public function features()
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'User not authenticated'], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => app(\App\Services\AppAccessService::class)->forUser($user),
+        ]);
+    }
+
     public function team(Request $request)
     {
         try {

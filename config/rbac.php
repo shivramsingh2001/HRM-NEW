@@ -179,8 +179,10 @@ return [
             // team => own: canViewUserProfile() always let a user view their
             // own profile via id-equality regardless of role.
             'team' => ['view' => 'own'],
-            'overtime' => ['view' => 'own'],
-            'requests' => ['view' => 'own'],
+            // create => own: employees raise their own overtime and travel/WFH requests
+            // (the mobile app shows "Apply" from this matrix — see GET /api/user/features).
+            'overtime' => ['view' => 'own', 'create' => 'own'],
+            'requests' => ['view' => 'own', 'create' => 'own'],
             'branches' => ['view' => 'company'],
             // assets => own: an employee only sees assets currently or
             // previously assigned to them (My Assets self-service page).
