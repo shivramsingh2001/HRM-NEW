@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\DirectOnboardingBlockedException;
 use App\Http\Controllers\Controller;
 use App\Models\BiometricDevice;
 use App\Models\BiometricEnrollment;
+use App\Models\Tenant;
+use App\Services\Biometric\BiometricEmployeeProvisioningService;
 use App\Services\Biometric\BiometricPunchIngestService;
+use App\Services\Biometric\BiometricRosterService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
@@ -78,7 +82,11 @@ class BiometricFkWebController extends Controller
                     return $this->reply('OK', $transId);
 
                 default:
-                    Log::info('FkWeb unhandled request_code', ['device_id' => $device->id, 'request_code' => $requestCode]);
+                    Log::info('FkWeb unhandled request_code', [
+                        'device_id' => $device->id,
+                        'request_code' => $requestCode,
+                        'json' => $this->decode($request->getContent()),
+                    ]);
 
                     return $this->reply('OK', $transId);
             }
@@ -119,9 +127,45 @@ class BiometricFkWebController extends Controller
     }
 
     /**
+     * Device-side enrollment of someone HRM doesn't know, on a device with
+     * allow_direct_onboarding: create the employee and link the row, same as
+     * BiometricV1Controller::reportEnrollments. A re-sent enrollment for a row
+     * that is already linked never creates a second employee. When blocked (seat
+     * cap), the row stays unmapped with last_error for the admin to see.
+     */
+    private function onboard(BiometricDevice $device, BiometricEnrollment $row, string $enrollNo, ?string $name): void
+    {
+        $row->fill([
+            'tenant_id' => $device->tenant_id,
+            'name_on_device' => $row->name_on_device ?: $name,
+            'source' => 'manual',
+            'sync_state' => 'synced',
+        ]);
+
+        // No auth on this route, so nothing has bound the tenant that
+        // User::create (TenantTrait) stamps onto the new employee.
+        $previous = app()->bound('current_tenant') ? app('current_tenant') : null;
+        app()->instance('current_tenant', Tenant::findOrFail($device->tenant_id));
+
+        try {
+            $user = app(BiometricEmployeeProvisioningService::class)
+                ->createFromDeviceEnrollment($device, $enrollNo, $name);
+            $row->fill(['user_id' => $user->id, 'device_user_id' => $user->id, 'last_error' => null])->save();
+
+            // Let other auto_provision devices in the tenant pick the new employee up.
+            app(BiometricRosterService::class)->syncUser($user);
+        } catch (DirectOnboardingBlockedException $e) {
+            $row->fill(['last_error' => $e->getMessage()])->save();
+        } finally {
+            $previous ? app()->instance('current_tenant', $previous) : app()->forgetInstance('current_tenant');
+        }
+    }
+
+    /**
      * Block 1 of an enroll upload carries {user_id, user_name, ...}. Link the
-     * enrollment like BiometricV1Controller::reportEnrollments does (without
-     * direct onboarding); the biometric templates are never stored.
+     * enrollment like BiometricV1Controller::reportEnrollments does, creating
+     * the employee when the device allows direct onboarding; the biometric
+     * templates are never stored.
      *
      * @param  array<string,mixed>|null  $json
      */
@@ -132,13 +176,23 @@ class BiometricFkWebController extends Controller
         }
 
         $enrollNo = $this->enrollNo((string) $json['user_id']);
-        $name = isset($json['user_name']) ? mb_substr((string) $json['user_name'], 0, 120) : null;
+        $name = isset($json['user_name']) ? (mb_substr(trim((string) $json['user_name']), 0, 120) ?: null) : null;
         $selfUserId = $ingest->userIdFromEnroll($device, $enrollNo);
+        Log::info('FkWeb enrollment received', [
+            'device_id' => $device->id, 'enroll_no' => $enrollNo, 'name' => $name,
+            'matches_user' => $selfUserId, 'direct_onboarding' => (bool) $device->allow_direct_onboarding,
+        ]);
 
         $row = BiometricEnrollment::firstOrNew([
             'biometric_device_id' => $device->id,
             'enroll_no' => $enrollNo,
         ]);
+
+        if (! $selfUserId && ! $row->user_id && $device->allow_direct_onboarding) {
+            $this->onboard($device, $row, $enrollNo, $name);
+
+            return;
+        }
 
         if (! $row->exists) {
             $row->fill([
@@ -203,15 +257,28 @@ class BiometricFkWebController extends Controller
         return ctype_digit($userId) ? (ltrim($userId, '0') ?: '0') : $userId;
     }
 
-    private function reply(string $code, string $transId, int $status = 200): Response
+    /** @param  array<string,mixed>|null  $cmdJson */
+    private function reply(string $code, string $transId, int $status = 200, ?string $cmdCode = null, ?array $cmdJson = null): Response
     {
-        return response('', $status, [
+        // A command body uses the same framing as requests: 4-byte LE JSON length + JSON.
+        $body = '';
+        if ($cmdJson !== null) {
+            $json = json_encode($cmdJson, JSON_UNESCAPED_UNICODE);
+            $body = pack('V', strlen($json)) . $json;
+        }
+
+        $headers = [
             'response_code' => $code,
             'trans_id' => $transId,
             'Content-Type' => 'application/octet-stream',
             // Required: without it the firmware treats the reply as incomplete and
             // never advances past receive_cmd (no punches are ever sent).
-            'Content-Length' => '0',
-        ]);
+            'Content-Length' => (string) strlen($body),
+        ];
+        if ($cmdCode !== null) {
+            $headers['cmd_code'] = $cmdCode;
+        }
+
+        return response($body, $status, $headers);
     }
 }

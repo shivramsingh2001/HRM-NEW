@@ -23,12 +23,17 @@ class BiometricRosterTest extends TestCase
     private User $emp;
     private BiometricDevice $device;
     private string $secret;
+    private $multiPunchFlag;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->tenantId = (int) DB::table('users')->whereNotNull('tenant_id')->value('tenant_id');
+
+        // These assertions cover the single-punch path; don't depend on the dev tenant's setting.
+        $this->multiPunchFlag = DB::table('tenants')->where('id', $this->tenantId)->value('allow_multiple_punches');
+        DB::table('tenants')->where('id', $this->tenantId)->update(['allow_multiple_punches' => 0]);
 
         // tenant_id is guarded on User; forceCreate so it persists.
         $this->emp = User::withoutGlobalScopes()->forceCreate([
@@ -63,8 +68,11 @@ class BiometricRosterTest extends TestCase
         BiometricEnrollment::where('biometric_device_id', $this->device->id)->delete();
         BiometricEnrollment::where('user_id', $this->emp->id)->delete();
         Attendance::withoutGlobalScopes()->where('user_id', $this->emp->id)->delete();
+        DB::table('attendance_punches')->where('user_id', $this->emp->id)->delete();
+        DB::table('attendance_logs')->where('user_id', $this->emp->id)->delete();
         $this->device->delete();
         User::withoutGlobalScopes()->where('id', $this->emp->id)->forceDelete();
+        DB::table('tenants')->where('id', $this->tenantId)->update(['allow_multiple_punches' => $this->multiPunchFlag]);
         parent::tearDown();
     }
 

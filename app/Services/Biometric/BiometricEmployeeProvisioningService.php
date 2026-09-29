@@ -17,8 +17,9 @@ use Illuminate\Support\Str;
 /**
  * Auto-creates an HRM employee from a device-side (walk-up) biometric
  * enrollment, for devices that opt in via biometric_devices.allow_direct_onboarding.
- * Only called from BiometricV1Controller::reportEnrollments() when a reported
- * enroll_no matches no existing HRM user.
+ * Called from BiometricV1Controller::reportEnrollments() (bridge) and
+ * BiometricFkWebController::onboard() (direct push) when a reported enroll_no
+ * matches no existing HRM user. Expects `current_tenant` to be bound.
  *
  * Deliberately smaller than EmployeeProvisioningService::hire() (the ATS
  * hire flow) — a device enrollment has none of the candidate/job-offer data

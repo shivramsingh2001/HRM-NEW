@@ -14,6 +14,7 @@ use App\Services\Attendance\AttendanceCalculator;
 use App\Services\Attendance\AttendanceEntryService;
 use App\Services\Attendance\AttendancePunchService;
 use App\Services\Attendance\AuditContext;
+use App\Services\Attendance\PolicyResolver;
 use App\Services\Attendance\PunchInput;
 use App\Services\Attendance\TenantShiftResolver;
 use App\Services\Attendance\TimezoneResolver;
@@ -156,6 +157,7 @@ class BiometricAttendanceService
         $tz = $device?->site_timezone ?: app(TimezoneResolver::class)->forUser($user->id, $tenantId);
         $punchLocal = Carbon::parse($punch->punched_at);
         $punchUtc = $this->calc->toUtc($punchLocal->format('Y-m-d H:i:s'), $tz);
+        $this->adoptSinglePunchDay($user->id, $tenantId, $punchLocal, $tz, $device);
         $direction = $this->resolveDirectionForPunchPipeline($punch, $device, $tenantId, $user->id);
         $label = $device?->name ?: $punch->serial_number;
 
@@ -167,6 +169,7 @@ class BiometricAttendanceService
                 punchedAt: $punchLocal,
                 source: 'biometric',
                 method: $punch->method,
+                address: $this->addressLine($punch, $label),
                 biometricDeviceId: $device?->id,
                 audit: new AuditContext(
                     actorId: null,
@@ -210,6 +213,77 @@ class BiometricAttendanceService
         } catch (\Throwable $e) {
             // never block on the event
         }
+    }
+
+    /**
+     * A day written by the allow_multiple_punches = 0 path has an `attendances`
+     * row but no attendance_punches behind it, which AttendancePunchService
+     * reads as "set manually" and blocks every further clock-in. When the flag
+     * is switched on mid-day, turn that biometric-written row into its
+     * in/out punches so the next device punch opens session 2 instead.
+     * Rows from any other source (manual mark, regularization) are left alone.
+     */
+    private function adoptSinglePunchDay(int $userId, int $tenantId, Carbon $punchLocal, string $tz, ?BiometricDevice $device): void
+    {
+        $shift = app(TenantShiftResolver::class)->forUserDate($userId, $tenantId, $punchLocal->format('Y-m-d'));
+        $date = $this->calc->resolveAttendanceDate($punchLocal, $shift);
+
+        $hasPunches = AttendancePunch::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)->where('user_id', $userId)
+            ->where('date', $date)->where('status', 'active')
+            ->exists();
+        if ($hasPunches) {
+            return;
+        }
+
+        $row = Attendance::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)->where('user_id', $userId)->where('date', $date)
+            ->first();
+        if (! $row || empty($row->clock_in) || $row->attendance_type === 'manual') {
+            return;
+        }
+        $meta = is_array($row->metadata) ? $row->metadata : (json_decode((string) $row->metadata, true) ?: []);
+        if (($meta['source'] ?? null) !== 'biometric') {
+            return;
+        }
+
+        $base = [
+            'tenant_id' => $tenantId,
+            'user_id' => $userId,
+            'attendance_id' => $row->id,
+            'date' => $date,
+            'timezone' => $tz,
+            'source' => 'biometric',
+            'method' => $meta['method'] ?? null,
+            'biometric_device_id' => $device?->id,
+            'actor_role' => 'device',
+            'reason' => 'Adopted from single-punch biometric attendance',
+            'status' => 'active',
+            'session_seq' => 1,
+            'metadata' => ['adopted_from_attendance' => true],
+        ];
+
+        DB::transaction(function () use ($base, $row) {
+            $in = Carbon::parse($row->clock_in);
+            $inPunch = AttendancePunch::create($base + [
+                'direction' => 'in',
+                'address' => $row->clock_in_address,
+                'punched_at' => $in->format('Y-m-d H:i:s'),
+                'punched_at_utc' => $this->calc->toUtc($in->format('Y-m-d H:i:s'), $base['timezone']),
+            ]);
+
+            if (! empty($row->clock_out)) {
+                $out = Carbon::parse($row->clock_out);
+                $outPunch = AttendancePunch::create($base + [
+                    'direction' => 'out',
+                    'address' => $row->clock_out_address,
+                    'punched_at' => $out->format('Y-m-d H:i:s'),
+                    'punched_at_utc' => $this->calc->toUtc($out->format('Y-m-d H:i:s'), $base['timezone']),
+                    'paired_punch_id' => $inPunch->id,
+                ]);
+                $inPunch->forceFill(['paired_punch_id' => $outPunch->id])->save();
+            }
+        });
     }
 
     /** Same priority order as resolveDirection(), but 'auto' reads open-session state from attendance_punches. */
@@ -381,7 +455,7 @@ class BiometricAttendanceService
 
         $early = 0;
         $overtime = 0;
-        $status = null;
+        $expected = 0;
         if ($shift) {
             $scheduledEnd = Carbon::parse($date . ' ' . $shift->end_time);
             if ($this->calc->isOvernight(['start_time' => $shift->start_time, 'end_time' => $shift->end_time])) {
@@ -397,11 +471,11 @@ class BiometricAttendanceService
             $expected = $this->calc->expectedWorkSeconds([
                 'start_time' => $shift->start_time, 'end_time' => $shift->end_time,
             ]);
-            $ratio = $expected > 0 ? ($workedSeconds / $expected) : 0;
-            $status = $ratio < 0.2 ? 'absent' : ($ratio < 0.6 ? 'half_day' : 'present');
-        } else {
-            $status = $workedHours < 2 ? 'absent' : ($workedHours < 6 ? 'half_day' : 'present');
         }
+        // Same tenant policy (ratios + Day Classification switch) as every other path.
+        $status = app(PolicyResolver::class)
+            ->forTenantDate((int) $existing->tenant_id, $date)
+            ->classify($workedHours, (int) $expected);
 
         return [
             'clock_out' => $at->format('Y-m-d H:i:s'),

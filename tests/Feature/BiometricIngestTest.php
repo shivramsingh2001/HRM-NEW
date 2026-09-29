@@ -21,14 +21,26 @@ class BiometricIngestTest extends TestCase
     private User $employee;
     private BiometricDevice $device;
     private string $secret;
+    private $multiPunchFlag;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->tenantId = (int) DB::table('users')->whereNotNull('tenant_id')->value('tenant_id');
-        $this->employee = User::where('tenant_id', $this->tenantId)->where('status', 1)
-            ->where('role', '!=', 'admin')->firstOrFail();
+        // These assertions cover the single-punch path; don't depend on the dev tenant's setting.
+        $this->multiPunchFlag = DB::table('tenants')->where('id', $this->tenantId)->value('allow_multiple_punches');
+        DB::table('tenants')->where('id', $this->tenantId)->update(['allow_multiple_punches' => 0]);
+        // A throwaway employee — never punch or wipe attendance for a real one.
+        $this->employee = User::withoutGlobalScopes()->forceCreate([
+            'name' => 'Ingest Temp',
+            'email' => 'ingest.' . uniqid() . '@phpunit.test',
+            'employee_id' => 'IN' . random_int(100000, 999999),
+            'password' => bcrypt('x'),
+            'role' => 'employee',
+            'status' => 1,
+            'tenant_id' => $this->tenantId,
+        ]);
 
         $issued = ApiClient::issue($this->tenantId, 'phpunit biometric ' . uniqid(),
             ['biometric:write', 'biometric:read']);
@@ -55,6 +67,13 @@ class BiometricIngestTest extends TestCase
         BiometricEnrollment::where('biometric_device_id', $this->device->id)->delete();
         $this->device->delete();
         DB::table('webhook_deliveries')->where('event', 'like', 'biometric%')->delete();
+        // The roster observer also queues the temp employee onto real auto_provision devices.
+        BiometricEnrollment::where('user_id', $this->employee->id)->delete();
+        DB::table('attendance_punches')->where('user_id', $this->employee->id)->delete();
+        Attendance::withoutGlobalScopes()->where('user_id', $this->employee->id)->delete();
+        DB::table('attendance_logs')->where('user_id', $this->employee->id)->delete();
+        User::withoutGlobalScopes()->where('id', $this->employee->id)->forceDelete();
+        DB::table('tenants')->where('id', $this->tenantId)->update(['allow_multiple_punches' => $this->multiPunchFlag]);
         parent::tearDown();
     }
 
