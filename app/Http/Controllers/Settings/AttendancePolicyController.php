@@ -66,6 +66,7 @@ class AttendancePolicyController extends Controller
             array_merge(
                 Arr::except($data, ['allow_multiple_punches']),
                 Arr::only($current->toPersistableArray(), [
+                    'day_classification_enabled',
                     'grace_mode', 'fixed_grace_minutes',
                     'late_deduction_enabled', 'late_deduction_multiplier',
                     'late_deduction_mode', 'late_deduction_amount',

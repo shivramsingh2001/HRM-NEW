@@ -25,21 +25,20 @@ class DayClassificationSettingsController extends Controller
         $tenantId = (int) Auth::user()->tenant_id;
         $effectiveFrom = now()->format('Y-m-d');
         $current = $resolver->forTenantDate($tenantId, $effectiveFrom);
+        // Off: only the switch is posted/kept; the thresholds carry forward.
         $data = $request->validated();
 
         AttendancePolicy::updateOrCreate(
             ['tenant_id' => $tenantId, 'effective_from' => $effectiveFrom],
-            array_merge($current->toPersistableArray(), [
-                'present_ratio' => $data['present_ratio'],
-                'half_day_ratio' => $data['half_day_ratio'],
-                'fallback_present_hours' => $data['fallback_present_hours'],
-                'fallback_half_hours' => $data['fallback_half_hours'],
+            array_merge($current->toPersistableArray(), $data, [
                 'created_by' => Auth::id(),
             ])
         );
 
         $resolver->forget();
 
-        return back()->with('success', 'Day classification updated. It applies from the next summary recalculation.');
+        return back()->with('success', $data['day_classification_enabled']
+            ? 'Day classification turned on. It applies from the next summary recalculation.'
+            : 'Day classification turned off — any day with work now counts as present. It applies from the next summary recalculation.');
     }
 }

@@ -22,6 +22,7 @@ class AttendancePolicy extends Model
         'half_day_ratio' => 'float',
         'fallback_present_hours' => 'float',
         'fallback_half_hours' => 'float',
+        'day_classification_enabled' => 'boolean',
         'full_day_min_hours' => 'float',
         'overtime_after_hours' => 'float',
         'overtime_multiplier' => 'float',

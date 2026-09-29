@@ -75,33 +75,21 @@ class AttendanceReportController extends Controller
         }
         
         // ============================================================
-        // PRIORITY 3: If shift found, calculate percentage
+        // PRIORITY 3: classify with the tenant's attendance policy (ratios +
+        // Day Classification switch), same as Attendance summary and Payroll.
+        // No shift found anywhere => the policy's absolute-hours fallback.
         // ============================================================
-        if ($expectedHours !== null && $expectedHours > 0 && $totalHours !== null) {
-            // Calculate percentage of shift completed
-            $percentage = ($totalHours / $expectedHours) * 100;
-            
-            // Determine status based on percentage
-            // < 20% = Absent, 20-60% = Halfday, >= 60% = Present
-            if ($percentage < 20) {
-                return 'Absent';
-            } elseif ($percentage < 60) {
-                return 'Halfday';
-            } else {
-                return 'Present';
-            }
-        }
-        
-        // ============================================================
-        // FALLBACK: Hours-based logic (No shift found anywhere)
-        // ============================================================
-        if ($totalHours === null || $totalHours < 2) {
-            return 'Absent';
-        } elseif ($totalHours < 6) {
-            return 'Halfday';
-        } else {
-            return 'Present';
-        }
+        $expectedSeconds = ($shiftStart && $shiftEnd && $expectedHours > 0)
+            ? (int) $shiftStart->diffInSeconds($shiftEnd)
+            : 0;
+        $policy = app(\App\Services\Attendance\PolicyResolver::class)
+            ->forTenantDate((int) $tenantId, Carbon::parse($date)->format('Y-m-d'));
+
+        return match ($policy->classify((float) ($totalHours ?? 0), $expectedSeconds)) {
+            'present' => 'Present',
+            'half_day' => 'Halfday',
+            default => 'Absent',
+        };
     }
 
     /**

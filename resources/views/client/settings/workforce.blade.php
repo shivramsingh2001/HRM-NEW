@@ -386,6 +386,15 @@
                     <div class="wf-card__body">
                         <div class="info-list">
                             <div class="info-row">
+                                <span class="info-row__label">Half-day calculation</span>
+                                <span class="info-row__value">{{ $policy->dayClassificationEnabled ? 'Enabled' : 'Disabled' }}</span>
+                            </div>
+                        </div>
+                        @unless ($policy->dayClassificationEnabled)
+                            <div class="field-hint mb-2">Not applied — any day with work counts as Present.</div>
+                        @endunless
+                        <div class="info-list" @unless ($policy->dayClassificationEnabled) style="opacity:.5" @endunless>
+                            <div class="info-row">
                                 <span class="info-row__label">Present ratio</span>
                                 <span class="info-row__value">{{ $policy->presentRatio }}</span>
                             </div>
@@ -413,7 +422,7 @@
                     <i class="feather-info"></i>
                     <span>
                         <strong>Note:</strong>
-                        Saving only changes these 4 values — every other Attendance Policy
+                        Saving only changes this switch and these 4 values — every other Attendance Policy
                         setting (overtime, grace period, etc.) is carried forward unchanged.
                     </span>
                 </div>
@@ -676,6 +685,20 @@
                 @csrf
                 @method('PUT')
 
+                <div class="form-check form-switch mb-1">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="day_classification_enabled" name="day_classification_enabled" value="1"
+                           {{ old('day_classification_enabled', $policy->dayClassificationEnabled) ? 'checked' : '' }}>
+                    <label class="form-check-label field-label mb-0" for="day_classification_enabled">
+                        Calculate half day / absent from hours worked
+                    </label>
+                </div>
+                <div class="field-hint mb-3">
+                    On — days are scored present / half day / absent using the values below.
+                    Off — no calculation: any day with work counts as Present.
+                </div>
+
+                <div id="day_classification_fields">
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="field-label">Present ratio</label>
@@ -707,6 +730,7 @@
                                name="fallback_half_hours"
                                value="{{ old('fallback_half_hours', $policy->fallbackHalfHours) }}">
                     </div>
+                </div>
                 </div>
 
                 <div class="mt-3">
@@ -959,6 +983,15 @@
 
             wireDeductionCard('late');
             wireDeductionCard('early');
+
+            // Day Classification: hide the thresholds while the switch is off.
+            const dcToggle = document.getElementById('day_classification_enabled');
+            const dcFields = document.getElementById('day_classification_fields');
+            if (dcToggle && dcFields) {
+                const syncDc = () => dcFields.classList.toggle('d-none', !dcToggle.checked);
+                dcToggle.addEventListener('change', syncDc);
+                syncDc();
+            }
         });
     </script>
 @endsection

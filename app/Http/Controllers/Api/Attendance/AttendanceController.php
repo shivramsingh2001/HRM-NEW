@@ -39,47 +39,38 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Calculate attendance status based on shift timings
-     * Priority 1: scheduled_shift_start/end from attendance record
-     * Priority 2: hours-based fallback (2hrs=Absent, 2-6hrs=Half Day, 6hrs+=Present)
+     * Present / Half Day / Absent from worked hours, using the tenant's
+     * attendance policy (ratios + Day Classification switch) — same as the
+     * Attendance summary and Payroll. Scheduled shift from the attendance
+     * record; none => the policy's absolute-hours fallback.
      */
     private function getAttendanceStatusByShift($totalHours, $attendance = null)
     {
-        // PRIORITY 1: Use scheduled shift times from attendance record
-        if ($attendance && isset($attendance->scheduled_shift_start) && $attendance->scheduled_shift_start && 
+        $expectedSeconds = 0;
+        if ($attendance && isset($attendance->scheduled_shift_start) && $attendance->scheduled_shift_start &&
             isset($attendance->scheduled_shift_end) && $attendance->scheduled_shift_end) {
             $shiftStart = Carbon::parse($attendance->scheduled_shift_start);
             $shiftEnd = Carbon::parse($attendance->scheduled_shift_end);
-            
+
             // Handle overnight shifts (e.g., 22:00 to 06:00)
             if ($shiftEnd->lessThan($shiftStart)) {
                 $shiftEnd->addDay();
             }
-            
-            $expectedHours = $shiftStart->diffInHours($shiftEnd);
-            
-            if ($expectedHours > 0 && $totalHours !== null) {
-                $percentage = ($totalHours / $expectedHours) * 100;
-                
-                // < 20% = Absent, 20-60% = Half Day, >= 60% = Present
-                if ($percentage < 20) {
-                    return 'Absent';
-                } elseif ($percentage < 60) {
-                    return 'Half Day';
-                } else {
-                    return 'Present';
-                }
-            }
+
+            $expectedSeconds = (int) $shiftStart->diffInSeconds($shiftEnd);
         }
-        
-        // PRIORITY 2: Hours-based fallback
-        if ($totalHours === null || $totalHours < 2) {
-            return 'Absent';
-        } elseif ($totalHours < 6) {
-            return 'Half Day';
-        } else {
-            return 'Present';
-        }
+
+        $tenantId = (int) ($attendance->tenant_id ?? Auth::user()->tenant_id);
+        $date = $attendance && !empty($attendance->date)
+            ? Carbon::parse($attendance->date)->format('Y-m-d')
+            : now()->format('Y-m-d');
+        $policy = app(\App\Services\Attendance\PolicyResolver::class)->forTenantDate($tenantId, $date);
+
+        return match ($policy->classify((float) ($totalHours ?? 0), $expectedSeconds)) {
+            'present' => 'Present',
+            'half_day' => 'Half Day',
+            default => 'Absent',
+        };
     }
 
     public function history(Request $request)

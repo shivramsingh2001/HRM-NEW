@@ -90,6 +90,28 @@ class PayrollAuditPhase2Test extends TestCase
         return $user;
     }
 
+    /**
+     * Pin a known policy for the tenant from a far-future date, so the
+     * tenant's real (dev) policy rows — e.g. Day Classification switched
+     * off — can't change what the test measures. Callers use dates on/after
+     * $from. Removed in tearDown.
+     */
+    private function pinPolicy(int $tenantId, string $from, array $overrides = []): void
+    {
+        DB::table('attendance_policies')->where('tenant_id', $tenantId)->where('effective_from', $from)->delete();
+        $this->attendancePolicyIds[] = DB::table('attendance_policies')->insertGetId(array_merge([
+            'tenant_id' => $tenantId, 'effective_from' => $from,
+            'present_ratio' => 0.90, 'half_day_ratio' => 0.50,
+            'fallback_present_hours' => 8, 'fallback_half_hours' => 4,
+            'day_classification_enabled' => 1,
+            'overtime_after_hours' => 9, 'overtime_multiplier' => 1,
+            'grace_minutes' => 0, 'rounding_minutes' => 0, 'late_halfday_enabled' => 0,
+            'monthly_late_allowance' => 30, 'sandwich_leave' => 0,
+            'created_at' => now(), 'updated_at' => now(),
+        ], $overrides));
+        app(\App\Services\Attendance\PolicyResolver::class)->forget();
+    }
+
     private function callPrivate(?object $instance, string $class, string $method, array $args)
     {
         $ref = new ReflectionMethod($class, $method);
@@ -221,7 +243,8 @@ class PayrollAuditPhase2Test extends TestCase
     {
         [, , $tenantId] = $this->tenantFixture();
         $controller = app(MonthlyPayrollController::class);
-        $today = now()->toDateString();
+        $today = '2031-06-02';
+        $this->pinPolicy($tenantId, '2031-06-01');
 
         $call = fn ($hours, $attendance = null) => $this->callPrivate(
             $controller, MonthlyPayrollController::class, 'getAttendanceStatusByShift',
@@ -280,15 +303,8 @@ class PayrollAuditPhase2Test extends TestCase
         [, , $tenantId] = $this->tenantFixture();
         $user = $this->makeScratchUser($tenantId);
 
-        $this->attendancePolicyIds[] = DB::table('attendance_policies')->insertGetId([
-            'tenant_id' => $tenantId, 'effective_from' => '2000-01-01',
-            'present_ratio' => 0.90, 'half_day_ratio' => 0.50,
-            'fallback_present_hours' => 8, 'fallback_half_hours' => 4,
-            'overtime_after_hours' => 9, 'overtime_multiplier' => 1,
-            'grace_minutes' => 0, 'rounding_minutes' => 0, 'late_halfday_enabled' => 0,
-            'monthly_late_allowance' => 30, 'sandwich_leave' => 1,
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
+        // Dated just before the 2031 test weeks so it outranks the tenant's real rows.
+        $this->pinPolicy($tenantId, '2031-01-01', ['sandwich_leave' => 1]);
 
         $paidLeaveTypeId = LeaveType::withoutGlobalScope('tenant')
             ->where('tenant_id', $tenantId)->where('is_unpaid', false)->value('id');

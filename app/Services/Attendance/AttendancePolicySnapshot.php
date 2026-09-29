@@ -43,6 +43,7 @@ final class AttendancePolicySnapshot
         public readonly float $earlyDeductionMultiplier = 1.00,
         public readonly string $earlyDeductionMode = 'custom_multiplier',
         public readonly ?float $earlyDeductionAmount = null,
+        public readonly bool $dayClassificationEnabled = true,
     ) {
     }
 
@@ -100,6 +101,7 @@ final class AttendancePolicySnapshot
             earlyDeductionMultiplier: (float) $get('early_deduction_multiplier', 1.00),
             earlyDeductionMode: (string) $get('early_deduction_mode', 'custom_multiplier'),
             earlyDeductionAmount: ($r['early_deduction_amount'] ?? null) !== null ? (float) $r['early_deduction_amount'] : null,
+            dayClassificationEnabled: (bool) $get('day_classification_enabled', true),
         );
     }
 
@@ -119,6 +121,7 @@ final class AttendancePolicySnapshot
             'half_day_ratio' => $this->halfDayRatio,
             'fallback_present_hours' => $this->fallbackPresentHours,
             'fallback_half_hours' => $this->fallbackHalfHours,
+            'day_classification_enabled' => $this->dayClassificationEnabled,
             'full_day_min_hours' => $this->fullDayMinHours,
             'overtime_after_hours' => $this->overtimeAfterHours,
             'overtime_multiplier' => $this->overtimeMultiplier,
@@ -163,9 +166,14 @@ final class AttendancePolicySnapshot
      *
      * Byte-for-byte the logic previously copy-pasted into
      * AttendanceDayResolver / LatePolicyService / AutoClockOutCommand.
+     * With Day Classification switched off, any work at all is a present day.
      */
     public function classify(float $workedHours, int $expectedSeconds): string
     {
+        if (! $this->dayClassificationEnabled) {
+            return $workedHours > 0 ? 'present' : 'absent';
+        }
+
         if ($expectedSeconds > 0) {
             $ratio = ($workedHours * 3600) / $expectedSeconds;
             if ($ratio >= $this->presentRatio) {

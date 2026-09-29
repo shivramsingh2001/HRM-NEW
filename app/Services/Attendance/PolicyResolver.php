@@ -138,6 +138,7 @@ class PolicyResolver
             earlyDeductionMultiplier: $base->earlyDeductionMultiplier,
             earlyDeductionMode: $base->earlyDeductionMode,
             earlyDeductionAmount: $base->earlyDeductionAmount,
+            dayClassificationEnabled: $base->dayClassificationEnabled,
         );
     }
 
