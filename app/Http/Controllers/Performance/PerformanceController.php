@@ -245,6 +245,31 @@ class PerformanceController extends Controller
 
         [$dailyPerformance, $weeklyPerformance] = $this->periodBreakdown($employee->id, (int) $employee->tenant_id, $month);
 
+        // Report extras: profile line, score weights, and where this score ranks.
+        $job = $employee->jobDetails;
+        $profile = [
+            'code' => $employee->employee_id,
+            'email' => $employee->email,
+            'department' => $departmentId ? \App\Models\Department::find($departmentId)?->name : null,
+            'designation' => $job?->designation ? \Illuminate\Support\Facades\DB::table('designations')->where('id', $job->designation)->value('name') : null,
+            'joining_date' => $job?->joining_date ? Carbon::parse($job->joining_date)->format('d M Y') : null,
+            'reporting_heads' => $employee->reportingHeads()->pluck('name')->implode(', '),
+        ];
+
+        $policy = app(\App\Services\Performance\PerformancePolicyResolver::class)
+            ->forTenantMonth((int) $employee->tenant_id, $month);
+        $weights = $policy->dailyWeights() + ['manager_rating' => $policy->weightManagerRating];
+
+        $rankIn = function ($scores) use ($overallScore) {
+            if ($overallScore === null || $scores->isEmpty()) {
+                return null;
+            }
+
+            return ['rank' => $scores->where('overall_score', '>', $overallScore)->count() + 1, 'of' => $scores->count()];
+        };
+        $companyRank = $rankIn($companyScores);
+        $departmentRank = $rankIn($departmentScores ?? collect());
+
         return view('client.performance.individual-report', compact(
             'employee',
             'kpiScore',
@@ -264,7 +289,11 @@ class PerformanceController extends Controller
             'regularizationDetails',
             'managerReview',
             'dailyPerformance',
-            'weeklyPerformance'
+            'weeklyPerformance',
+            'profile',
+            'weights',
+            'companyRank',
+            'departmentRank'
         ));
     }
 

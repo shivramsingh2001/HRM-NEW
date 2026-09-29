@@ -253,6 +253,7 @@
                         <table class="table table-hover" id="shiftList">
                             <thead>
                                 <tr>
+                                    <th style="width:60px">Sr. No.</th>
                                     <th>Shift</th>
                                     <th>Timing</th>
                                     <th>Duration</th>
@@ -271,6 +272,7 @@
                                         $overnight = $end->lessThanOrEqualTo($start);
                                     @endphp
                                     <tr>
+                                        <td class="muted-cell">{{ $shifts->firstItem() + $loop->index }}</td>
                                         <td>
                                             <span class="shift-dot" style="background: {{ $shift->color_code ?: '#4f46e5' }}"></span>
                                             <span class="shift-name">{{ $shift->name }}</span>
@@ -324,7 +326,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center py-4">
+                                        <td colspan="9" class="text-center py-4">
                                             <span class="text-muted">No shifts yet. Click "Add Shift" to create one.</span>
                                         </td>
                                     </tr>

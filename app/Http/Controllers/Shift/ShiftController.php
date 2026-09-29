@@ -57,7 +57,7 @@ class ShiftController extends Controller
             $currentMonth = Carbon::now();
             $shifts = $query->withCount(['userShifts as assigned_this_month' => function ($q) use ($currentMonth) {
                 $q->whereMonth('date', $currentMonth->month)->whereYear('date', $currentMonth->year);
-            }])->orderBy('id', 'desc')->paginate(12)->withQueryString();
+            }])->orderBy('id', 'desc')->paginate(15)->withQueryString();
 
             // Get statistics
             $totalShifts = Shift::count();

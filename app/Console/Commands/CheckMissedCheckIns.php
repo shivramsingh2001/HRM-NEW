@@ -115,6 +115,7 @@ class CheckMissedCheckIns extends Command
             $notYetGracePassed = 0;
             $alreadyNotified = 0;
             $notificationFailed = 0;
+            $notExpected = 0;
 
             foreach ($userShifts as $userShift) {
                 $processed++;
@@ -166,6 +167,13 @@ class CheckMissedCheckIns extends Command
                     continue;
                 }
 
+                // On leave, a holiday or a week-off: nobody expects a clock-in.
+                if ($reason = $this->notExpectedReason($userShift, $checkDate)) {
+                    $notExpected++;
+                    Log::info('Missed check-in skipped', ['user_id' => $userShift->user_id, 'reason' => $reason]);
+                    continue;
+                }
+
                 // Send notifications — returns count of recipients actually notified
                 $successCount = $this->sendMissedCheckInNotifications($userShift, $graceMinutes);
 
@@ -209,6 +217,7 @@ class CheckMissedCheckIns extends Command
                     ['Already notified today', $alreadyNotified],
                     ['New notifications sent', $notificationsSent],
                     ['Notification send failed', $notificationFailed],
+                    ['On leave / holiday / week-off', $notExpected],
                     ['Processed', $processed],
                 ]
             );
@@ -222,6 +231,7 @@ class CheckMissedCheckIns extends Command
                 'already_notified' => $alreadyNotified,
                 'notifications_sent' => $notificationsSent,
                 'notification_failed' => $notificationFailed,
+                'not_expected' => $notExpected,
                 'processed' => $processed
             ]);
 
@@ -447,15 +457,51 @@ class CheckMissedCheckIns extends Command
             ->pluck('id');
         $ids = $ids->merge($adminIds);
 
-        // 4. Managers (same tenant only, optional)
-        $managerIds = DB::table('users')
-            ->where('status', 1)
-            ->where('tenant_id', $tenantId)
-            ->where('role', 'manager')
-            ->pluck('id');
-        $ids = $ids->merge($managerIds);
+        // Managers are reached through step 1 (the employee's own reporting heads) —
+        // not every manager in the company.
 
         return $ids->unique()->values();
+    }
+
+    /**
+     * Why this employee is not expected to clock in on $date (approved leave
+     * covering the morning, company holiday, or week-off), or null.
+     */
+    private function notExpectedReason($userShift, Carbon $date): ?string
+    {
+        $day = $date->toDateString();
+
+        // Approved leave that covers the shift start. A leave that only starts in the
+        // second half on this day (start_session = session2) still expects a morning clock-in.
+        $onLeave = DB::table('leaves')
+            ->where('tenant_id', $userShift->tenant_id)
+            ->where('user_id', $userShift->user_id)
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $day)
+            ->whereDate('end_date', '>=', $day)
+            ->where(fn ($q) => $q->whereDate('start_date', '<', $day)->orWhere('start_session', '!=', 'session2')->orWhereNull('start_session'))
+            ->exists();
+        if ($onLeave) {
+            return 'leave';
+        }
+
+        $holiday = DB::table('holidays')
+            ->where('tenant_id', $userShift->tenant_id)
+            ->where('status', 1)
+            ->whereDate('start_date', '<=', $day)
+            ->whereRaw('DATE(COALESCE(end_date, start_date)) >= ?', [$day])
+            ->exists();
+        if ($holiday) {
+            return 'holiday';
+        }
+
+        $weekoffs = \App\Models\UserWeekoffs::withoutGlobalScopes()
+            ->where('tenant_id', $userShift->tenant_id)
+            ->where('user_id', $userShift->user_id)
+            ->where('status', 1)
+            ->get();
+
+        return \App\Support\WeekOffPredicate::isWeekOff($weekoffs, $date) ? 'week_off' : null;
     }
 
     /**
