@@ -52,6 +52,8 @@ class PayrollRevisionApprovalHandler implements ApprovalOutcomeHandler
 
             app(PayrollArrearsCalculator::class)->computeForRevision($structure->fresh(), optional($log)->id);
         });
+
+        DB::afterCommit(fn () => app(\App\Services\PayrollNotificationService::class)->notifyRevisionApplied($structure->fresh()));
     }
 
     public function rejected(ApprovalRequest $request, User $finalActor, ?string $remarks): void

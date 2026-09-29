@@ -112,6 +112,10 @@ class PayrollBonusController extends Controller
 
             DB::commit();
 
+            if (! $approvalRequest) {
+                app(\App\Services\PayrollNotificationService::class)->notifyBonusApproved($bonus);
+            }
+
             return response()->json(['success' => true, 'message' => $message]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -201,6 +205,9 @@ class PayrollBonusController extends Controller
                 'status' => $action === 'approve' ? 'approved' : 'cancelled',
                 'approved_by' => auth()->id(),
             ]);
+            if ($action === 'approve') {
+                app(\App\Services\PayrollNotificationService::class)->notifyBonusApproved($bonus);
+            }
         }
 
         return redirect()->route('payroll-bonuses.index')->with('success', 'Bonus ' . ($action === 'approve' ? 'approved' : 'rejected') . '.');

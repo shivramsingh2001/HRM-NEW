@@ -30,6 +30,8 @@ class PayrollBonusApprovalHandler implements ApprovalOutcomeHandler
             'approved_by' => $finalActor->id,
             'approval_request_id' => $request->id,
         ]);
+
+        \Illuminate\Support\Facades\DB::afterCommit(fn () => app(\App\Services\PayrollNotificationService::class)->notifyBonusApproved($bonus));
     }
 
     public function rejected(ApprovalRequest $request, User $finalActor, ?string $remarks): void

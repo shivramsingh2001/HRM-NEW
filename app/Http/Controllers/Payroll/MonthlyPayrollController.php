@@ -2609,6 +2609,8 @@ class MonthlyPayrollController extends Controller
             ]);
             DB::commit();
 
+            app(\App\Services\PayrollNotificationService::class)->notifyStatusChange($monthlyPayroll, $previousStatus, 'pending');
+
             return redirect()->route('monthly-payrolls.edit', $id)
                 ->with('success', 'Payroll reopened for correction -- make your changes and save.');
         } catch (\Exception $e) {
@@ -2661,6 +2663,8 @@ class MonthlyPayrollController extends Controller
             });
 
             $this->maybeLockPeriod($monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month, $request->payment_status);
+
+            app(\App\Services\PayrollNotificationService::class)->notifyStatusChange($monthlyPayroll->fresh(), $previousStatus, $request->payment_status);
 
             return redirect()->back()->with('success', 'Payment status updated successfully.');
         } catch (\App\Exceptions\ExpenseException $e) {
@@ -2737,6 +2741,16 @@ class MonthlyPayrollController extends Controller
             foreach ($affected as $row) {
                 $this->maybeLockPeriod($row->tenant_id, $row->payroll_month, $request->payment_status);
             }
+
+            // One push per employee can take a while for a big batch - send them after the response.
+            $ids = $before->keys()->all();
+            $newStatus = $request->payment_status;
+            dispatch(function () use ($ids, $previousStatus, $newStatus) {
+                $notifier = app(\App\Services\PayrollNotificationService::class);
+                foreach (MonthlyPayroll::withoutGlobalScopes()->whereIn('id', $ids)->get() as $slip) {
+                    $notifier->notifyStatusChange($slip, $previousStatus[$slip->id] ?? null, $newStatus);
+                }
+            })->afterResponse();
 
             return redirect()->back()->with('success', count($request->ids) . ' payroll records updated successfully.');
         } catch (\App\Exceptions\ExpenseException $e) {

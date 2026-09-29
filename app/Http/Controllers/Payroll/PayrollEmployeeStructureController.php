@@ -289,6 +289,7 @@ class PayrollEmployeeStructureController extends Controller
                 // same immediate-effect behavior as before Phase 5.
                 $structure->update(['is_current' => true, 'status' => 'active']);
                 $message = 'Dynamic payroll structure assigned successfully.';
+                DB::afterCommit(fn () => app(\App\Services\PayrollNotificationService::class)->notifyRevisionApplied($structure->fresh()));
 
                 $arrears = app(\App\Services\Payroll\PayrollArrearsCalculator::class)
                     ->computeForRevision($structure->fresh(), $log->id);

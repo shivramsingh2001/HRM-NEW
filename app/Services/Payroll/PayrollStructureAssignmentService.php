@@ -211,6 +211,7 @@ class PayrollStructureAssignmentService
                 $structure->update(['is_current' => true, 'status' => 'active']);
 
                 app(PayrollArrearsCalculator::class)->computeForRevision($structure->fresh(), $log->id);
+                DB::afterCommit(fn () => app(\App\Services\PayrollNotificationService::class)->notifyRevisionApplied($structure->fresh()));
             }
 
             return $structure->fresh();
