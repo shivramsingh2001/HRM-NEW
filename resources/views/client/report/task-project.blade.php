@@ -101,19 +101,16 @@
         <form method="GET" class="tp-filter-bar row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="d-block text-muted mb-1" style="font-size:9.5px;">Month</label>
-                <input type="month" name="month" class="form-control" value="{{ $month }}">
+                <input type="month" name="month" class="form-control" onchange="this.form.submit()" value="{{ $month }}">
             </div>
             <div class="col-md-3">
                 <label class="d-block text-muted mb-1" style="font-size:9.5px;">Department</label>
-                <select name="department" class="form-control">
+                <select name="department" class="form-control" onchange="this.form.submit()">
                     <option value="">All Departments</option>
                     @foreach ($departments as $dept)
                         <option value="{{ $dept->id }}" {{ (string) $departmentFilter === (string) $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
                     @endforeach
                 </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-apply w-100">Apply</button>
             </div>
         </form>
 

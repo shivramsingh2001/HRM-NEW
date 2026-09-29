@@ -1330,7 +1330,8 @@ class TeamController extends Controller
 
             $attendanceEndDate = min($monthEndDate, $today);
 
-            $users = $this->getUsersForSummary($authUser);
+            [$branchesEnabled, $branches, $branchId] = $this->summaryBranchContext($request, $authUser);
+            $users = $this->getUsersForSummary($authUser, $branchId);
 
             $summaryData = [];
             $totalSummary = [
@@ -1353,6 +1354,7 @@ class TeamController extends Controller
                 );
 
                 if ($userSummary) {
+                    $userSummary['branch'] = $branches->firstWhere('id', $user->jobDetails?->branch_id)?->name;
                     $summaryData[] = $userSummary;
 
                     $totalSummary['total_users']++;
@@ -1373,7 +1375,10 @@ class TeamController extends Controller
                 'totalSummary',
                 'months',
                 'selectedMonth',
-                'authUser'
+                'authUser',
+                'branchesEnabled',
+                'branches',
+                'branchId'
             ));
         } catch (Exception $e) {
             Log::error('Error in attendanceSummary: ' . $e->getMessage());
@@ -1381,11 +1386,26 @@ class TeamController extends Controller
         }
     }
 
-    private function getUsersForSummary($authUser)
+    /**
+     * Monthly Summary branch filter: only when the plan includes the Branches module.
+     * @return array{0: bool, 1: \Illuminate\Support\Collection, 2: ?int} [enabled, branches, selected branch id]
+     */
+    private function summaryBranchContext(Request $request, $authUser): array
+    {
+        $enabled = app(\App\Services\FeatureService::class)->enabledForCurrentTenant('branches');
+        $branches = $enabled
+            ? DB::table('company_branches')->where('tenant_id', $authUser->tenant_id)->where('status', 1)->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        return [$enabled, $branches, $enabled && $request->filled('branch_id') ? (int) $request->branch_id : null];
+    }
+
+    private function getUsersForSummary($authUser, ?int $branchId = null)
     {
         $query = User::with(['jobDetails.Department', 'jobDetails.Designation'])
             ->where('status', 1)
-            ->where('role', "!=", 'admin');
+            ->where('role', "!=", 'admin')
+            ->when($branchId, fn ($q) => $q->whereHas('jobDetails', fn ($j) => $j->where('branch_id', $branchId)));
 
         if (app(RbacService::class)->scopeFor($authUser, 'team', 'view') === 'team') {
             $query->managedBy($authUser->id);
@@ -1674,7 +1694,8 @@ class TeamController extends Controller
 
             $attendanceEndDate = min($monthEndDate, $today);
 
-            $users = $this->getUsersForSummary($authUser);
+            [$branchesEnabled, $branches, $branchId] = $this->summaryBranchContext($request, $authUser);
+            $users = $this->getUsersForSummary($authUser, $branchId);
 
             $summaryData = [];
             foreach ($users as $user) {
@@ -1685,6 +1706,7 @@ class TeamController extends Controller
                     $attendanceEndDate
                 );
                 if ($userSummary) {
+                    $userSummary['branch'] = $branches->firstWhere('id', $user->jobDetails?->branch_id)?->name;
                     $summaryData[] = $userSummary;
                 }
             }
@@ -1695,7 +1717,7 @@ class TeamController extends Controller
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ];
 
-            $callback = function () use ($summaryData, $selectedDate) {
+            $callback = function () use ($summaryData, $selectedDate, $branchesEnabled) {
                 $file = fopen('php://output', 'w');
 
                 $this->writeCsvRow($file, [
@@ -1704,6 +1726,7 @@ class TeamController extends Controller
                     'Email',
                     'Department',
                     'Designation',
+                    ...($branchesEnabled ? ['Branch'] : []),
                     'Present Days',
                     'halfdays',
                     'Absent Days',
@@ -1721,6 +1744,7 @@ class TeamController extends Controller
                         $row['email'],
                         $row['department'],
                         $row['designation'],
+                        ...($branchesEnabled ? [$row['branch'] ?? ''] : []),
                         $row['present'],
                         $row['halfday'] ?? 0,
                         $row['absent'],

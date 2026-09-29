@@ -444,13 +444,8 @@
                         </select>
                     </div>
                     <div class="filter-item">
-                        <input type="text" name="search" class="form-control-sm-custom" placeholder="Search name or ID…"
+                        <input type="text" name="search" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" class="form-control-sm-custom" placeholder="Search name or ID…"
                                value="{{ request('search') }}" style="width: 170px;">
-                    </div>
-                    <div class="filter-item">
-                        <button type="submit" class="btn-sm-custom">
-                            <i class="feather-eye"></i> View
-                        </button>
                     </div>
                     <div class="filter-item">
                         <a href="{{ route('report.attendance.detailed.index') }}" class="btn-sm-custom-outline">

@@ -3,11 +3,14 @@
 @section('style')
 <style>
     .filter-section { background: #fff; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
-    .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .filter-item { }
+    .filter-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; overflow-x: auto; }
+    .filter-row > .filter-item { flex: 0 1 auto; min-width: 0; }
+    .filter-row select.form-control-sm-custom { min-width: 96px; max-width: 150px; }
+    .filter-row input[type="date"].form-control-sm-custom { width: 118px; padding: 6px 6px; }
+    .filter-row > .filter-item.fi-search { flex: 1 1 140px; }
+    .filter-row input[name="search"] { width: 100%; min-width: 120px; }
+    .filter-row .btn-sm-custom-outline { display: inline-block; white-space: nowrap; padding: 6px 10px; }
     .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; }
-    .btn-sm-custom { background: #1e3a8a; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; }
-    .btn-sm-custom:hover { background: #2563eb; color: #fff; }
     .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; }
     .btn-sm-custom-outline:hover { background: #e3edfe; color: #1e3a8a; }
 
@@ -38,7 +41,7 @@
         </div>
     </div>
 
-    <div class="content-area-body pb-0 h-100">
+    <div class="content-area-body pb-3">
         <div class="filter-section">
             <form action="{{ route('report.project.summary.index') }}" method="GET">
                 <div class="filter-row">
@@ -74,6 +77,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @feature('branches')
                     <div class="filter-item">
                         <select name="branch_id" class="form-control-sm-custom" onchange="this.form.submit()">
                             <option value="">-- All Branches --</option>
@@ -82,46 +86,39 @@
                             @endforeach
                         </select>
                     </div>
+                    @endfeature
                     <div class="filter-item">
-                        <select name="department_id" class="form-control-sm-custom" onchange="this.form.submit()">
-                            <option value="">-- All Departments --</option>
-                            @foreach ($allDepartments as $d)
-                                <option value="{{ $d->id }}" {{ request('department_id') == $d->id ? 'selected' : '' }}>{{ $d->name }}</option>
-                            @endforeach
-                        </select>
+                        <input type="date" name="date_from" class="form-control-sm-custom" onchange="this.form.submit()" value="{{ request('date_from') }}" title="Deadline from">
                     </div>
                     <div class="filter-item">
-                        <input type="date" name="date_from" class="form-control-sm-custom" value="{{ request('date_from') }}" title="Deadline from">
+                        <input type="date" name="date_to" class="form-control-sm-custom" onchange="this.form.submit()" value="{{ request('date_to') }}" title="Deadline to">
                     </div>
-                    <div class="filter-item">
-                        <input type="date" name="date_to" class="form-control-sm-custom" value="{{ request('date_to') }}" title="Deadline to">
+                    <div class="filter-item fi-search">
+                        <input type="text" name="search" class="form-control-sm-custom" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" placeholder="Search project, code or manager…" value="{{ request('search') }}">
                     </div>
-                    <div class="filter-item">
-                        <input type="text" name="search" class="form-control-sm-custom" placeholder="Search project, code or manager…" value="{{ request('search') }}">
-                    </div>
-                    <div class="filter-item"><button type="submit" class="btn-sm-custom"><i class="feather-eye"></i> View</button></div>
-                    <div class="filter-item"><a href="{{ route('report.project.summary.index') }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
+                    <div class="filter-item"><a href="{{ route('report.project.summary.index') }}" class="btn-sm-custom-outline" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
         </div>
 
-        <div class="card stretch stretch-full">
+        <div class="card mb-0">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover" id="reportTable">
                         <thead>
                             <tr>
-                                <th>Code</th><th>Name</th><th>Manager</th><th>Branch</th><th>Status</th><th>Priority</th>
+                                <th>Sr. No.</th><th>Code</th><th>Name</th><th>Manager</th>@feature('branches')<th>Branch</th>@endfeature<th>Status</th><th>Priority</th>
                                 <th>Start</th><th>Deadline</th><th>Team</th><th>Tasks</th><th>Progress</th><th>Budget</th><th>Spent</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($projects as $p)
                                 <tr>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $p->project_code }}</td>
                                     <td>{{ $p->name }}</td>
                                     <td>{{ $p->manager_name ?? 'N/A' }}</td>
-                                    <td>{{ $p->branch_name ?? '—' }}</td>
+                                    @feature('branches')<td>{{ $p->branch_name ?? '—' }}</td>@endfeature
                                     <td><span class="rpt-badge {{ in_array($p->status, ['ongoing','pending','hold']) ? 'badge-active' : 'badge-inactive' }}">{{ ucfirst($p->status) }}</span></td>
                                     <td>{{ ucfirst($p->priority) }}</td>
                                     <td>{{ optional($p->start_date)->format('d M Y') ?? '—' }}</td>
@@ -138,7 +135,7 @@
                                     <td>{{ number_format($p->spent, 2) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="13" class="text-center text-muted py-4">No projects match the selected filters.</td></tr>
+                                <tr><td colspan="14" class="text-center text-muted py-4">No projects match the selected filters.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

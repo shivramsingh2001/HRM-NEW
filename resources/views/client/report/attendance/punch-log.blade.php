@@ -116,6 +116,7 @@
                         <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control-sm-custom"
                             placeholder="Search name / ID" aria-label="Search employee" autocomplete="off">
                     </div>
+                    @feature('branches')
                     <div class="filter-item">
                         <select name="branch_id" class="form-control-sm-custom auto-submit" aria-label="Branch">
                             <option value="">-- All Branches --</option>
@@ -124,6 +125,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @endfeature
                     <div class="filter-item">
                         <select name="user_id" class="form-control-sm-custom auto-submit" aria-label="Employee">
                             <option value="">-- All Employees --</option>
@@ -163,7 +165,6 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="filter-item fi-btn"><button type="submit" class="btn-sm-custom"><i class="feather-eye"></i> View</button></div>
                     <div class="filter-item fi-btn"><a href="{{ route('report.attendance.punches.index') }}" class="btn-sm-custom-outline" title="Reset filters"><i class="feather-refresh-cw"></i> Reset</a></div>
                 </div>
             </form>
@@ -179,7 +180,7 @@
                                 <th class="col-emp">Employee</th>
                                 <th>Department</th>
                                 <th>Designation</th>
-                                <th>Branch</th>
+                                @feature('branches')<th>Branch</th>@endfeature
                                 <th>Date</th>
                                 <th>Time</th>
                                 <th>Dir</th>
@@ -225,7 +226,7 @@
                                     </td>
                                     <td>{{ $r->department_name ?: '—' }}</td>
                                     <td>{{ $r->designation_name ?: '—' }}</td>
-                                    <td>{{ $r->branch_name ?: '—' }}</td>
+                                    @feature('branches')<td>{{ $r->branch_name ?: '—' }}</td>@endfeature
                                     <td>{{ \Carbon\Carbon::parse($r->date)->format('d M Y') }}<div class="sub">{{ \Carbon\Carbon::parse($r->date)->format('l') }}</div></td>
                                     <td><strong>{{ $at->format('h:i:s A') }}</strong>
                                         @if ($at->toDateString() !== \Carbon\Carbon::parse($r->date)->toDateString())

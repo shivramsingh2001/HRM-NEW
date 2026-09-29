@@ -512,6 +512,7 @@
                         </select>
                     </div>
 
+                    @feature('branches')
                     <div class="filter-item">
                         <select name="branch_id" class="filter-select" onchange="this.form.submit()">
                             <option value="">All Branches</option>
@@ -523,6 +524,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @endfeature
 
                     <div class="filter-item search-filter">
                         <input type="text" name="search" class="filter-input"
@@ -531,11 +533,6 @@
                                onkeyup="if(event.keyCode==13) this.form.submit();">
                     </div>
 
-                    <div class="filter-item" style="min-width: auto;">
-                        <button type="submit" class="apply-btn">
-                            <i class="feather-search"></i> Filter
-                        </button>
-                    </div>
 
                     <div class="filter-item" style="min-width: auto;">
                         <a href="{{ route('report.attendance.hourly.index') }}" class="reset-btn">
@@ -587,7 +584,7 @@
                             <th>Name</th>
                             <th>Designation</th>
                             <th>Department</th>
-                            <th>Branch</th>
+                            @feature('branches')<th>Branch</th>@endfeature
                             @foreach ($dayNames as $day => $name)
                                 <th class="{{ in_array($name, ['Sat', 'Sun']) ? 'weekend-header' : '' }}">
                                     <span>{{ $name }}</span>
@@ -605,7 +602,7 @@
                                 <td style="text-align: left; font-weight: 600;">{{ $row['name'] }}</td>
                                 <td style="text-align: left;">{{ $row['designation'] }}</td>
                                 <td style="text-align: left;">{{ $row['department'] }}</td>
-                                <td style="text-align: left;">{{ $row['branch'] ?? '—' }}</td>
+                                @feature('branches')<td style="text-align: left;">{{ $row['branch'] ?? '—' }}</td>@endfeature
                                 
                                 @foreach ($row['days'] as $dayData)
                                     <td class="

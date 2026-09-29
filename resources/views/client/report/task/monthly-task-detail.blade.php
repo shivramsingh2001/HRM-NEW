@@ -753,14 +753,11 @@
                     </div>
 
                     <div class="filter-item grow">
-                        <input type="text" name="search" class="filter-input"
+                        <input type="text" name="search" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" class="filter-input"
                                placeholder="Search task code, title or assignee…"
                                value="{{ request('search') }}">
                     </div>
 
-                    <div class="filter-item">
-                        <button type="submit" class="btn-sm-custom-outline"><i class="feather-search"></i> Search</button>
-                    </div>
 
                     <div class="filter-item">
                         <a href="{{ route('report.task.monthly-task-detail') }}" class="reset-button">

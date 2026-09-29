@@ -144,14 +144,13 @@
                     @endisset
 
                     <div class="filter-item">
-                        <input type="text" name="search" class="form-control-sm-custom" placeholder="Search employee, ID or reference…"
+                        <input type="text" name="search" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" class="form-control-sm-custom" placeholder="Search employee, ID or reference…"
                             value="{{ $filters['search'] ?? '' }}">
                     </div>
 
                     @if ($isAgeing)
                         <span class="filter-note"><i class="feather-calendar me-1"></i>As of {{ $as_of }} — a live snapshot; branch and search still narrow it.</span>
                     @endif
-                    <div class="filter-item"><button type="submit" class="btn-sm-custom"><i class="feather-eye"></i> View</button></div>
                     <div class="filter-item"><a href="{{ route('expense.reports.show', $report) }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
                 </div>
             </form>

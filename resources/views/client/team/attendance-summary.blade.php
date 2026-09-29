@@ -292,7 +292,7 @@
                 Filter Summary Report
             </div>
             <div class="month-selector">
-                <form action="{{ route('team.attendance-summary') }}" method="GET" id="monthForm">
+                <form action="{{ route('team.attendance-summary') }}" method="GET" id="monthForm" class="d-flex gap-2">
                     <select name="month" class="month-select" onchange="this.form.submit()">
                         @foreach($months as $value => $name)
                             <option value="{{ $value }}" {{ $selectedMonth == $value ? 'selected' : '' }}>
@@ -300,8 +300,16 @@
                             </option>
                         @endforeach
                     </select>
+                    @if ($branchesEnabled ?? false)
+                        <select name="branch_id" class="month-select" onchange="this.form.submit()" aria-label="Branch">
+                            <option value="">All Branches</option>
+                            @foreach ($branches as $b)
+                                <option value="{{ $b->id }}" {{ (int) ($branchId ?? 0) === (int) $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+                            @endforeach
+                        </select>
+                    @endif
                 </form>
-                <a href="{{ route('team.attendance-summary.export') }}?month={{ $selectedMonth }}" class="export-btn">
+                <a href="{{ route('team.attendance-summary.export', array_filter(['month' => $selectedMonth, 'branch_id' => $branchId ?? null])) }}" class="export-btn">
                     <i class="feather-download"></i>
                     Export CSV
                 </a>
@@ -314,10 +322,11 @@
         <table class="table" id="summaryTable">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th>Sr. No.</th>
                     <th>Employee</th>
                     {{-- <th>Department</th> --}}
                     <th>Designation</th>
+                    @if ($branchesEnabled ?? false)<th>Branch</th>@endif
                     <th class="text-center">Present</th>
                     <th class="text-center">Absent</th>
                     <th class="text-center">Leaves</th>
@@ -347,6 +356,7 @@
                         </td>
                         {{-- <td>{{ $row['department'] }}</td> --}}
                         <td>{{ $row['designation'] }}</td>
+                        @if ($branchesEnabled ?? false)<td>{{ $row['branch'] ?? '—' }}</td>@endif
                         <td class="text-center">
                             <span class="badge badge-success">{{ $row['present'] }}</span>
                         </td>

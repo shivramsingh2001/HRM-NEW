@@ -475,13 +475,10 @@
                     </div>
 
                     <div class="filter-item grow">
-                        <input type="text" name="search" class="filter-input" placeholder="Search employee, ID or email…"
+                        <input type="text" name="search" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" class="filter-input" placeholder="Search employee, ID or email…"
                                value="{{ request('search') }}">
                     </div>
 
-                    <div class="filter-item">
-                        <button type="submit" class="btn-sm-custom-outline"><i class="feather-search"></i> Search</button>
-                    </div>
 
                     <div class="filter-item">
                         <a href="{{ route('report.task.employee-monthly') }}" class="reset-button">

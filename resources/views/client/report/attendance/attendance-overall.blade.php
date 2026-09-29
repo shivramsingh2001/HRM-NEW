@@ -50,49 +50,37 @@
             z-index: 20;
         }
 
-        /* Sticky Columns - Employee ID, Name, Designation, Department */
+        /* Sticky columns: Sr. No. + Employee */
         .overall-table th:first-child,
         .overall-table td:first-child {
             position: sticky;
             left: 0;
             z-index: 15;
             background: white;
-            min-width: 100px;
+            min-width: 44px;
+            max-width: 44px;
         }
 
         .overall-table th:nth-child(2),
         .overall-table td:nth-child(2) {
             position: sticky;
-            left: 100px;
+            left: 44px;
             z-index: 15;
             background: white;
-            min-width: 150px;
-            max-width: 150px;
+            min-width: 210px;
             text-align: left !important;
         }
 
         .overall-table th:nth-child(3),
-        .overall-table td:nth-child(3) {
-            position: sticky;
-            left: 250px;
-            z-index: 15;
-            background: white;
-            text-align: left !important;
-        }
-
+        .overall-table td:nth-child(3),
         .overall-table th:nth-child(4),
         .overall-table td:nth-child(4) {
-            left: 370px;
-            z-index: 15;
-            background: white;
             text-align: left !important;
         }
 
         /* Header background for sticky columns */
         .overall-table th:first-child,
-        .overall-table th:nth-child(2),
-        .overall-table th:nth-child(3)
-         {
+        .overall-table th:nth-child(2) {
             background: #f1f5f9;
             z-index: 25;
         }
@@ -487,6 +475,7 @@
                         </select>
                     </div>
 
+                    @feature('branches')
                     <div class="filter-item">
                         <select name="branch_id" class="filter-select" onchange="this.form.submit()">
                             <option value="">All Branches</option>
@@ -498,6 +487,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @endfeature
 
                     <div class="filter-item search-filter">
                         <input type="text" name="search" class="filter-input"
@@ -506,11 +496,6 @@
                                onkeyup="if(event.keyCode==13) this.form.submit();">
                     </div>
 
-                    <div class="filter-item" style="min-width: auto;">
-                        <button type="submit" class="apply-btn">
-                            <i class="feather-search"></i> Filter
-                        </button>
-                    </div>
 
                     <div class="filter-item" style="min-width: auto;">
                         <a href="{{ route('report.attendance.overall.index') }}" class="reset-btn">
@@ -589,10 +574,11 @@
                 <table class="overall-table" id="overallTable">
                     <thead>
                         <tr>
+                            <th>Sr. No.</th>
                             <th>Employee Name</th>
                             <th>Designation</th>
                             <th>Department</th>
-                            <th>Branch</th>
+                            @feature('branches')<th>Branch</th>@endfeature
                             @foreach ($dateLabels as $day => $date)
                                 <th
                                     class="{{ in_array(Carbon::parse($date)->format('D'), ['Sat', 'Sun']) ? 'weekend-header' : '' }}">
@@ -609,8 +595,10 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @php $srStart = (is_object($paginator ?? null) && method_exists($paginator, 'firstItem')) ? ($paginator->firstItem() ?? 1) : 1; @endphp
                         @forelse($reportData as $index => $row)
                             <tr>
+                                <td>{{ $srStart + $loop->index }}</td>
                                 <td>
                                     <div class="employee-info">
                                         <div class="employee-avatar">
@@ -628,7 +616,7 @@
                                 
                                 <td style="text-align: left;">{{ $row['designation'] }}</td>
                                 <td style="text-align: left;">{{ $row['department'] }}</td>
-                                <td style="text-align: left;">{{ $row['branch'] ?? '—' }}</td>
+                                @feature('branches')<td style="text-align: left;">{{ $row['branch'] ?? '—' }}</td>@endfeature
 
                                 @foreach ($row['days'] as $day => $status)
                                     <td
@@ -653,7 +641,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ $daysInMonth + 11 }}" class="text-center py-5">
+                                <td colspan="{{ $daysInMonth + 12 }}" class="text-center py-5">
                                     <div class="empty-state">
                                         <i class="feather-calendar"></i>
                                         <h5 class="mt-3">No Data Found</h5>

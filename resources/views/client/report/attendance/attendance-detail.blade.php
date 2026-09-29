@@ -1218,6 +1218,7 @@
                     </div>
 
                     <!-- Branch Filter -->
+                    @feature('branches')
                     <div class="filter-item">
                         <select class="filter-select" name="branch_id" onchange="this.form.submit()">
                             <option value="">All Branches</option>
@@ -1226,6 +1227,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @endfeature
 
                     <!-- Search Filter -->
                     <div class="filter-item search-filter">
@@ -1340,7 +1342,7 @@
                                     <tr>
                                         <th width="40">#</th>
                                         <th>Employee</th>
-                                        <th>Branch</th>
+                                        @feature('branches')<th>Branch</th>@endfeature
                                         <th>Date</th>
                                         <th>Day</th>
                                         <th>Status</th>
@@ -1408,7 +1410,7 @@
                                                     </div>
                                                 </a>
                                             </td>
-                                            <td>{{ $record['branch'] ?? '—' }}</td>
+                                            @feature('branches')<td>{{ $record['branch'] ?? '—' }}</td>@endfeature
                                             <td>{{ \Carbon\Carbon::parse($record['date'])->format('d M Y') }}</td>
                                             <td>{{ \Carbon\Carbon::parse($record['date'])->format('D') }}</td>
                                             <td>

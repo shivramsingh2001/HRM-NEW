@@ -3,10 +3,14 @@
 @section('style')
 <style>
     .filter-section { background: #fff; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
-    .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .filter-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; overflow-x: auto; }
+    .filter-row > .filter-item { flex: 0 1 auto; min-width: 0; }
+    .filter-row select.form-control-sm-custom { min-width: 96px; max-width: 150px; }
+    .filter-row input[type="date"].form-control-sm-custom { width: 118px; padding: 6px 6px; }
+    .filter-row > .filter-item.fi-search { flex: 1 1 140px; }
+    .filter-row input[name="search"] { width: 100%; min-width: 120px; }
+    .filter-row .btn-sm-custom-outline { display: inline-block; white-space: nowrap; padding: 6px 10px; }
     .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; }
-    .btn-sm-custom { background: #1e3a8a; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; }
-    .btn-sm-custom:hover { background: #2563eb; color: #fff; }
     .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; }
     .btn-sm-custom-outline:hover { background: #e3edfe; color: #1e3a8a; }
 
@@ -34,7 +38,7 @@
         </div>
     </div>
 
-    <div class="content-area-body pb-0 h-100">
+    <div class="content-area-body pb-3">
         <div class="filter-section">
             <form action="{{ route('report.project.progress.index') }}" method="GET">
                 <div class="filter-row">
@@ -62,6 +66,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @feature('branches')
                     <div class="filter-item">
                         <select name="branch_id" class="form-control-sm-custom" onchange="this.form.submit()">
                             <option value="">-- All Branches --</option>
@@ -70,33 +75,34 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="filter-item"><input type="date" name="date_from" class="form-control-sm-custom" value="{{ request('date_from') }}" title="Deadline from"></div>
-                    <div class="filter-item"><input type="date" name="date_to" class="form-control-sm-custom" value="{{ request('date_to') }}" title="Deadline to"></div>
-                    <div class="filter-item">
-                        <input type="text" name="search" class="form-control-sm-custom" placeholder="Search project or code…" value="{{ request('search') }}">
+                    @endfeature
+                    <div class="filter-item"><input type="date" name="date_from" class="form-control-sm-custom" onchange="this.form.submit()" value="{{ request('date_from') }}" title="Deadline from"></div>
+                    <div class="filter-item"><input type="date" name="date_to" class="form-control-sm-custom" onchange="this.form.submit()" value="{{ request('date_to') }}" title="Deadline to"></div>
+                    <div class="filter-item fi-search">
+                        <input type="text" name="search" class="form-control-sm-custom" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" placeholder="Search project or code…" value="{{ request('search') }}">
                     </div>
-                    <div class="filter-item"><button type="submit" class="btn-sm-custom"><i class="feather-eye"></i> View</button></div>
-                    <div class="filter-item"><a href="{{ route('report.project.progress.index') }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
+                    <div class="filter-item"><a href="{{ route('report.project.progress.index') }}" class="btn-sm-custom-outline" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
         </div>
 
-        <div class="card stretch stretch-full">
+        <div class="card mb-0">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover" id="reportTable">
                         <thead>
                             <tr>
-                                <th>Code</th><th>Name</th><th>Branch</th><th>Progress</th><th>Completed</th><th>In Progress</th>
+                                <th>Sr. No.</th><th>Code</th><th>Name</th>@feature('branches')<th>Branch</th>@endfeature<th>Progress</th><th>Completed</th><th>In Progress</th>
                                 <th>Pending</th><th>Overdue Tasks</th><th>Days</th><th>Latest Update</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($projects as $p)
                                 <tr>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $p->project_code }}</td>
                                     <td>{{ $p->name }}</td>
-                                    <td>{{ $p->branch_name ?? '—' }}</td>
+                                    @feature('branches')<td>{{ $p->branch_name ?? '—' }}</td>@endfeature
                                     <td>
                                         <div class="d-flex align-items-center gap-1">
                                             <div class="progress-track"><div class="progress-fill" style="width: {{ $p->progress_percentage }}%"></div></div>
@@ -111,7 +117,7 @@
                                     <td>{{ $p->latest_update_summary }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="10" class="text-center text-muted py-4">No projects match the selected filters.</td></tr>
+                                <tr><td colspan="11" class="text-center text-muted py-4">No projects match the selected filters.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

@@ -226,7 +226,7 @@
 
                     @if ($report === 'balance')
                         <div class="filter-item">
-                            <input type="text" name="search" class="form-control-sm-custom" style="width: 200px;"
+                            <input type="text" name="search" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" class="form-control-sm-custom" style="width: 200px;"
                                 placeholder="Search employee, ID or email…" value="{{ $filters['search'] ?? '' }}">
                         </div>
                     @endif
@@ -268,7 +268,6 @@
                     @endif
 
                     @if ($needsPeriod || $report === 'balance')
-                        <div class="filter-item"><button type="submit" class="btn-sm-custom-outline"><i class="feather-eye"></i> View</button></div>
                     @endif
                     <div class="filter-item"><a href="{{ route('report.leave.show', $report) }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
                 </div>

@@ -34,7 +34,12 @@
     #shiftMatrix thead th { font-size: 9.5px; font-weight: 700; color: #6b7385; background: #f7faff; border-bottom: 1px solid #e3edfe; line-height: 1.2; }
     #shiftMatrix thead th .dow { display: block; font-weight: 600; color: #94a3b8; font-size: 8.5px; text-transform: uppercase; }
     #shiftMatrix thead th.is-weekend { background: #eef3fd; }
-    #shiftMatrix .col-emp { position: sticky; left: 0; z-index: 2; background: #fff; text-align: left; min-width: 190px; max-width: 190px; padding: 5px 10px; border-right: 1px solid #eef1f7; }
+    #shiftMatrix .col-sr { position: sticky; left: 0; z-index: 2; background: #fff; min-width: 40px; max-width: 40px; color: #6b7385; }
+    #shiftMatrix thead .col-sr { background: #f7faff; z-index: 3; text-transform: uppercase; }
+    #shiftMatrix tbody tr:hover td.col-sr { background: #fafcff; }
+    #shiftMatrix .col-branch { text-align: left; white-space: nowrap; padding: 4px 8px; color: #334155; }
+    #shiftMatrix thead .col-branch { text-transform: uppercase; }
+    #shiftMatrix .col-emp { position: sticky; left: 40px; z-index: 2; background: #fff; text-align: left; min-width: 190px; max-width: 190px; padding: 5px 10px; border-right: 1px solid #eef1f7; }
     #shiftMatrix thead .col-emp { background: #f7faff; z-index: 3; text-transform: uppercase; }
     #shiftMatrix .col-sum { min-width: 44px; font-weight: 700; color: #1a2236; background: #fbfcff; }
     #shiftMatrix thead .col-sum { text-transform: uppercase; }
@@ -115,6 +120,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @feature('branches')
                     <div class="filter-item">
                         <select name="branch_id" class="form-control-sm-custom auto-submit" aria-label="Branch">
                             <option value="">-- All Branches --</option>
@@ -123,6 +129,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @endfeature
                     <div class="filter-item">
                         <select name="shift_id" class="form-control-sm-custom auto-submit" aria-label="Shift">
                             <option value="">-- All Shifts --</option>
@@ -131,7 +138,6 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="filter-item"><button type="submit" class="btn-sm-custom"><i class="feather-eye"></i> View</button></div>
                     <div class="filter-item"><a href="{{ route('report.attendance.shift-monthly.index') }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
                 </div>
             </form>
@@ -164,7 +170,9 @@
                     <table id="shiftMatrix">
                         <thead>
                             <tr>
+                                <th class="col-sr">Sr. No.</th>
                                 <th class="col-emp">Employee</th>
+                                @feature('branches')<th class="col-branch">Branch</th>@endfeature
                                 @foreach ($dates as $d)
                                     <th class="{{ $d->isWeekend() ? 'is-weekend' : '' }}" title="{{ $d->format('l, d M Y') }}">
                                         {{ $d->format('d') }}<span class="dow">{{ $d->format('D') }}</span>
@@ -178,10 +186,12 @@
                         <tbody>
                             @forelse ($pagedRows as $row)
                                 <tr>
+                                    <td class="col-sr">{{ $pagedRows->firstItem() + $loop->index }}</td>
                                     <td class="col-emp">
                                         <div class="emp-name" title="{{ $row['name'] }}">{{ $row['name'] }}</div>
-                                        <div class="emp-sub">{{ $row['employee_id'] }}{{ $row['department'] ? ' · ' . $row['department'] : '' }}{{ $row['branch'] ? ' · ' . $row['branch'] : '' }}</div>
+                                        <div class="emp-sub">{{ $row['employee_id'] }}{{ $row['department'] ? ' · ' . $row['department'] : '' }}</div>
                                     </td>
+                                    @feature('branches')<td class="col-branch">{{ $row['branch'] ?: '—' }}</td>@endfeature
                                     @foreach ($dates as $d)
                                         @php $c = $row['cells'][$d->format('Y-m-d')]; @endphp
                                         <td>
@@ -201,7 +211,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ $dates->count() + 4 }}" class="text-center py-5 text-muted" style="font-size:11px;">
+                                    <td colspan="{{ $dates->count() + 6 }}" class="text-center py-5 text-muted" style="font-size:11px;">
                                         No employees match these filters for {{ $monthLabel }}.
                                     </td>
                                 </tr>
