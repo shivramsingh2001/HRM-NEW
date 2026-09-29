@@ -532,6 +532,21 @@
                         </div>
                     </div>
 
+                    <!-- Clock In/Out Log (every punch) -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-log-in"></i>
+                        </div>
+                        <h6 class="card-title">Clock In/Out Log</h6>
+                        <p class="card-description">Every clock-in and clock-out (multiple per day) with time, direction, location, office radius, distance, source & device.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-success">Punches</span>
+                            <a href="{{ route('report.attendance.punches.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Working Hours Report -->
                     <div class="report-card">
                         <div class="card-icon primary">

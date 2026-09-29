@@ -1020,6 +1020,10 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::get('/attendance/branch-wise', [AttendanceReportController::class, 'branchWiseAttendanceReport'])->name('attendance.branch-wise');
                 Route::get('/attendance/branch-wise/{branchId}', [AttendanceReportController::class, 'branchWiseDetailReport'])->name('attendance.branch-wise.detail');
                 Route::get('/attendance/branch-wise/{branchId}/export', [AttendanceReportController::class, 'branchWiseDetailExport'])->name('attendance.branch-wise.detail.export');
+
+                // Clock In/Out log — one row per punch (multiple clock in/out), with location details.
+                Route::get('/attendance/punches', [\App\Http\Controllers\Report\PunchReportController::class, 'index'])->name('attendance.punches.index');
+                Route::get('/attendance/punches/export', [\App\Http\Controllers\Report\PunchReportController::class, 'export'])->name('attendance.punches.export');
             });
 
             Route::middleware('feature:overtime')->group(function () {
