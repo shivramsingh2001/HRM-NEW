@@ -598,9 +598,8 @@
                         {{-- <button type="submit" class="btn-sm-custom">
                             <i class="feather-search"></i> Filter
                         </button> --}}
-                        <a href="{{ route('team.attendance-summary') }}" class="reset-button">
-                            <i class="feather-refresh-cw"></i> Reset
-                        </a>
+                        <a href="{{ route('team.attendance-summary') }}" class="reset-button" title="Reset filters" aria-label="Reset filters">
+                            <i class="feather-refresh-cw"></i></a>
                     </div>
 
                     <div class="filter-item" style="min-width: auto;">

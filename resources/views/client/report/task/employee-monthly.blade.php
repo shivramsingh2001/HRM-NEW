@@ -481,9 +481,8 @@
 
 
                     <div class="filter-item">
-                        <a href="{{ route('report.task.employee-monthly') }}" class="reset-button">
-                            <i class="feather-refresh-cw"></i> Reset
-                        </a>
+                        <a href="{{ route('report.task.employee-monthly') }}" class="reset-button" title="Reset filters" aria-label="Reset filters">
+                            <i class="feather-refresh-cw"></i></a>
                     </div>
 
                     <div class="filter-item">

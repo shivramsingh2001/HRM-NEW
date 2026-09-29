@@ -12,7 +12,7 @@
                         <option value="{{ $b->id }}" {{ $branchId == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
                     @endforeach
                 </select>
-                <a href="{{ route('report.asset.summary.index') }}" class="btn btn-light btn-sm">Reset</a>
+                <a href="{{ route('report.asset.summary.index') }}" class="btn btn-light btn-sm" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a>
             </form>
             <p class="text-muted mb-0 mt-1" style="font-size:10.5px;">Status and Category counts respect the Branch filter above; the By Branch breakdown always shows every branch.</p>
         </div></div>

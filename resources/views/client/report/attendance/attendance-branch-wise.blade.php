@@ -399,9 +399,8 @@
                     @endif
                 </span>
                 <div class="ms-auto">
-                    <a href="{{ route('report.attendance.branch-wise') }}" class="reset-btn">
-                        <i class="feather-refresh-cw"></i> Reset
-                    </a>
+                    <a href="{{ route('report.attendance.branch-wise') }}" class="reset-btn" title="Reset filters" aria-label="Reset filters">
+                        <i class="feather-refresh-cw"></i></a>
                 </div>
             </div>
         </form>

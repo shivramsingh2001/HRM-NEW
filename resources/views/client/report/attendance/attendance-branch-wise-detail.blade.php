@@ -455,8 +455,8 @@
                     </select>
                 </div>
                 <div class="filter-item">
-                    <a href="{{ route('report.attendance.branch-wise.detail', $branch->id) }}" class="reset-btn">
-                        <i class="feather-refresh-cw"></i> Reset
+                    <a href="{{ route('report.attendance.branch-wise.detail', $branch->id) }}" class="reset-btn" title="Reset filters" aria-label="Reset filters">
+                        <i class="feather-refresh-cw"></i>
                     </a>
                 </div>
             </div>

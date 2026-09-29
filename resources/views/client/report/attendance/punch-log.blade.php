@@ -165,7 +165,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="filter-item fi-btn"><a href="{{ route('report.attendance.punches.index') }}" class="btn-sm-custom-outline" title="Reset filters"><i class="feather-refresh-cw"></i> Reset</a></div>
+                    <div class="filter-item fi-btn"><a href="{{ route('report.attendance.punches.index') }}" class="btn-sm-custom-outline" title="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
         </div>

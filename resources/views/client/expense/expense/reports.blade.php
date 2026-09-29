@@ -151,7 +151,7 @@
                     @if ($isAgeing)
                         <span class="filter-note"><i class="feather-calendar me-1"></i>As of {{ $as_of }} — a live snapshot; branch and search still narrow it.</span>
                     @endif
-                    <div class="filter-item"><a href="{{ route('expense.reports.show', $report) }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
+                    <div class="filter-item"><a href="{{ route('expense.reports.show', $report) }}" class="btn-sm-custom-outline" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
         </div>

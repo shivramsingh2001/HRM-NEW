@@ -21,7 +21,7 @@
                     @endforeach
                 </select>
                 <input type="text" name="search" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" class="form-control form-control-sm" style="width:auto;" placeholder="Search employee or ID…" value="{{ request('search') }}">
-                <a href="{{ route('report.asset.employee-wise.index') }}" class="btn btn-light btn-sm">Reset</a>
+                <a href="{{ route('report.asset.employee-wise.index') }}" class="btn btn-light btn-sm" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a>
             </form>
         </div></div>
 

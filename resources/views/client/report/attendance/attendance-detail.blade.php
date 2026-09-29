@@ -1241,10 +1241,8 @@
                     </div>
 
                     <div class="filter-item" style="min-width: auto;">
-                        <a href="{{ route('report.attendance.detail.index') }}" class="reset-btn">
-                            <i class="feather-refresh-cw"></i>
-                            Reset
-                        </a>
+                        <a href="{{ route('report.attendance.detail.index') }}" class="reset-btn" title="Reset filters" aria-label="Reset filters">
+                            <i class="feather-refresh-cw"></i></a>
                     </div>
                 </div>
             </form>
