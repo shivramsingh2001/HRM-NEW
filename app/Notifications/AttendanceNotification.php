@@ -18,12 +18,18 @@ class AttendanceNotification extends Notification
     protected $type;
     protected $expectedTime;
 
-    public function __construct(Attendance $attendance, User $employee, $type, $expectedTime = null)
+    protected $title;
+    protected $message;
+
+    /** $title/$message = the exact push wording (AttendanceNotificationService); built below when not given. */
+    public function __construct(Attendance $attendance, User $employee, $type, $expectedTime = null, ?string $title = null, ?string $message = null)
     {
         $this->attendance = $attendance;
         $this->employee = $employee;
         $this->type = $type;
         $this->expectedTime = $expectedTime;
+        $this->title = $title;
+        $this->message = $message;
     }
 
     public function via($notifiable)
@@ -57,8 +63,8 @@ class AttendanceNotification extends Notification
         }
 
         return [
-            'title' => $title,
-            'message' => $message,
+            'title' => $this->title ?? $title,
+            'message' => $this->message ?? $message,
             'type' => 'attendance_' . $this->type,
             'attendance_id' => $this->attendance->id,
             'user_id' => $this->employee->id,

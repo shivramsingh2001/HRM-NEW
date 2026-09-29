@@ -4,9 +4,9 @@
 namespace App\Notifications;
 
 use App\Models\Leave;
+use App\Services\LeaveNotificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
 class LeaveStatusChangedNotification extends Notification
 {
@@ -15,12 +15,25 @@ class LeaveStatusChangedNotification extends Notification
     protected $leave;
     protected $status;
     protected $remarks;
+    protected $title;
+    protected $message;
 
-    public function __construct(Leave $leave, $status, $remarks = null)
+    /**
+     * $title/$message are the exact push wording (LeaveNotificationService::message);
+     * built here when not given. Previously the stored title was always
+     * "Leave Approved", even for a rejection.
+     */
+    public function __construct(Leave $leave, $status, $remarks = null, ?string $title = null, ?string $message = null)
     {
         $this->leave = $leave;
         $this->status = $status;
         $this->remarks = $remarks;
+
+        if ($title === null || $message === null) {
+            [$title, $message] = LeaveNotificationService::message((string) $status, $leave, $remarks);
+        }
+        $this->title = $title;
+        $this->message = $message;
     }
 
     public function via($notifiable)
@@ -30,26 +43,17 @@ class LeaveStatusChangedNotification extends Notification
 
     public function toArray($notifiable)
     {
-        $start = \Carbon\Carbon::parse($this->leave->start_date);
-        $end = \Carbon\Carbon::parse($this->leave->start_date ?? $this->leave->start_date);
-        $totalDays = $end->diffInDays($start) + 1;
-        
-        $statusText = $this->status === 'approved' ? 'approved' : 'rejected';
-        $statusColor = $this->status === 'approved' ? 'success' : 'danger';
-
         return [
-            'title'=>'✅ Leave Approved',
+            'title' => $this->title,
             'type' => 'leave_' . $this->status,
             'leave_id' => $this->leave->id,
             'leave_number' => $this->leave->leave_id,
             'status' => $this->status,
-            // 'status_text' => $statusText,
-            // 'status_color' => $statusColor,
             'start_date' => $this->leave->start_date,
-            'end_date' => $this->leave->start_date,
-            'total_days' => $totalDays,
+            'end_date' => $this->leave->end_date ?? $this->leave->start_date,
+            'total_days' => LeaveNotificationService::dayCount($this->leave),
             'remarks' => $this->remarks,
-            'message' => 'Your leave request for ' . $totalDays . ' day(s) has been'. $statusText.'.',
+            'message' => $this->message,
             'created_at' => now()->toDateTimeString()
         ];
     }

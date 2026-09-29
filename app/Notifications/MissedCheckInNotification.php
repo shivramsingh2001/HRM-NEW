@@ -21,34 +21,42 @@ class MissedCheckInNotification extends Notification
     /**
      * Create a new notification instance.
      */
+    /**
+     * @param  \App\Models\User|int  $user  the employee who missed check-in
+     *         (CheckMissedCheckIns passes the id — it used to be used as an object and crash)
+     * @param  object  $shift  row with start_time (+ optional id/name/shift_name/end_time)
+     */
     public function __construct($user, $shift, $graceMinutes)
     {
+        if (! is_object($user)) {
+            $user = \App\Models\User::withoutGlobalScopes()->find($user)
+                ?? (object) ['id' => (int) $user, 'name' => $shift->user_name ?? 'Employee', 'email' => null];
+        }
+
         $this->user = $user;
-        $this->shift = $shift;
-        $this->graceMinutes = $graceMinutes;
+        $this->shift = (object) [
+            'id' => $shift->id ?? $shift->shift_id ?? null,
+            'name' => $shift->name ?? $shift->shift_name ?? 'your shift',
+            'start_time' => $shift->start_time ?? null,
+            'end_time' => $shift->end_time ?? null,
+        ];
+        $this->graceMinutes = (int) $graceMinutes;
         $this->currentTime = now();
-        
-       
+    }
+
+    /** "09:00:00" → "09:00 AM" */
+    private function startLabel(): string
+    {
+        return $this->shift->start_time ? \Carbon\Carbon::parse($this->shift->start_time)->format('h:i A') : '—';
     }
 
     /**
-     * Get the notification's delivery channels.
+     * Get the notification's delivery channels. Push goes through the app's
+     * FcmChannel — the old 'fcm' string had no registered driver and threw.
      */
     public function via($notifiable): array
     {
-        $channels = ['database'];
-        
-        // Add FCM if available
-        if (config('services.fcm.enabled', true)) {
-            $channels[] = 'fcm';
-        }
-        
-        // Add broadcast for real-time updates (optional)
-        if (config('app.env') !== 'production') {
-            $channels[] = 'broadcast';
-        }
-        
-        return $channels;
+        return ['database', \App\Channels\FcmChannel::class];
     }
 
     /**
@@ -58,9 +66,9 @@ class MissedCheckInNotification extends Notification
     {
         $isSelf = $notifiable->id == $this->user->id;
         
-        $message = $isSelf 
-            ? "You haven't checked in today. Your shift '{$this->shift->name}' started at {$this->shift->start_time} with {$this->graceMinutes} minutes grace period."
-            : "{$this->user->name} hasn't checked in today. Shift '{$this->shift->name}' started at {$this->shift->start_time} with {$this->graceMinutes} minutes grace period.";
+        $message = $isSelf
+            ? "You haven't checked in today. Your shift started at {$this->startLabel()} ({$this->graceMinutes} min grace)."
+            : "{$this->user->name} hasn't checked in today. Shift started at {$this->startLabel()} ({$this->graceMinutes} min grace).";
 
         return [
             'id' => uniqid(),
@@ -87,52 +95,25 @@ class MissedCheckInNotification extends Notification
     /**
      * Get the FCM representation of the notification.
      */
+    /** Shape App\Channels\FcmChannel sends: title, body, data (string values). Same wording as the bell. */
     public function toFcm($notifiable): array
     {
-        $isSelf = $notifiable->id == $this->user->id;
-        
-        $message = $isSelf 
-            ? "You haven't checked in today. Your shift '{$this->shift->name}' started at {$this->shift->start_time}"
-            : "{$this->user->name} hasn't checked in today. Shift '{$this->shift->name}' started at {$this->shift->start_time}";
-
         return [
-            'notification' => [
-                'title' => '⚠️ Missed Check-In Alert',
-                'body' => $message,
-                'sound' => 'default'
-            ],
+            'title' => '⚠️ Missed Check-In Alert',
+            'body' => $this->toArray($notifiable)['message'],
             'data' => [
                 'type' => 'missed_checkin',
                 'user_id' => (string) $this->user->id,
-                'user_name' => $this->user->name,
-                'shift_id' => (string) $this->shift->id,
-                'shift_name' => $this->shift->name,
-                'shift_start' => $this->shift->start_time,
+                'user_name' => (string) $this->user->name,
+                'shift_id' => (string) ($this->shift->id ?? ''),
+                'shift_name' => (string) $this->shift->name,
+                'shift_start' => (string) ($this->shift->start_time ?? ''),
                 'grace_minutes' => (string) $this->graceMinutes,
                 'date' => $this->currentTime->toDateString(),
                 'timestamp' => (string) $this->currentTime->timestamp,
                 'click_action' => 'MISSED_CHECKIN',
                 'priority' => 'high'
             ],
-            'android' => [
-                'priority' => 'high',
-                'notification' => [
-                    'icon' => 'ic_alert',
-                    'color' => '#f44336',
-                    'priority' => 'high',
-                    'sound' => 'default',
-                    'click_action' => 'MISSED_CHECKIN'
-                ]
-            ],
-            'apns' => [
-                'payload' => [
-                    'aps' => [
-                        'sound' => 'default',
-                        'badge' => 1,
-                        'category' => 'MISSED_CHECKIN'
-                    ]
-                ]
-            ]
         ];
     }
 

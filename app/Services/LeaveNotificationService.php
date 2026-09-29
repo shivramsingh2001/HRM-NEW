@@ -36,11 +36,7 @@ class LeaveNotificationService
             }
 
             $employee = $leave->user;
-            
-            // Calculate total days
-            $start = \Carbon\Carbon::parse($leave->start_date);
-            $end = \Carbon\Carbon::parse($leave->end_date ?? $leave->start_date);
-            $totalDays = $end->diffInDays($start) + 1;
+            $totalDays = self::dayCount($leave);
 
             $data = [
                 'leave_id' => $leave->id,
@@ -49,13 +45,12 @@ class LeaveNotificationService
                 'employee_id' => $employee->employee_id,
                 'leave_type' => $leave->leaveType->name ?? 'Leave',
                 'start_date' => $leave->start_date,
-                'end_date' => $leave->end_date,
+                'end_date' => $leave->end_date ?? $leave->start_date,
                 'total_days' => $totalDays,
                 'type' => 'leave_submitted'
             ];
 
-            $title = '📅 New Leave Request';
-            $body = $employee->name . ' requested ' . $totalDays . ' day(s) of leave';
+            [$title, $body] = self::message('submitted', $leave);
 
             // Send to each recipient
             foreach ($recipients as $recipient) {
@@ -66,8 +61,8 @@ class LeaveNotificationService
                     array_merge($data, ['recipient_role' => $recipient->role])
                 );
 
-                // Also store in database
-                $recipient->notify(new LeaveSubmittedNotification($leave));
+                // Also store in database (same wording as the push)
+                $recipient->notify(new LeaveSubmittedNotification($leave, $title, $body));
             }
 
             Log::info('Leave submission notifications sent', [
@@ -91,42 +86,56 @@ class LeaveNotificationService
      */
     public function notifyLeaveApproved($leave, $remarks = null)
     {
+        return $this->notifyDecision($leave, 'approved', $remarks);
+    }
+
+    /**
+     * Send notification when a pending leave request is rejected
+     */
+    public function notifyLeaveRejected($leave, $remarks = null)
+    {
+        return $this->notifyDecision($leave, 'rejected', $remarks);
+    }
+
+    /**
+     * Send notification when an already-approved leave is revoked/cancelled
+     * (previously this was sent as "Leave Rejected").
+     */
+    public function notifyLeaveCancelled($leave, $remarks = null)
+    {
+        return $this->notifyDecision($leave, 'cancelled', $remarks);
+    }
+
+    /** Push + stored notification to the employee, both with the same wording. */
+    private function notifyDecision($leave, string $status, $remarks = null): bool
+    {
         try {
             $employee = $leave->user;
-            
+
             if (!$employee) {
-                Log::warning('Employee not found for leave approval', [
+                Log::warning('Employee not found for leave ' . $status, [
                     'leave_id' => $leave->id
                 ]);
                 return false;
             }
-
-            $start = \Carbon\Carbon::parse($leave->start_date);
-            $end = \Carbon\Carbon::parse($leave->start_date ?? $leave->start_date);
-            $totalDays = $end->diffInDays($start) + 1;
 
             $data = [
                 'leave_id' => $leave->id,
                 'leave_number' => $leave->leave_id,
                 'leave_type' => $leave->leaveType->name ?? 'Leave',
                 'start_date' => $leave->start_date,
-                'end_date' => $leave->start_date,
-                'total_days' => $totalDays,
+                'end_date' => $leave->end_date ?? $leave->start_date,
+                'total_days' => self::dayCount($leave),
                 'remarks' => $remarks,
-                'type' => 'leave_approved'
+                'type' => 'leave_' . $status
             ];
 
-            $title = '✅ Leave Approved';
-            $body = 'Your leave request for ' . $totalDays . ' day(s) has been approved.';
-            
-            if ($remarks) {
-                $body .= ' Remarks: ' . $remarks;
-            }
+            [$title, $body] = self::message($status, $leave, $remarks);
 
             $this->sendNotification($employee, $title, $body, $data);
-            $employee->notify(new LeaveStatusChangedNotification($leave, 'approved', $remarks));
+            $employee->notify(new LeaveStatusChangedNotification($leave, $status, $remarks, $title, $body));
 
-            Log::info('Leave approval notification sent', [
+            Log::info('Leave ' . $status . ' notification sent', [
                 'leave_id' => $leave->id,
                 'employee_id' => $employee->id
             ]);
@@ -134,7 +143,7 @@ class LeaveNotificationService
             return true;
 
         } catch (\Exception $e) {
-            Log::error('Failed to send leave approval notification', [
+            Log::error('Failed to send leave ' . $status . ' notification', [
                 'error' => $e->getMessage(),
                 'leave_id' => $leave->id
             ]);
@@ -143,59 +152,44 @@ class LeaveNotificationService
     }
 
     /**
-     * Send notification when leave is rejected
+     * Days on the request: the stored total_days (already accounts for half
+     * days / sessions), else the inclusive start..end span.
      */
-    public function notifyLeaveRejected($leave, $remarks = null)
+    public static function dayCount($leave): float
     {
-        try {
-            $employee = $leave->user;
-            
-            if (!$employee) {
-                Log::warning('Employee not found for leave rejection', [
-                    'leave_id' => $leave->id
-                ]);
-                return false;
-            }
-
-            $start = \Carbon\Carbon::parse($leave->start_date);
-            $end = \Carbon\Carbon::parse($leave->start_date ?? $leave->start_date);
-            $totalDays = $end->diffInDays($start) + 1;
-
-            $data = [
-                'leave_id' => $leave->id,
-                'leave_number' => $leave->leave_id,
-                'leave_type' => $leave->leaveType->name ?? 'Leave',
-                'start_date' => $leave->start_date,
-                'end_date' => $leave->start_date,
-                'total_days' => $totalDays,
-                'remarks' => $remarks,
-                'type' => 'leave_rejected'
-            ];
-
-            $title = '❌ Leave Rejected';
-            $body = 'Your leave request for ' . $totalDays . ' day(s) has been rejected.';
-            
-            if ($remarks) {
-                $body .= ' Reason: ' . $remarks;
-            }
-
-            $this->sendNotification($employee, $title, $body, $data);
-            $employee->notify(new LeaveStatusChangedNotification($leave, 'rejected', $remarks));
-
-            Log::info('Leave rejection notification sent', [
-                'leave_id' => $leave->id,
-                'employee_id' => $employee->id
-            ]);
-
-            return true;
-
-        } catch (\Exception $e) {
-            Log::error('Failed to send leave rejection notification', [
-                'error' => $e->getMessage(),
-                'leave_id' => $leave->id
-            ]);
-            return false;
+        if ((float) ($leave->total_days ?? 0) > 0) {
+            return (float) $leave->total_days;
         }
+
+        $start = \Carbon\Carbon::parse($leave->start_date);
+        $end = \Carbon\Carbon::parse($leave->end_date ?? $leave->start_date);
+
+        return (float) (abs($end->diffInDays($start)) + 1);
+    }
+
+    /** [title, body] for a leave event — shared by the push and the stored notification. */
+    public static function message(string $status, $leave, $remarks = null): array
+    {
+        $days = self::dayCount($leave);
+        $daysText = rtrim(rtrim(number_format($days, 1), '0'), '.') . ' day' . ($days == 1 ? '' : 's');
+        $type = $leave->leaveType->name ?? 'leave';
+        $start = \Carbon\Carbon::parse($leave->start_date);
+        $end = \Carbon\Carbon::parse($leave->end_date ?? $leave->start_date);
+        $dates = $start->isSameDay($end) ? $start->format('d M Y') : $start->format('d M') . ' – ' . $end->format('d M Y');
+
+        [$title, $body] = match ($status) {
+            'submitted' => ['📅 New Leave Request', ($leave->user->name ?? 'An employee') . " requested {$daysText} of {$type} ({$dates})."],
+            'approved' => ['✅ Leave Approved', "Your {$type} request for {$daysText} ({$dates}) has been approved."],
+            'rejected' => ['❌ Leave Rejected', "Your {$type} request for {$daysText} ({$dates}) has been rejected."],
+            'cancelled' => ['🚫 Leave Cancelled', "Your approved {$type} for {$daysText} ({$dates}) has been cancelled and the balance restored."],
+            default => ['📅 Leave Update', "Your {$type} request for {$daysText} ({$dates}) was updated."],
+        };
+
+        if ($remarks) {
+            $body .= ($status === 'rejected' ? ' Reason: ' : ' Remarks: ') . $remarks;
+        }
+
+        return [$title, $body];
     }
 
     /**
@@ -249,23 +243,20 @@ class LeaveNotificationService
     private function getLeaveSubmittedRecipients($employeeId)
     {
         $recipients = collect();
+        $tenantId = User::withoutGlobalScopes()->whereKey($employeeId)->value('tenant_id');
 
         // 1. Get Reporting Head
         $recipients = $recipients->merge($this->getReportingHeads($employeeId));
 
-        // 2. Get all HR users
-        $hrUsers = $this->getUsersByRole('hr');
-        foreach ($hrUsers as $hr) {
-            $recipients->push($hr);
+        // 2. Get all HR users, 3. all Admin users — of the employee's own company
+        foreach (['hr', 'admin'] as $role) {
+            foreach ($this->getUsersByRole($role, $tenantId) as $user) {
+                $recipients->push($user);
+            }
         }
 
-        // 3. Get all Admin users
-        $adminUsers = $this->getUsersByRole('admin');
-        foreach ($adminUsers as $admin) {
-            $recipients->push($admin);
-        }
-
-        return $recipients->unique('id')->values();
+        // An HR/admin applying for their own leave isn't notified of it.
+        return $recipients->unique('id')->reject(fn ($u) => $u->id == $employeeId)->values();
     }
 
     /**
@@ -279,9 +270,12 @@ class LeaveNotificationService
     /**
      * Get all users by role
      */
-    private function getUsersByRole($role)
+    private function getUsersByRole($role, $tenantId)
     {
-        return User::where('role', $role)
+        // Explicit tenant filter: never rely only on the request-bound global scope.
+        return User::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('role', $role)
             ->where('status', 1)
             ->get();
     }

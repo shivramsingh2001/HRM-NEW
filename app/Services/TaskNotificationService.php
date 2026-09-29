@@ -25,6 +25,11 @@ class TaskNotificationService
     public function notifyTaskAssigned($task, $assignedTo, $assignedBy)
     {
         try {
+            // A self-assigned task needs no "you assigned yourself" alert.
+            if ($assignedBy && $assignedTo->id == $assignedBy->id) {
+                return false;
+            }
+
             $data = [
                 'task_id' => $task->id,
                 'task_code' => $task->task_code,
@@ -55,42 +60,27 @@ class TaskNotificationService
     /**
      * Send notification when task status is updated (by assignee OR assigner).
      *
-     * $receiver is optional and should be passed explicitly whenever the
-     * caller already knows who this notification concerns — e.g. a group
-     * task approval looping over each member. Without it, this falls back to
-     * an arbitrary TaskAssign row for the task, which is only correct for a
-     * genuinely 1:1 individual task (a group task has multiple rows, so
-     * guessing "the" row is wrong).
+     * The wording always follows $newStatus — "approved"/"rejected" only ever
+     * for an actual approval decision, never for In Progress / Hold / etc.
+     *
+     * $receiver should be passed whenever the caller knows who this concerns
+     * (the assigner for an assignee's update; each member for an approval).
+     * Without it the receivers are derived from the task's assignment rows by
+     * what the status means: an approval decision goes to every assignee, any
+     * other update goes to the assigner(s). Nobody is notified about their
+     * own action.
      */
-    public function notifyTaskStatusUpdate($task, $actionBy, $oldStatus, $newStatus, $remarks = null, $receiver = null)
+    public function notifyTaskStatusUpdate($task, $actionBy, $oldStatus, $newStatus, $remarks = null, $receiver = null, ?string $groupStatus = null)
     {
         try {
-            $action = $newStatus === 'approved' ? 'approved' : ($newStatus === 'rejected' ? 'rejected' : 'updated');
-
-            if ($receiver) {
-                $action = $receiver->id == $actionBy->id ? 'updated' : $action;
-            } else {
-                $assign = TaskAssign::where('task_id', $task->id)
-                    ->where(function ($q) use ($actionBy) {
-                        $q->where('assigned_to', $actionBy->id)->orWhere('assigned_by', $actionBy->id);
-                    })
-                    ->first();
-                if (!$assign) return false;
-
-                if ($actionBy->id == $assign->assigned_to) {
-                    // If assignee updated, notify assigner
-                    $receiver = User::find($assign->assigned_by);
-                    $action = 'updated';
-                } else {
-                    // If assigner approved/rejected, notify assignee
-                    $receiver = User::find($assign->assigned_to);
-                    $action = $newStatus === 'approved' ? 'approved' : 'rejected';
-                }
+            $receivers = $receiver ? collect([$receiver]) : $this->receiversFor($task, $actionBy, $newStatus);
+            $receivers = $receivers->filter(fn ($u) => $u && $u->id != $actionBy->id)->unique('id');
+            if ($receivers->isEmpty()) {
+                return false;
             }
 
-            if (!$receiver) return false;
+            [$title, $body] = self::statusMessage($task->title, $actionBy->name, $newStatus, $remarks, $groupStatus);
 
-            // Prepare notification data
             $data = [
                 'task_id' => $task->id,
                 'task_code' => $task->task_code,
@@ -102,33 +92,17 @@ class TaskNotificationService
                 'type' => 'task_status_update'
             ];
 
-            // Set title and body based on who performed the action
-            if ($action === 'updated') {
-                $title = '🔄 Task Status Updated';
-                $body = $actionBy->name . ' updated task "' . $task->title . '" to ' . $newStatus;
-            } elseif ($action === 'approved') {
-                $title = '✅ Task Approved';
-                $body = 'Your task "' . $task->title . '" has been approved.';
-            } else {
-                $title = '❌ Task Rejected';
-                $body = 'Your task "' . $task->title . '" has been rejected.';
+            foreach ($receivers as $user) {
+                // Push and the in-app (database) notification carry the same title/message.
+                $this->sendNotification($user, $title, $body, $data);
+                $user->notify(new TaskStatusUpdateNotification($task, $actionBy, $oldStatus, $newStatus, $remarks, $title, $body));
+
+                Log::info('Task status update notification sent', [
+                    'task_id' => $task->id,
+                    'receiver_id' => $user->id,
+                    'new_status' => $newStatus
+                ]);
             }
-
-            if ($remarks) {
-                $body .= ' Remarks: ' . $remarks;
-            }
-
-            // Send FCM notification
-            $this->sendNotification($receiver, $title, $body, $data);
-            
-            // Store in database
-            $receiver->notify(new TaskStatusUpdateNotification($task, $actionBy, $oldStatus, $newStatus, $remarks));
-
-            Log::info('Task status update notification sent', [
-                'task_id' => $task->id,
-                'receiver_id' => $receiver->id,
-                'new_status' => $newStatus
-            ]);
 
             return true;
 
@@ -139,6 +113,65 @@ class TaskNotificationService
             ]);
             return false;
         }
+    }
+
+    /**
+     * [title, body] for a status change — shared by the push and the stored
+     * notification so both always say the same thing.
+     */
+    public static function statusMessage(string $taskTitle, string $actorName, ?string $newStatus, ?string $remarks = null, ?string $groupStatus = null): array
+    {
+        $label = self::statusLabel($newStatus);
+
+        // A group member changing their own part: say so, plus where the whole task stands.
+        [$title, $body] = $groupStatus !== null ? [
+            $groupStatus === 'completed' ? '☑️ Group Task Completed' : '👥 Group Task Update',
+            "{$actorName} marked their part of \"{$taskTitle}\" as {$label}. Group status: " . self::statusLabel($groupStatus)
+                . ($groupStatus === 'completed' ? ' — waiting for your approval.' : '.'),
+        ] : match ($newStatus) {
+            'approved' => ['✅ Task Approved', "{$actorName} approved your task \"{$taskTitle}\"."],
+            'rejected' => ['❌ Task Rejected', "{$actorName} rejected your task \"{$taskTitle}\". It has been reassigned to you for rework."],
+            'completed' => ['☑️ Task Completed', "{$actorName} marked task \"{$taskTitle}\" as Completed. It is waiting for your approval."],
+            'in_progress' => ['▶️ Task In Progress', "{$actorName} started working on task \"{$taskTitle}\" (In Progress)."],
+            'hold' => ['⏸️ Task On Hold', "{$actorName} put task \"{$taskTitle}\" On Hold."],
+            'cancelled' => ['🚫 Task Cancelled', "{$actorName} cancelled task \"{$taskTitle}\"."],
+            'pending' => ['🔄 Task Status Updated', "{$actorName} moved task \"{$taskTitle}\" back to Pending."],
+            default => ['🔄 Task Status Updated', "{$actorName} updated task \"{$taskTitle}\" to {$label}."],
+        };
+
+        if ($remarks) {
+            $body .= ' Remarks: ' . $remarks;
+        }
+
+        return [$title, $body];
+    }
+
+    public static function statusLabel(?string $status): string
+    {
+        return match ($status) {
+            'in_progress' => 'In Progress',
+            'hold' => 'On Hold',
+            default => ucfirst(str_replace('_', ' ', (string) $status)),
+        };
+    }
+
+    /**
+     * Who should hear about $actionBy moving $task to $newStatus, when the
+     * caller didn't say: an approval decision → all assignees; anything else
+     * → the assigner(s) of the actor's own assignment (or of the task).
+     */
+    private function receiversFor($task, $actionBy, ?string $newStatus)
+    {
+        $assigns = TaskAssign::where('task_id', $task->id)->get();
+
+        if (in_array($newStatus, ['approved', 'rejected'], true)) {
+            $ids = $assigns->pluck('assigned_to');
+        } else {
+            $own = $assigns->where('assigned_to', $actionBy->id);
+            $ids = ($own->isNotEmpty() ? $own : $assigns)->pluck('assigned_by');
+        }
+
+        return User::whereIn('id', $ids->filter()->unique()->all())->get();
     }
 
     /**

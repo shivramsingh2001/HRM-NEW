@@ -232,23 +232,24 @@ class AttendanceRegularizationNotificationService
     private function getRegularizationRecipients($employeeId)
     {
         $recipients = collect();
+        $tenantId = User::withoutGlobalScopes()->whereKey($employeeId)->value('tenant_id');
 
         // 1. Get Reporting Heads
         $recipients = $recipients->merge($this->getReportingHeads($employeeId));
 
         // 2. Get all HR users
-        $hrUsers = $this->getUsersByRole('hr');
+        $hrUsers = $this->getUsersByRole('hr', $tenantId);
         foreach ($hrUsers as $hr) {
             $recipients->push($hr);
         }
 
         // 3. Get all Admin users
-        $adminUsers = $this->getUsersByRole('admin');
+        $adminUsers = $this->getUsersByRole('admin', $tenantId);
         foreach ($adminUsers as $admin) {
             $recipients->push($admin);
         }
 
-        return $recipients->unique('id')->values();
+        return $recipients->unique('id')->reject(fn ($u) => $u->id == $employeeId)->values();
     }
 
     /**
@@ -262,9 +263,12 @@ class AttendanceRegularizationNotificationService
     /**
      * Get all users by role
      */
-    private function getUsersByRole($role)
+    private function getUsersByRole($role, $tenantId)
     {
-        return User::where('role', $role)
+        // Explicit tenant filter: never rely only on the request-bound global scope.
+        return User::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('role', $role)
             ->where('status', 1)
             ->get();
     }

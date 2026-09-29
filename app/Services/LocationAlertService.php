@@ -151,8 +151,8 @@ class LocationAlertService
             }
         }
 
-        // Remove duplicates just in case
-        $uniqueRecipients = $recipients->unique('id')->values();
+        // Remove duplicates, and never alert the person about their own location.
+        $uniqueRecipients = $recipients->unique('id')->reject(fn ($r) => $r->id == $user->id)->values();
         return $uniqueRecipients;
     }
 

@@ -72,6 +72,8 @@ class TaskDeadlineReminders extends Command
             $assigneeIds = DB::table('task_assigns')
                 ->where('task_id', $task->id)
                 ->where('tenant_id', $task->tenant_id)
+                // A group member who already finished their part isn't nagged.
+                ->where(fn ($q) => $q->whereNull('individual_status')->orWhere('individual_status', '!=', 'completed'))
                 ->pluck('assigned_to')
                 ->unique();
 

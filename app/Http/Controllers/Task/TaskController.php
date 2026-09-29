@@ -858,7 +858,9 @@ class TaskController extends Controller
             $request->validate([
                 'task_ids' => 'required|array',
                 'task_ids.*' => 'exists:tasks,id',
-                'status' => 'required|in:pending,in_progress,completed,approved,rejected',
+                // Same statuses an assignee may set in TaskUpdate(); approve /
+                // reject is only ever the assigner's decision (TaskApproval).
+                'status' => 'required|in:pending,in_progress,hold,completed',
                 'remarks' => 'nullable|string'
             ]);
 
@@ -879,6 +881,7 @@ class TaskController extends Controller
 
             $updated = [];
             $skipped = [];
+            $notify = [];
 
             DB::beginTransaction();
             try {
@@ -893,6 +896,8 @@ class TaskController extends Controller
                         $skipped[] = ['task_id' => $taskId, 'reason' => 'Cannot update a ' . $task->status . ' task'];
                         continue;
                     }
+
+                    $oldStatus = $task->task_mode === 'group' ? ($assign->individual_status ?? 'pending') : $task->status;
 
                     if ($task->task_mode === 'group') {
                         // Same per-member path as TaskUpdate(): only this
@@ -924,12 +929,31 @@ class TaskController extends Controller
                     ]);
 
                     $updated[] = $taskId;
+                    $notify[] = [$task, $assign, $oldStatus];
                 }
 
                 DB::commit();
             } catch (Exception $e) {
                 DB::rollBack();
                 throw $e;
+            }
+
+            // Same notification as a single TaskUpdate(), to each task's assigner.
+            foreach ($notify as [$task, $assign, $oldStatus]) {
+                try {
+                    $task->refresh();
+                    $this->notificationService->notifyTaskStatusUpdate(
+                        $task,
+                        $authUser,
+                        $oldStatus,
+                        $request->status,
+                        $request->remarks,
+                        User::find($assign->assigned_by),
+                        $task->task_mode === 'group' ? $task->status : null
+                    );
+                } catch (Exception $e) {
+                    Log::error('Bulk task notification failed: ' . $e->getMessage());
+                }
             }
 
             return response()->json([
@@ -984,7 +1008,9 @@ class TaskController extends Controller
                 ], 400);
             }
 
-            $oldStatus = $task->status;
+            // For a group task the member changes their own part, so the "old"
+            // status in the notification is their previous individual status.
+            $oldStatus = $task->task_mode === 'group' ? ($assign->individual_status ?? 'pending') : $task->status;
             $oldDeadline = $task->deadline_date;
             $deadlineExtended = false;
 
@@ -1068,13 +1094,16 @@ class TaskController extends Controller
             // assigned_by, so $assign here is a safe, correct source).
             try {
                 if ($this->notificationService) {
+                    // What this member actually set; for a group task also
+                    // report where the whole task now stands.
                     $this->notificationService->notifyTaskStatusUpdate(
                         $task,
                         $authUser,
                         $oldStatus,
-                        $task->status,
+                        $request->status,
                         $request->remarks,
-                        User::find($assign->assigned_by)
+                        User::find($assign->assigned_by),
+                        $task->task_mode === 'group' ? $task->status : null
                     );
                 }
             } catch (Exception $e) {

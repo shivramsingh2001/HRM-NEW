@@ -34,6 +34,13 @@ class RegularizationApprovalHandler implements ApprovalOutcomeHandler
             }
             $this->entry->applyRegularization($reg, $finalActor);
         });
+
+        // Same employee notification as the direct (no-workflow) approval path.
+        try {
+            app(\App\Services\AttendanceRegularizationNotificationService::class)->notifyRegularizationApproved($reg->fresh());
+        } catch (\Throwable $e) {
+            // never block on notification
+        }
     }
 
     public function rejected(ApprovalRequest $request, User $finalActor, ?string $remarks): void
@@ -49,5 +56,11 @@ class RegularizationApprovalHandler implements ApprovalOutcomeHandler
             'approved_date' => now(),
             'approval_remarks' => $remarks ?: 'Rejected via approval workflow',
         ]);
+
+        try {
+            app(\App\Services\AttendanceRegularizationNotificationService::class)->notifyRegularizationRejected($reg->fresh(), $remarks);
+        } catch (\Throwable $e) {
+            // never block on notification
+        }
     }
 }

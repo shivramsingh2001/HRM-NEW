@@ -33,22 +33,10 @@ class LocationStatusNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-       
-        
-        // Send via database and FCM
-        $channels = ['database'];
-        
-        // Add FCM if available
-        if (config('services.fcm.enabled', true)) {
-            $channels[] = 'fcm';
-        }
-        
-        // Add broadcast for real-time updates (optional)
-        if (config('app.env') !== 'production') {
-            $channels[] = 'broadcast';
-        }
-        
-        return $channels;
+        // Database only: LocationAlertService already sends the push itself.
+        // The old 'fcm' channel string had no registered driver and threw
+        // after the database write, counting every alert as a failure.
+        return ['database'];
     }
 
     /**

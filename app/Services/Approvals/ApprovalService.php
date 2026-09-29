@@ -342,17 +342,26 @@ class ApprovalService
         }
     }
 
+    /** Request types whose outcome handler already sends its own, specific employee notification. */
+    private const HANDLER_NOTIFIES = ['leave', 'overtime', 'regularization'];
+
     private function notifyRequester(ApprovalRequest $request, string $status): void
     {
         try {
+            // Avoid a second, generic "Request approved" next to e.g. "✅ Leave Approved".
+            if (in_array($request->request_type, self::HANDLER_NOTIFIES, true)) {
+                return;
+            }
             $requester = User::find($request->requested_by);
             if (! $requester) {
                 return;
             }
-            $label = str_replace('_', ' ', $request->request_type);
+            $label = ucfirst(str_replace('_', ' ', $request->request_type));
+            $approved = in_array($status, ['approved', 'auto_approved'], true);
             $requester->notify(new \App\Notifications\CustomNotification(
-                'Request ' . $status,
-                "Your {$label} request has been {$status}.",
+                ($approved ? '✅ ' : '❌ ') . $label . ' Request ' . ($approved ? 'Approved' : 'Rejected'),
+                "Your {$label} request has been " . ($approved ? 'approved' : 'rejected')
+                    . ($status === 'auto_approved' ? ' automatically (approval time limit passed).' : '.'),
                 ['type' => 'approval_result', 'approval_request_id' => $request->id, 'status' => $status],
             ));
         } catch (\Throwable $e) {

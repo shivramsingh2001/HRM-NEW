@@ -786,7 +786,7 @@ class AttendanceController extends Controller
             }
 
             try {
-                $this->notificationService->notifyClockIn($attendance, $user);
+                $this->notificationService->notifyClockIn($attendance, $user, $capturedPunch);
             } catch (Exception $e) {
                 Log::error('Clock-in notification failed: ' . $e->getMessage());
             }
@@ -1220,7 +1220,7 @@ class AttendanceController extends Controller
             }
 
             try {
-                $this->notificationService->notifyClockOut($attendance, $user);
+                $this->notificationService->notifyClockOut($attendance, $user, $capturedPunch);
             } catch (Exception $e) {
                 Log::error('Clock-out notification failed: ' . $e->getMessage());
             }
@@ -1984,9 +1984,9 @@ class AttendanceController extends Controller
             try {
                 $notifier = app(\App\Services\AttendanceRegularizationNotificationService::class);
                 if ($request->status == 'approved') {
-                    $notifier->notifyRegularizationApproved($model);
+                    $notifier->notifyRegularizationApproved($model, $request->input('remarks'));
                 } else {
-                    $notifier->notifyRegularizationRejected($model);
+                    $notifier->notifyRegularizationRejected($model, $request->input('remarks'));
                 }
             } catch (\Throwable $e) {
                 Log::error('Regularization notification failed: ' . $e->getMessage());

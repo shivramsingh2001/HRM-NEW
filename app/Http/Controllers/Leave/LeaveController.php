@@ -615,7 +615,8 @@ class LeaveController extends Controller
                 try {
                     $leaveWithUser = Leave::with('user')->find($leave->id);
                     if ($leaveWithUser) {
-                        app(\App\Services\LeaveNotificationService::class)->notifyLeaveRejected($leaveWithUser, $request->remarks);
+                        // An approved leave being revoked is a cancellation, not a rejection.
+                        app(\App\Services\LeaveNotificationService::class)->notifyLeaveCancelled($leaveWithUser, $request->remarks);
                     }
                 } catch (\Throwable $e) {
                     // never block on notification

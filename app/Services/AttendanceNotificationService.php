@@ -17,23 +17,33 @@ class AttendanceNotificationService
     }
 
     /**
-     * Send notification when employee clocks in
+     * Send notification when employee clocks in.
+     *
+     * $punch (the attendance_punches row just captured) gives the time and
+     * place of THIS clock-in — with multiple punches per day the attendance
+     * row's clock_in is the day's first punch, not this one.
      */
-    public function notifyClockIn($attendance, $employee)
+    public function notifyClockIn($attendance, $employee, $punch = null)
     {
         try {
+            if (!$attendance) {
+                return false;
+            }
+
             // Get all recipients
             $recipients = $this->getAttendanceRecipients($employee->id);
-            
-            if (empty($recipients)) {
+
+            if ($recipients->isEmpty()) {
                 Log::warning('No recipients found for clock-in notification', [
                     'user_id' => $employee->id
                 ]);
                 return false;
             }
 
-            $clockInTime = \Carbon\Carbon::parse($attendance->clock_in)->format('h:i A');
-            
+            $at = $punch->punched_at ?? $attendance->clock_in;
+            $clockInTime = \Carbon\Carbon::parse($at)->format('h:i A');
+            $session = (int) ($punch->session_seq ?? 1);
+
             $data = [
                 'attendance_id' => $attendance->id,
                 'user_id' => $employee->id,
@@ -41,12 +51,14 @@ class AttendanceNotificationService
                 'employee_id' => $employee->employee_id,
                 'date' => $attendance->date,
                 'clock_in_time' => $clockInTime,
-                'clock_in_address' => $attendance->clock_in_address,
+                'clock_in_address' => $punch->address ?? $attendance->clock_in_address,
+                'session' => $session,
                 'type' => 'clock_in'
             ];
 
             $title = '🟢 Employee Clocked In';
-            $body = $employee->name . ' clocked in at ' . $clockInTime;
+            $body = $employee->name . ($session > 1 ? ' clocked in again at ' : ' clocked in at ') . $clockInTime
+                . ($session > 1 ? ' (session ' . $session . ')' : '');
 
             // Send to each recipient
             foreach ($recipients as $recipient) {
@@ -57,8 +69,8 @@ class AttendanceNotificationService
                     array_merge($data, ['recipient_role' => $recipient->role])
                 );
 
-                // Also store in database
-                $recipient->notify(new AttendanceNotification($attendance, $employee, 'clock_in'));
+                // Also store in database (same wording as the push)
+                $recipient->notify(new AttendanceNotification($attendance, $employee, 'clock_in', null, $title, $body));
             }
 
             Log::info('Clock-in notifications sent', [
@@ -80,37 +92,45 @@ class AttendanceNotificationService
     /**
      * Send notification when employee clocks out
      */
-    public function notifyClockOut($attendance, $employee)
+    public function notifyClockOut($attendance, $employee, $punch = null)
     {
         try {
+            if (!$attendance) {
+                return false;
+            }
+
             // Get all recipients
             $recipients = $this->getAttendanceRecipients($employee->id);
-            
-            if (empty($recipients)) {
+
+            if ($recipients->isEmpty()) {
                 Log::warning('No recipients found for clock-out notification', [
                     'user_id' => $employee->id
                 ]);
                 return false;
             }
 
-            $clockOutTime = \Carbon\Carbon::parse($attendance->clock_out)->format('h:i A');
-            $totalHours = $attendance->total_hours;
-            
+            $at = $punch->punched_at ?? $attendance->clock_out;
+            $clockOutTime = $at ? \Carbon\Carbon::parse($at)->format('h:i A') : '—';
+            $totalHours = $attendance->total_hours ?: '0:00';
+            $session = (int) ($punch->session_seq ?? 1);
+
             $data = [
                 'attendance_id' => $attendance->id,
                 'user_id' => $employee->id,
                 'employee_name' => $employee->name,
                 'employee_id' => $employee->employee_id,
                 'date' => $attendance->date,
-                'clock_in_time' => \Carbon\Carbon::parse($attendance->clock_in)->format('h:i A'),
+                'clock_in_time' => $attendance->clock_in ? \Carbon\Carbon::parse($attendance->clock_in)->format('h:i A') : null,
                 'clock_out_time' => $clockOutTime,
                 'total_hours' => $totalHours,
-                'clock_out_address' => $attendance->clock_out_address,
+                'clock_out_address' => $punch->address ?? $attendance->clock_out_address,
+                'session' => $session,
                 'type' => 'clock_out'
             ];
 
             $title = '🔴 Employee Clocked Out';
-            $body = $employee->name . ' clocked out at ' . $clockOutTime . ' (Total: ' . $totalHours . ')';
+            // total_hours is the whole day's worked time (all sessions so far).
+            $body = $employee->name . ' clocked out at ' . $clockOutTime . ' (Worked today: ' . $totalHours . ')';
 
             // Send to each recipient
             foreach ($recipients as $recipient) {
@@ -121,8 +141,8 @@ class AttendanceNotificationService
                     array_merge($data, ['recipient_role' => $recipient->role])
                 );
 
-                // Also store in database
-                $recipient->notify(new AttendanceNotification($attendance, $employee, 'clock_out'));
+                // Also store in database (same wording as the push)
+                $recipient->notify(new AttendanceNotification($attendance, $employee, 'clock_out', null, $title, $body));
             }
 
             Log::info('Clock-out notifications sent', [
@@ -148,8 +168,8 @@ class AttendanceNotificationService
     {
         try {
             $recipients = $this->getAttendanceRecipients($employee->id);
-            
-            if (empty($recipients)) {
+
+            if ($recipients->isEmpty()) {
                 return false;
             }
 
@@ -171,7 +191,7 @@ class AttendanceNotificationService
 
             foreach ($recipients as $recipient) {
                 $this->sendNotification($recipient, $title, $body, array_merge($data, ['recipient_role' => $recipient->role]));
-                $recipient->notify(new AttendanceNotification($attendance, $employee, 'late_clock_in', $expectedTime));
+                $recipient->notify(new AttendanceNotification($attendance, $employee, 'late_clock_in', $expectedTime, $title, $body));
             }
 
             return true;
@@ -188,23 +208,20 @@ class AttendanceNotificationService
     private function getAttendanceRecipients($employeeId)
     {
         $recipients = collect();
+        $tenantId = User::withoutGlobalScopes()->whereKey($employeeId)->value('tenant_id');
 
         // 1. Get Reporting Heads
         $recipients = $recipients->merge($this->getReportingHeads($employeeId));
 
-        // 2. Get all HR users
-        $hrUsers = $this->getUsersByRole('hr');
-        foreach ($hrUsers as $hr) {
-            $recipients->push($hr);
+        // 2. Get all HR users, 3. all Admin users — of the employee's own company
+        foreach (['hr', 'admin'] as $role) {
+            foreach ($this->getUsersByRole($role, $tenantId) as $user) {
+                $recipients->push($user);
+            }
         }
 
-        // 3. Get all Admin users
-        $adminUsers = $this->getUsersByRole('admin');
-        foreach ($adminUsers as $admin) {
-            $recipients->push($admin);
-        }
-
-        return $recipients->unique('id')->values();
+        // An HR/admin/manager clocking in isn't notified about themselves.
+        return $recipients->unique('id')->reject(fn ($u) => $u->id == $employeeId)->values();
     }
 
     /**
@@ -218,9 +235,12 @@ class AttendanceNotificationService
     /**
      * Get all users by role
      */
-    private function getUsersByRole($role)
+    private function getUsersByRole($role, $tenantId)
     {
-        return User::where('role', $role)
+        // Explicit tenant filter: never rely only on the request-bound global scope.
+        return User::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('role', $role)
             ->where('status', 1)
             ->get();
     }

@@ -646,14 +646,17 @@ class TaskController extends Controller
 
             DB::commit();
             try {
+                // Explicit receiver: the assigner of this user's own assignment.
+                // (Letting the service guess mislabelled updates as "rejected".)
                 $assigner = User::find($assign->assigned_by);
                 if ($assigner) {
                     $this->notificationService->notifyTaskStatusUpdate(
                         $task,
                         $authUser,
                         $oldStatus,
-                        $request->status,
-                        $request->remarks
+                        $input['status'],
+                        $input['remarks'] ?? null,
+                        $assigner
                     );
                 }
             } catch (Exception $e) {
@@ -776,22 +779,24 @@ class TaskController extends Controller
 
             DB::commit();
 
-            // Send notification to assignee
-            try {
-                $assignee = User::find($assign->assigned_to);
-                if ($assignee && $this->notificationService) {
-
-                    // For approved tasks, send notification about approval
-                    $this->notificationService->notifyTaskStatusUpdate(
-                        $task,
-                        $authUser,
-                        $oldStatus,
-                        $request->status,
-                        $request->remarks
-                    );
+            // Notify every assignee (all members of a group task), one explicit
+            // receiver each — same as the web TaskApproval.
+            foreach (TaskAssign::where('task_id', $taskId)->pluck('assigned_to')->unique() as $assigneeId) {
+                try {
+                    $assignee = User::find($assigneeId);
+                    if ($assignee && $this->notificationService) {
+                        $this->notificationService->notifyTaskStatusUpdate(
+                            $task,
+                            $authUser,
+                            $oldStatus,
+                            $request->status,
+                            $request->remarks,
+                            $assignee
+                        );
+                    }
+                } catch (Exception $e) {
+                    Log::error('Failed to send task approval notification: ' . $e->getMessage());
                 }
-            } catch (Exception $e) {
-                Log::error('Failed to send task approval notification: ' . $e->getMessage());
             }
 
 
