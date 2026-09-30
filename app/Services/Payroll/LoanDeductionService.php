@@ -6,6 +6,7 @@ use App\Models\Loan;
 use App\Models\LoanRepayment;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Single source of truth for "how much loan should be deducted from this
@@ -229,7 +230,8 @@ class LoanDeductionService
             $loan->status = Loan::STATUS_CLOSED;
             $loan->closed_date = now();
 
-            if ($loan->loan_application_id) {
+            // loan_applications has never existed in the schema — guard so closing a loan can't crash payroll.
+            if ($loan->loan_application_id && Schema::hasTable('loan_applications')) {
                 DB::table('loan_applications')
                     ->where('id', $loan->loan_application_id)
                     ->update(['status' => 'closed']);

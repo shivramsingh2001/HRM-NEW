@@ -43,7 +43,7 @@ Regenerate this doc's source data any time with:
 | `impersonation_sessions` | Super-admin "login as tenant user" session tracking. | `session_token`, `end_reason` |
 | `inquiries` | Public sales inquiry / lead form submissions. | `status` enum(new→contacted→negotiating→payment_sent→paid→provisioned/lost), `plan_interest` |
 | `payment_logs` | Manual payment records collected against an inquiry/tenant (pre-provisioning or renewal). | `payment_mode` enum(upi/bank_transfer/cheque/cash/card) |
-| `company_registrations` | Self-serve signup intake (pre-tenant). | (no migration for schema detail beyond base; check model) |
+| `company_registrations` | Self-serve signup intake (pre-tenant): `name`, `company_name`, `email`, `gst`, `details`. | Model unused in code. Recreated on hrm_22_04 2026-09-30 (migration row existed but table was missing). |
 
 ## API platform (external API clients, webhooks)
 
@@ -289,7 +289,7 @@ Used by leave/regularization/overtime/payroll-structure changes and, as of 2026-
 | Table | Purpose | Key columns |
 |---|---|---|
 | `announcements` | Company-wide announcements, optional acknowledgment requirement + expiry. | `acknowledge`, `expire_date` |
-| `announcement_acknowledgments` | Per-user ack tracking (added 2026-09-12; no detailed columns captured beyond migration name — check model if needed). | |
+| `announcement_acknowledgments` | Per-user ack tracking: `tenant_id`, `announcement_id`, `user_id`, `acknowledged_at`; unique (`announcement_id`,`user_id`). | FK `announcement_id`→`announcements` (cascade), `user_id`→`users` (cascade). Table created on hrm_22_04 2026-09-30 (migration had never been run). |
 | `requests` | Generic WFH/Travel request (feeds `daily_reports` for WFH work logs). | `status` enum(PENDING/APPROVED/REJECTED/CANCELLED, **uppercase** — inconsistent with most other status enums which are lowercase) |
 | `request_types` | Only 2 values today. | `type_name` enum(WFH/TRAVEL) |
 | `request_attachments` / `request_histories` | Files + status-change audit trail. | `request_histories.action` enum(CREATED/SUBMITTED/APPROVED/REJECTED/CANCELLED/UPDATED) |
