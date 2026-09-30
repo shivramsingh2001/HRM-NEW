@@ -21,7 +21,8 @@ class AttendanceTrackingPoint extends Model
     public $timestamps = false;
 
     protected $casts = [
-        'track_time' => 'datetime',
+        // Serialized as local "Y-m-d H:i:s" (not ISO/UTC) in every API/JSON response.
+        'track_time' => 'datetime:Y-m-d H:i:s',
         'created_at' => 'datetime',
     ];
 

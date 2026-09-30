@@ -723,7 +723,7 @@ class AttendanceContoller extends Controller
                 ->map(function ($track) {
                     return [
                         'id' => $track->id,
-                        'track_time' => $track->track_time,
+                        'track_time' => $track->track_time?->format('Y-m-d H:i:s'),
                         'latitude' => $track->lat,
                         'longitude' => $track->long,
                         'address' => $track->address,
