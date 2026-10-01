@@ -506,6 +506,33 @@ class UserController extends Controller
     }
 
     /**
+     * Attendance Location and Work Type are optional. "All Locations" (legacy
+     * value 0) and an empty choice are both stored as NULL — office_branch has
+     * a FK to attendance_locations, so 0 can't be saved. NULL = any location.
+     */
+    private function normalizeJobLocationInput(Request $request): void
+    {
+        $branch = $request->input('branch');
+        if ($branch === '' || $branch === '0' || $branch === 0) {
+            $request->merge(['branch' => null]);
+        }
+        if ($request->input('type') === '') {
+            $request->merge(['type' => null]);
+        }
+    }
+
+    private function jobLocationRules(): array
+    {
+        return [
+            'type' => 'nullable|in:office,field',
+            'branch' => [
+                'nullable',
+                Rule::exists('attendance_locations', 'id')->where('tenant_id', auth()->user()->tenant_id),
+            ],
+        ];
+    }
+
+    /**
      * Persist the full multiselect reporting-head set for an employee.
      * The first id is treated as primary; returns the primary id (or null)
      * so callers can keep user_job_details.reporting_head in sync for the
@@ -770,14 +797,14 @@ class UserController extends Controller
      */
     private function saveStep3($request, $employeeId)
     {
+        $this->normalizeJobLocationInput($request);
         $validated = $request->validate([
             'department' => 'nullable|exists:departments,id',
             'designation' => 'nullable|exists:designations,id',
             'reporting_head' => 'nullable|array',
             'reporting_head.*' => 'distinct|exists:users,id',
             'employment_type' => 'nullable|in:full-time,part-time,contract',
-            'type' => 'required|in:office,field',
-            'branch' => 'required',
+            ...$this->jobLocationRules(),
             'company_branch' => 'nullable|exists:company_branches,id',
             'joining_date' => 'nullable|date',
             'leave_type_assigned' => 'nullable|array|min:1',
@@ -806,8 +833,8 @@ class UserController extends Controller
             'designation' => $validated['designation'] ?? null,
             'reporting_head' => $primaryReportingHeadId,
             'employment_type' => $validated['employment_type'] ?? 'full-time',
-            'type' => $validated['type'],
-            'office_branch' => $validated['branch'],
+            'type' => $validated['type'] ?? 'office',
+            'office_branch' => $validated['branch'] ?? null,
             'branch_id' => $validated['company_branch'] ?? null,
             'joining_date' => $validated['joining_date'] ?? null,
             'leave_assigned' => $leaveAssignedJson,
@@ -1176,6 +1203,7 @@ class UserController extends Controller
             $id = decrypt($id);
             $user = User::findOrFail($id);
 
+            $this->normalizeJobLocationInput($request);
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email,' . $id,
@@ -1209,8 +1237,7 @@ class UserController extends Controller
                 'joining_date' => 'nullable|date',
                 'employment_type' => 'nullable',
                 'salary' => 'nullable|numeric',
-                'type' => 'required|in:office,field',
-                'branch' => 'required',
+                ...$this->jobLocationRules(),
                 'company_branch' => 'nullable|exists:company_branches,id',
                 'country' => 'nullable|string',
                 'state' => 'nullable|string',
@@ -1292,7 +1319,7 @@ class UserController extends Controller
                 'reporting_head' => $primaryReportingHeadId,
                 'employment_type' => $validated['employment_type'] ?? null,
                 'salary' => $validated['salary'] ?? null,
-                'type' => $validated['type'] ?? null,
+                'type' => $validated['type'] ?? 'office',
                 'office_branch' => $validated['branch'] ?? null,
                 'branch_id' => $validated['company_branch'] ?? null,
             ];
@@ -1518,14 +1545,14 @@ class UserController extends Controller
      */
     private function updateStep3($request, $user)
     {
+        $this->normalizeJobLocationInput($request);
         $validated = $request->validate([
             'department' => 'nullable|exists:departments,id',
             'designation' => 'nullable|exists:designations,id',
             'reporting_head' => 'nullable|array',
             'reporting_head.*' => 'distinct|exists:users,id',
             'employment_type' => 'nullable|in:full-time,part-time,contract',
-            'type' => 'required|in:office,field',
-            'branch' => 'required',
+            ...$this->jobLocationRules(),
             'company_branch' => 'nullable|exists:company_branches,id',
             'joining_date' => 'nullable|date',
             'leave_type_assigned' => 'nullable|array|min:1',
@@ -1552,8 +1579,8 @@ class UserController extends Controller
             'designation' => $validated['designation'] ?? null,
             'reporting_head' => $primaryReportingHeadId,
             'employment_type' => $validated['employment_type'] ?? 'full-time',
-            'type' => $validated['type'],
-            'office_branch' => $validated['branch'],
+            'type' => $validated['type'] ?? 'office',
+            'office_branch' => $validated['branch'] ?? null,
             'branch_id' => $validated['company_branch'] ?? null,
             'joining_date' => $validated['joining_date'] ?? null,
             'leave_assigned' => $leaveAssignedJson,

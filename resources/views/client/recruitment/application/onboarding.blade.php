@@ -232,16 +232,16 @@
                             <form id="hireForm">
                                 @csrf
                                 <div class="mb-2">
-                                    <label class="form-label small required">Employee Type</label>
-                                    <select name="type" class="form-select form-select-sm" required>
+                                    <label class="form-label small">Employee Type</label>
+                                    <select name="type" class="form-select form-select-sm">
                                         <option value="office">Office</option>
                                         <option value="field">Field</option>
                                     </select>
                                 </div>
                                 <div class="mb-2">
-                                    <label class="form-label small required">Attendance Branch</label>
-                                    <select name="branch" class="form-select form-select-sm" required>
-                                        <option value="">Select</option>
+                                    <label class="form-label small">Attendance Location</label>
+                                    <select name="branch" class="form-select form-select-sm">
+                                        <option value="">{{ $branches->count() > 1 ? 'All Locations' : '-- None --' }}</option>
                                         @foreach ($branches as $branch)
                                             <option value="{{ $branch->id }}">{{ $branch->name }}</option>
                                         @endforeach

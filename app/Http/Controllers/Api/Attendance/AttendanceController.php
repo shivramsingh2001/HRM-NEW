@@ -555,8 +555,14 @@ class AttendanceController extends Controller
             if (!$skipLocationCheck && $user->jobDetails && $user->jobDetails->type == 'office') {
                 $officeBranch = $user->jobDetails->office_branch;
     
-                // CASE 1: User can mark attendance from ANY branch (office_branch == 0)
-                if ($officeBranch == 0) {
+                // CASE 0: no location assigned (NULL = any location) and the company has no
+                // geofenced location configured — nothing to check against, so allow
+                // (defaults above already mean "verified, no branch").
+                if (!$officeBranch && !AttendanceLocation::where('status', 1)->where('geofence_enabled', true)->exists()) {
+                    // no location check
+                }
+                // CASE 1: User can mark attendance from ANY branch (office_branch NULL/0)
+                elseif ($officeBranch == 0) {
                     // Find the nearest branch to user's location
                     // Disabled locations aren't valid candidates for "any branch".
                     $allBranches = AttendanceLocation::where('status', 1)
@@ -993,8 +999,14 @@ class AttendanceController extends Controller
             if (!$skipLocationCheck && $user->jobDetails && $user->jobDetails->type == 'office') {
                 $officeBranch = $user->jobDetails->office_branch;
     
-                // CASE 1: User can mark attendance from ANY branch (office_branch == 0)
-                if ($officeBranch == 0) {
+                // CASE 0: no location assigned (NULL = any location) and the company has no
+                // geofenced location configured — nothing to check against, so allow
+                // (defaults above already mean "verified, no branch").
+                if (!$officeBranch && !AttendanceLocation::where('status', 1)->where('geofence_enabled', true)->exists()) {
+                    // no location check
+                }
+                // CASE 1: User can mark attendance from ANY branch (office_branch NULL/0)
+                elseif ($officeBranch == 0) {
                     // Find the nearest branch to user's location
                     // Disabled locations aren't valid candidates for "any branch".
                     $allBranches = AttendanceLocation::where('status', 1)

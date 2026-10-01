@@ -898,8 +898,8 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Work Type <span class="required">*</span></label>
-                                    <select name="type" class="form-control" required>
+                                    <label class="form-label">Work Type</label>
+                                    <select name="type" class="form-control">
                                         <option value="office"
                                             {{ old('type', $user->jobDetails->type ?? '') == 'office' ? 'selected' : '' }}>
                                             Office</option>
@@ -913,10 +913,9 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Attendance Location <span class="required">*</span></label>
-                                    <select name="branch" class="form-control" required>
-                                        <option value="">Select Attendance Location</option>
-                                        <option value="0" {{ old('branch', $user->jobDetails->office_branch ?? '') == "0" ? 'selected' : '' }}>All Locations</option>
+                                    <label class="form-label">Attendance Location</label>
+                                    <select name="branch" class="form-control">
+                                        <option value="">{{ $branches->count() > 1 ? 'All Locations' : '-- None --' }}</option>
                                         @foreach ($branches as $branch)
                                             <option value="{{ $branch->id }}"
                                                 {{ old('branch', $user->jobDetails->office_branch ?? '') == $branch->id ? 'selected' : '' }}>
@@ -2190,17 +2189,6 @@
 
             if (step === 3) {
                 // Validate Step 3
-                const workType = currentStepElement.find('select[name="type"]');
-                if (!workType.val()) {
-                    showError(workType, 'Please select work type');
-                    isValid = false;
-                }
-
-                const branch = currentStepElement.find('select[name="branch"]');
-                if (!branch.val()) {
-                    showError(branch, 'Please select office branch');
-                    isValid = false;
-                }
             }
 
             if (step === 4) {

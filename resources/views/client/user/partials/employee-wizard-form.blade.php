@@ -268,18 +268,17 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Work Type <span class="required">*</span></label>
-                    <select name="type" class="form-control" required>
+                    <label class="form-label">Work Type</label>
+                    <select name="type" class="form-control">
                         <option value="office">Office</option>
                         <option value="field">Field</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Attendance Location <span class="required">*</span></label>
-                    <select name="branch" class="form-control" required>
-                        <option value="">Select Attendance Location</option>
-                        <option value="0">All Locations</option>
+                    <label class="form-label">Attendance Location</label>
+                    <select name="branch" class="form-control">
+                        <option value="">{{ $branches->count() > 1 ? 'All Locations' : '-- None --' }}</option>
                         @foreach ($branches as $branch)
                             <option value="{{ $branch->id }}">{{ $branch->name }}</option>
                         @endforeach

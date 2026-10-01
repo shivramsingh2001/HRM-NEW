@@ -154,9 +154,20 @@ class OnboardingController extends Controller
     public function hire(Request $request, $assignmentId)
     {
         try {
+            // Attendance location + work type are optional; empty/"0" = any location (NULL).
+            if (in_array($request->input('branch'), ['', '0'], true)) {
+                $request->merge(['branch' => null]);
+            }
+            if ($request->input('type') === '') {
+                $request->merge(['type' => null]);
+            }
+
             $data = $request->validate([
-                'type' => 'required|in:office,field',
-                'branch' => 'required|string',
+                'type' => 'nullable|in:office,field',
+                'branch' => [
+                    'nullable',
+                    \Illuminate\Validation\Rule::exists('attendance_locations', 'id')->where('tenant_id', auth()->user()->tenant_id),
+                ],
                 'company_branch' => 'nullable|exists:company_branches,id',
                 'role' => 'nullable|in:employee,manager,admin,hr',
                 'leave_type_assigned' => 'nullable|array',

@@ -596,18 +596,17 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">Work Type <span class="required">*</span></label>
-                                    <select name="type" class="form-control" required>
+                                    <label class="form-label">Work Type</label>
+                                    <select name="type" class="form-control">
                                         <option value="office">Office</option>
                                         <option value="field">Field</option>
                                     </select>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">Attendance Location <span class="required">*</span></label>
-                                    <select name="branch" class="form-control" required>
-                                        <option value="">Select Attendance Location</option>
-                                        <option value="0">All Locations</option>
+                                    <label class="form-label">Attendance Location</label>
+                                    <select name="branch" class="form-control">
+                                        <option value="">{{ $branches->count() > 1 ? 'All Locations' : '-- None --' }}</option>
                                         @foreach ($branches as $branch)
                                             <option value="{{ $branch->id }}">{{ $branch->name }}</option>
                                         @endforeach
@@ -1738,17 +1737,6 @@
 
             // Step 3 validation
             if (step === 3) {
-                const workType = currentStepElement.find('select[name="type"]');
-                if (!workType.val()) {
-                    showError(workType, 'Please select work type');
-                    isValid = false;
-                }
-
-                const branch = currentStepElement.find('select[name="branch"]');
-                if (!branch.val()) {
-                    showError(branch, 'Please select office branch');
-                    isValid = false;
-                }
 
                 // const status = currentStepElement.find('select[name="status"]');
                 // if (!status.val() && status.val() !== '0') {
@@ -2004,7 +1992,7 @@
                 $('select[name="reporting_head[]"]').val(data.job.reporting_head_ids || []).trigger('change');
                 $('select[name="employment_type"]').val(data.job.employment_type);
                 $('select[name="type"]').val(data.job.type);
-                $('select[name="branch"]').val(data.job.office_branch);
+                $('select[name="branch"]').val(data.job.office_branch || '');
                 $('select[name="company_branch"]').val(data.job.branch_id || '');
                 $('input[name="joining_date"]').val(data.job.joining_date);
                 // $('select[name="status"]').val(data.job.status);

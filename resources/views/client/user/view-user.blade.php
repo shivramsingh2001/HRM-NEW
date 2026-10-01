@@ -2666,17 +2666,6 @@
             }
 
             if (step === 3) {
-                const workType = currentStepElement.find('select[name="type"]');
-                if (!workType.val()) {
-                    showError(workType, 'Please select work type');
-                    isValid = false;
-                }
-
-                const branch = currentStepElement.find('select[name="branch"]');
-                if (!branch.val()) {
-                    showError(branch, 'Please select office branch');
-                    isValid = false;
-                }
             }
 
             if (step === 4) {
@@ -2915,7 +2904,7 @@
                     .trigger('change');
                 $('#employeeForm select[name="employment_type"]').val(data.job.employment_type);
                 $('#employeeForm select[name="type"]').val(data.job.type);
-                $('#employeeForm select[name="branch"]').val(data.job.office_branch);
+                $('#employeeForm select[name="branch"]').val(data.job.office_branch || '');
                 $('#employeeForm select[name="company_branch"]').val(data.job.branch_id || '');
                 $('#employeeForm input[name="joining_date"]').val(data.job.joining_date);
 
