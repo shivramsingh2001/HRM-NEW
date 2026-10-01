@@ -132,6 +132,60 @@ class SingleDomainLoginTest extends TestCase
         $this->assertNotSame(404, $this->get(self::HOST . '/careers/' . $code)->getStatusCode());
     }
 
+    public function test_mobile_api_login_without_company_header_finds_each_users_company(): void
+    {
+        foreach ($this->users as $user) {
+            $res = $this->postJson(self::HOST . '/api/login', ['employee_id' => $user->employee_id, 'password' => 'secret-pass'])
+                ->assertOk()->assertJson(['success' => true]);
+            $this->assertNotEmpty($res->json('data.token'));
+            $this->assertSame((int) $user->tenant_id, (int) app('current_tenant')->id);
+            // Same app instance across requests in a test: the JWT singleton keeps
+            // the previous token, so log it out before the next user's login.
+            auth('api')->logout();
+            app()->forgetInstance('current_tenant');
+            $this->app['auth']->forgetGuards();
+        }
+    }
+
+    public function test_mobile_api_login_still_accepts_the_company_header(): void
+    {
+        $user = $this->users[0];
+        $code = Tenant::find($user->tenant_id)->subdomain;
+
+        $this->withHeaders(['X-Tenant' => $code])
+            ->postJson(self::HOST . '/api/login', ['employee_id' => $user->employee_id, 'password' => 'secret-pass'])
+            ->assertOk()->assertJson(['success' => true]);
+    }
+
+    public function test_mobile_api_login_unknown_id_and_inactive_company(): void
+    {
+        $this->postJson(self::HOST . '/api/login', ['employee_id' => 'NOPE' . uniqid(), 'password' => 'x'])
+            ->assertOk()->assertJson(['success' => false, 'message' => 'Employee not found.']);
+
+        $user = $this->users[0];
+        $original = Tenant::find($user->tenant_id)->status;
+        try {
+            DB::table('tenants')->where('id', $user->tenant_id)->update(['status' => 'suspended']);
+            $this->postJson(self::HOST . '/api/login', ['employee_id' => $user->employee_id, 'password' => 'secret-pass'])
+                ->assertStatus(400)->assertJson(['message' => 'Company not found or inactive.']);
+        } finally {
+            DB::table('tenants')->where('id', $user->tenant_id)->update(['status' => $original]);
+        }
+    }
+
+    public function test_mobile_api_otp_without_company_header_resolves_by_mobile(): void
+    {
+        $user = $this->users[0];
+        $mobile = (string) random_int(6000000000, 9999999999);
+        DB::table('users')->where('id', $user->id)->update(['contact' => $mobile]);
+
+        $res = $this->postJson(self::HOST . '/api/send-otp', ['mobile_no' => $mobile]);
+        $this->assertNotSame(400, $res->getStatusCode(), $res->getContent());
+        $this->assertStringNotContainsString('Missing tenant identifier', $res->getContent());
+        $this->assertSame((int) $user->tenant_id, (int) app('current_tenant')->id);
+        DB::table('otps')->where('mobile_no', $mobile)->delete();
+    }
+
     public function test_forgot_password_api_works_without_a_company_header(): void
     {
         Mail::fake();

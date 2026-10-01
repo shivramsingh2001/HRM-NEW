@@ -169,19 +169,22 @@ class TenantMiddleware
                 ?? $request->header('X-Tenant-ID')
                 ?? $request->input('tenant_id');
 
-            // Single login domain: the web forgot/reset-password pages send no
-            // company identifier. users.email is globally unique, so the
-            // account's own tenant is unambiguous for these two routes.
-            // An unknown email falls through untenanted so the controller's
-            // generic reply is returned (no account-enumeration signal).
-            if (!$identifier && $request->is('api/forgot-password', 'api/reset-password') && $request->filled('email')) {
-                $identifier = User::withoutGlobalScope('tenant')
-                    ->where('email', $request->input('email'))
-                    ->value('tenant_id');
+            // Common app for every company: when no company is named, take it
+            // from the account itself. employee_id, contact and email each have
+            // a global UNIQUE key on users, so the match is unambiguous.
+            // An unknown identifier falls through untenanted so the controller
+            // returns its normal "not found" reply (no extra enumeration signal).
+            if (!$identifier && ($lookup = $this->accountLookupFor($request))) {
+                [$field, $column] = $lookup;
+                $account = User::withoutGlobalScope('tenant')
+                    ->where($column, $request->input($field))
+                    ->first(['id', 'tenant_id']);
 
-                if (!$identifier) {
+                if (!$account) {
                     return $next($request);
                 }
+
+                $identifier = $account->tenant_id; // null → rejected below as before
             }
 
             if (!$identifier) {
@@ -209,6 +212,30 @@ class TenantMiddleware
         }
 
         return $next($request);
+    }
+
+    /**
+     * Pre-auth route => [request field, users column] used to find the
+     * caller's company when the app sends no X-Tenant.
+     */
+    private const ACCOUNT_LOOKUP = [
+        'api/login' => ['employee_id', 'employee_id'],
+        'api/send-otp' => ['mobile_no', 'contact'],
+        'api/login-otp' => ['mobile_no', 'contact'],
+        'api/forgot-password' => ['email', 'email'],
+        'api/reset-password' => ['email', 'email'],
+    ];
+
+    /** @return array{0:string,1:string}|null */
+    private function accountLookupFor($request): ?array
+    {
+        foreach (self::ACCOUNT_LOOKUP as $route => [$field, $column]) {
+            if ($request->is($route) && $request->filled($field)) {
+                return [$field, $column];
+            }
+        }
+
+        return null;
     }
 
     /**
