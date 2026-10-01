@@ -220,6 +220,8 @@ Route::group(['middleware' => ['tenant']], function () {
         Route::prefix('employee')->name('employee.')->group(function () {
             Route::get('/', [UserController::class, 'index'])->name('index');
             Route::get('/create', [UserController::class, 'create'])->name('create');
+            Route::post('/import', [UserController::class, 'importEmployees'])->name('import')->middleware('role:admin,hr');
+            Route::get('/import/template', [UserController::class, 'importTemplate'])->name('import.template')->middleware('role:admin,hr');
             Route::post('/store', [UserController::class, 'store'])->name('store.step');
             Route::post('/save-step', [UserController::class, 'saveStep'])->name('save.step');
             Route::post('/complete-store', [UserController::class, 'completeStore'])->name('complete.store');

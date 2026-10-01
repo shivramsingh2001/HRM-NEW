@@ -1098,6 +1098,12 @@
                             </a>
                         </div>
                     </div>
+                    @if (in_array(auth()->user()->role, ['admin', 'hr']))
+                        <button type="button" class="btn btn-sm btn-light-brand" data-bs-toggle="modal" data-bs-target="#importEmployeeModal">
+                            <i class="feather-upload me-2"></i>
+                            <span>Import Employees</span>
+                        </button>
+                    @endif
                     <button type="button" class="btn btn-sm btn-primary add-employee-btn" onclick="openAddEmployeeDrawer()">
                         <i class="feather-plus me-2"></i>
                         <span>Add Employee</span>
@@ -1636,6 +1642,30 @@
     <x-ui.drawer id="employeeDrawer" title="Add Employee" width="480px">
         @include('client.user.partials.employee-wizard-form')
     </x-ui.drawer>
+
+    <!-- Import Employees (users table only: Name, Email, Mobile No, Password) -->
+    <x-ui.modal id="importEmployeeModal" title="Import Employees" size="md">
+        <form id="importEmployeeForm" enctype="multipart/form-data">
+            @csrf
+            <p class="fs-12 text-muted mb-2">
+                Upload an Excel (.xlsx) or CSV file with the columns
+                <strong>Name, Email, Mobile No, Password</strong>. Employee IDs are generated automatically.
+            </p>
+            <a href="{{ route('employee.import.template') }}" class="fs-12 d-inline-block mb-3">
+                <i class="feather-download me-1"></i>Download sample file
+            </a>
+            <div class="form-group mb-3">
+                <input type="file" class="form-control" name="file" accept=".xlsx,.csv" required>
+            </div>
+            <div id="importEmployeeErrors" class="alert alert-danger fs-12 d-none" style="max-height:220px;overflow:auto"></div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm" id="importEmployeeBtn">
+                    <i class="feather-upload me-2"></i>Import
+                </button>
+                <button type="button" class="btn btn-modal-cancel btn-sm" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </form>
+    </x-ui.modal>
 @endsection
 
 @section('script-area')
@@ -2098,6 +2128,47 @@
             return bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('employeeDrawer'));
         }
 
+
+        // Import Employees modal
+        $('#importEmployeeForm').on('submit', function (e) {
+            e.preventDefault();
+            const $btn = $('#importEmployeeBtn');
+            const $errors = $('#importEmployeeErrors').addClass('d-none').empty();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Importing...');
+
+            $.ajax({
+                url: '{{ route('employee.import') }}',
+                method: 'POST',
+                data: new FormData(this),
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    toastr.success(res.message);
+                    $('#importEmployeeModal').modal('hide');
+                    setTimeout(() => window.location.reload(), 800);
+                },
+                error: function (xhr) {
+                    const res = xhr.responseJSON || {};
+                    let html = '<div class="fw-semibold mb-1">' + $('<div>').text(res.message || 'Import failed.').html() + '</div>';
+                    if (Array.isArray(res.errors)) {
+                        html += '<ul class="mb-0 ps-3">' + res.errors.map(function (r) {
+                            return '<li>Row ' + r.row + ': ' + r.messages.map(m => $('<div>').text(m).html()).join(' ') + '</li>';
+                        }).join('') + '</ul>';
+                    } else if (res.errors && typeof res.errors === 'object') {
+                        html += Object.values(res.errors).flat().map(m => $('<div>').text(m).html()).join('<br>');
+                    }
+                    $errors.html(html).removeClass('d-none');
+                },
+                complete: function () {
+                    $btn.prop('disabled', false).html('<i class="feather-upload me-2"></i>Import');
+                }
+            });
+        });
+
+        $('#importEmployeeModal').on('hidden.bs.modal', function () {
+            $('#importEmployeeForm')[0].reset();
+            $('#importEmployeeErrors').addClass('d-none').empty();
+        });
         function openAddEmployeeDrawer() {
             wizardMode = 'add';
             resetWizardForm();
