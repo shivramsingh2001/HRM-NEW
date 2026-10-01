@@ -90,12 +90,14 @@
                         @endif
                     @endfeature
 
-                    <li class="nxl-item">
-                        <a href="{{ route('job-openings.index') }}" class="nxl-link">
-                            <span class="nxl-micon"><i class="feather-user-check"></i></span>
-                            <span class="nxl-mtext">Hiring</span><span class="nxl-arrow"></span>
-                        </a>
-                    </li>
+                    @feature('recruitment')
+                        <li class="nxl-item">
+                            <a href="{{ route('job-openings.index') }}" class="nxl-link">
+                                <span class="nxl-micon"><i class="feather-user-check"></i></span>
+                                <span class="nxl-mtext">Hiring</span><span class="nxl-arrow"></span>
+                            </a>
+                        </li>
+                    @endfeature
 
                     <li class="nxl-item">
                         <a href="{{ route('employee.index') }}" class="nxl-link">
@@ -186,21 +188,23 @@
                         </li>
                     @endfeature
 
-                    <li class="nxl-item nxl-hasmenu">
-                        <a href="#" class="nxl-link">
-                            <span class="nxl-micon"><i class="feather-trending-up"></i></span>
-                            <span class="nxl-mtext">Performance</span><span class="nxl-arrow"><i
-                                    class="feather-chevron-right"></i></span>
-                        </a>
-                        <ul class="nxl-submenu">
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('performance.team') }}">
-                                    Team Performance</a>
-                            </li>
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('performance.reviews.index') }}">
-                                    Team Review</a>
-                            </li>
-                        </ul>
-                    </li>
+                    @feature('kpi_performance')
+                        <li class="nxl-item nxl-hasmenu">
+                            <a href="#" class="nxl-link">
+                                <span class="nxl-micon"><i class="feather-trending-up"></i></span>
+                                <span class="nxl-mtext">Performance</span><span class="nxl-arrow"><i
+                                        class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('performance.team') }}">
+                                        Team Performance</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('performance.reviews.index') }}">
+                                        Team Review</a>
+                                </li>
+                            </ul>
+                        </li>
+                    @endfeature
 
                     <li class="nxl-item nxl-hasmenu">
                         <a href="#" class="nxl-link">
@@ -253,9 +257,11 @@
                                         Tasks</a>
                                 </li>
                             @endif
-                            <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.index') }}">
-                                    Offboarding</a>
-                            </li>
+                            @feature('offboarding')
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.index') }}">
+                                        Offboarding</a>
+                                </li>
+                            @endfeature
                         </ul>
                     </li>
 
@@ -496,7 +502,7 @@
                     </li>
                 @endif
 
-                @if ($role !== 'admin')
+                @if ($role !== 'admin' && app(\App\Services\FeatureService::class)->enabledForCurrentTenant('kpi_performance'))
                     @if ($role === 'employee')
                         <li class="nxl-item">
                             <a href="{{ route('performance.my-dashboard') }}" class="nxl-link">
@@ -563,12 +569,14 @@
                 @endfeature
 
                 @if (in_array($role, ['manager', 'employee']))
-                    <li class="nxl-item">
-                        <a href="{{ route('offboarding.employee') }}" class="nxl-link">
-                            <span class="nxl-micon"><i class="feather-user-minus"></i></span>
-                            <span class="nxl-mtext">Off Boarding</span><span class="nxl-arrow"></span>
-                        </a>
-                    </li>
+                    @feature('offboarding')
+                        <li class="nxl-item">
+                            <a href="{{ route('offboarding.employee') }}" class="nxl-link">
+                                <span class="nxl-micon"><i class="feather-user-minus"></i></span>
+                                <span class="nxl-mtext">Off Boarding</span><span class="nxl-arrow"></span>
+                            </a>
+                        </li>
+                    @endfeature
                 @endif
 
                 @feature('loan_management')
@@ -771,16 +779,18 @@
                                         Tasks</a>
                                 </li>
                             @endif
-                            @if (in_array($role, ['hr']))
-                                <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.index') }}">
-                                        Offboarding</a>
-                                </li>
-                            @endif
-                            @if (in_array($role, ['manager']))
-                                <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.manager') }}">
-                                        Offboarding</a>
-                                </li>
-                            @endif
+                            @feature('offboarding')
+                                @if (in_array($role, ['hr']))
+                                    <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.index') }}">
+                                            Offboarding</a>
+                                    </li>
+                                @endif
+                                @if (in_array($role, ['manager']))
+                                    <li class="nxl-item"><a class="nxl-link" href="{{ route('offboarding.manager') }}">
+                                            Offboarding</a>
+                                    </li>
+                                @endif
+                            @endfeature
                         </ul>
                     </li>
                 @endif

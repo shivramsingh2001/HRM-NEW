@@ -944,7 +944,7 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::post('/{id}/remarks', [OffboardingController::class, 'updateRemarks'])->name('remarks.update')->middleware('permission:offboarding,edit');
         });
         
-        Route::prefix('performance')->name('performance.')->middleware('permission:performance,view')->group(function () {
+        Route::prefix('performance')->name('performance.')->middleware(['feature:kpi_performance', 'permission:performance,view'])->group(function () {
             Route::get('/my-dashboard', [PerformanceController::class, 'myPerformance'])->name('my-dashboard');
             Route::get('/employee/{userId}', [PerformanceController::class, 'individualReport'])->name('individual');
             Route::get('/employee/{userId}/daily-detail', [PerformanceController::class, 'dailyDetail'])->name('daily-detail');
@@ -988,7 +988,7 @@ Route::group(['middleware' => ['tenant']], function () {
         });
 
       
-        Route::prefix('/performance/reviews')->name('performance.reviews.')->group(function () {
+        Route::prefix('/performance/reviews')->name('performance.reviews.')->middleware('feature:kpi_performance')->group(function () {
             Route::get('/', [ManagerPerformanceReviewController::class, 'index'])->name('index')->middleware('permission:performance_reviews,view');
             Route::post('/store/{userId}', [ManagerPerformanceReviewController::class, 'store'])->name('store')->middleware('permission:performance_reviews,create');
             Route::get('/show/{id}', [ManagerPerformanceReviewController::class, 'show'])->name('show')->middleware('permission:performance_reviews,view');

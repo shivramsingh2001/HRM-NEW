@@ -345,6 +345,7 @@ Full asset lifecycle module — categories/types, registration with a system-gen
 - **Subscription feature gating (added 2026-09-22)**: new plan key `asset_management` (default **on** — this whole module had zero plan gating before, so defaulting true keeps every existing tenant working; a plan can now turn it off going forward). Wraps `assets.*`/`asset-categories.*`/`asset-types.*`/`asset-vendors.*`/`my-assets.*` routes, the sidebar Assets menu and Company-settings reference-data links, and the Asset Reports tab/routes.
 
 ## Recruitment / ATS
+- **Sidebar plan gating (2026-10-01)**: the Hiring sidebar link is wrapped in `@feature('recruitment')` (routes already required `feature:recruitment`), so companies without the module no longer see a link that only bounces to the dashboard.
 
 - `App\Http\Controllers\Recruitment\JobOpeningController` (thin HTTP layer as of the 2026-09-18 rework — validates the request, delegates every stage transition to `App\Services\Recruitment\RecruitmentPipelineService`) + `App\Http\Controllers\Recruitment\RecruitmentController` (public careers page: `careers.*` routes, no auth, gated `feature:recruitment`) + `App\Http\Controllers\Recruitment\OnboardingController` (document verification + onboarding checklist + `hire()`).
 - **Service layer** (`app/Services/Recruitment/`), the single choke point for every transition — controllers must not contain stage-transition logic:
@@ -360,6 +361,7 @@ Full asset lifecycle module — categories/types, registration with a system-gen
 - Onboarding now has both DB tables and models: `onboarding_assignments` (1:1 with `candidates` and `job_offers`), `onboarding_tasks` (checklist catalog — `tenant_id = NULL` rows are the shared/global default set), `onboarding_task_items` (per-assignment instance). Document verification uses the pre-existing `candidate_documents`/`CandidateDocument` model (`verify()`/`reject()`), now wired to `OnboardingController`.
 
 ## Offboarding
+- **Sidebar plan gating (2026-10-01)**: every Offboarding / Off Boarding sidebar link (admin, HR, manager, employee menus) and the manager dashboard's Offboarding approval row are wrapped in `@feature('offboarding')`; routes already required `feature:offboarding`.
 
 Rebuilt 2026-09-30 (was dummy-data/manual-only). Full flow: submit -> approval (via `ApprovalService`) -> knowledge transfer -> clearance -> exit interview -> final settlement -> complete. Service layer under `app/Services/Offboarding/`; controllers (`app/Http/Controllers/offboarding/OffboardingController.php` web, `app/Http/Controllers/Api/Offboarding/offboardingController.php` mobile-employee-only) are thin HTTP glue over it.
 
@@ -375,6 +377,7 @@ Rebuilt 2026-09-30 (was dummy-data/manual-only). Full flow: submit -> approval (
 - Views: `resources/views/client/offboarding/{index_admin,index_manager,index_employee,create,show}.blade.php`, rebuilt onto the shared blue theme (`theme-custom.css` `--primary` tokens, `<x-ui.*>` components) — previously hardcoded an old indigo/purple palette. `show.blade.php` is the single hub page per request (approval trail, notice overrides, KT, clearance grouped by department category, exit interview, settlement worksheet, remarks).
 
 ## Performance
+- **Plan gating (2026-10-01)**: `performance.*` and `performance.reviews.*` web routes now require `feature:kpi_performance` (previously only the mobile API did — the web pages opened without the module), and both Performance sidebar menus are hidden without it. Dashboard KPI widgets already used `$show_performance`.
 
 **Redesigned 2026-09-24 around daily scoring** (previously monthly-only, with several confirmed bugs — see history note at the end of this section). Controllers: `App\Http\Controllers\Performance\PerformanceController` (self/individual/team dashboards, `dailyDetail()` AJAX drilldown) + `App\Http\Controllers\Performance\ManagerPerformanceReviewController` (manager-authored reviews: store/show/update/destroy/acknowledge/export, `performance.reviews.*`) + `App\Http\Controllers\Settings\PerformancePolicyController` (tenant weight/threshold settings, mirrors `Settings\AttendancePolicyController`).
 

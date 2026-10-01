@@ -321,10 +321,12 @@
                             <span class="approval-count">{{ $pending_wfh_travel_requests }}</span>
                         </a>
                     @endif
-                    <a href="{{ route('offboarding.manager') }}" class="approval-row">
-                        <span class="approval-row-left"><i class="feather-user-minus text-muted"></i> Offboarding</span>
-                        <span class="approval-count">{{ $pending_offboarding_requests }}</span>
-                    </a>
+                    @feature('offboarding')
+                        <a href="{{ route('offboarding.manager') }}" class="approval-row">
+                            <span class="approval-row-left"><i class="feather-user-minus text-muted"></i> Offboarding</span>
+                            <span class="approval-count">{{ $pending_offboarding_requests }}</span>
+                        </a>
+                    @endfeature
                 </x-ui.card>
             </div>
 
