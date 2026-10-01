@@ -120,7 +120,8 @@ Route::get('/uploads/{path}', [\App\Http\Controllers\FileController::class, 'upl
     ->name('files.uploads');
 
 Route::group(['middleware' => ['tenant']], function () {
-      Route::prefix('careers')->name('public.jobs.')->middleware('feature:recruitment')->group(function () {
+      // {company} = tenant code (tenants.subdomain); resolved + removed by TenantMiddleware
+      Route::prefix('careers/{company}')->name('public.jobs.')->middleware('feature:recruitment')->group(function () {
             Route::get('/', [RecruitmentController::class, 'index'])->name('list');
             Route::get('/{id}/apply', [RecruitmentController::class, 'showApplyForm'])->name('apply.form');
             Route::post('/apply-store', [RecruitmentController::class, 'submitApplication'])->name('apply');

@@ -167,7 +167,7 @@
                 
                 try {
                     // Call your API endpoint
-                    const response = await fetch('https://hrm.shurttech.com/api/forgot-password', {
+                    const response = await fetch('/api/forgot-password', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

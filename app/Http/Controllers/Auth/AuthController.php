@@ -35,14 +35,41 @@ class AuthController extends Controller
                 'password' => 'required|string',
             ]);
 
-            // Get tenant_id from session
-            $tenantId = session('tenant_id');
+            // Single login domain: the company is identified from the account.
+            // employee_id (tenant prefix + global user id) and email are both
+            // unique across companies.
+            $login = trim($request->employee_id);
+            $matches = User::withoutGlobalScope('tenant')
+                ->where(str_contains($login, '@') ? 'email' : 'employee_id', $login)
+                ->limit(2)
+                ->get();
 
-            if (!$tenantId) {
+            if ($matches->count() > 1) {
                 return back()
-                    ->withErrors(['error' => 'Company not identified. Please use company subdomain.'])
+                    ->withErrors(['error' => 'This ID belongs to more than one company. Please contact your administrator.'])
                     ->withInput();
             }
+
+            $user = $matches->first();
+
+            // Consecutive-failure lockout per login ID (unique across companies).
+            $lockoutKey = 'web:' . strtolower($login);
+            if ($this->loginAttempts->isLockedOut($lockoutKey)) {
+                return back()
+                    ->withErrors(['error' => $this->loginAttempts->lockoutMessage($lockoutKey)])
+                    ->withInput();
+            }
+
+            if (!$user) {
+                $this->loginAttempts->recordFailure($lockoutKey);
+                $this->audit->logLoginFailed(null, $login);
+
+                return back()
+                    ->withErrors(['error' => 'Employee ID does not exist.'])
+                    ->withInput();
+            }
+
+            $tenantId = $user->tenant_id;
 
             // Platform-level gate: a tenant suspended / pending-deletion from the
             // Super Admin Panel cannot log any user in.
@@ -70,33 +97,9 @@ class AuthController extends Controller
                     ->withInput();
             }
 
-            // Consecutive-failure lockout — scoped per tenant+employee_id
-            // since employee_id alone isn't unique across tenants.
-            $lockoutKey = 'web:' . $tenantId . ':' . $request->employee_id;
-            if ($this->loginAttempts->isLockedOut($lockoutKey)) {
-                return back()
-                    ->withErrors(['error' => $this->loginAttempts->lockoutMessage($lockoutKey)])
-                    ->withInput();
-            }
-
-            // Check if user exists first (optional but good for debugging)
-            $user = User::withoutGlobalScope('tenant')
-            ->where('employee_id', $request->employee_id)
-            ->where('tenant_id', $tenantId)
-            ->first();
-
-            if (!$user) {
-                $this->loginAttempts->recordFailure($lockoutKey);
-                $this->audit->logLoginFailed($tenantId, $request->employee_id);
-
-                return back()
-                    ->withErrors(['error' => 'Employee ID does not exist in this company.'])
-                    ->withInput();
-            }
-
             if (!Hash::check($request->password, $user->password)) {
                 $this->loginAttempts->recordFailure($lockoutKey);
-                $this->audit->logLoginFailed($tenantId, $request->employee_id);
+                $this->audit->logLoginFailed($tenantId, $login);
 
                 return back()
                     ->withErrors(['error' => 'Password not matched.'])
@@ -145,7 +148,6 @@ class AuthController extends Controller
         return [
             'employee_id' => $request->employee_id,
             'password' => $request->password,
-            'tenant_id' => session('tenant_id')
         ];
     }
 

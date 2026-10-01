@@ -5,20 +5,24 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
 class TenantMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
         $host = $request->getHost();
-        $mainDomain = 'shurttech.com';
-
-       
 
         // Handle API requests differently
         if ($request->is('api/*')) {
             return $this->handleApiRequest($request, $next);
+        }
+
+        // Public careers pages name their company in the URL (careers/{company}).
+        if ($request->route('company') !== null) {
+            return $this->handleCareersRequest($request, $next);
         }
 
         // Local development: no *.shurttech.com host available.
@@ -26,8 +30,28 @@ class TenantMiddleware
             return $this->handleLocalRequest($request, $next);
         }
 
-        // Handle web requests with subdomain
-        return $this->handleWebRequest($request, $next, $host, $mainDomain);
+        // Single login domain for every company
+        return $this->handleWebRequest($request, $next, $host);
+    }
+
+    /**
+     * careers/{company}/... — pre-login, company-specific. {company} is the
+     * tenant's code (tenants.subdomain). The parameter is removed from the
+     * route afterwards so controller signatures stay unchanged.
+     */
+    private function handleCareersRequest(Request $request, Closure $next)
+    {
+        $code = (string) $request->route('company');
+
+        $tenant = Tenant::where('subdomain', $code)->where('status', 'active')->first();
+        if (!$tenant) {
+            abort(404, 'Company not found or inactive');
+        }
+
+        $this->setTenantContext($tenant, $request);
+        $request->route()->forgetParameter('company');
+
+        return $next($request);
     }
 
     /**
@@ -145,6 +169,21 @@ class TenantMiddleware
                 ?? $request->header('X-Tenant-ID')
                 ?? $request->input('tenant_id');
 
+            // Single login domain: the web forgot/reset-password pages send no
+            // company identifier. users.email is globally unique, so the
+            // account's own tenant is unambiguous for these two routes.
+            // An unknown email falls through untenanted so the controller's
+            // generic reply is returned (no account-enumeration signal).
+            if (!$identifier && $request->is('api/forgot-password', 'api/reset-password') && $request->filled('email')) {
+                $identifier = User::withoutGlobalScope('tenant')
+                    ->where('email', $request->input('email'))
+                    ->value('tenant_id');
+
+                if (!$identifier) {
+                    return $next($request);
+                }
+            }
+
             if (!$identifier) {
                 return response()->json([
                     'success' => false,
@@ -181,53 +220,67 @@ class TenantMiddleware
     }
 
     /**
-     * Handle web requests with subdomain
+     * Web requests: every company uses the same host (APP_URL). The tenant is
+     * the logged-in user's own tenant; guests (login, forgot/reset password,
+     * impersonation handoff) get no tenant. Old company subdomains are
+     * redirected to the single host.
      */
-    private function handleWebRequest($request, $next, $host, $mainDomain)
+    private function handleWebRequest($request, $next, $host)
     {
-        
+        if ($redirect = $this->redirectCompanySubdomain($request, $host)) {
+            return $redirect;
+        }
 
-        // If accessing main domain (no subdomain)
-        if ($host === $mainDomain || $host === "www.$mainDomain") {
-            Log::info('🏢 Main domain access - no tenant');
+        $user = $request->user();
+        if (!$user) {
             return $next($request);
         }
 
-        // Extract subdomain safely
-        if (!str_ends_with($host, $mainDomain)) {
-            Log::warning('🏢 Invalid domain', ['host' => $host]);
-            abort(404, 'Invalid domain');
+        $tenant = $user->tenant_id ? Tenant::find($user->tenant_id) : null;
+
+        if (!$tenant || !in_array($tenant->status, ['active', 'trial'], true)) {
+            Log::warning('🏢 Logged-in user has no active tenant', [
+                'user_id' => $user->id,
+                'tenant_id' => $user->tenant_id,
+            ]);
+
+            auth()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->withErrors(['error' => 'This workspace is currently unavailable. Please contact support.']);
         }
 
-        $subdomain = str_replace('.' . $mainDomain, '', $host);
-
-        // Skip special subdomains
-        if (in_array($subdomain, ['crm', 'api', 'www', 'mail', 'admin'])) {
-            Log::info('🏢 Special subdomain - no tenant', ['subdomain' => $subdomain]);
-            return $next($request);
-        }
-
-        // Find tenant by subdomain
-        $tenant = Tenant::where('subdomain', $subdomain)
-            ->where('status', 'active')
-            ->first();
-
-        Log::info('🏢 Tenant lookup result', [
-            'subdomain' => $subdomain,
-            'found' => $tenant ? 'YES' : 'NO',
-            'tenant_id' => $tenant->id ?? null,
-            'tenant_name' => $tenant->company_name ?? null
-        ]);
-
-        if (!$tenant) {
-            Log::warning('🏢 Tenant not found or inactive', ['subdomain' => $subdomain]);
-            abort(404, 'Company not found or inactive');
-        }
-
-        // Store tenant globally
         $this->setTenantContext($tenant, $request);
 
         return $next($request);
+    }
+
+    /**
+     * <code>.base_domain (e.g. demo.shurttech.com) → same path on the single
+     * login host. Null when the host isn't an old company subdomain.
+     */
+    private function redirectCompanySubdomain($request, string $host)
+    {
+        $host = strtolower($host);
+        $base = strtolower((string) config('tenancy.base_domain'));
+        $appHost = strtolower((string) config('tenancy.app_host'));
+
+        if (!config('tenancy.redirect_company_subdomains') || !$base || !$appHost || $host === $appHost) {
+            return null;
+        }
+
+        if (!str_ends_with($host, '.' . $base)) {
+            return null;
+        }
+
+        $subdomain = substr($host, 0, -strlen('.' . $base));
+        if (in_array($subdomain, config('tenancy.reserved_subdomains', []), true)) {
+            return null;
+        }
+
+        return redirect()->away(rtrim((string) config('app.url'), '/') . $request->getRequestUri(), 301);
     }
 
     /**
@@ -250,6 +303,11 @@ class TenantMiddleware
         // Also store in request for easy access
         $request->attributes->set('tenant', $tenant);
         $request->merge(['tenant_id' => $tenant->id]);
+
+        // route('public.jobs.*') fills careers/{company} from the bound tenant
+        if ($tenant->subdomain) {
+            URL::defaults(['company' => $tenant->subdomain]);
+        }
 
     }
 }

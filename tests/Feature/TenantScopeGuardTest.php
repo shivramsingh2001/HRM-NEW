@@ -30,6 +30,7 @@ class TenantScopeGuardTest extends TestCase
         'app/Console/Commands/AutoClockOutCommand.php',        // CLI: sweeps open rows, filters per row
         'app/Console/Commands/CheckMissedCheckIns.php',        // CLI: hydrates notifiables by id list
         'app/Http/Controllers/Auth/AuthController.php',        // login runs before tenant context exists
+        'app/Http/Middleware/TenantMiddleware.php',            // resolves the tenant itself (forgot/reset email → tenant)
         'app/Services/AttendanceSummaryService.php',           // every query carries an explicit tenant_id / scoped id list
         'app/Http/Controllers/AI/AttendanceRegularizationController.php', // applies ->where('ar.tenant_id', ...) before ->get()
     ];

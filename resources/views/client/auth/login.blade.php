@@ -56,7 +56,7 @@
                     <form action="{{ route('login.check') }}" method="POST" class="w-100 mt-4 pt-2">
                         @csrf
                         <div class="mb-4">
-                            <input type="text" class="form-control" placeholder="Enter Employee ID"
+                            <input type="text" class="form-control" placeholder="Enter Employee ID or Email"
                                 name="employee_id" required>
                         </div>
                         <div class="mb-3">

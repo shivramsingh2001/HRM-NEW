@@ -247,7 +247,7 @@
             </p>
             
             <div style="text-align: center;">
-                <a href="{{ url('/careers') }}" class="button">
+                <a href="{{ url('/careers/' . ($company->subdomain ?? '')) }}" class="button">
                     🔍 View Other Opportunities
                 </a>
             </div>
