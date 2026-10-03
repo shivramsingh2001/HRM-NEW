@@ -19,8 +19,8 @@
 @endsection
 
 @section('content-area')
+<x-ui.page-header title="Attendance Analytics" />
 <div class="page-content"><div class="container-fluid">
-    <h4 class="mb-3">Attendance Analytics</h4>
     @if (session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
 
     <div class="a-card">

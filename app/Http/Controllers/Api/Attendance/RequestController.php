@@ -74,6 +74,15 @@ class RequestController extends Controller
             
             // Check for overlapping requests
             $overlapping = RequestStore::overlapping($user->id, $validated['start_date'], $validated['end_date'])->exists();
+
+            // Company / employee WFH limits (Company Policies → Request limits, Employee 360 → Policies).
+            if ($limit = app(\App\Services\RequestLimitService::class)->wfhRefusal(
+                (int) $user->tenant_id, (int) $user->id, (int) $validated['request_type_id'],
+                $validated['start_date'], $validated['end_date'], null
+            )) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => $limit], 200);
+            }
     
             if ($overlapping) {
                 DB::rollBack();
@@ -198,6 +207,15 @@ class RequestController extends Controller
             DB::beginTransaction();
 
             $overlapping = RequestStore::overlapping($user->id, $validated['start_date'], $validated['end_date'], $id)->exists();
+
+            // Company / employee WFH limits (Company Policies → Request limits, Employee 360 → Policies).
+            if ($limit = app(\App\Services\RequestLimitService::class)->wfhRefusal(
+                (int) $user->tenant_id, (int) $user->id, (int) $validated['request_type_id'],
+                $validated['start_date'], $validated['end_date'], (int) $id
+            )) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => $limit], 200);
+            }
 
             if ($overlapping) {
                 DB::rollBack();

@@ -107,9 +107,9 @@
 
         /* Cell styling */
         .cell-present {
-            color: #1e3a8a;
+            color: #0D6EFD;
             font-weight: 600;
-            background: #e3edfe !important;
+            background: #EFF6FF !important;
         }
 
         .cell-absent {
@@ -119,61 +119,38 @@
         }
 
         .cell-leave {
-            color: #1e3a8a;
+            color: #0D6EFD;
             font-weight: 600;
             background: #bfd3f7 !important;
         }
 
         .cell-weekoff {
-            color: #16295e;
+            color: #0D6EFD;
             font-weight: 600;
-            background: #e3edfe !important;
+            background: #EFF6FF !important;
         }
 
         .cell-holiday {
-            color: #1e40af;
+            color: #0D6EFD;
             font-weight: 600;
             background: #dbeafe !important;
         }
 
         .cell-halfday {
-            color: #2563eb;
+            color: #0D6EFD;
             font-weight: 600;
-            background: #e3edfe !important;
+            background: #EFF6FF !important;
         }
 
         .summary-cell {
             font-weight: 700;
-            color: #1e3a8a;
-            background: #e3edfe !important;
+            color: #0D6EFD;
+            background: #EFF6FF !important;
         }
 
-        /* Filter Section */
-        .filter-wrapper {
-            background: white;
-            border-radius: 16px;
-            border: 1px solid #eef2f6;
-            padding: 14px 17px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 12px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 150px;
-        }
 
-        .filter-item.search-filter {
-            flex: 1;
-            min-width: 200px;
-        }
 
         .filter-select,
         .filter-input {
@@ -190,7 +167,7 @@
 
         .filter-select:focus,
         .filter-input:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             outline: none;
             background: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -199,7 +176,7 @@
         .apply-btn {
             height: 40px;
             padding: 0 20px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
             border-radius: 10px;
@@ -214,35 +191,12 @@
         }
 
         .apply-btn:hover {
-            background: #16295e;
+            background: #0B5ED7;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
 
-        .reset-btn {
-            height: 40px;
-            padding: 0 16px;
-            background: white;
-            color: #64748b;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 10.5px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            transition: all 0.3s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            color: #0f172a;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        }
 
         /* Stats Cards */
         .stats-grid {
@@ -274,7 +228,7 @@
         }
 
         .stat-card.present .stat-number {
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .stat-card.absent .stat-number {
@@ -282,15 +236,15 @@
         }
 
         .stat-card.leave .stat-number {
-            color: #2563eb;
+            color: #0D6EFD;
         }
 
         .stat-card.halfday .stat-number {
-            color: #2563eb;
+            color: #0D6EFD;
         }
 
         .stat-card.weekoff .stat-number {
-            color: #2563eb;
+            color: #0D6EFD;
         }
 
         .stat-card.holiday .stat-number {
@@ -298,7 +252,7 @@
         }
 
         .stat-card.total .stat-number {
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         /* Legend */
@@ -325,7 +279,7 @@
         }
 
         .legend-dot.present {
-            background: #e3edfe;
+            background: #EFF6FF;
         }
 
         .legend-dot.absent {
@@ -337,7 +291,7 @@
         }
 
         .legend-dot.weekoff {
-            background: #e3edfe;
+            background: #EFF6FF;
         }
 
         .legend-dot.holiday {
@@ -345,7 +299,7 @@
         }
 
         .legend-dot.halfday {
-            background: #e3edfe;
+            background: #EFF6FF;
         }
 
         .weekend-header {
@@ -366,63 +320,16 @@
             color: #cbd5e1;
         }
 
-        /* Card footer for pagination */
-        .card-footer {
-            background: white;
-            border-top: 1px solid #eef2f6;
-            padding: 10px 17px;
-        }
 
-        .pagination {
-            margin: 0;
-            gap: 4px;
-        }
 
-        .page-item {
-            list-style: none;
-        }
 
-        .page-link {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px !important;
-            color: #475569;
-            font-size: 10.5px;
-            padding: 6px 10px;
-            transition: all 0.2s;
-            background: white;
-            font-weight: 500;
-        }
 
-        .page-link:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            color: #0f172a;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
-        }
 
-        .page-item.active .page-link {
-            background: #1e3a8a;
-            border-color: #1e3a8a;
-            color: white;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-        }
 
-        .page-item.disabled .page-link {
-            background: #f8fafc;
-            color: #94a3b8;
-            pointer-events: none;
-            opacity: 0.6;
-        }
 
         @media (max-width: 768px) {
-            .filter-item {
-                flex: 1 1 100%;
-            }
 
-            .filter-item.search-filter {
-                flex: 1 1 100%;
-            }
+
 
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -432,30 +339,18 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Overall Attendance Report</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item active">Overall Attendance Report</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <a href="{{ route('report.attendance.overall.export', request()->query()) }}" class="btn btn-sm btn-primary"
-                    target="_blank">
-                    <i class="feather-download me-1"></i> Export CSV
-                </a>
-            </div>
-        </div>
-    </div>
+    <x-ui.page-header title="Overall Attendance Report" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
+            <a href="{{ route('report.attendance.overall.export', request()->query()) }}" class="btn btn-sm btn-primary"
+                target="_blank">
+                <i class="feather-download me-1"></i> Export CSV
+            </a>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Filter Section -->
-        <div class="filter-wrapper">
+        <x-ui.filter-card title="Filter Report">
             <form action="{{ route('report.attendance.overall.index') }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     <div class="filter-item">
@@ -503,7 +398,7 @@
                     </div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         <!-- Stats -->
         {{-- <div class="stats-grid">
@@ -542,7 +437,7 @@
             <div class="overall-header d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="mb-0">
-                        <i class="feather-calendar me-2" style="color: #1e3a8a;"></i>
+                        <i class="feather-calendar me-2" style="color: var(--icon-color, #0D6EFD);"></i>
                         Overall Attendance Report - {{ $selectedDate->format('F Y') }}
                     </h6>
                     <small class="text-muted">Total Days: {{ $daysInMonth }}</small>
@@ -654,18 +549,7 @@
             </div>
 
             @if (method_exists($paginator, 'links') && $paginator->hasPages())
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div class="text-muted small">
-                            Showing <strong>{{ $paginator->firstItem() }}</strong> to
-                            <strong>{{ $paginator->lastItem() }}</strong>
-                            of <strong>{{ $paginator->total() }}</strong> entries
-                        </div>
-                        <div>
-                            {{ $paginator->appends(request()->query())->links() }}
-                        </div>
-                    </div>
-                </div>
+                <x-ui.pagination-footer :paginator="$paginator" label="entries" />
             @endif
         </div>
     </div>

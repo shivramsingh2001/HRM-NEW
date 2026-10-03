@@ -11,17 +11,7 @@
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Payroll Engine Settings</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.57rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Payroll Engine Settings</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header class="content-area-header sticky-top" title="Payroll Engine Settings" />
 
     <div class="content-area-body">
         @if (session('success'))

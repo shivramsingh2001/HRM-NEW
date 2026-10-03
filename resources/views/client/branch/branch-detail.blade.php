@@ -6,7 +6,7 @@
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
             display: flex;
             align-items: center;
@@ -25,11 +25,11 @@
         }
 
         .badge-active { background: #3b82f6; color: #fff; }
-        .badge-inactive { background: #1e3a8a; color: #fff; }
+        .badge-inactive { background: #0D6EFD; color: #fff; }
 
         .personal-info .input-group-text {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
             border-color: #dfe5f0;
         }
 
@@ -40,14 +40,14 @@
         }
 
         .customers-nav-tabs .nav-link.active {
-            color: #1e3a8a;
+            color: #0D6EFD;
             border-color: #dfe5f0 #dfe5f0 #fff;
         }
 
         .customers-nav-tabs .nav-link { color: #6b7385; }
 
         #membersTable .badge.bg-success { background-color: #3b82f6 !important; }
-        #membersTable .badge.bg-danger { background-color: #1e3a8a !important; }
+        #membersTable .badge.bg-danger { background-color: #0D6EFD !important; }
 
         .compact-modal .modal-header .fs-18 { font-size: 13px !important; }
         .compact-modal .form-group { margin-bottom: 0; }
@@ -62,22 +62,13 @@
 @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Branch Management</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('branch.index') }}">Branch</a></li>
-                <li class="breadcrumb-item">Branch Details</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Branch Management" current="Branch Details" :crumbs="[['label' => 'Branch', 'url' => route('branch.index')]]">
+        <x-slot:actions>
             <span class="br-detail-badge {{ $branch->status ? 'badge-active' : 'badge-inactive' }}">
                 {{ $branch->status ? 'Active' : 'Inactive' }}
             </span>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="row">

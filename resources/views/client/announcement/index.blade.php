@@ -43,7 +43,7 @@
     .stats-icon {
         width: 34px;
         height: 34px;
-        background: #e3edfe;
+        background: #EFF6FF;
         border-radius: 9px;
         display: flex;
         align-items: center;
@@ -54,7 +54,7 @@
 
     .stats-icon i {
         font-size: 15px;
-        color: #1e3a8a;
+        color: var(--icon-color, #0D6EFD);
     }
 
     .stats-info h3 {
@@ -76,38 +76,16 @@
     .stats-card.active .stats-icon,
     .stats-card.inactive .stats-icon,
     .stats-card.pending .stats-icon {
-        background: #e3edfe;
+        background: #EFF6FF;
     }
-    .stats-card.total .stats-icon i { color: #1e3a8a; }
-    .stats-card.active .stats-icon i { color: #2563eb; }
-    .stats-card.inactive .stats-icon i { color: #1d4ed8; }
+    .stats-card.total .stats-icon i { color: var(--icon-color, #0D6EFD); }
+    .stats-card.active .stats-icon i { color: var(--icon-color, #0D6EFD); }
+    .stats-card.inactive .stats-icon i { color: #0B5ED7; }
     .stats-card.pending .stats-icon i { color: #0ea5e9; }
 
-    /* ==================== PAGINATION ==================== */
-    .pagination {
-        margin: 0;
-        gap: 4px;
-    }
 
-    .page-link {
-        border: 1px solid #e2e8f0;
-        color: #475569;
-        font-size: 11px;
-        padding: 4px 10px;
-        border-radius: 6px !important;
-        transition: all 0.2s;
-    }
 
-    .page-link:hover {
-        background: #f8fafc;
-        border-color: #94a3b8;
-        color: #1e293b;
-    }
 
-    .page-item.active .page-link {
-        background: #1e3a8a;
-        border-color: #1e3a8a;
-    }
 
     /* ==================== EMPTY STATE ==================== */
     .empty-state {
@@ -143,12 +121,12 @@
     #announcementList td { padding: 6px 10px; vertical-align: middle; }
     #announcementList .badge { font-size: 10px; padding: 2px 8px; font-weight: 700; }
     #announcementList .badge.bg-success { background-color: #3b82f6 !important; }
-    #announcementList .badge.bg-danger { background-color: #1e3a8a !important; }
-    #announcementList .badge.bg-secondary { background-color: #93c5fd !important; color: #1e3a8a !important; }
+    #announcementList .badge.bg-danger { background-color: #0D6EFD !important; }
+    #announcementList .badge.bg-secondary { background-color: #93c5fd !important; color: #0D6EFD !important; }
     #announcementList .badge.bg-warning { background-color: #60a5fa !important; color: #fff !important; }
     .card-header .badge.bg-info { background-color: #0ea5e9 !important; }
     .card-header .badge.bg-success { background-color: #3b82f6 !important; }
-    .card-title { font-size: 13px; }
+
 
     /* ==================== COMPACT MODAL (Add / Edit) — core chrome
        (max-width/header/body/card/row/label/btn) is centralized in
@@ -166,29 +144,18 @@ $role = $user->role;
 @endphp
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Announcement Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">My Announcements</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Announcement Management" current="My Announcements">
+        <x-slot:actions>
             <div class="hstack gap-2">
                 @if(in_array($role,['admin','hr']))
-                <div class="dropdown d-none d-sm-flex">
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                         data-bs-target="#addAnnouncementModal">
                         <i class="feather-plus me-2"></i>Add Announcement
                     </a>
-                </div>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body pb-0 h-100">
         <div class="stats-grid">
@@ -226,17 +193,6 @@ $role = $user->role;
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Announcements List</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-info">
-                                <i class="feather-list me-1"></i>Total: {{ $totalAnnouncements ?? 0 }}
-                            </span>
-                            <span class="badge bg-success">
-                                <i class="feather-check me-1"></i>Active: {{ $activeAnnouncements ?? 0 }}
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover" id="announcementList">
@@ -374,17 +330,7 @@ $role = $user->role;
                     
                     <!-- Pagination Section -->
                     @if (method_exists($announcements, 'links') && $announcements->hasPages())
-                        <div class="card-footer">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-muted small">
-                                    Showing {{ $announcements->firstItem() }} to {{ $announcements->lastItem() }} of
-                                    {{ $announcements->total() }} entries
-                                </div>
-                                <div class="remove-internal-para">
-                                    {{ $announcements->appends(request()->query())->links() }}
-                                </div>
-                            </div>
-                        </div>
+                        <x-ui.pagination-footer :paginator="$announcements" label="announcements" />
                     @endif
                 </div>
             </div>

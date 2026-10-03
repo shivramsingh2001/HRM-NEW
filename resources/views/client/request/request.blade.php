@@ -34,46 +34,9 @@
             }
         }
 
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: var(--primary-mid);
-            font-size: 16px;
-        }
-
-        .filter-title span {
-            background: var(--primary-light);
-            color: var(--primary-mid);
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -92,17 +55,7 @@
             color: #ef4444;
         }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 140px;
-        }
 
         .filter-select {
             width: 100%;
@@ -118,22 +71,6 @@
             transition: all 0.2s;
         }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 12px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
         .active-filters {
             margin-top: 12px;
@@ -170,7 +107,7 @@
         }
 
         .filter-tag i {
-            color: var(--primary-mid);
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
 
@@ -194,17 +131,7 @@
             padding: 3px 10px;
         }
 
-        /* ==================== TABLE STYLES ====================
-           Padding/font size are intentionally NOT overridden here — the
-           table inherits the sitewide compact convention from
-           theme-custom.css (11.5px font, tight padding). */
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
         /* ==================== BADGES ====================
            Status badges use the ui.status-badge component, but its
@@ -223,16 +150,16 @@
 
         .status-badge[data-status="pending"] {
             background: #dbeafe !important;
-            color: #1e40af !important;
+            color: #0D6EFD !important;
         }
 
         .status-badge[data-status="approved"] {
-            background: #e3edfe !important;
-            color: #1e3a8a !important;
+            background: #EFF6FF !important;
+            color: #0D6EFD !important;
         }
 
         .status-badge[data-status="rejected"] {
-            background: #1e3a8a !important;
+            background: #0D6EFD !important;
             color: #ffffff !important;
         }
 
@@ -264,7 +191,7 @@
 
         .type-travel {
             background: #dbeafe;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         /* ==================== DATE RANGE STYLING ==================== */
@@ -305,7 +232,7 @@
 
         .duration-badge i {
             font-size: 10px;
-            color: var(--primary-mid);
+            color: var(--icon-color, #0D6EFD);
         }
 
         /* ==================== REASON CELL ==================== */
@@ -318,51 +245,12 @@
             line-height: 1.4;
         }
 
-        /* ==================== ACTION BUTTONS ==================== */
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-            margin: 0 2px;
-        }
 
-        .action-btn:hover {
-            background: white;
-            transform: translateY(-2px);
-        }
 
-        .action-btn.view:hover {
-            color: var(--primary-mid);
-            border-color: var(--primary-mid);
-        }
 
-        .action-btn.edit:hover {
-            color: #10b981;
-            border-color: #10b981;
-        }
 
-        .action-btn.delete:hover {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
 
-        .action-btn i {
-            font-size: 14px;
-        }
 
-        .action-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
 
         /* ==================== EMPTY STATE ==================== */
         .empty-state {
@@ -394,90 +282,42 @@
 
         /* ==================== RESPONSIVE ==================== */
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 8px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(50% - 8px);
-                min-width: 120px;
-            }
+
         }
 
         @media (max-width: 768px) {
-            .filter-wrapper {
-                padding: 12px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
 
-            .filter-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
 
-            .reset-btn {
-                width: 100%;
-                justify-content: center;
-            }
+
         }
     </style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Travel & WFH Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Travel & WFH Requests</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex d-md-none">
-                    <a href="#" class="page-header-right-close-toggle">
-                        <i class="feather-arrow-left me-2"></i>
-                        <span>Back</span>
-                    </a>
-                </div>
-                <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
-                            data-bs-auto-close="outside">
-                            <i class="feather-download"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a href="#" class="dropdown-item" onclick="exportToCSV()">
-                                <i class="bi bi-filetype-csv me-3"></i>
-                                <span>Export CSV</span>
-                            </a>
-                        </div>
-                    </div>
-                    <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#addRequestModal">
-                        <i class="feather-plus me-2"></i>
-                        <span>New Request</span>
-                    </a>
-                </div>
-            </div>
-            <div class="d-md-none d-flex align-items-center">
-                <a href="#" class="page-header-right-open-toggle">
-                    <i class="feather-align-right fs-20"></i>
+    <x-ui.page-header title="Travel & WFH Management" current="Travel & WFH Requests">
+        <x-slot:actions>
+            <div class="dropdown">
+                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
+                    data-bs-auto-close="outside">
+                    <i class="feather-download"></i>
                 </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="#" class="dropdown-item" onclick="exportToCSV()">
+                        <i class="bi bi-filetype-csv me-3"></i>
+                        <span>Export CSV</span>
+                    </a>
+                </div>
             </div>
-        </div>
-    </div>
+            <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                data-bs-target="#addRequestModal">
+                <i class="feather-plus me-2"></i>
+                <span>New Request</span>
+            </a>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
@@ -685,14 +525,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">My Requests</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-info">
-                                <i class="feather-list me-1"></i>Total: {{ $requests->total() }}
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table" id="requestsTable">
@@ -802,9 +634,7 @@
 
                     <!-- Pagination -->
                     @if ($requests->hasPages())
-                        <div class="card-footer">
-                            {{ $requests->links() }}
-                        </div>
+                        <x-ui.pagination-footer :paginator="$requests" label="requests" />
                     @endif
                 </div>
             </div>

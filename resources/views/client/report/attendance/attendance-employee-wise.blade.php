@@ -58,14 +58,14 @@
             padding: 2px 6px;
             border-radius: 4px;
         }
-        .summary-badges .badge-item .num.present { color: #1e3a8a; background: #e3edfe; }
-        .summary-badges .badge-item .num.holiday { color: #1e40af; background: #dbeafe; }
-        .summary-badges .badge-item .num.weekoff { color: #16295e; background: #e3edfe; }
-        .summary-badges .badge-item .num.halfday { color: #2563eb; background: #e3edfe; }
+        .summary-badges .badge-item .num.present { color: #0D6EFD; background: #EFF6FF; }
+        .summary-badges .badge-item .num.holiday { color: #0D6EFD; background: #dbeafe; }
+        .summary-badges .badge-item .num.weekoff { color: #0D6EFD; background: #EFF6FF; }
+        .summary-badges .badge-item .num.halfday { color: #0D6EFD; background: #EFF6FF; }
         .summary-badges .badge-item .num.absent { color: #475569; background: #e2e8f0; }
-        .summary-badges .badge-item .num.paiddays { color: #1e3a8a; background: #bfd3f7; }
-        .summary-badges .badge-item .num.workhrs { color: #1e3a8a; background: #e3edfe; }
-        .summary-badges .badge-item .num.shorthrs { color: #1e3a8a; background: #bfd3f7; }
+        .summary-badges .badge-item .num.paiddays { color: #0D6EFD; background: #bfd3f7; }
+        .summary-badges .badge-item .num.workhrs { color: #0D6EFD; background: #EFF6FF; }
+        .summary-badges .badge-item .num.shorthrs { color: #0D6EFD; background: #bfd3f7; }
         .summary-badges .badge-item .num.othrs { color: #475569; background: #e2e8f0; }
 
         /* Employee List Card */
@@ -139,12 +139,12 @@
         .employee-row .emp-stats .stat .num {
             font-weight: 700;
         }
-        .employee-row .emp-stats .stat .num.present { color: #1e3a8a; }
+        .employee-row .emp-stats .stat .num.present { color: #0D6EFD; }
         .employee-row .emp-stats .stat .num.absent { color: #475569; }
-        .employee-row .emp-stats .stat .num.weekoff { color: #2563eb; }
-        .employee-row .emp-stats .stat .num.halfday { color: #2563eb; }
+        .employee-row .emp-stats .stat .num.weekoff { color: #0D6EFD; }
+        .employee-row .emp-stats .stat .num.halfday { color: #0D6EFD; }
         .employee-row .emp-stats .stat .num.holiday { color: #3b82f6; }
-        .employee-row .emp-stats .stat .num.leave { color: #2563eb; }
+        .employee-row .emp-stats .stat .num.leave { color: #0D6EFD; }
 
         .employee-row .view-btn {
             flex: 0 0 auto;
@@ -153,13 +153,13 @@
             padding: 3px 10px;
             font-size: 10px;
             border-radius: 6px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
             transition: all 0.3s;
         }
         .employee-row .view-btn .btn:hover {
-            background: #16295e;
+            background: #0B5ED7;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
@@ -206,9 +206,9 @@
 
         /* Status Colors */
         .status-p { 
-            color: #1e3a8a; 
+            color: #0D6EFD; 
             font-weight: 700; 
-            background: #e3edfe !important; 
+            background: #EFF6FF !important; 
             border-radius: 4px;
             padding: 2px 7px;
             display: inline-block;
@@ -222,7 +222,7 @@
             display: inline-block;
         }
         .status-l { 
-            color: #1e3a8a; 
+            color: #0D6EFD; 
             font-weight: 700; 
             background: #bfd3f7 !important; 
             border-radius: 4px;
@@ -230,15 +230,15 @@
             display: inline-block;
         }
         .status-wo { 
-            color: #16295e; 
+            color: #0D6EFD; 
             font-weight: 700; 
-            background: #e3edfe !important; 
+            background: #EFF6FF !important; 
             border-radius: 4px;
             padding: 2px 7px;
             display: inline-block;
         }
         .status-h { 
-            color: #1e40af; 
+            color: #0D6EFD; 
             font-weight: 700; 
             background: #dbeafe !important; 
             border-radius: 4px;
@@ -246,15 +246,15 @@
             display: inline-block;
         }
         .status-hd { 
-            color: #2563eb; 
+            color: #0D6EFD; 
             font-weight: 700; 
-            background: #e3edfe !important; 
+            background: #EFF6FF !important; 
             border-radius: 4px;
             padding: 2px 7px;
             display: inline-block;
         }
         .status-ci { 
-            color: #1e3a8a; 
+            color: #0D6EFD; 
             font-weight: 700; 
             background: #bfd3f7 !important; 
             border-radius: 4px;
@@ -262,27 +262,9 @@
             display: inline-block;
         }
 
-        /* Filter Section */
-        .filter-section {
-            background: white;
-            border-radius: 12px;
-            padding: 11px 14px;
-            border: 1px solid #eef2f6;
-            margin-bottom: 14px;
-        }
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 12px;
-        }
-        .filter-item {
-            flex: 0 0 auto;
-        }
-        .filter-item.employee-select {
-            flex: 1;
-            min-width: 200px;
-        }
+
+
+
         .form-control-sm-custom {
             height: 38px;
             padding: 4px 8px;
@@ -294,7 +276,7 @@
             width: 100%;
         }
         .form-control-sm-custom:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             outline: none;
             background: white;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
@@ -302,7 +284,7 @@
         .btn-sm-custom {
             height: 38px;
             padding: 0 16px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
             border-radius: 8px;
@@ -316,7 +298,7 @@
             text-decoration: none;
         }
         .btn-sm-custom:hover {
-            background: #16295e;
+            background: #0B5ED7;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
             color: white;
@@ -347,12 +329,8 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .filter-item {
-                flex: 1 1 100%;
-            }
-            .filter-item.employee-select {
-                flex: 1 1 100%;
-            }
+
+
             .employee-header-card .emp-name {
                 font-size: 13px;
             }
@@ -393,32 +371,20 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Employee Wise Attendance Report</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
- <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item active">Employee Wise Attendance</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                @if(isset($employee) && isset($selectedMonth))
-                    <a href="{{ route('report.attendance.detailed.export', ['employee_id' => $employee->id, 'month' => $selectedMonth]) }}" 
-                       class="btn btn-sm btn-primary" target="_blank">
-                        <i class="feather-download me-1"></i> Export CSV
-                    </a>
-                @endif
-            </div>
-        </div>
-    </div>
+    <x-ui.page-header title="Employee Wise Attendance Report" current="Employee Wise Attendance" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
+            @if(isset($employee) && isset($selectedMonth))
+                <a href="{{ route('report.attendance.detailed.export', ['employee_id' => $employee->id, 'month' => $selectedMonth]) }}" 
+                   class="btn btn-sm btn-primary" target="_blank">
+                    <i class="feather-download me-1"></i> Export CSV
+                </a>
+            @endif
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Filter Section -->
-        <div class="filter-section">
+        <x-ui.filter-card title="Filter Report">
             <form action="{{ route('report.attendance.detailed.index') }}" method="GET">
                 <div class="filter-row">
                     <div class="filter-item">
@@ -453,7 +419,7 @@
                     </div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         @if(isset($employee) && !empty($dailyData))
             <!-- Single Employee Detail View -->
@@ -544,13 +510,13 @@
 
             <!-- Legend -->
             <div class="mt-3 d-flex flex-wrap gap-2">
-                <span class="badge" style="background: #e3edfe; color: #1e3a8a; padding: 4px 10px; font-size: 9.5px;">P - Present</span>
+                <span class="badge" style="background: #EFF6FF; color: #0D6EFD; padding: 4px 10px; font-size: 9.5px;">P - Present</span>
                 <span class="badge" style="background: #e2e8f0; color: #475569; padding: 4px 10px; font-size: 9.5px;">A - Absent</span>
-                <span class="badge" style="background: #bfd3f7; color: #1e3a8a; padding: 4px 10px; font-size: 9.5px;">L - Leave</span>
-                <span class="badge" style="background: #e3edfe; color: #16295e; padding: 4px 10px; font-size: 9.5px;">WO - Week Off</span>
-                <span class="badge" style="background: #dbeafe; color: #1e40af; padding: 4px 10px; font-size: 9.5px;">H - Holiday</span>
-                <span class="badge" style="background: #e3edfe; color: #2563eb; padding: 4px 10px; font-size: 9.5px;">HD - Half Day</span>
-                <span class="badge" style="background: #bfd3f7; color: #1e3a8a; padding: 4px 10px; font-size: 9.5px;">CI - Checked In</span>
+                <span class="badge" style="background: #bfd3f7; color: #0D6EFD; padding: 4px 10px; font-size: 9.5px;">L - Leave</span>
+                <span class="badge" style="background: #EFF6FF; color: #0D6EFD; padding: 4px 10px; font-size: 9.5px;">WO - Week Off</span>
+                <span class="badge" style="background: #dbeafe; color: #0D6EFD; padding: 4px 10px; font-size: 9.5px;">H - Holiday</span>
+                <span class="badge" style="background: #EFF6FF; color: #0D6EFD; padding: 4px 10px; font-size: 9.5px;">HD - Half Day</span>
+                <span class="badge" style="background: #bfd3f7; color: #0D6EFD; padding: 4px 10px; font-size: 9.5px;">CI - Checked In</span>
             </div>
 
         @elseif(isset($employeeData) && count($employeeData) > 0)

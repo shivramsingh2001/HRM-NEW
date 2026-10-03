@@ -1,7 +1,7 @@
 @extends('client.layout.master')
 
 @section('content-area')
-    <x-ui.page-header title="Biometric Terminals" subtitle="Register terminals, generate bridge keys, and map enroll numbers to employees.">
+    <x-ui.page-header title="Biometric Terminals" back subtitle="Register terminals, generate bridge keys, and map enroll numbers to employees.">
         <x-slot:actions>
             <button class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#addTerminalDrawer">
                 <i class="feather-plus"></i> Add Terminal

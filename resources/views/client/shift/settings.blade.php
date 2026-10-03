@@ -26,8 +26,8 @@
         }
 
         .stat-tile:hover {
-            border-color: var(--primary-light, #e3edfe);
-            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.05);
+            border-color: var(--primary-light, #EFF6FF);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.05);
         }
 
         .stat-tile__icon {
@@ -37,8 +37,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--primary-light, #e3edfe);
-            color: var(--primary, #1e3a8a);
+            background: var(--primary-light, #EFF6FF);
+            color: var(--icon-color, #0D6EFD);
             font-size: 14px;
             flex-shrink: 0;
         }
@@ -99,7 +99,7 @@
 
         .shift-card__title i {
             font-size: 14px;
-            color: var(--primary, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
         }
 
         .shift-card__desc {
@@ -143,9 +143,9 @@
         }
 
         .mode-tile.is-active {
-            border-color: var(--primary, #1e3a8a);
+            border-color: var(--primary, #0D6EFD);
             background: #f5f9ff;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.06);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.06);
         }
 
         .mode-tile__icon {
@@ -155,15 +155,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--primary-light, #e3edfe);
-            color: var(--primary, #1e3a8a);
+            background: var(--primary-light, #EFF6FF);
+            color: var(--icon-color, #0D6EFD);
             font-size: 13px;
             margin-bottom: 8px;
             transition: all .15s ease;
         }
 
         .mode-tile.is-active .mode-tile__icon {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
         }
 
@@ -195,8 +195,8 @@
         }
 
         .mode-tile.is-active .mode-tile__check {
-            border-color: var(--primary, #1e3a8a);
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            border-color: var(--primary, #0D6EFD);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         }
 
         .mode-tile.is-active .mode-tile__check::after {
@@ -219,13 +219,13 @@
             padding: 9px 12px;
             border-radius: 8px;
             background: #f8fafc;
-            border-left: 3px solid var(--primary, #1e3a8a);
+            border-left: 3px solid var(--primary, #0D6EFD);
             margin: 12px 0 16px;
         }
 
         .hint-bar i {
             font-size: 12px;
-            color: var(--primary, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
             margin-top: 2px;
             flex-shrink: 0;
         }
@@ -251,7 +251,7 @@
 
         .section-label i {
             font-size: 12px;
-            color: var(--primary, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
         }
 
         /* ============ FORM FIELDS ============ */
@@ -287,8 +287,8 @@
         }
 
         .field-input:focus {
-            border-color: var(--primary, #1e3a8a);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08);
+            border-color: var(--primary, #0D6EFD);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.08);
         }
 
         .field-hint {
@@ -335,13 +335,13 @@
         }
 
         .day-pill input:checked + span {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
-            border-color: var(--primary, #1e3a8a);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
+            border-color: var(--primary, #0D6EFD);
             color: #fff;
         }
 
         .day-pill input:focus-visible + span {
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
         }
 
         /* ============ INFO NOTE ============ */
@@ -359,7 +359,7 @@
         }
 
         .info-bar i {
-            color: var(--primary, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
             font-size: 12px;
             margin-top: 2px;
             flex-shrink: 0;
@@ -375,7 +375,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
             border: none;
             font-size: 12.5px;
@@ -388,7 +388,7 @@
 
         .btn-save:hover {
             filter: brightness(0.9);
-            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
         }
 
         .btn-save:active {
@@ -399,9 +399,9 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
-            border: 1px solid var(--primary, #1e3a8a);
+            border: 1px solid var(--primary, #0D6EFD);
             font-size: 11.5px;
             font-weight: 500;
             padding: 5px 12px;
@@ -414,7 +414,7 @@
         .btn-ghost:hover {
             filter: brightness(0.9);
             color: #fff;
-            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
         }
 
         /* ============ ALERTS ============ */
@@ -602,7 +602,7 @@
                                 <span class="stat-tile__label">Company Hours</span>
                                 <span class="stat-tile__value">
                                     {{ $defaultShift
-                                        ? \Carbon\Carbon::parse($defaultShift->start_time)->format('h:i A') . ' – ' . \Carbon\Carbon::parse($defaultShift->end_time)->format('h:i A')
+                                        ? \Carbon\Carbon::parse($defaultShift->start_time)->format('h:i A') . ' – ' . \Carbon\Carbon::parse($defaultShift->end_time)->format('h:i A') . ($defaultShift->is_overnight ? ' (next day)' : '')
                                         : 'Not set' }}
                                 </span>
                             </div>
@@ -698,6 +698,13 @@
                                         </label>
                                         <input type="time" class="field-input" id="end_time" name="end_time"
                                             value="{{ old('end_time', $defaultShift?->end_time ? \Carbon\Carbon::parse($defaultShift->end_time)->format('H:i') : '18:00') }}">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="is_overnight" value="1" id="is_overnight"
+                                                {{ old('is_overnight', $defaultShift?->is_overnight) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="is_overnight">Overnight shift (ends next day, e.g. 22:00 to 06:00)</label>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="grace_minutes" class="field-label">
@@ -820,5 +827,15 @@
                 sync();
             }
         })();
+
+        // Typing an end time on/before the start time means the shift ends next day.
+        document.querySelectorAll('#start_time, #end_time').forEach(function (el) {
+            el.addEventListener('change', function () {
+                var start = document.getElementById('start_time').value;
+                var end = document.getElementById('end_time').value;
+                var box = document.getElementById('is_overnight');
+                if (start && end && box) box.checked = end <= start;
+            });
+        });
     </script>
 @endsection

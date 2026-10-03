@@ -5,7 +5,7 @@
     <style>
         /* ============================================
            MANAGE SHIFTS — matches Shift Settings' theme
-           (single blue #1e3a8a, full-width main-content)
+           (single blue #0D6EFD, full-width main-content)
            ============================================ */
 
         /* ============ STAT CARDS ============ */
@@ -28,8 +28,8 @@
         }
 
         .stat-tile:hover {
-            border-color: var(--primary-light, #e3edfe);
-            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.05);
+            border-color: var(--primary-light, #EFF6FF);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.05);
         }
 
         .stat-tile__icon {
@@ -39,8 +39,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--primary-light, #e3edfe);
-            color: var(--primary, #1e3a8a);
+            background: var(--primary-light, #EFF6FF);
+            color: var(--icon-color, #0D6EFD);
             font-size: 14px;
             flex-shrink: 0;
         }
@@ -65,7 +65,7 @@
         .stat-tile__value {
             font-size: 16px;
             font-weight: 700;
-            color: var(--primary, #1e3a8a);
+            color: var(--primary, #0D6EFD);
             line-height: 1.2;
         }
 
@@ -104,7 +104,7 @@
             gap: 6px;
         }
 
-        .shift-card__title i { font-size: 14px; color: var(--primary, #1e3a8a); }
+        .shift-card__title i { font-size: 14px; color: var(--icon-color, #0D6EFD); }
 
         .shift-card__body { padding: 0; }
 
@@ -139,11 +139,11 @@
             width: 13px; height: 13px; border-radius: 50%; background: #fff;
             transition: transform .15s ease; box-shadow: 0 1px 2px rgba(0,0,0,.15);
         }
-        .status-toggle:checked { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+        .status-toggle:checked { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); }
         .status-toggle:checked::before { transform: translateX(13px); }
         .status-toggle:disabled { opacity: .5; cursor: wait; }
         .status-toggle-label { font-size: 11px; font-weight: 600; }
-        .status-toggle-label.is-active { color: var(--primary, #1e3a8a); }
+        .status-toggle-label.is-active { color: var(--primary, #0D6EFD); }
         .status-toggle-label.is-inactive { color: #94a3b8; }
 
         /* ============ ROW ACTIONS (no 3-dot dropdown) ============ */
@@ -154,25 +154,25 @@
             border: 1px solid #e2e8f0; background: #fff; color: #64748b;
             transition: all .15s ease; cursor: pointer; text-decoration: none;
         }
-        .row-action-btn:hover { border-color: var(--primary, #1e3a8a); color: var(--primary, #1e3a8a); background: var(--primary-light, #e3edfe); }
+        .row-action-btn:hover { border-color: var(--primary, #0D6EFD); color: var(--primary, #0D6EFD); background: var(--primary-light, #EFF6FF); }
         .row-action-btn.danger:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
 
         /* ============ BUTTONS (header actions) ============ */
         .btn-save {
             display: inline-flex; align-items: center; gap: 6px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; border: none;
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; border: none;
             font-size: 12.5px; font-weight: 500; padding: 7px 18px;
             border-radius: 8px; cursor: pointer; transition: all .15s ease; text-decoration: none;
         }
-        .btn-save:hover { filter: brightness(0.9); color: #fff; box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3); }
+        .btn-save:hover { filter: brightness(0.9); color: #fff; box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3); }
 
         .btn-ghost {
             display: inline-flex; align-items: center; gap: 5px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; border: 1px solid var(--primary, #1e3a8a);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; border: 1px solid var(--primary, #0D6EFD);
             font-size: 11.5px; font-weight: 500; padding: 5px 12px;
             border-radius: 7px; text-decoration: none; cursor: pointer; transition: all .15s ease;
         }
-        .btn-ghost:hover { filter: brightness(0.9); color: #fff; box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3); }
+        .btn-ghost:hover { filter: brightness(0.9); color: #fff; box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3); }
 
         .modal-custom .modal-content { border: none; border-radius: 14px; }
         .modal-custom .modal-title { font-size: 15px; }
@@ -269,7 +269,7 @@
                                     @php
                                         $start = \Carbon\Carbon::parse($shift->start_time);
                                         $end = \Carbon\Carbon::parse($shift->end_time);
-                                        $overnight = $end->lessThanOrEqualTo($start);
+                                        $overnight = \App\Support\ShiftWindow::isOvernight($shift);
                                     @endphp
                                     <tr>
                                         <td class="muted-cell">{{ $shifts->firstItem() + $loop->index }}</td>
@@ -311,6 +311,7 @@
                                                    data-color_code="{{ $shift->color_code }}"
                                                    data-start_time="{{ $start->format('H:i') }}"
                                                    data-end_time="{{ $end->format('H:i') }}"
+                                                   data-is_overnight="{{ $overnight ? 1 : 0 }}"
                                                    data-grace_minutes="{{ (int) $shift->grace_minutes }}"
                                                    data-break_time="{{ (int) $shift->break_time }}"
                                                    data-status="{{ (int) $shift->status }}"
@@ -383,6 +384,12 @@
                                 <input type="time" name="end_time" class="form-control" required>
                                 <small class="text-danger error-text end_time_error"></small>
                             </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input overnight-check" type="checkbox" name="is_overnight" value="1" id="add_is_overnight">
+                                    <label class="form-check-label" for="add_is_overnight">Overnight shift (ends next day)</label>
+                                </div>
+                            </div>
                             <div class="col-6">
                                 <label class="form-label">Grace (min)</label>
                                 <input type="number" min="0" max="120" name="grace_minutes" class="form-control" value="0">
@@ -395,7 +402,7 @@
                                 <label class="form-label">Description</label>
                                 <textarea name="description" class="form-control" rows="2"></textarea>
                             </div>
-                            <div class="col-12"><small class="text-muted">Working hours are calculated from start/end minus break. End on or before start = overnight shift.</small></div>
+                            <div class="col-12"><small class="text-muted">Working hours are calculated from start/end minus break. For a night shift (e.g. 22:00 to 06:00) tick "Overnight shift".</small></div>
                         </div>
                     </form>
                 </div>
@@ -439,6 +446,12 @@
                                 <label class="form-label">End time <span class="text-danger">*</span></label>
                                 <input type="time" name="end_time" id="edit_end_time" class="form-control" required>
                                 <small class="text-danger error-text edit_end_time_error"></small>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input overnight-check" type="checkbox" name="is_overnight" value="1" id="edit_is_overnight">
+                                    <label class="form-check-label" for="edit_is_overnight">Overnight shift (ends next day)</label>
+                                </div>
                             </div>
                             <div class="col-4">
                                 <label class="form-label">Grace (min)</label>
@@ -504,6 +517,14 @@
                 $.each(errors, (k, v) => $('.' + prefix + k + '_error').text(v[0]));
             }
 
+            // Typing an end time on/before the start time means the shift ends next day.
+            $(document).on('change', '#addShiftForm input[type=time], #editShiftForm input[type=time]', function () {
+                const $form = $(this).closest('form');
+                const start = $form.find('[name=start_time]').val();
+                const end = $form.find('[name=end_time]').val();
+                if (start && end) $form.find('.overnight-check').prop('checked', end <= start);
+            });
+
             $('#addShiftForm').on('submit', function (e) {
                 e.preventDefault();
                 $('.error-text').text(''); $('#addFormError').addClass('d-none').text('');
@@ -526,6 +547,7 @@
                 $('#edit_color_code').val(d.color_code || '#4f46e5');
                 $('#edit_start_time').val(d.start_time);
                 $('#edit_end_time').val(d.end_time);
+                $('#edit_is_overnight').prop('checked', String(d.is_overnight) === '1');
                 $('#edit_grace_minutes').val(d.grace_minutes);
                 $('#edit_break_time').val(d.break_time);
                 $('#edit_status').val(d.status);

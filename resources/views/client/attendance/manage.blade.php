@@ -20,8 +20,8 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+            border-color: #0D6EFD;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
         }
 
         /* Consistent initials style - same color for all */
@@ -29,7 +29,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             /* Single consistent color */
             color: white;
             border-radius: 50%;
@@ -72,12 +72,12 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #1e3a8a !important;
+            color: #0D6EFD !important;
             opacity: 0.8;
         }
 
@@ -111,46 +111,10 @@
         font-weight: 400;
     }
 
-    /* ==================== FILTER SECTION ==================== */
-    .filter-wrapper {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid #edf2f7;
-        padding: 16px 20px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-    }
 
-    .filter-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-    }
 
-    .filter-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #1e293b;
-    }
 
-    .filter-title i {
-        color: #1e3a8a;
-        font-size: 16px;
-    }
 
-    .filter-title span {
-        background: #e3edfe;
-        color: #1e3a8a;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 2px 8px;
-        border-radius: 20px;
-        margin-left: 6px;
-    }
 
     .clear-all-link {
         display: flex;
@@ -169,54 +133,16 @@
         color: #ef4444;
     }
 
-    .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
-    }
 
-    .filter-item {
-        flex: 0 0 auto;
-        min-width: 140px;
-    }
 
     .employee-search {
         flex: 1;
         min-width: 200px;
     }
 
-    .search-wrapper {
-        position: relative;
-        width: 100%;
-    }
 
-    .search-wrapper i {
-        position: absolute;
-        left: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-        font-size: 14px;
-        pointer-events: none;
-    }
 
-    .search-wrapper .form-control {
-        width: 100%;
-        height: 36px;
-        padding: 6px 12px 6px 32px;
-        font-size: 13px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background: #f8fafc;
-        transition: all 0.2s;
-    }
 
-    .search-wrapper .form-control:focus {
-        border-color: #1e3a8a;
-        outline: none;
-        background: white;
-    }
 
     .filter-select {
         width: 100%;
@@ -233,7 +159,7 @@
     }
 
     .filter-select:focus {
-        border-color: #1e3a8a;
+        border-color: #0D6EFD;
         outline: none;
         background-color: white;
     }
@@ -241,7 +167,7 @@
     .apply-btn {
         height: 36px;
         padding: 0 16px;
-        background: #1e3a8a;
+        background: #0D6EFD;
         color: white;
         border: none;
         border-radius: 8px;
@@ -256,30 +182,10 @@
     }
 
     .apply-btn:hover {
-        background: #16295e;
+        background: #0B5ED7;
     }
 
-    .reset-btn {
-        height: 36px;
-        padding: 0 12px;
-        background: white;
-        color: #64748b;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        text-decoration: none;
-        transition: all 0.2s;
-        white-space: nowrap;
-    }
 
-    .reset-btn:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-    }
 
     .active-filters {
         margin-top: 12px;
@@ -316,7 +222,7 @@
     }
 
     .filter-tag i {
-        color: #1e3a8a;
+        color: var(--icon-color, #0D6EFD);
         font-size: 11px;
     }
 
@@ -332,41 +238,17 @@
     }
 
     .filter-tag.clear-all {
-        background: #e3edfe;
-        border-color: #1e3a8a;
-        color: #1e3a8a;
+        background: #EFF6FF;
+        border-color: #0D6EFD;
+        color: #0D6EFD;
         font-weight: 600;
         text-decoration: none;
         padding: 3px 10px;
     }
 
-    /* ==================== TABLE STYLES ==================== */
-    .table {
-        margin-bottom: 0;
-    }
 
-    .table th {
-        background-color: #f8fafc;
-        font-weight: 600;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        color: #475569;
-        border-bottom-width: 1px;
-        padding: 12px 16px;
-        white-space: nowrap;
-    }
 
-    .table td {
-        vertical-align: middle;
-        font-size: 13px;
-        padding: 12px 16px;
-        border-bottom: 1px solid #f1f5f9;
-    }
 
-    .table tbody tr:hover {
-        background-color: #f8fafc;
-    }
 
     .employee-info {
         display: flex;
@@ -377,7 +259,7 @@
     .reporting-head-badge {
         font-size: 10px;
         background: #e0e7ff;
-        color: #1e3a8a;
+        color: #0D6EFD;
         padding: 2px 8px;
         border-radius: 20px;
         margin-left: 5px;
@@ -411,37 +293,37 @@
 
     .badge.bg-info {
         background: #dbeafe !important;
-        color: #1e40af;
+        color: #0D6EFD;
     }
 
     .badge.bg-purple {
-        background: #e3edfe !important;
-        color: #1e3a8a;
+        background: #EFF6FF !important;
+        color: #0D6EFD;
     }
 
     .badge-type-in {
-        background: #e3edfe !important;
-        color: #1e3a8a;
+        background: #EFF6FF !important;
+        color: #0D6EFD;
     }
 
     .badge-type-out {
         background: #dbeafe !important;
-        color: #2563eb;
+        color: #0D6EFD;
     }
 
     .badge-type-both {
         background: #bfd3f7 !important;
-        color: #1e3a8a;
+        color: #0D6EFD;
     }
 
     .badge-type-fullday {
         background: #93c5fd !important;
-        color: #1e3a8a;
+        color: #0D6EFD;
     }
 
     .badge-type-wfh {
         background: #eef3fd !important;
-        color: #2563eb;
+        color: #0D6EFD;
         border: 1px solid #bfd3f7;
     }
 
@@ -450,58 +332,13 @@
         color: #475569;
     }
 
-    /* ==================== ACTION BUTTONS ==================== */
-    .action-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8fafc;
-        color: #64748b;
-        transition: all 0.2s;
-        border: 1px solid #e2e8f0;
-        cursor: pointer;
-        margin: 0 2px;
-    }
 
-    .action-btn:hover {
-        background: white;
-        transform: translateY(-2px);
-    }
 
-    .action-btn.approve {
-        color: #10b981;
-    }
 
-    .action-btn.approve:hover {
-        color: #059669;
-        border-color: #059669;
-        background: #f0fdf4;
-    }
 
-    .action-btn.reject {
-        color: #ef4444;
-    }
 
-    .action-btn.reject:hover {
-        color: #dc2626;
-        border-color: #dc2626;
-        background: #fef2f2;
-    }
 
-    .action-btn.view:hover {
-        color: #1e3a8a;
-        border-color: #1e3a8a;
-        background: #e3edfe;
-    }
 
-    .action-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        pointer-events: none;
-    }
 
     /* ==================== FILE PREVIEW ==================== */
     .file-preview {
@@ -511,7 +348,7 @@
     }
 
     .file-preview a {
-        color: #1e3a8a;
+        color: #0D6EFD;
         text-decoration: none;
         font-size: 11px;
         display: flex;
@@ -593,9 +430,9 @@
     }
 
     .status-select:focus {
-        border-color: #1e3a8a;
+        border-color: #0D6EFD;
         outline: none;
-        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
     }
 
     .status-select.approve-selected {
@@ -623,15 +460,15 @@
     }
 
     .remarks-input textarea:focus {
-        border-color: #1e3a8a;
+        border-color: #0D6EFD;
         outline: none;
-        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
     }
 
     #viewModal .modal-header {
         padding: 10px 16px;
         border-bottom: none;
-        background: #1e3a8a;
+        background: #0D6EFD;
     }
 
     #viewModal .modal-title {
@@ -683,24 +520,24 @@
     }
 
     #approvalModal .btn-primary {
-        background: #1e3a8a !important;
-        border-color: #1e3a8a !important;
+        background: #0D6EFD !important;
+        border-color: #0D6EFD !important;
     }
 
     #approvalModal .btn-primary:hover {
-        background: #16295e !important;
-        border-color: #16295e !important;
+        background: #0B5ED7 !important;
+        border-color: #0B5ED7 !important;
     }
 
     #approvalModal .btn-modal-cancel {
         background: #eef3fd !important;
         border-color: #bfd3f7 !important;
-        color: #1e3a8a !important;
+        color: #0D6EFD !important;
     }
 
     #approvalModal .btn-modal-cancel:hover {
         background: #dbeafe !important;
-        color: #1e3a8a !important;
+        color: #0D6EFD !important;
     }
 
     .employee-detail-card {
@@ -721,11 +558,11 @@
         width: 48px;
         height: 48px;
         border-radius: 12px;
-        background: #e3edfe;
+        background: #EFF6FF;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #1e3a8a;
+        color: #0D6EFD;
         font-weight: 600;
         font-size: 18px;
     }
@@ -742,38 +579,10 @@
         margin-bottom: 0;
     }
 
-    /* ==================== PAGINATION ==================== */
-    .pagination {
-        margin-bottom: 0;
-        gap: 5px;
-    }
 
-    .page-link {
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        color: #475569;
-        font-size: 13px;
-        padding: 0.5rem 0.75rem;
-        transition: all 0.2s;
-    }
 
-    .page-link:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-        color: #1e293b;
-    }
 
-    .page-item.active .page-link {
-        background: #1e3a8a;
-        border-color: #1e3a8a;
-        color: white;
-    }
 
-    .page-item.disabled .page-link {
-        background: #f8fafc;
-        color: #94a3b8;
-        pointer-events: none;
-    }
 
     /* ==================== RESPONSIVE ==================== */
     @media (max-width: 1200px) {
@@ -783,9 +592,7 @@
     }
 
     @media (max-width: 992px) {
-        .filter-row {
-            gap: 8px;
-        }
+
         .filter-item, .employee-search {
             flex: 1 1 calc(50% - 8px);
             min-width: 120px;
@@ -793,21 +600,15 @@
     }
 
     @media (max-width: 768px) {
-        .filter-wrapper {
-            padding: 12px;
-        }
-        .filter-row {
-            flex-direction: column;
-        }
+
+
         .filter-item, .employee-search {
             width: 100%;
         }
         .stats-grid {
             grid-template-columns: 1fr;
         }
-        .table th, .table td {
-            white-space: nowrap;
-        }
+
         .employee-info {
             min-width: 150px;
         }
@@ -816,32 +617,21 @@
 @endsection
 
 @section('content-area')
-<div class="page-header">
-    <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title">
-            <h5 class="m-b-10">Team Regularization Management</h5>
-        </div>
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item active">Manage Regularizations</li>
-        </ul>
-    </div>
-    <div class="page-header-right ms-auto">
-        <div class="page-header-right-items">
-            <div class="dropdown">
-                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10">
-                    <i class="feather-download"></i>
+<x-ui.page-header title="Team Regularization Management" current="Manage Regularizations">
+    <x-slot:actions>
+        <div class="dropdown">
+            <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10">
+                <i class="feather-download"></i>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end">
+                <a href="#" class="dropdown-item" onclick="exportToCSV()">
+                    <i class="bi bi-filetype-csv me-3"></i>
+                    <span>Export CSV</span>
                 </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                    <a href="#" class="dropdown-item" onclick="exportToCSV()">
-                        <i class="bi bi-filetype-csv me-3"></i>
-                        <span>Export CSV</span>
-                    </a>
-                </div>
             </div>
         </div>
-    </div>
-</div>
+    </x-slot:actions>
+</x-ui.page-header>
 
 <div class="main-content" style="padding: 20px !important;">
     <!-- Stats Cards -->
@@ -1090,14 +880,6 @@
     <div class="row">
         <div class="col-lg-12">
             <div class="card stretch stretch-full">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">All Regularization Requests</h5>
-                    <div class="d-flex gap-2">
-                        <span class="badge bg-info">
-                            <i class="feather-list me-1"></i>Total: {{ $regularizations->total() }}
-                        </span>
-                    </div>
-                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table" id="regularizationList">
@@ -1260,17 +1042,7 @@
                     <!-- Pagination -->
                 
                 @if(method_exists($regularizations, 'links') && $regularizations->hasPages())
-                 <div class="card-footer">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted small">
-                            Showing {{ $regularizations->firstItem() }} to {{ $regularizations->lastItem() }} 
-                            of {{ $regularizations->total() }} entries
-                        </div>
-                        <div class="remove-internal-para">
-                            {{ $regularizations->appends(request()->query())->links() }}
-                        </div>
-                    </div>
-                </div>
+                 <x-ui.pagination-footer :paginator="$regularizations" label="requests" />
                 @endif
                
             </div>

@@ -367,10 +367,18 @@ class LeaveCreditController extends Controller
             return false;
         }
 
+        // This employee's custom leave rules (Employee 360 → Policies): a type switched
+        // off for them is not credited; a custom credit replaces the type's.
+        $employeePolicy = app(\App\Services\EmployeePolicyService::class);
+        if (! $employeePolicy->leaveAllowed((int) $user->tenant_id, (int) $user->id, (int) $leaveType->id)) {
+            return false;
+        }
+        $fullCredit = $employeePolicy->leaveRule((int) $user->tenant_id, (int) $user->id, $leaveType)->credit_value;
+
         // Calculate prorated credit if joining mid-cycle
         $creditValue = $this->calculateProratedCredit(
             $user->joining_date,
-            $leaveType->credit_value,
+            $fullCredit,
             $frequency,
             $creditDate
         );
@@ -418,7 +426,7 @@ class LeaveCreditController extends Controller
             'transaction_date' => $creditDate->toDateTimeString(),
             'leave_detail' => 'paid',
             'remarks' => ucfirst($frequency) . ' credit added' .
-                ($creditValue != $leaveType->credit_value ? ' (prorated)' : ''),
+                ($creditValue != $fullCredit ? ' (prorated)' : ''),
             'status' => 1,
             'created_at' => now(),
             'updated_at' => now()

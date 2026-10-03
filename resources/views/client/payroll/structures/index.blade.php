@@ -9,7 +9,7 @@
         border-radius: 8px; border: 1px solid; transition: all .15s;
     }
     .btn-icon-edit { border-color: #dfe5f0; background: #f4f6fb; color: #475569; }
-    .btn-icon-edit:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+    .btn-icon-edit:hover { background: var(--primary-light); border-color: var(--primary); color: var(--icon-color, #0D6EFD); }
     .btn-icon-delete { border-color: #fbdada; background: var(--danger-light); color: var(--danger); margin-left: 6px; }
     .btn-icon-delete:hover { background: #fde3e3; border-color: var(--danger); color: #dc2626; }
     .btn-icon-edit i, .btn-icon-delete i { font-size: 14px; }
@@ -55,26 +55,17 @@
 @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Payroll Structures</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.57rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Payroll Structures</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Payroll Structures">
+        <x-slot:actions>
             <div class="hstack gap-2">
                 @if (in_array($role, ['admin', 'hr']))
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" id="addStructureBtn">
+                    <a href="#" class="btn btn-primary btn-sm" id="addStructureBtn">
                         <i class="feather-plus me-1"></i>Add Structure
                     </a>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body">
         <div class="card">

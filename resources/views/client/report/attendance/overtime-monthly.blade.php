@@ -8,8 +8,8 @@
         background: white; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px;
         display: flex; align-items: center; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
-    .stats-icon { width: 30px; height: 30px; background: #e3edfe; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
-    .stats-icon i { font-size: 13px; color: #1e3a8a; }
+    .stats-icon { width: 30px; height: 30px; background: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
+    .stats-icon i { font-size: 13px; color: var(--icon-color, #0D6EFD); }
     .stats-info h3 { font-size: 15px; font-weight: 700; margin: 0 0 1px 0; color: #1a2236; line-height: 1.2; }
     .stats-info p { font-size: 9.5px; color: #6b7385; margin: 0; }
 
@@ -17,35 +17,24 @@
     .ot-filter-bar .form-control, .ot-filter-bar select {
         font-size: 10.5px; padding: 4px 8px; height: auto; border-radius: 7px; border: 1px solid #dfe5f0;
     }
-    .ot-filter-bar .form-control:focus, .ot-filter-bar select:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30,58,138,.12); }
-    .ot-filter-bar .btn-apply { background: #1e3a8a; border-color: #1e3a8a; color: #fff; font-size: 10.5px; padding: 4px 14px; border-radius: 7px; }
-    .ot-filter-bar .btn-apply:hover { background: #16295e; border-color: #16295e; }
+    .ot-filter-bar .form-control:focus, .ot-filter-bar select:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253,.12); }
+    .ot-filter-bar .btn-apply { background: #0D6EFD; border-color: #0D6EFD; color: #fff; font-size: 10.5px; padding: 4px 14px; border-radius: 7px; }
+    .ot-filter-bar .btn-apply:hover { background: #0B5ED7; border-color: #0B5ED7; }
 
     #overtimeTable { font-size: 10.5px; }
-    #overtimeTable th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: #6b7385; background: #f7faff; padding: 6px 8px; border-bottom: 1px solid #e3edfe; }
+    #overtimeTable th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: #6b7385; background: #f7faff; padding: 6px 8px; border-bottom: 1px solid #EFF6FF; }
     #overtimeTable td { padding: 6px 8px; vertical-align: middle; }
     #overtimeTable tr:hover td { background: #fafcff; }
     #overtimeTable .hours-pill { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-    #overtimeTable .hours-approved { background: #1e3a8a; color: #fff; }
-    #overtimeTable .hours-pending { background: #93c5fd; color: #1e3a8a; }
+    #overtimeTable .hours-approved { background: #0D6EFD; color: #fff; }
+    #overtimeTable .hours-pending { background: #93c5fd; color: #0D6EFD; }
     #overtimeTable .hours-rejected { background: #e2e8f0; color: #475569; }
-    #overtimeTable .cost-value { font-weight: 700; color: #1e3a8a; }
+    #overtimeTable .cost-value { font-weight: 700; color: #0D6EFD; }
 </style>
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Overtime Report (Monthly)</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item">Overtime Monthly</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header class="content-area-header sticky-top" title="Overtime Report (Monthly)" current="Overtime Monthly" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]" />
 
     <div class="content-area-body" style="padding: 20px !important;">
         @if (session('error'))
@@ -90,7 +79,8 @@
             </div>
         </div>
 
-        <form method="GET" class="ot-filter-bar row g-2 align-items-end">
+        <x-ui.filter-card title="Filter Report">
+<form method="GET" class="ot-filter-bar row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="d-block text-muted mb-1" style="font-size:9.5px;">Month</label>
                 <input type="month" name="month" class="form-control" onchange="this.form.submit()" value="{{ $selectedMonth }}">
@@ -129,6 +119,7 @@
             </div>
             @endfeature
         </form>
+</x-ui.filter-card>
 
         <div class="card">
             <div class="card-body p-0">
@@ -142,6 +133,7 @@
                                 @feature('branches')<th>Branch</th>@endfeature
                                 <th class="text-center">Requests</th>
                                 <th class="text-center">Approved</th>
+                                <th class="text-center" title="Hours worked in additional (2nd+) shifts — paid as overtime automatically">Extra Shift</th>
                                 <th class="text-center">Pending</th>
                                 <th class="text-center">Rejected</th>
                                 <th class="text-end">Rate (₹/hr)</th>
@@ -155,7 +147,7 @@
                                     <td>
                                         <div class="employee-info">
                                             <div class="employee-avatar"
-                                                style="background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
+                                                style="background:#0D6EFD;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
                                                 {{ strtoupper(substr($row['name'], 0, 2)) }}</div>
                                             <div class="employee-details">
                                                 <div class="employee-name">
@@ -173,6 +165,9 @@
                                         <span class="hours-pill hours-approved">{{ number_format($row['approved_hours'], 1) }}h ({{ $row['approved_count'] }})</span>
                                     </td>
                                     <td class="text-center">
+                                        <span class="hours-pill hours-approved">{{ number_format($row['extra_shift_hours'] ?? 0, 1) }}h</span>
+                                    </td>
+                                    <td class="text-center">
                                         <span class="hours-pill hours-pending">{{ number_format($row['pending_hours'], 1) }}h ({{ $row['pending_count'] }})</span>
                                     </td>
                                     <td class="text-center">
@@ -183,7 +178,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="text-center text-muted py-4">No overtime requests found for this month.</td>
+                                    <td colspan="11" class="text-center text-muted py-4">No overtime requests found for this month.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -192,7 +187,7 @@
             </div>
         </div>
 
-        <div class="alert-info-blue mt-3" style="background:#eef3fd;border:1px solid #bfd3f7;color:#1e3a8a;border-radius:10px;font-size:10.5px;padding:8px 12px;">
+        <div class="alert-info-blue mt-3" style="background:#eef3fd;border:1px solid #bfd3f7;color:#0D6EFD;border-radius:10px;font-size:10.5px;padding:8px 12px;">
             <i class="feather-info me-1"></i> Estimated cost = approved hours &times; hourly rate &times; the tenant's overtime multiplier ({{ rtrim(rtrim($stats['multiplier'], '0'), '.') }}x). Hourly rate is derived from
             each employee's current payroll assignment — this is an estimate for planning, not a payroll-authoritative figure.
         </div>

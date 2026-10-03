@@ -1007,6 +1007,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/apply-leave" \
 | 200 | Validation failure (any rule above) | `{"success": false, "message": "<first validation error>"}` |
 | 200 | `end_date` before `start_date` | `{"success": false, "message": "End date cannot be before start date."}` |
 | 200 | Selected date range has zero working days (all weekend/holiday) | `{"success": false, "message": "The selected date range has no working days to apply leave for."}` |
+| 200 | Leave type switched off for this employee, or their custom notice / maximum-length rule is not met (Employee 360 → Policies, 2026-10-02) | `{"success": false, "message": "{Leave type} is not available for this employee."}` / `"… requires at least N day(s) notice."` / `"… cannot be taken for more than N consecutive day(s)."` |
 | 200 | Insufficient balance (non-LWP leave type only) | `{"success": false, "message": "Insufficient leave balance. You have {available} days available but requested {requested} days."}` |
 | 500 | Any exception (transaction rolled back) | `{"success": false, "message": "<exception message>"}` |
 

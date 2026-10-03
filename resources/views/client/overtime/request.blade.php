@@ -13,43 +13,10 @@
             margin-top: 4px;
         }
 
-        /* ==================== COMPACT FILTER SECTION (matches Leave Management) ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #1a2236;
-        }
 
-        .filter-title i { color: var(--primary); font-size: 13px; }
 
-        .filter-title span {
-            background: var(--primary-light);
-            color: var(--primary);
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -66,15 +33,8 @@
         .clear-all-link:hover { background: var(--primary-light); color: var(--primary); }
         .clear-all-link i { font-size: 12px; }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .filter-item { flex: 0 0 auto; min-width: 160px; }
-        .filter-item.narrow { min-width: auto; }
+
 
         .filter-select,
         .filter-item .form-control {
@@ -101,31 +61,14 @@
         .filter-item .form-control:focus {
             background-color: white;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
             outline: none;
         }
 
         .filter-select:hover,
         .filter-item .form-control:hover { background-color: white; border-color: #94a3b8; }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 12px;
-            background: white;
-            color: #6b7385;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover { background: #f8fafc; border-color: #94a3b8; color: #1a2236; }
 
         .active-filters {
             margin-top: 12px;
@@ -160,7 +103,7 @@
             gap: 4px;
         }
 
-        .filter-tag i { color: var(--primary); font-size: 11px; }
+        .filter-tag i { color: var(--icon-color, #0D6EFD); font-size: 11px; }
 
         .filter-tag .remove-tag {
             color: #94a3b8;
@@ -188,35 +131,20 @@
            component's centralized CSS colors these amber/green/red by default). */
         .status-badge[data-status="pending"] {
             background: #dbeafe !important;
-            color: #1e40af !important;
+            color: #0D6EFD !important;
         }
 
         .status-badge[data-status="approved"] {
-            background: #e3edfe !important;
-            color: #1e3a8a !important;
+            background: #EFF6FF !important;
+            color: #0D6EFD !important;
         }
 
         .status-badge[data-status="rejected"] {
-            background: #1e3a8a !important;
+            background: #0D6EFD !important;
             color: #ffffff !important;
         }
 
-        /* Table Styles */
-        .table th {
-            background: #f8fafc;
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-            padding: 12px 16px;
-            border-bottom: 1px solid #e2e8f0;
-        }
 
-        .table td {
-            padding: 12px 16px;
-            vertical-align: middle;
-            font-size: 13px;
-            border-bottom: 1px solid #f1f5f9;
-        }
 
         .badge {
             padding: 4px 10px;
@@ -225,34 +153,9 @@
             font-weight: 500;
         }
 
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            color: #64748b;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
 
-        .action-btn:hover {
-            background: white;
-            transform: translateY(-2px);
-        }
 
-        .action-btn.edit:hover {
-            color: var(--primary-mid);
-            border-color: var(--primary-mid);
-        }
 
-        .action-btn.delete:hover {
-            color: var(--danger);
-            border-color: var(--danger);
-        }
 
         .empty-state {
             text-align: center;
@@ -270,10 +173,9 @@
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .filter-wrapper { padding: 12px; }
-            .filter-row { flex-direction: column; align-items: stretch; }
-            .filter-item { width: 100%; }
-            .filter-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+
+
         }
 
         /* ==================== ADD/EDIT MODALS - small font, small margin/padding ==================== */
@@ -334,23 +236,14 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Overtime Requests</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Overtime Requests</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Overtime Requests">
+        <x-slot:actions>
             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addOvertimeModal">
                 <i class="feather-plus me-2"></i>
                 <span>Request Overtime</span>
             </button>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Section -->
@@ -495,9 +388,6 @@
 
         <!-- Requests Table -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Overtime Requests</h5>
-            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table">
@@ -571,9 +461,7 @@
                 </div>
             </div>
             @if($requests->hasPages())
-            <div class="card-footer">
-                {{ $requests->links() }}
-            </div>
+            <x-ui.pagination-footer :paginator="$requests" label="requests" />
             @endif
         </div>
     </div>

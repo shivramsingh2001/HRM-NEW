@@ -89,6 +89,7 @@ class CheckMissedCheckIns extends Command
                 ->where('users.status', 1) // don't alert about deactivated staff
                 ->select(
                     'user_shifts.id as user_shift_id',
+                    'user_shifts.is_additional',
                     'user_shifts.user_id',
                     'user_shifts.missed_checkin_notified',
                     'users.name as user_name',
@@ -130,13 +131,22 @@ class CheckMissedCheckIns extends Command
                     continue;
                 }
 
-                // Check if user already checked in today — scoped to their tenant
-                $attendance = DB::table('attendances')
-                    ->where('user_id', $userShift->user_id)
-                    ->where('tenant_id', $userShift->tenant_id)
-                    ->whereDate('date', $checkDate)
-                    ->whereNotNull('clock_in')
-                    ->first();
+                // Check if user already checked in today — scoped to their tenant.
+                // An additional (2nd+) shift is only "checked in" by a clock-in
+                // punch matched to that very shift.
+                $attendance = !empty($userShift->is_additional)
+                    ? DB::table('attendance_punches')
+                        ->where('tenant_id', $userShift->tenant_id)
+                        ->where('user_shift_id', $userShift->user_shift_id)
+                        ->where('direction', 'in')
+                        ->where('status', 'active')
+                        ->first(['punched_at as clock_in'])
+                    : DB::table('attendances')
+                        ->where('user_id', $userShift->user_id)
+                        ->where('tenant_id', $userShift->tenant_id)
+                        ->whereDate('date', $checkDate)
+                        ->whereNotNull('clock_in')
+                        ->first();
 
                 if ($attendance) {
                     // User already checked in

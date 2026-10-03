@@ -62,6 +62,13 @@ class ExpenseService
         try {
             return DB::transaction(function () use ($actor, $data, $files, $source, &$stored) {
                 $this->policy->check($actor, $data, count($files));
+
+                // This employee's monthly expense limit (Employee 360 → Policies).
+                if ($limit = app(\App\Services\RequestLimitService::class)->expenseRefusal(
+                    (int) $actor->tenant_id, (int) $actor->id, (string) $data['date'], (float) $data['amount'], (string) $data['requirement_type'], null
+                )) {
+                    throw new ExpenseException($limit, 422);
+                }
                 $duplicate = $this->policy->findDuplicate($actor, $data);
 
                 foreach ($files as $file) {
@@ -133,6 +140,13 @@ class ExpenseService
                 }
 
                 $this->policy->check($actor, $data, $existing + count($files));
+
+                // This employee's monthly expense limit (Employee 360 → Policies).
+                if ($limit = app(\App\Services\RequestLimitService::class)->expenseRefusal(
+                    (int) $actor->tenant_id, (int) $actor->id, (string) $data['date'], (float) $data['amount'], (string) $data['requirement_type'], (int) $expense->id
+                )) {
+                    throw new ExpenseException($limit, 422);
+                }
                 $duplicate = $this->policy->findDuplicate($actor, $data, (int) $expense->id);
 
                 foreach ($files as $file) {

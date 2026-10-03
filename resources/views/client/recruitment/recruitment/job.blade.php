@@ -22,7 +22,7 @@
 
         /* Header Section */
         .career-hero {
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
             padding: 48px 20px;
             text-align: center;
@@ -93,13 +93,13 @@
 
         .search-group input:focus, .search-group select:focus {
             outline: none;
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .search-btn {
             padding: 8px 20px;
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
             border: none;
             border-radius: 8px;
@@ -137,7 +137,7 @@
         .stat-number {
             font-size: 32px;
             font-weight: 700;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .stat-label {
@@ -184,7 +184,7 @@
         .job-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
         }
 
         .job-code {
@@ -230,7 +230,7 @@
 
         .job-meta-item i {
             font-size: 9.5px;
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .job-salary {
@@ -270,7 +270,7 @@
 
         .job-skill-tag {
             font-size: 9.5px;
-            color: #1e3a8a;
+            color: #0D6EFD;
             background: #eff6ff;
             padding: 2px 7px;
             border-radius: 10px;
@@ -293,7 +293,7 @@
             border-radius: 20px;
         }
 
-        .job-type-full_time { background: #dbeafe; color: #1e40af; }
+        .job-type-full_time { background: #dbeafe; color: #0D6EFD; }
         .job-type-part_time { background: #f1f5f9; color: #475569; }
         .job-type-contract { background: #fef3c7; color: #92400e; }
         .job-type-internship { background: #e0e7ff; color: #3730a3; }
@@ -301,7 +301,7 @@
 
         .apply-btn {
             padding: 5px 14px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
             border-radius: 7px;
@@ -312,7 +312,7 @@
         }
 
         .apply-btn:hover {
-            background: #1e40af;
+            background: #0D6EFD;
             transform: translateY(-1px);
         }
 
@@ -340,9 +340,9 @@
         }
 
         .pagination li.active span {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
         }
 
         /* Empty State */

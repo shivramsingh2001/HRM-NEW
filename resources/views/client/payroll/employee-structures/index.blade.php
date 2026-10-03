@@ -4,8 +4,8 @@
 <style>
     /* ==================== ALL-BLUE THEME ==================== */
     #assignmentsTable .badge { font-size: 10px; padding: 3px 9px; font-weight: 700; }
-    #assignmentsTable .badge.bg-success { background-color: #2563eb !important; }
-    #assignmentsTable .badge.bg-warning { background-color: #93c5fd !important; color: #1e3a8a !important; }
+    #assignmentsTable .badge.bg-success { background-color: #0D6EFD !important; }
+    #assignmentsTable .badge.bg-warning { background-color: #93c5fd !important; color: #0D6EFD !important; }
 
     /* search bar */
     .structure-search { position: relative; max-width: 360px; }
@@ -14,15 +14,15 @@
         background: #fff; transition: all .15s;
     }
     .structure-search input:focus {
-        border-color: #1e3a8a; box-shadow: 0 0 0 .18rem rgba(30, 58, 138, .12); outline: none;
+        border-color: #0D6EFD; box-shadow: 0 0 0 .18rem rgba(13, 110, 253, .12); outline: none;
     }
     .structure-search i {
         position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #93a1b8; font-size: 13px;
     }
     .structure-search .btn-search {
-        border-radius: 999px; background: #1e3a8a; border-color: #1e3a8a; color: #fff; font-size: 11.5px; padding: 6px 16px;
+        border-radius: 999px; background: #0D6EFD; border-color: #0D6EFD; color: #fff; font-size: 11.5px; padding: 6px 16px;
     }
-    .structure-search .btn-search:hover { background: #16295e; border-color: #16295e; }
+    .structure-search .btn-search:hover { background: #0B5ED7; border-color: #0B5ED7; }
 
     /* action buttons */
     .btn-icon-view, .btn-icon-revise {
@@ -30,10 +30,10 @@
         display: inline-flex; align-items: center; justify-content: center; gap: 5px;
         border-radius: 8px; border: 1px solid; transition: all .15s;
     }
-    .btn-icon-view { border-color: #bfd3f7; background: #eef3fd; color: #1e3a8a; }
-    .btn-icon-view:hover { background: #dbe6fb; border-color: #1e3a8a; }
-    .btn-icon-revise { border-color: #1e3a8a; background: #1e3a8a; color: #fff; margin-left: 6px; }
-    .btn-icon-revise:hover { background: #16295e; border-color: #16295e; color: #fff; }
+    .btn-icon-view { border-color: #bfd3f7; background: #eef3fd; color: var(--icon-color, #0D6EFD); }
+    .btn-icon-view:hover { background: #dbe6fb; border-color: #0D6EFD; }
+    .btn-icon-revise { border-color: #0D6EFD; background: #0D6EFD; color: #fff; margin-left: 6px; }
+    .btn-icon-revise:hover { background: #0B5ED7; border-color: #0B5ED7; color: #fff; }
     .btn-icon-view i, .btn-icon-revise i { font-size: 12px; }
 
     /* ==================== VIEW DRAWER (read-only breakdown) ==================== */
@@ -46,7 +46,7 @@
     .view-drawer .breakdown-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f4f6fb; font-size: 11.5px; }
     .view-drawer .breakdown-row:last-child { border-bottom: none; }
     .view-drawer .breakdown-row .label { color: #1a2236; font-weight: 500; }
-    .view-drawer .breakdown-row .value { font-weight: 700; color: #1e3a8a; }
+    .view-drawer .breakdown-row .value { font-weight: 700; color: #0D6EFD; }
 
     /* ==================== ASSIGN/REVISE DRAWER ==================== */
     .structure-drawer { width: 720px; max-width: 94vw; }
@@ -78,10 +78,10 @@
     #componentsTotalNotice { color: var(--gray-600); }
     #componentsTotalNotice.components-over-budget { color: var(--danger); }
     .structure-drawer .btn { padding: 4px 12px; font-size: 11px; border-radius: 7px; }
-    .structure-drawer .btn-primary { background: #1e3a8a; border-color: #1e3a8a; }
-    .structure-drawer .btn-primary:hover { background: #16295e; border-color: #16295e; }
+    .structure-drawer .btn-primary { background: #0D6EFD; border-color: #0D6EFD; }
+    .structure-drawer .btn-primary:hover { background: #0B5ED7; border-color: #0B5ED7; }
     .structure-drawer .btn-modal-cancel { background: #f4f6fb; border-color: #dfe5f0; color: #475569; }
-    .structure-drawer .btn-modal-cancel:hover { background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; }
+    .structure-drawer .btn-modal-cancel:hover { background: #EFF6FF; border-color: #0D6EFD; color: #0D6EFD; }
 </style>
 @endsection
 
@@ -91,29 +91,21 @@
 @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Employee Payroll Structures (Dynamic)</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.57rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Employee Payroll Structures</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Employee Payroll Structures (Dynamic)" current="Employee Payroll Structures">
+        <x-slot:actions>
             <div class="hstack gap-2">
                 @if (in_array($role, ['admin', 'hr']))
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" id="assignStructureBtn">
+                    <a href="#" class="btn btn-primary btn-sm" id="assignStructureBtn">
                         <i class="feather-plus me-1"></i>Assign Structure
                     </a>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body">
-        <form method="GET" class="mb-3">
+        <x-ui.filter-card title="Search Employees">
+<form method="GET">
             <div class="structure-search d-inline-flex align-items-center gap-2">
                 <div class="position-relative flex-grow-1">
                     <i class="feather-search"></i>
@@ -122,6 +114,7 @@
                 <button type="submit" class="btn btn-search">Search</button>
             </div>
         </form>
+</x-ui.filter-card>
 
         <div class="card">
             <div class="card-body p-0">
@@ -144,7 +137,7 @@
                                     <td>
                                         <div class="employee-info">
                                             <div class="employee-avatar"
-                                                style="background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
+                                                style="background:#0D6EFD;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
                                                 {{ strtoupper(substr($employee->name, 0, 2)) }}</div>
                                             <div class="employee-details">
                                                 <div class="employee-name">{{ $employee->name }}</div>
@@ -418,7 +411,7 @@
 
                     $('#viewDrawerLabel').text('Payroll Structure — ' + d.employee.name);
                     $('#viewEmployeeInfo').html(
-                        '<div class="employee-avatar" style="background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">' +
+                        '<div class="employee-avatar" style="background:#0D6EFD;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">' +
                         d.employee.name.substring(0, 2).toUpperCase() + '</div>' +
                         '<div class="employee-details">' +
                         '<div class="employee-name">' + d.employee.name + ' <small class="text-muted">(' + d.employee.employee_id + ')</small></div>' +

@@ -4,7 +4,7 @@
 @section('style')
     <style>
         .onb-header {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
             border-radius: 12px;
             padding: 20px 24px;
@@ -71,33 +71,12 @@
             font-size: 12.5px;
         }
 
-        .action-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-        }
 
-        .action-btn:hover { background: #fff; color: var(--primary); border-color: var(--primary); }
     </style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title"><h5 class="m-b-10">Onboarding Checklist</h5></div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('job-openings.index') }}">Job Openings</a></li>
-                <li class="breadcrumb-item active">Onboarding</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Onboarding Checklist" current="Onboarding" :crumbs="[['label' => 'Job Openings', 'url' => route('job-openings.index')]]" />
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="onb-header d-flex justify-content-between align-items-center flex-wrap gap-2">

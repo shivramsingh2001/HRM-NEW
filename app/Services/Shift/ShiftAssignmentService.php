@@ -2,7 +2,9 @@
 
 namespace App\Services\Shift;
 
+use App\Models\Shift;
 use App\Models\ShiftAssignment;
+use App\Models\UserShift;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -15,10 +17,66 @@ class ShiftAssignmentService
 {
     public function __construct(
         private ShiftAssignmentValidator $validator,
-        private ShiftMaterializer $materializer
+        private ShiftMaterializer $materializer,
+        private ShiftOverlapGuard $overlapGuard
     ) {
     }
 
+    /**
+     * Assign an ADDITIONAL shift (2nd+ shift on the same days) — Permanent
+     * (open-ended, $endDate null) or Flexible (date range). Never replaces or
+     * supersedes the primary shift or other additional shifts; overlaps are
+     * rejected up front by the caller via additionalConflicts().
+     */
+    public function assignAdditional(
+        int $tenantId,
+        int $userId,
+        int $shiftId,
+        string $type,
+        Carbon $startDate,
+        ?Carbon $endDate,
+        int $createdBy
+    ): array {
+        return DB::transaction(function () use ($tenantId, $userId, $shiftId, $type, $startDate, $endDate, $createdBy) {
+            $assignment = ShiftAssignment::create([
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'shift_id' => $shiftId,
+                'type' => $type,
+                'is_additional' => 1,
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $type === 'permanent' ? null : ($endDate ?? $startDate)->toDateString(),
+                'status' => 'active',
+                'source' => 'manual',
+                'created_by' => $createdBy,
+            ]);
+
+            $result = $type === 'permanent'
+                ? $this->materializer->materializePermanentHorizon($assignment)
+                : $this->materializer->materializeFlexible($assignment, $startDate, $endDate ?? $startDate);
+
+            return ['assignment' => $assignment, 'materialized' => $result];
+        });
+    }
+
+    /**
+     * Dates an additional shift would cover that overlap a shift the user
+     * already works: [date => clashing shift name]. A Permanent additional
+     * shift is checked over the cached horizon.
+     */
+    public function additionalConflicts(int $tenantId, int $userId, Shift $shift, string $type, Carbon $startDate, ?Carbon $endDate): array
+    {
+        $to = $type === 'permanent'
+            ? Carbon::today()->addDays(ShiftMaterializer::PERMANENT_HORIZON_DAYS)
+            : ($endDate ?? $startDate)->copy();
+
+        $dates = [];
+        for ($d = $startDate->copy(); $d->lte($to); $d->addDay()) {
+            $dates[] = $d->toDateString();
+        }
+
+        return $this->overlapGuard->conflicts($tenantId, $userId, $shift, $dates);
+    }
     /**
      * Assign a Permanent (open-ended) shift. Auto-supersedes the user's
      * existing active Permanent, if any — never a hard conflict.
@@ -146,6 +204,17 @@ class ShiftAssignmentService
                 'ended_at' => now(),
                 'notes' => $reason,
             ]);
+
+            // An additional shift only owns its own rows — drop them after the end date.
+            if ($assignment->is_additional) {
+                UserShift::withoutGlobalScopes()
+                    ->where('tenant_id', $assignment->tenant_id)
+                    ->where('shift_assignment_id', $assignment->id)
+                    ->where('date', '>', $endDate->toDateString())
+                    ->delete();
+
+                return $assignment;
+            }
 
             $this->materializer->regenerateFrom($assignment->tenant_id, $assignment->user_id, $endDate->copy()->addDay());
 

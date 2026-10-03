@@ -14,9 +14,9 @@
         --x-text: #1a2236;
         --x-soft: #6b7385;
         --x-muted: #9aa1b1;
-        --x-blue: #1e3a8a;
-        --x-blue-2: #2563eb;
-        --x-chip: #e3edfe;
+        --x-blue: #0D6EFD;
+        --x-blue-2: #0D6EFD;
+        --x-chip: #EFF6FF;
         --x-shadow: 0 1px 2px rgba(20, 30, 60, .04), 0 2px 8px rgba(20, 30, 60, .04);
         --x-shadow-hover: 0 6px 22px rgba(30, 50, 110, .10);
     }
@@ -48,7 +48,7 @@
         border-radius: 7px;
         flex: none;
         background: var(--x-chip);
-        color: var(--x-blue);
+        color: var(--icon-color, #0D6EFD);
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -102,7 +102,7 @@
         justify-content: center;
         font-size: 13px;
         background: var(--x-chip);
-        color: var(--x-blue);
+        color: var(--icon-color, #0D6EFD);
     }
 
     .ex-page .ex-tile-val {
@@ -154,7 +154,7 @@
     }
 
     .ex-page .filter-title i {
-        color: var(--x-blue);
+        color: var(--icon-color, #0D6EFD);
         font-size: 15px;
     }
 
@@ -268,7 +268,7 @@
     .ex-page .filter-select:focus {
         background-color: #fff;
         border-color: var(--x-blue);
-        box-shadow: 0 0 0 3px rgba(30, 58, 138, .10);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, .10);
         outline: none;
     }
 
@@ -330,7 +330,7 @@
     }
 
     .ex-page .filter-tag i {
-        color: var(--x-blue);
+        color: var(--icon-color, #0D6EFD);
         font-size: 11px;
     }
 
@@ -369,7 +369,7 @@
 
     .ex-page .custom-employee-dropdown .btn:focus {
         border-color: var(--x-blue);
-        box-shadow: 0 0 0 3px rgba(30, 58, 138, .10);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, .10);
     }
 
     .ex-page .custom-employee-dropdown .dropdown-menu {
@@ -408,7 +408,7 @@
     .ex-page .employee-initials-sm {
         width: 28px;
         height: 28px;
-        background: linear-gradient(135deg, #1e3a8a, #2563eb);
+        background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         color: #fff;
         border-radius: 50%;
         display: inline-flex;
@@ -503,7 +503,7 @@
         width: 30px;
         height: 30px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #1e3a8a, #2563eb);
+        background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         color: #fff;
         display: flex;
         align-items: center;
@@ -540,8 +540,8 @@
     }
 
     .ex-page .badge.bg-success {
-        background: rgba(29, 78, 216, .14) !important;
-        color: #1d4ed8;
+        background: rgba(11, 94, 215, .14) !important;
+        color: #0B5ED7;
     }
 
     .ex-page .badge.bg-info {
@@ -556,7 +556,7 @@
 
     .ex-page .badge.bg-warning {
         background: rgba(96, 165, 250, .20) !important;
-        color: #2563eb;
+        color: #0D6EFD;
     }
 
     .ex-page .badge.bg-danger {
@@ -575,7 +575,7 @@
         align-items: center;
         justify-content: center;
         background: #fff;
-        color: var(--x-blue);
+        color: var(--icon-color, #0D6EFD);
         border: 1px solid #bcd0f5;
         transition: all .18s ease;
         cursor: pointer;
@@ -592,17 +592,17 @@
         border-color: var(--x-blue);
         color: var(--x-blue);
         transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(30, 58, 138, .18);
+        box-shadow: 0 4px 10px rgba(13, 110, 253, .18);
     }
 
     .ex-page .action-btn.primary {
-        background: linear-gradient(135deg, #1e3a8a, #2563eb);
+        background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         color: #fff;
         border-color: transparent;
     }
 
     .ex-page .action-btn.primary:hover {
-        background: linear-gradient(135deg, #172c6b, #1d4ed8);
+        background: linear-gradient(135deg, #0B5ED7, #0B5ED7);
         color: #fff;
     }
 

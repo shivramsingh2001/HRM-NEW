@@ -9,20 +9,20 @@
         display: flex; align-items: center; transition: all 0.2s; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
     .stats-card:hover { box-shadow: 0 4px 12px -4px rgba(30, 50, 110, .12); border-color: #dfe5f0; transform: translateY(-1px); }
-    .stats-icon { width: 34px; height: 34px; background: #e3edfe; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex: none; }
-    .stats-icon i { font-size: 15px; color: #1e3a8a; }
+    .stats-icon { width: 34px; height: 34px; background: #EFF6FF; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex: none; }
+    .stats-icon i { font-size: 15px; color: var(--icon-color, #0D6EFD); }
     .stats-info h3 { font-size: 17px; font-weight: 700; margin: 0 0 2px 0; color: #1a2236; line-height: 1.2; }
     .stats-info p { font-size: 11px; color: #6b7385; margin: 0; }
 
     .bonus-filter select {
         border-radius: 999px; border: 1px solid #dfe5f0; font-size: 12px; padding: 6px 14px; max-width: 260px;
     }
-    .bonus-filter select:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .18rem rgba(30, 58, 138, .12); }
+    .bonus-filter select:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .18rem rgba(13, 110, 253, .12); }
 
     #bonusesTable .badge { font-size: 10px; padding: 3px 9px; font-weight: 700; }
-    #bonusesTable .badge.bg-warning { background-color: #93c5fd !important; color: #1e3a8a !important; }
-    #bonusesTable .badge.bg-success { background-color: #2563eb !important; }
-    #bonusesTable .badge.bg-danger { background-color: #bfd3f7 !important; color: #1e3a8a !important; }
+    #bonusesTable .badge.bg-warning { background-color: #93c5fd !important; color: #0D6EFD !important; }
+    #bonusesTable .badge.bg-success { background-color: #0D6EFD !important; }
+    #bonusesTable .badge.bg-danger { background-color: #bfd3f7 !important; color: #0D6EFD !important; }
 
     .btn-icon-edit, .btn-approve, .btn-reject {
         height: 28px; padding: 0 10px; font-size: 10.5px; font-weight: 600;
@@ -30,11 +30,11 @@
         border-radius: 7px; border: 1px solid; transition: all .15s;
     }
     .btn-icon-edit { border-color: #dfe5f0; background: #f4f6fb; color: #475569; margin-right: 6px; }
-    .btn-icon-edit:hover { background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; }
-    .btn-approve { border-color: #1e3a8a; background: #1e3a8a; color: #fff; }
-    .btn-approve:hover { background: #16295e; border-color: #16295e; color: #fff; }
-    .btn-reject { border-color: #bfd3f7; background: #eef3fd; color: #1e3a8a; margin-left: 6px; }
-    .btn-reject:hover { background: #dbe6fb; border-color: #1e3a8a; }
+    .btn-icon-edit:hover { background: #EFF6FF; border-color: #0D6EFD; color: var(--icon-color, #0D6EFD); }
+    .btn-approve { border-color: #0D6EFD; background: #0D6EFD; color: #fff; }
+    .btn-approve:hover { background: #0B5ED7; border-color: #0B5ED7; color: #fff; }
+    .btn-reject { border-color: #bfd3f7; background: #eef3fd; color: #0D6EFD; margin-left: 6px; }
+    .btn-reject:hover { background: #dbe6fb; border-color: #0D6EFD; }
     .btn-icon-edit i, .btn-approve i, .btn-reject i { font-size: 11px; }
 
     /* ==================== BONUS DRAWER (Add / Edit) ==================== */
@@ -47,10 +47,10 @@
     .bonus-drawer .form-control { font-size: 10.5px; padding: 4px 8px; height: auto; }
     .bonus-drawer .row > [class*="col-"] { margin-bottom: 4px !important; }
     .bonus-drawer .btn { padding: 4px 12px; font-size: 11px; border-radius: 7px; }
-    .bonus-drawer .btn-primary { background: #1e3a8a; border-color: #1e3a8a; }
-    .bonus-drawer .btn-primary:hover { background: #16295e; border-color: #16295e; }
+    .bonus-drawer .btn-primary { background: #0D6EFD; border-color: #0D6EFD; }
+    .bonus-drawer .btn-primary:hover { background: #0B5ED7; border-color: #0B5ED7; }
     .bonus-drawer .btn-modal-cancel { background: #f4f6fb; border-color: #dfe5f0; color: #475569; }
-    .bonus-drawer .btn-modal-cancel:hover { background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; }
+    .bonus-drawer .btn-modal-cancel:hover { background: #EFF6FF; border-color: #0D6EFD; color: #0D6EFD; }
 </style>
 @endsection
 
@@ -60,26 +60,17 @@
 @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Payroll Bonuses</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.57rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Payroll Bonuses</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Payroll Bonuses">
+        <x-slot:actions>
             <div class="hstack gap-2">
                 @if (in_array($role, ['admin', 'hr']))
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" id="addBonusBtn">
+                    <a href="#" class="btn btn-primary btn-sm" id="addBonusBtn">
                         <i class="feather-plus me-1"></i>Add Bonus
                     </a>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body">
         @php
@@ -104,7 +95,8 @@
             </div>
         </div>
 
-        <form method="GET" class="mb-3 bonus-filter">
+        <x-ui.filter-card title="Filter Bonuses">
+<form method="GET" class="bonus-filter filter-row">
             <select name="status" class="form-control" onchange="this.form.submit()">
                 <option value="">All Statuses</option>
                 @foreach (['draft' => 'Pending Approval', 'approved' => 'Approved', 'included_in_payroll' => 'Included in Payroll', 'paid' => 'Paid', 'cancelled' => 'Cancelled/Rejected'] as $val => $label)
@@ -112,6 +104,7 @@
                 @endforeach
             </select>
         </form>
+</x-ui.filter-card>
 
         <div class="card">
             <div class="card-body p-0">
@@ -135,7 +128,7 @@
                                         @if ($bonus->user)
                                             <div class="employee-info">
                                                 <div class="employee-avatar"
-                                                    style="background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
+                                                    style="background:#0D6EFD;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
                                                     {{ strtoupper(substr($bonus->user->name, 0, 2)) }}</div>
                                                 <div class="employee-details">
                                                     <div class="employee-name">

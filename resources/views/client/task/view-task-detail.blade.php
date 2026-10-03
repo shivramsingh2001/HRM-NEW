@@ -34,7 +34,7 @@
 
         /* Task Header */
         .task-header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
             padding: 14px;
             border-radius: 10px;
@@ -55,8 +55,8 @@
         .deadline-pill.soon { background: rgba(255,255,255,.2); color: #fde68a; }
         .deadline-pill.ok { background: rgba(255,255,255,.2); color: #bbf7d0; }
 
-        .group-progress-track { background: #e3edfe; border-radius: 999px; height: 8px; overflow: hidden; flex: 1; }
-        .group-progress-fill { background: #1e3a8a; height: 100%; border-radius: 999px; transition: width .3s; }
+        .group-progress-track { background: #EFF6FF; border-radius: 999px; height: 8px; overflow: hidden; flex: 1; }
+        .group-progress-fill { background: #0D6EFD; height: 100%; border-radius: 999px; transition: width .3s; }
 
         .task-title {
             font-size: 16px;
@@ -109,11 +109,11 @@
 
         .status-in_progress {
             background-color: #dbeafe;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .status-in_progress::before {
-            background: #1e3a8a;
+            background: #0D6EFD;
         }
 
         .status-completed {
@@ -171,12 +171,12 @@
         }
 
         .priority-critical {
-            background-color: #e3edfe;
-            color: #1e3a8a;
+            background-color: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .priority-critical::before {
-            background: #1e3a8a;
+            background: #0D6EFD;
         }
 
         /* Detail Items */
@@ -270,14 +270,14 @@
             line-height: 1.5;
             background: white;
             border: 1px solid #eef0f3;
-            border-left: 2px solid #1e3a8a;
+            border-left: 2px solid #0D6EFD;
             border-radius: 4px;
             padding: 6px 8px;
             margin-top: 4px;
         }
 
         .update-remarks i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
             margin-top: 2px;
             flex-shrink: 0;
@@ -298,9 +298,9 @@
             display: inline-flex;
             align-items: center;
             padding: 6px 10px;
-            background: #e3edfe;
+            background: #EFF6FF;
             border-radius: 6px;
-            color: #1e3a8a;
+            color: #0D6EFD;
             text-decoration: none;
             font-weight: 500;
             transition: all 0.2s;
@@ -311,16 +311,16 @@
         .file-attachment:hover {
             background: #bfd3f7;
             text-decoration: none;
-            color: #16295e;
+            color: #0D6EFD;
         }
 
         .voice-attachment {
             display: inline-flex;
             align-items: center;
             padding: 6px 10px;
-            background: #e3edfe;
+            background: #EFF6FF;
             border-radius: 6px;
-            color: #1e3a8a;
+            color: #0D6EFD;
             text-decoration: none;
             font-weight: 500;
             transition: all 0.2s;
@@ -331,7 +331,7 @@
         .voice-attachment:hover {
             background: #bfd3f7;
             text-decoration: none;
-            color: #16295e;
+            color: #0D6EFD;
         }
 
         /* Deadline Status */
@@ -461,24 +461,24 @@
         }
         #statusUpdateModal .btn-primary,
         #approvalModal .btn-primary {
-            background: #1e3a8a !important;
-            border-color: #1e3a8a !important;
+            background: #0D6EFD !important;
+            border-color: #0D6EFD !important;
         }
         #statusUpdateModal .btn-primary:hover,
         #approvalModal .btn-primary:hover {
-            background: #16295e !important;
-            border-color: #16295e !important;
+            background: #0B5ED7 !important;
+            border-color: #0B5ED7 !important;
         }
         #statusUpdateModal .btn-modal-cancel,
         #approvalModal .btn-modal-cancel {
             background: #eef3fd !important;
             border: 1px solid #bfd3f7 !important;
-            color: #1e3a8a !important;
+            color: #0D6EFD !important;
         }
         #statusUpdateModal .btn-modal-cancel:hover,
         #approvalModal .btn-modal-cancel:hover {
             background: #dbeafe !important;
-            color: #1e3a8a !important;
+            color: #0D6EFD !important;
         }
     </style>
 @endsection
@@ -498,18 +498,7 @@
         </div>
     @endif
 
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Tasks Management</h5>
-            </div>
-            <ul class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ url()->previous() }}">Tasks</a></li>
-                <li class="breadcrumb-item">Task Details</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Tasks Management" current="Task Details" :crumbs="[['label' => 'Tasks', 'url' => url()->previous()]]" />
 
     <div class="main-content" style="padding:30px;">
         <!-- Task Header -->
@@ -612,7 +601,7 @@
                                             <td class="detail-label">Project:</td>
                                             <td class="detail-value">
                                                 @if ($task->project_id)
-                                                    <a href="{{ route('project.view-details', ['id' => encrypt($task->project_id)]) }}" style="color:#1e3a8a; font-weight:500;">{{ $task->project_name }}</a>
+                                                    <a href="{{ route('project.view-details', ['id' => encrypt($task->project_id)]) }}" style="color:#0D6EFD; font-weight:500;">{{ $task->project_name }}</a>
                                                 @else
                                                     <div>{{ $task->project_name }}</div>
                                                 @endif
@@ -642,7 +631,7 @@
                 <div class="main-card mt-2">
                     <div class="card-header-custom d-flex justify-content-between align-items-center">
                         <span>Updates History</span>
-                        <span class="badge rounded-pill" style="background:#1e3a8a;color:#fff;">{{ $updates->count() }}</span>
+                        <span class="badge rounded-pill" style="background:#0D6EFD;color:#fff;">{{ $updates->count() }}</span>
                     </div>
                     <div class="card-body-custom">
                         @if ($updates->count() > 0)
@@ -725,7 +714,7 @@
                                 <div>
                                     <div class="detail-label mb-2">
                                         Group Members
-                                        <span class="badge" style="background:#1e3a8a;color:#fff;">{{ $memberTotal }}</span>
+                                        <span class="badge" style="background:#0D6EFD;color:#fff;">{{ $memberTotal }}</span>
                                     </div>
                                     <div class="detail-label mb-2" style="font-weight:400;font-size:11px;">
                                         Rule:
@@ -738,7 +727,7 @@
                                         <div class="group-progress-track">
                                             <div class="group-progress-fill" style="width:{{ $groupPct }}%;"></div>
                                         </div>
-                                        <small style="font-weight:700; color:#1e3a8a; font-size:11px;">{{ $memberCompleted }}/{{ $memberTotal }}</small>
+                                        <small style="font-weight:700; color:#0D6EFD; font-size:11px;">{{ $memberCompleted }}/{{ $memberTotal }}</small>
                                     </div>
                                     @foreach ($task->members as $m)
                                         <div class="d-flex align-items-center justify-content-between mb-2 p-2"
@@ -750,7 +739,7 @@
                                                     <div class="employee-name">
                                                         {{ $m->name }}
                                                         @if ($m->member_role === 'lead')
-                                                            <span class="badge" style="font-size:9px; background:#1e3a8a; color:#fff;">LEAD</span>
+                                                            <span class="badge" style="font-size:9px; background:#0D6EFD; color:#fff;">LEAD</span>
                                                         @endif
                                                     </div>
                                                     <div class="employee-email">{{ $m->email }}</div>
@@ -847,7 +836,7 @@
                 <!-- Comments -->
                 <div class="main-card mt-2">
                     <div class="card-header-custom">
-                        <span>Comments <span class="badge" id="commentCount" style="background:#1e3a8a;color:#fff;">{{ $comments->count() }}</span></span>
+                        <span>Comments <span class="badge" id="commentCount" style="background:#0D6EFD;color:#fff;">{{ $comments->count() }}</span></span>
                     </div>
                     <div class="card-body-custom">
                         <form id="addCommentForm" class="mb-3">
@@ -883,7 +872,7 @@
                     <div class="card-header-custom d-flex justify-content-between align-items-center">
                         <span>Approval {{ $task->task_mode === 'group' ? 'History' : 'Status' }}</span>
                         @if ($approvals->count() > 1)
-                            <span class="badge" style="background:#1e3a8a;color:#fff;">{{ $approvals->count() }}</span>
+                            <span class="badge" style="background:#0D6EFD;color:#fff;">{{ $approvals->count() }}</span>
                         @endif
                     </div>
                     <div class="card-body-custom">

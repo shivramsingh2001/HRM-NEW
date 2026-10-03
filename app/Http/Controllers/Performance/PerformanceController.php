@@ -257,7 +257,7 @@ class PerformanceController extends Controller
         ];
 
         $policy = app(\App\Services\Performance\PerformancePolicyResolver::class)
-            ->forTenantMonth((int) $employee->tenant_id, $month);
+            ->forUserMonth((int) $employee->tenant_id, (int) $employee->id, $month);
         $weights = $policy->dailyWeights() + ['manager_rating' => $policy->weightManagerRating];
 
         $rankIn = function ($scores) use ($overallScore) {

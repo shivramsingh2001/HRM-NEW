@@ -12,6 +12,7 @@ class ShiftAssignment extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'is_additional' => 'boolean',
         'start_date' => 'date',
         'end_date' => 'date',
         'ended_at' => 'datetime',

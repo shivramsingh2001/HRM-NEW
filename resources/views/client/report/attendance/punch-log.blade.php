@@ -8,32 +8,31 @@
         background: white; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px;
         display: flex; align-items: center; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
-    .stats-icon { width: 30px; height: 30px; background: #e3edfe; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
-    .stats-icon i { font-size: 13px; color: #1e3a8a; }
+    .stats-icon { width: 30px; height: 30px; background: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
+    .stats-icon i { font-size: 13px; color: var(--icon-color, #0D6EFD); }
     .stats-info h3 { font-size: 15px; font-weight: 700; margin: 0 0 1px 0; color: #1a2236; line-height: 1.2; }
     .stats-info p { font-size: 9.5px; color: #6b7385; margin: 0; }
 
-    .filter-section { background: #fff; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
     /* All filters on one line: items share the width; scrolls sideways only on narrow screens. */
     .filter-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; overflow-x: auto; }
-    .filter-row .filter-item { flex: 1 1 0; min-width: 96px; }
-    .filter-row .filter-item.fi-date { flex: 0 0 122px; min-width: 122px; }
-    .filter-row .filter-item.fi-search { flex: 1.4 1 0; min-width: 140px; }
-    .filter-row .filter-item.fi-btn { flex: 0 0 auto; min-width: 0; }
-    .filter-row .form-control-sm-custom { width: 100%; }
+
+
+
+
+
     .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 8px; font-size: 11px; height: 32px; background-color: #fff; }
-    .form-control-sm-custom:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30, 58, 138, .12); outline: none; }
-    .btn-sm-custom { background: #1e3a8a; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; }
-    .btn-sm-custom:hover { background: #2563eb; color: #fff; }
+    .form-control-sm-custom:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); outline: none; }
+    .btn-sm-custom { background: #0D6EFD; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; }
+    .btn-sm-custom:hover { background: #0D6EFD; color: #fff; }
     .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; }
-    .btn-sm-custom-outline:hover { background: #e3edfe; color: #1e3a8a; }
+    .btn-sm-custom-outline:hover { background: #EFF6FF; color: #0D6EFD; }
     .btn-sm-custom, .btn-sm-custom-outline { white-space: nowrap; height: 32px; display: inline-flex; align-items: center; gap: 4px; }
     .date-sep { font-size: 11px; color: #6b7385; flex: none; }
 
     .punch-table-wrap { overflow-x: auto; }
     #punchTable { font-size: 11px; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; }
     #punchTable th, #punchTable td { padding: 7px 10px; vertical-align: top; border-bottom: 1px solid #eef1f7; white-space: nowrap; }
-    #punchTable thead th { font-size: 9.5px; font-weight: 700; color: #6b7385; background: #f7faff; text-transform: uppercase; letter-spacing: .3px; border-bottom: 1px solid #e3edfe; }
+    #punchTable thead th { font-size: 9.5px; font-weight: 700; color: #6b7385; background: #f7faff; text-transform: uppercase; letter-spacing: .3px; border-bottom: 1px solid #EFF6FF; }
     #punchTable tbody tr:hover td { background: #fafcff; }
     #punchTable .col-emp { position: sticky; left: 0; background: #fff; z-index: 1; border-right: 1px solid #eef1f7; }
     #punchTable thead .col-emp { background: #f7faff; z-index: 2; }
@@ -46,7 +45,7 @@
     .dir { display: inline-block; min-width: 36px; text-align: center; padding: 2px 6px; border-radius: 6px; font-size: 9.5px; font-weight: 700; }
     .dir-in { background: #dcfce7; color: #15803d; }
     .dir-out { background: #fee2e2; color: #b91c1c; }
-    .chip { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 9.5px; font-weight: 600; background: #eef3fd; color: #1e3a8a; }
+    .chip { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 9.5px; font-weight: 600; background: #eef3fd; color: #0D6EFD; }
     .chip.ok { background: #dcfce7; color: #15803d; }
     .chip.warn { background: #fef3c7; color: #b45309; }
     .chip.bad { background: #fee2e2; color: #b91c1c; }
@@ -55,23 +54,13 @@
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Clock In/Out Log</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item">Clock In/Out Log</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Clock In/Out Log" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
             <a href="{{ route('report.attendance.punches.export', request()->query()) }}" class="btn btn-sm btn-primary">
                 <i class="feather-download me-1"></i> Export CSV
             </a>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body" style="padding: 20px !important;">
         @if (session('error'))
@@ -102,7 +91,7 @@
         </div>
 
         {{-- Filters --}}
-        <div class="filter-section">
+        <x-ui.filter-card title="Filter Report">
             <form action="{{ route('report.attendance.punches.index') }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     <div class="filter-item fi-date">
@@ -168,7 +157,7 @@
                     <div class="filter-item fi-btn"><a href="{{ route('report.attendance.punches.index') }}" class="btn-sm-custom-outline" title="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         <div class="card stretch stretch-full">
             <div class="card-body p-0">
@@ -282,12 +271,7 @@
                 </div>
             </div>
             @if ($rows->hasPages())
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <div class="text-muted small">
-                        Showing {{ $rows->firstItem() }} to {{ $rows->lastItem() }} of {{ $rows->total() }} punches
-                    </div>
-                    <div>{{ $rows->links('pagination::bootstrap-4') }}</div>
-                </div>
+                <x-ui.pagination-footer :paginator="$rows" label="punches" />
             @endif
         </div>
     </div>

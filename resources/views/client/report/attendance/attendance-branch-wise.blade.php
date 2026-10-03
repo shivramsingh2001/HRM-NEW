@@ -2,82 +2,14 @@
 
 @section('style')
 <style>
-    /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
-       are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
-    .filter-wrapper {
-        background: white;
-        border-radius: 8px;
-        border: 1px solid #eef2f6;
-        padding: 7px 11px;
-        margin-bottom: 11px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    }
 
-    .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 8px;
-    }
 
-    .filter-item.date-picker {
-        min-width: 160px;
-        flex: 0 0 auto;
-    }
 
-    .filter-item.date-picker input {
-        height: 32px;
-        padding: 3px 7px;
-        font-size: 10px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 6px;
-        background: #f8fafc;
-        transition: all 0.3s;
-        width: 100%;
-        color: #0f172a;
-        font-weight: 500;
-        cursor: pointer;
-    }
 
-    .filter-item.date-picker input:hover {
-        background: white;
-        border-color: #cbd5e1;
-    }
 
-    .filter-item.date-picker input:focus {
-        border-color: #1e3a8a;
-        outline: none;
-        background: white;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
-    }
 
-    .reset-btn {
-        height: 32px;
-        padding: 0 12px;
-        background: white;
-        color: #64748b;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 6px;
-        font-size: 10px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        text-decoration: none;
-        transition: all 0.3s;
-        white-space: nowrap;
-    }
 
-    .reset-btn:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-        color: #0f172a;
-    }
-
-    .reset-btn i {
-        font-size: 10px;
-    }
 
     .date-indicator {
         background: #f8fafc;
@@ -90,7 +22,7 @@
 
     .date-indicator i {
         margin-right: 3px;
-        color: #1e3a8a;
+        color: var(--icon-color, #0D6EFD);
         font-size: 10px;
     }
 
@@ -121,7 +53,7 @@
     .branch-card-item:hover {
         transform: translateY(-3px);
         box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.08);
-        border-color: #1e3a8a;
+        border-color: #0D6EFD;
     }
 
     .branch-header {
@@ -159,10 +91,10 @@
     .branch-employees {
         font-size: 9.5px;
         font-weight: 600;
-        color: #1e3a8a;
+        color: #0D6EFD;
         margin-bottom: 6px;
         padding: 2px 7px;
-        background: #e3edfe;
+        background: #EFF6FF;
         border-radius: 6px;
         display: inline-block;
     }
@@ -210,9 +142,9 @@
 
     .stat-mini.present .number { color: #3b82f6; }
     .stat-mini.absent .number { color: #475569; }
-    .stat-mini.leave .number { color: #2563eb; }
-    .stat-mini.holiday .number { color: #2563eb; }
-    .stat-mini.weekoff .number { color: #1e3a8a; }
+    .stat-mini.leave .number { color: #0D6EFD; }
+    .stat-mini.holiday .number { color: #0D6EFD; }
+    .stat-mini.weekoff .number { color: #0D6EFD; }
 
     .mt-3 {
         margin-top: 8px !important;
@@ -224,8 +156,8 @@
         border-radius: 12px !important;
     }
 
-    .badge-success { background: #e3edfe !important; color: #1e3a8a !important; }
-    .badge-warning { background: #bfd3f7 !important; color: #1e3a8a !important; }
+    .badge-success { background: #EFF6FF !important; color: #0D6EFD !important; }
+    .badge-warning { background: #bfd3f7 !important; color: #0D6EFD !important; }
     .badge-danger { background: #e2e8f0 !important; color: #475569 !important; }
 
     .summary-footer {
@@ -245,11 +177,11 @@
         font-size: 11px !important;
     }
 
-    .summary-footer .text-primary { color: #1e3a8a !important; }
-    .summary-footer .text-success { color: #1e3a8a !important; }
+    .summary-footer .text-primary { color: #0D6EFD !important; }
+    .summary-footer .text-success { color: #0D6EFD !important; }
     .summary-footer .text-danger { color: #475569 !important; }
-    .summary-footer .text-warning { color: #2563eb !important; }
-    .summary-footer .text-info { color: #2563eb !important; }
+    .summary-footer .text-warning { color: #0D6EFD !important; }
+    .summary-footer .text-info { color: #0D6EFD !important; }
 
     .alert {
         padding: 20px !important;
@@ -276,11 +208,6 @@
         margin-bottom: 12px !important;
     }
 
-    .breadcrumb {
-        padding: 6px 0 !important;
-        margin-bottom: 0 !important;
-        font-size: 10px !important;
-    }
 
     /* Responsive */
     @media (max-width: 1200px) {
@@ -296,9 +223,9 @@
     @media (max-width: 768px) {
         .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
         .branch-grid { grid-template-columns: 1fr; gap: 10px; }
-        .filter-row { flex-direction: column; align-items: stretch; }
-        .filter-item.date-picker { min-width: auto; width: 100%; }
-        .reset-btn { width: 100%; justify-content: center; }
+
+
+
         .branch-stats { grid-template-columns: repeat(3, 1fr); }
         .stat-mini .number { font-size: 10.5px; }
         .main-content { padding: 10px 12px !important; }
@@ -313,25 +240,14 @@
         .branch-name { font-size: 10px; }
         .stat-mini .number { font-size: 10px; }
         .date-indicator { font-size: 9.5px; }
-        .filter-item.date-picker input { font-size: 9.5px; height: 28px; }
-        .reset-btn { font-size: 9.5px; height: 28px; }
+
+
     }
 </style>
 @endsection
 
 @section('content-area')
-<div class="page-header">
-    <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title">
-                <h5 class="m-b-10">Attendance Location Reports</h5>
-            </div>
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-            <li class="breadcrumb-item active">Attendance Location Wise Attendance</li>
-        </ul>
-    </div>
-</div>
+<x-ui.page-header title="Attendance Location Reports" current="Attendance Location Wise Attendance" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]" />
 
 <div class="main-content" style="padding: 16px 20px !important;">
     <!-- Statistics Cards -->
@@ -381,7 +297,7 @@
     </div>
 
     <!-- Filter Section - Date Picker -->
-    <div class="filter-wrapper">
+    <x-ui.filter-card title="Filter Report">
         <form action="{{ route('report.attendance.branch-wise') }}" method="GET">
             <div class="filter-row">
                 <div class="filter-item date-picker">
@@ -404,7 +320,7 @@
                 </div>
             </div>
         </form>
-    </div>
+    </x-ui.filter-card>
 
     <!-- Branch Cards -->
     @if(empty($branchStats) || count($branchStats) == 0)
@@ -472,7 +388,7 @@
                         <span class="badge">
                             {{ $attendancePercent }}%
                         </span>
-                        <span style="font-size: 9px; color: #1e3a8a;">
+                        <span style="font-size: 9px; color: #0D6EFD;">
                             View <i class="feather-arrow-right" style="font-size: 9.5px;"></i>
                         </span>
                     </div>

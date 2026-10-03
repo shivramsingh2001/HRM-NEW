@@ -190,23 +190,23 @@
         }
 
         .badge-present {
-            background: #2563eb;
+            background: #0D6EFD;
             color: #ffffff;
         }
 
         .badge-absent {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: #ffffff;
         }
 
         .badge-leave {
             background: #dbeafe;
-            color: #1d4ed8;
+            color: #0B5ED7;
         }
 
         .badge-holiday {
             background: #bfdbfe;
-            color: #1d4ed8;
+            color: #0B5ED7;
         }
 
         .badge-week-off {
@@ -416,20 +416,7 @@
 
 @section('content-area')
     <!-- Page Header -->
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <ul class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('team.index') }}">Team</a></li>
-                <li class="breadcrumb-item active">Member Profile</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <a href="{{ route('team.index') }}" class="btn btn-light btn-sm">
-                <i class="feather-arrow-left me-1"></i>Back
-            </a>
-        </div>
-    </div>
+    <x-ui.page-header title="Member Profile" :crumbs="[['label' => 'Team', 'url' => route('team.index')]]" :back="route('team.index')" />
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Profile Header -->
@@ -703,10 +690,10 @@
                     <!-- Legend -->
                     <div class="calendar-legend">
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #2563eb; border-color: #1d4ed8;"></div><span>Present</span>
+                            <div class="legend-color" style="background: #0D6EFD; border-color: #0B5ED7;"></div><span>Present</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-color" style="background: #1e3a8a; border-color: #1e293b;"></div><span>Absent</span>
+                            <div class="legend-color" style="background: #0D6EFD; border-color: #1e293b;"></div><span>Absent</span>
                         </div>
                         <div class="legend-item">
                             <div class="legend-color" style="background: #dbeafe; border-color: #93c5fd;"></div><span>Leave</span>
@@ -990,8 +977,8 @@
 
                 switch (statusLower) {
                     case 'present':
-                        bgColor = '#2563eb';
-                        borderColor = '#1d4ed8';
+                        bgColor = '#0D6EFD';
+                        borderColor = '#0B5ED7';
                         textColor = '#ffffff';
                         title = 'Present';
                         break;
@@ -1002,7 +989,7 @@
                         title = 'Half Day';
                         break;
                     case 'absent':
-                        bgColor = '#1e3a8a';
+                        bgColor = '#0D6EFD';
                         borderColor = '#1e293b';
                         textColor = '#ffffff';
                         title = 'Absent';
@@ -1012,13 +999,13 @@
                     case 'full day leave':
                         bgColor = '#dbeafe';
                         borderColor = '#93c5fd';
-                        textColor = '#1d4ed8';
+                        textColor = '#0B5ED7';
                         title = 'Leave';
                         break;
                     case 'holiday':
                         bgColor = '#bfdbfe';
                         borderColor = '#93c5fd';
-                        textColor = '#1d4ed8';
+                        textColor = '#0B5ED7';
                         title = record.holiday_name || 'Holiday';
                         break;
                     case 'week off':
@@ -1030,7 +1017,7 @@
                     case 'checked in only':
                         bgColor = '#93c5fd';
                         borderColor = '#60a5fa';
-                        textColor = '#1e3a8a';
+                        textColor = '#0D6EFD';
                         title = 'Checked In Only';
                         break;
                     case 'upcoming':

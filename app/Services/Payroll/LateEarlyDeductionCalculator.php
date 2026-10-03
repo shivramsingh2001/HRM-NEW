@@ -43,7 +43,7 @@ class LateEarlyDeductionCalculator
      */
     public function calculate(User $employee, int $tenantId, string $yearMonth): array
     {
-        $policy = $this->policies->forTenantMonth($tenantId, $yearMonth);
+        $policy = $this->policies->forUserMonth($tenantId, (int) $employee->id, $yearMonth);
         $excess = $this->latePolicy->excessCounts($employee->id, $tenantId, $yearMonth);
         $calendarDays = Carbon::createFromFormat('Y-m', $yearMonth)->daysInMonth;
 

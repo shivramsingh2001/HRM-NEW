@@ -36,7 +36,7 @@
 
                 <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
                     <div>
-                        <h5 class="mb-1"><i class="feather-check-square me-2" style="color: var(--primary-mid);"></i> Action Items & Tasks</h5>
+                        <h5 class="mb-1"><i class="feather-check-square me-2" style="color: var(--icon-color, #0D6EFD);"></i> Action Items & Tasks</h5>
                         <p class="text-muted mb-0" style="font-size: 13px;">Create and assign tasks to team members</p>
                     </div>
                     <button type="button" class="btn-add-task btn" onclick="addTaskRow()">

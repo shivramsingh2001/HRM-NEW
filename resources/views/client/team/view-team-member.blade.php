@@ -90,7 +90,7 @@
         }
 
         .total-card .stats-icon-wrapper i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
             font-size: 15px;
         }
 
@@ -162,253 +162,19 @@
             margin-bottom: 0;
         }
 
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            padding: 10px 14px;
-            margin-bottom: 14px;
-            box-shadow: var(--shadow-sm);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11.5px;
-            font-weight: 600;
-            color: #0f172a;
-        }
-
-        .filter-title i {
-            color: var(--primary);
-            font-size: 12px;
-            background: var(--primary-light);
-            padding: 5px;
-            border-radius: 8px;
-        }
-
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .filter-item {
-            flex: 0 0 auto;
-        }
-
-        .filter-item.search {
-            min-width: 220px;
-        }
-
-        .search-wrapper {
-            position: relative;
-        }
-
-        .search-wrapper i {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 12px;
-        }
-
-        .search-wrapper input {
-            height: 34px;
-            width: 100%;
-            padding: 6px 12px 6px 30px;
-            font-size: 11.5px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-            color: #0f172a;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-
-        .search-wrapper input:focus {
-            border-color: var(--primary-mid);
-            outline: none;
-            background: white;
-            box-shadow: var(--shadow-focus);
-        }
-
-        .filter-item.date-picker {
-            min-width: 160px;
-        }
-
-        .filter-item.date-picker input {
-            height: 34px;
-            padding: 6px 12px;
-            font-size: 11.5px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-            transition: all 0.3s;
-            width: 100%;
-            color: #0f172a;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        .filter-item.date-picker input:hover {
-            background: white;
-            border-color: #cbd5e1;
-        }
-
-        .filter-item.date-picker input:focus {
-            border-color: var(--primary-mid);
-            outline: none;
-            background: white;
-            box-shadow: var(--shadow-focus);
-        }
-
-        .filter-item.status-filter,
-        .filter-item.branch-filter {
-            min-width: 180px;
-        }
-
-        .filter-item.status-filter select,
-        .filter-item.branch-filter select {
-            width: 100%;
-            height: 34px;
-            padding: 6px 32px 6px 12px;
-            font-size: 11.5px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 10px center;
-            background-size: 14px;
-            appearance: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: #0f172a;
-            font-weight: 500;
-        }
-
-        .filter-item.status-filter select:hover,
-        .filter-item.branch-filter select:hover {
-            background-color: white;
-            border-color: #cbd5e1;
-        }
-
-        .filter-item.status-filter select:focus,
-        .filter-item.branch-filter select:focus {
-            border-color: var(--primary-mid);
-            outline: none;
-            background-color: white;
-            box-shadow: var(--shadow-focus);
-        }
-
-        .reset-btn {
-            height: 34px;
-            padding: 0 14px;
-            background: white;
-            color: #64748b;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 11.5px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.3s;
-            white-space: nowrap;
-        }
-
-        .reset-btn:hover {
-            background: var(--primary-light);
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .reset-btn i {
-            font-size: 12px;
-        }
-
-        /* ==================== TABLE STYLES ==================== */
-        .card {
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            box-shadow: var(--shadow-sm);
-            overflow: hidden;
-        }
-
-        .card-header {
-            background: white;
-            border-bottom: 1px solid #f1f5f9;
-            padding: 14px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #0f172a;
-            margin: 0;
-        }
 
         .card-body {
             padding: 0;
         }
 
-        .card-footer {
-            background: white;
-            border-top: 1px solid #f1f5f9;
-            padding: 12px 20px;
-        }
 
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table thead th {
-            background: #f8fafc;
-            font-weight: 600;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #475569;
-            padding: 10px 12px;
-            white-space: nowrap;
-            border-bottom: 2px solid #e2e8f0;
-        }
 
-        /* font-size and cell padding are centralized in client.layout.head
-                   (11.5px / 3px 15px) — no local override, so this table matches
-                   the project-wide compact table style. */
-        .table tbody td {
-            vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
-            color: #1e293b;
-        }
 
-        .table tbody tr {
-            transition: all 0.2s;
-        }
 
-        .table tbody tr:hover td {
-            background-color: #f8fafc;
-        }
 
-        .table tbody tr:last-child td {
-            border-bottom: none;
-        }
 
         .table-responsive {
             border-radius: 0 0 12px 12px;
@@ -526,52 +292,11 @@
             background: #f59e0b;
         }
 
-        /* Action Buttons */
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            border: 1px solid transparent;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            cursor: pointer;
-            font-size: 12px;
-            text-decoration: none;
-        }
 
-        .action-btn.view-btn {
-            background: var(--primary-light);
-            color: var(--primary);
-            border-color: var(--border-focus);
-        }
 
-        .action-btn.view-btn:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
-        }
 
-        .action-btn.mark-btn {
-            background: var(--primary-light);
-            color: var(--primary);
-            border-color: var(--border-focus);
-        }
 
-        .action-btn.mark-btn:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
-        }
 
-        .action-btn.mark-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
 
         /* ==================== MODAL STYLES ==================== */
         .modal-content {
@@ -626,7 +351,7 @@
 
         .form-control:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.18);
         }
 
         .form-control.is-invalid {
@@ -821,97 +546,25 @@
 
         .attendance-status-select:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.18);
             outline: none;
         }
 
-        /* ==================== PAGINATION STYLES ==================== */
-        .pagination-wrapper {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
 
-        .pagination-info {
-            font-size: 11.5px;
-            color: #64748b;
-        }
 
-        .pagination-info strong {
-            color: #0f172a;
-        }
 
-        .pagination {
-            display: flex;
-            gap: 4px;
-            margin: 0;
-            padding: 0;
-            list-style: none;
-        }
 
-        .pagination .page-item {
-            display: inline-block;
-        }
 
-        .pagination .page-link {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 36px;
-            height: 36px;
-            padding: 0 10px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            background: white;
-            color: #475569;
-            font-size: 11.5px;
-            font-weight: 500;
-            transition: all 0.2s;
-            text-decoration: none;
-        }
 
-        .pagination .page-link:hover {
-            background: #f1f5f9;
-            border-color: #cbd5e1;
-            color: #0f172a;
-        }
 
-        .pagination .active .page-link {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
 
-        .pagination .active .page-link:hover {
-            background: var(--primary-dark);
-            border-color: var(--primary-dark);
-        }
 
-        .pagination .disabled .page-link {
-            opacity: 0.5;
-            pointer-events: none;
-        }
 
         /* Responsive Pagination */
         @media (max-width: 768px) {
-            .pagination-wrapper {
-                flex-direction: column;
-                align-items: stretch;
-                text-align: center;
-            }
 
-            .pagination {
-                justify-content: center;
-                flex-wrap: wrap;
-            }
 
-            .pagination .page-link {
-                min-width: 32px;
-                height: 32px;
-                font-size: 12px;
-                padding: 0 8px;
-            }
+
         }
 
         @media (max-width: 480px) {
@@ -933,39 +586,6 @@
                 gap: 10px;
             }
 
-            .filter-wrapper {
-                padding: 12px 14px;
-            }
-
-            .filter-row {
-                flex-direction: column;
-            }
-
-            .filter-item {
-                width: 100%;
-            }
-
-            .filter-item.date-picker,
-            .filter-item.status-filter {
-                min-width: auto;
-            }
-
-            .reset-btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .filter-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .table th,
-            .table td {
-                padding: 6px 8px;
-                font-size: 11px;
-                white-space: nowrap;
-            }
 
             .employee-info {
                 min-width: 100px;
@@ -985,11 +605,6 @@
                 font-size: 8px;
             }
 
-            .action-btn {
-                width: 28px;
-                height: 28px;
-                font-size: 12px;
-            }
 
             .modal-dialog {
                 margin: 10px;
@@ -1033,17 +648,7 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-             <div class="page-header-title">
-                <h5 class="m-b-10">Team Attendance</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Team Attendance</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Team Attendance" />
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Statistics Cards -->
@@ -1179,20 +784,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="feather-users me-2" style="color: var(--primary);"></i>
-                            Team Members -
-                            <span style="color: var(--primary);">
-                                {{ \Carbon\Carbon::parse(request('date', date('Y-m-d')))->format('d F Y') }}
-                            </span>
-                        </h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge badge-info-custom">
-                                <i class="feather-list me-1"></i>Total: {{ $teamData->total() ?? count($teamData) }}
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table" id="teamTable">
@@ -1375,18 +966,7 @@
                         </div>
                     </div>
                     @if ($teamData->count() > 0)
-                        <div class="card-footer">
-                            <div class="pagination-wrapper">
-                                <div class="pagination-info">
-                                    Showing <strong>{{ $teamData->firstItem() }}</strong> to
-                                    <strong>{{ $teamData->lastItem() }}</strong>
-                                    of <strong>{{ $teamData->total() }}</strong> members
-                                </div>
-                                <div>
-                                    {{ $teamData->appends(request()->query())->links('pagination::bootstrap-4') }}
-                                </div>
-                            </div>
-                        </div>
+                        <x-ui.pagination-footer :paginator="$teamData" label="members" />
                     @endif
                 </div>
             </div>
@@ -1401,7 +981,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="feather-edit-2 me-2" style="color: var(--primary);"></i>
+                        <i class="feather-edit-2 me-2" style="color: var(--icon-color, #0D6EFD);"></i>
                         Mark Attendance
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -1459,7 +1039,7 @@
                         <!-- Attendance Status Selection -->
                         <div class="mb-3">
                             <label class="form-label">
-                                <i class="feather-check-circle me-1" style="color: var(--primary);"></i>
+                                <i class="feather-check-circle me-1" style="color: var(--icon-color, #0D6EFD);"></i>
                                 Attendance Status <span class="required">*</span>
                             </label>
                             <select class="attendance-status-select form-control" name="status" id="attendanceStatus">
@@ -1478,7 +1058,7 @@
                         <!-- Optional date range: apply the same status from `date` through `end_date` -->
                         <div class="mb-3">
                             <label class="form-label">
-                                <i class="feather-calendar me-1" style="color: var(--primary);"></i>
+                                <i class="feather-calendar me-1" style="color: var(--icon-color, #0D6EFD);"></i>
                                 Apply through <span class="text-muted" style="font-size: 11px;">(optional — leave blank
                                     for a single day)</span>
                             </label>
@@ -1494,7 +1074,7 @@
                         <div class="row g-3" id="clockTimeFields">
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    <i class="feather-clock me-1" style="color: var(--primary);"></i>
+                                    <i class="feather-clock me-1" style="color: var(--icon-color, #0D6EFD);"></i>
                                     Clock In Time <span class="required">*</span>
                                 </label>
                                 <input type="time" class="form-control" name="clock_in" id="clockInTime">
@@ -1502,7 +1082,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    <i class="feather-clock me-1" style="color: var(--primary);"></i>
+                                    <i class="feather-clock me-1" style="color: var(--icon-color, #0D6EFD);"></i>
                                     Clock Out Time <span class="required">*</span>
                                 </label>
                                 <input type="time" class="form-control" name="clock_out" id="clockOutTime">
@@ -1512,7 +1092,7 @@
 
                         <div class="mt-3" id="leaveTypeField" style="display: none;">
                             <label class="form-label">
-                                <i class="feather-calendar me-1" style="color: var(--primary);"></i>
+                                <i class="feather-calendar me-1" style="color: var(--icon-color, #0D6EFD);"></i>
                                 Leave Type <span class="required">*</span>
                             </label>
                             <select class="form-control" name="leave_type_id" id="leaveTypeId">
@@ -1531,7 +1111,7 @@
 
                         <div class="mt-3">
                             <label class="form-label">
-                                <i class="feather-message-square me-1" style="color: var(--primary);"></i>
+                                <i class="feather-message-square me-1" style="color: var(--icon-color, #0D6EFD);"></i>
                                 Remarks
                             </label>
                             <textarea class="form-control" name="remarks" id="attendanceRemarks" rows="2"

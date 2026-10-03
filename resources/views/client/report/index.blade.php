@@ -3,7 +3,7 @@
 @section('style')
     <style>
         /* Report tabs — compact segmented pill bar: ONE rounded outer border, equal-width segments,
-           active = blue gradient (same #1e3a8a→#2563eb as the theme buttons) / white text, inactive = white / dark text. */
+           active = blue gradient (same #0D6EFD→#0D6EFD as the theme buttons) / white text, inactive = white / dark text. */
         #reportTab {
             display: flex;
             flex-wrap: nowrap;
@@ -45,13 +45,13 @@
 
         #reportTab .nav-link i { font-size: 12px; margin: 0 !important; }
 
-        #reportTab .nav-link:hover:not(.active) { background: #f1f5fd; color: #1e3a8a; }
+        #reportTab .nav-link:hover:not(.active) { background: #f1f5fd; color: #0D6EFD; }
 
         #reportTab .nav-link.active,
         #reportTab .nav-link.active:hover {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
-            box-shadow: 0 2px 6px rgba(30, 58, 138, .25);
+            box-shadow: 0 2px 6px rgba(13, 110, 253, .25);
         }
 
         @media (max-width: 767.98px) {
@@ -87,7 +87,7 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, #1e3a8a, #2563eb);
+            background: linear-gradient(90deg, #0D6EFD, #0D6EFD);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -121,22 +121,22 @@
 
         .card-icon.primary {
             background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(79, 70, 229, 0.05));
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .card-icon.success {
             background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.05));
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .card-icon.info {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.05));
-            color: #3b82f6;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .card-icon.warning {
             background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.05));
-            color: #2563eb;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .card-icon.danger {
@@ -146,7 +146,7 @@
 
         .card-icon.purple {
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0.05));
-            color: #2563eb;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .report-card .card-title {
@@ -184,23 +184,23 @@
         }
 
         .badge-primary {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .badge-success {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .badge-info {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .badge-warning {
             background: #bfd3f7;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .badge-danger {
@@ -209,8 +209,8 @@
         }
 
         .badge-purple {
-            background: #e3edfe;
-            color: #16295e;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .report-card .btn-generate {
@@ -218,7 +218,7 @@
             border-radius: 6px;
             font-size: 9.5px;
             font-weight: 600;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD) !important;
             color: white;
             border: none;
             transition: all 0.3s;
@@ -230,7 +230,7 @@
         }
 
         .report-card .btn-generate:hover {
-            background: #16295e;
+            background: #0B5ED7;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
         }
@@ -283,23 +283,23 @@
         }
 
         .quick-stat-icon.purple {
-            background: #e3edfe;
-            color: #2563eb;
+            background: #EFF6FF;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .quick-stat-icon.blue {
             background: #dbeafe;
-            color: #3b82f6;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .quick-stat-icon.green {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .quick-stat-icon.orange {
             background: #bfd3f7;
-            color: #2563eb;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .quick-stat-content {
@@ -400,24 +400,13 @@
 @endsection
 
 @section('content-area')
-     <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Report</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Report</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <span class="badge badge-info-custom">
-                    <i class="feather-calendar me-1"></i> {{ now()->format('F Y') }}
-                </span>
-            </div>
-        </div>
-    </div>
+     <x-ui.page-header title="Report">
+         <x-slot:actions>
+             <span class="badge badge-info-custom">
+                 <i class="feather-calendar me-1"></i> {{ now()->format('F Y') }}
+             </span>
+         </x-slot:actions>
+     </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         @php
@@ -1052,9 +1041,9 @@
             <div class="col-12">
                 <div class="alert alert-info" style="border-radius: 10px; border: 1px solid #dbeafe; background: #eff6ff;">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="feather-info" style="font-size: 14px; color: #3b82f6;"></i>
+                        <i class="feather-info" style="font-size: 14px; color: var(--icon-color, #0D6EFD);"></i>
                         <div>
-                            <h6 class="mb-0" style="font-weight: 600; color: #1e40af; font-size: 10.5px;">All Reports Available</h6>
+                            <h6 class="mb-0" style="font-weight: 600; color: #0D6EFD; font-size: 10.5px;">All Reports Available</h6>
                             <p class="mb-0" style="color: #3b82f6; font-size: 10px;">
                                 Generate attendance, project, task, expense, asset, payroll and leave reports with real-time data. Reports can be exported as CSV for further analysis.
                             </p>

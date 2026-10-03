@@ -1,17 +1,7 @@
 @extends('client.layout.master')
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Payroll Arrears</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.57rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Payroll Arrears</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header class="content-area-header sticky-top" title="Payroll Arrears" />
 
     <div class="content-area-body">
         @if (session('success'))
@@ -27,7 +17,8 @@
             as a single "Arrears" line item.
         </div>
 
-        <form method="GET" class="mb-3">
+        <x-ui.filter-card title="Filter Arrears">
+<form method="GET">
             <div class="row">
                 <div class="col-md-3">
                     <select name="status" class="form-control" onchange="this.form.submit()">
@@ -38,6 +29,7 @@
                 </div>
             </div>
         </form>
+</x-ui.filter-card>
 
         <div class="card">
             <div class="card-body p-0">
@@ -62,7 +54,7 @@
                                         @if ($row->user)
                                             <div class="employee-info">
                                                 <div class="employee-avatar"
-                                                    style="background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
+                                                    style="background:#0D6EFD;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
                                                     {{ strtoupper(substr($row->user->name, 0, 2)) }}</div>
                                                 <div class="employee-details">
                                                     <div class="employee-name">

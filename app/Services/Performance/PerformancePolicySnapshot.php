@@ -75,6 +75,45 @@ final class PerformancePolicySnapshot
         );
     }
 
+    /** Every setting, keyed like the performance_policies table. */
+    public function toArray(): array
+    {
+        return [
+            'weight_attendance' => $this->weightAttendance,
+            'weight_task_completion' => $this->weightTaskCompletion,
+            'weight_task_ontime' => $this->weightTaskOntime,
+            'weight_project_participation' => $this->weightProjectParticipation,
+            'weight_regularization' => $this->weightRegularization,
+            'weight_manager_rating' => $this->weightManagerRating,
+            'late_grace_minutes' => $this->lateGraceMinutes,
+            'late_penalty_per_incident' => $this->latePenaltyPerIncident,
+            'late_penalty_cap' => $this->latePenaltyCap,
+            'early_departure_grace_minutes' => $this->earlyDepartureGraceMinutes,
+            'early_departure_penalty_per_incident' => $this->earlyDeparturePenaltyPerIncident,
+            'early_departure_penalty_cap' => $this->earlyDeparturePenaltyCap,
+            'regularization_penalty_approved' => $this->regularizationPenaltyApproved,
+            'regularization_penalty_rejected' => $this->regularizationPenaltyRejected,
+            'regularization_penalty_pending' => $this->regularizationPenaltyPending,
+            'regularization_penalty_cap' => $this->regularizationPenaltyCap,
+            'task_overdue_penalty_per_task' => $this->taskOverduePenaltyPerTask,
+            'task_overdue_penalty_cap' => $this->taskOverduePenaltyCap,
+            'min_tasks_for_task_score' => $this->minTasksForTaskScore,
+        ];
+    }
+
+    /**
+     * A copy with some columns replaced — $columns is keyed like the
+     * performance_policies table (one employee's custom values).
+     */
+    public function withOverrides(array $columns): self
+    {
+        return self::fromRow(
+            ['tenant_id' => $this->tenantId, 'effective_from' => $this->effectiveFrom]
+            + array_intersect_key($columns, $this->toArray())
+            + $this->toArray()
+        );
+    }
+
     /** The 5 daily-grain weights, as a plain map — used by PerformanceScoreCalculator::blend(). */
     public function dailyWeights(): array
     {

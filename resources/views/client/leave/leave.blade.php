@@ -18,8 +18,8 @@
 
     .avatar-text.avatar-xl { background: var(--lv-soft) !important; color: var(--lv-primary) !important; }
     .fs-24 { font-size: 17px !important; }
-    .card { border-color: var(--lv-border); }
-    .card-title { font-size: 13px; }
+
+
 
     #customerList1 { font-size: 11.5px; }
     #customerList1 th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: var(--lv-text-soft); padding: 8px 10px; }
@@ -34,43 +34,10 @@
     .btn-primary:hover { background: var(--lv-primary); border-color: var(--lv-primary); }
     .form-label { font-size: 11.5px; font-weight: 600; color: var(--lv-text-soft); }
 
-    /* ==================== COMPACT FILTER SECTION (matches Team Leave Applications) ==================== */
-    .filter-wrapper {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid var(--lv-border);
-        padding: 16px 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-    }
 
-    .filter-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-    }
 
-    .filter-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--lv-text);
-    }
 
-    .filter-title i { color: var(--lv-primary); font-size: 13px; }
 
-    .filter-title span {
-        background: var(--lv-soft);
-        color: var(--lv-primary);
-        font-size: 11px;
-        font-weight: 600;
-        padding: 2px 8px;
-        border-radius: 20px;
-        margin-left: 6px;
-    }
 
     .clear-all-link {
         display: flex;
@@ -87,15 +54,8 @@
     .clear-all-link:hover { background: var(--lv-soft); color: var(--lv-primary); }
     .clear-all-link i { font-size: 12px; }
 
-    .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
-    }
 
-    .filter-item { flex: 0 0 auto; min-width: 160px; }
-    .filter-item.narrow { min-width: auto; }
+
 
     .filter-select,
     .filter-item .form-control {
@@ -122,31 +82,14 @@
     .filter-item .form-control:focus {
         background-color: white;
         border-color: var(--lv-primary);
-        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         outline: none;
     }
 
     .filter-select:hover,
     .filter-item .form-control:hover { background-color: white; border-color: #94a3b8; }
 
-    .reset-btn {
-        height: 36px;
-        padding: 0 12px;
-        background: white;
-        color: var(--lv-text-soft);
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        text-decoration: none;
-        transition: all 0.2s;
-        white-space: nowrap;
-    }
 
-    .reset-btn:hover { background: #f8fafc; border-color: #94a3b8; color: var(--lv-text); }
 
     .active-filters {
         margin-top: 12px;
@@ -181,7 +124,7 @@
         gap: 4px;
     }
 
-    .filter-tag i { color: var(--lv-primary); font-size: 11px; }
+    .filter-tag i { color: var(--icon-color, #0D6EFD); font-size: 11px; }
 
     .filter-tag .remove-tag {
         color: #94a3b8;
@@ -205,29 +148,8 @@
     .filter-tag.clear-all:hover { background: var(--lv-primary); color: white; }
     .filter-tag.clear-all i { color: currentColor; }
 
-    /* ==================== DIRECT ACTION ICONS (no 3-dot dropdown) ==================== */
-    .action-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8fafc;
-        color: var(--lv-text-soft);
-        border: 1px solid #e2e8f0;
-        transition: all 0.2s;
-    }
 
-    .action-btn:hover {
-        background: white;
-        color: var(--lv-primary);
-        border-color: var(--lv-primary);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(30, 58, 138, 0.1);
-    }
 
-    .action-btn i { font-size: 12px; }
 
     /* ==================== STATS CARDS (matches Team Leave Applications) ==================== */
     .stats-grid {
@@ -266,7 +188,7 @@
         flex: none;
     }
 
-    .stats-icon i { font-size: 12px; color: var(--lv-primary); }
+    .stats-icon i { font-size: 12px; color: var(--icon-color, #0D6EFD); }
 
     .stats-info h3 {
         font-size: 15px;
@@ -288,10 +210,10 @@
     }
 
     @media (max-width: 768px) {
-        .filter-wrapper { padding: 12px; }
-        .filter-row { flex-direction: column; align-items: stretch; }
-        .filter-item { width: 100%; }
-        .filter-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+
+
+
         .stats-grid { grid-template-columns: 1fr; }
     }
 </style>
@@ -299,42 +221,18 @@
 
 @section('content-area')
     <!-- [ page-header ] start -->
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Leave Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
-                <li class="breadcrumb-item">View Leaves</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex d-md-none">
-                    <a href="#" class="page-header-right-close-toggle">
-                        <i class="feather-arrow-left me-2"></i>
-                        <span>Back</span>
-                    </a>
-                </div>
-                <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                    <a href="{{ route('leave-credit.my-transactions') }}" class="btn btn-primary">
-                        <i class="feather-file-text me-2"></i>
-                        <span>My Leave Report</span>
-                    </a>
-                    <a href="{{ route('leave.apply') }}" class="btn btn-primary">
-                        <i class="feather-plus me-2"></i>
-                        <span>Apply Leave</span>
-                    </a>
-                </div>
-            </div>
-            <div class="d-md-none d-flex align-items-center">
-                <a href="#" class="page-header-right-open-toggle">
-                    <i class="feather-align-right fs-20"></i>
-                </a>
-            </div>
-        </div>
-    </div>
+    <x-ui.page-header title="Leave Management" current="View Leaves">
+        <x-slot:actions>
+            <a href="{{ route('leave-credit.my-transactions') }}" class="btn btn-primary">
+                <i class="feather-file-text me-2"></i>
+                <span>My Leave Report</span>
+            </a>
+            <a href="{{ route('leave.apply') }}" class="btn btn-primary">
+                <i class="feather-plus me-2"></i>
+                <span>Apply Leave</span>
+            </a>
+        </x-slot:actions>
+    </x-ui.page-header>
     <!-- [ page-header ] end -->
     <!-- [ Main Content ] start -->
     <div class="main-content" style="padding: 20px !important;">
@@ -360,7 +258,7 @@
             </div>
             <div class="stats-card">
                 <div class="stats-icon" style="background: rgba(59, 130, 246, 0.15);">
-                    <i class="feather-user-check" style="color: #3b82f6;"></i>
+                    <i class="feather-user-check" style="color: var(--icon-color, #0D6EFD);"></i>
                 </div>
                 <div class="stats-info">
                     <h3>{{ $approvedLeave }}</h3>
@@ -368,8 +266,8 @@
                 </div>
             </div>
             <div class="stats-card">
-                <div class="stats-icon" style="background: rgba(30, 58, 138, 0.15);">
-                    <i class="feather-user-plus" style="color: #1e3a8a;"></i>
+                <div class="stats-icon" style="background: rgba(13, 110, 253, 0.15);">
+                    <i class="feather-user-plus" style="color: var(--icon-color, #0D6EFD);"></i>
                 </div>
                 <div class="stats-info">
                     <h3>{{ $unpaidLeave }}</h3>
@@ -493,9 +391,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Leave Applications</h5>
-                    </div>
                     <div class="card-body p-0">
                         <!-- Remove the old status filter div here -->
                         <!-- <div class="options px-4 pt-4"> ... </div> -->

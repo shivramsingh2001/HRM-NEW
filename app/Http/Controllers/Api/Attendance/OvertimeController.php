@@ -189,6 +189,11 @@ class OvertimeController extends Controller
             $settings = OvertimeSetting::where('tenant_id', $tenantId)
                 ->orWhereNull('tenant_id')
                 ->first();
+            // This employee's custom overtime rules (Employee 360 → Policies) win over the company's.
+            $settings = app(\App\Services\EmployeePolicyService::class)->overtime((int) $tenantId, (int) $userId, $settings);
+            if ($refusal = app(\App\Services\EmployeePolicyService::class)->overtimeRefusal((int) $tenantId, (int) $userId, (string) $request->date, (float) $request->overtime_hours)) {
+                return response()->json(['success' => false, 'message' => $refusal], 200);
+            }
 
             // Validate against max hours per day
             if ($settings && $settings->max_hours_per_day) {
@@ -298,6 +303,11 @@ class OvertimeController extends Controller
             $settings = OvertimeSetting::where('tenant_id', $tenantId)
                 ->orWhereNull('tenant_id')
                 ->first();
+            // This employee's custom overtime rules (Employee 360 → Policies) win over the company's.
+            $settings = app(\App\Services\EmployeePolicyService::class)->overtime((int) $tenantId, (int) $userId, $settings);
+            if ($refusal = app(\App\Services\EmployeePolicyService::class)->overtimeRefusal((int) $tenantId, (int) $userId, (string) $request->date, (float) $request->overtime_hours, (int) $overtimeRequest->id)) {
+                return response()->json(['success' => false, 'message' => $refusal], 200);
+            }
 
 
             if ($settings && $settings->max_hours_per_day) {
@@ -602,6 +612,8 @@ class OvertimeController extends Controller
             $settings = OvertimeSetting::where('tenant_id', $tenantId)
                 ->orWhereNull('tenant_id')
                 ->first();
+            // This employee's custom overtime rules (Employee 360 → Policies) win over the company's.
+            $settings = app(\App\Services\EmployeePolicyService::class)->overtime((int) $tenantId, (int) $overtimeRequest->user_id, $settings);
 
             if ($settings && $settings->max_hours_per_day && $approvedHours > $settings->max_hours_per_day) {
                 return response()->json(200);

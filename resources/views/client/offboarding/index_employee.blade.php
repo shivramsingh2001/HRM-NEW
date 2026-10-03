@@ -21,7 +21,7 @@
         }
         .ob-card-header .ob-icon {
             width: 26px; height: 26px; border-radius: 7px; flex: none;
-            background: #e3edfe; color: #1e3a8a;
+            background: #EFF6FF; color: var(--icon-color, #0D6EFD);
             display: inline-flex; align-items: center; justify-content: center; font-size: 13px;
         }
         .ob-card-header h6 { font-size: 13px; font-weight: 700; color: #1a2236; margin: 0; }
@@ -29,17 +29,17 @@
         .ob-meta { font-size: 11.5px; color: #6b7385; margin-bottom: 4px; }
         .ob-btn {
             display: inline-flex; align-items: center; gap: 6px;
-            background: #1e3a8a; color: #fff; border: none;
+            background: #0D6EFD; color: #fff; border: none;
             font-size: 11.5px; font-weight: 500; padding: 6px 14px;
             border-radius: 8px; text-decoration: none; margin-top: 8px;
             transition: background .2s;
         }
-        .ob-btn:hover { background: #16295e; color: #fff; }
+        .ob-btn:hover { background: #0B5ED7; color: #fff; }
 
         /* ==================== HEADER SUBMIT BUTTON ==================== */
         .ob-header-btn {
             display: inline-flex; align-items: center; gap: 6px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff; border: none;
             font-size: 12.5px; font-weight: 500; padding: 7px 16px;
             border-radius: 8px; text-decoration: none; cursor: pointer;
@@ -57,14 +57,14 @@
             font-size: 12px; padding: 7px 10px; border-radius: 7px; border: 1px solid #dfe5f0;
         }
         .ui-drawer .form-control:focus {
-            border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30, 58, 138, .12);
+            border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12);
         }
         .ui-drawer .form-hint { font-size: 10.5px; color: #6b7385; margin-top: 3px; display: block; }
         .ui-drawer .error-text { font-size: 10.5px; color: #dc3545; display: block; margin-top: 2px; }
         #submitResignationDrawer .hint-bar {
             display: flex; align-items: flex-start; gap: 8px;
             padding: 9px 12px; border-radius: 8px; background: #f8fafc;
-            border-left: 3px solid var(--primary-mid, #1e3a8a);
+            border-left: 3px solid var(--primary-mid, #0D6EFD);
             margin-bottom: 14px; font-size: 11px; color: #475569;
         }
     </style>

@@ -17,7 +17,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             min-height: 100vh;
             padding: 20px;
         }
@@ -62,7 +62,7 @@
         }
 
         .job-meta-item i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
 
@@ -74,7 +74,7 @@
             font-weight: 600;
         }
 
-        .job-type-full_time { background: #dbeafe; color: #1e40af; }
+        .job-type-full_time { background: #dbeafe; color: #0D6EFD; }
         .job-type-part_time { background: #fef3c7; color: #92400e; }
         .job-type-contract { background: #f1f5f9; color: #475569; }
         .job-type-internship { background: #e0e7ff; color: #3730a3; }
@@ -113,7 +113,7 @@
             color: #1e293b;
             margin-bottom: 12px;
             padding-bottom: 6px;
-            border-bottom: 2px solid #1e3a8a;
+            border-bottom: 2px solid #0D6EFD;
             display: inline-block;
         }
 
@@ -159,7 +159,7 @@
 
         input:focus, select:focus, textarea:focus {
             outline: none;
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
         }
 
@@ -191,7 +191,7 @@
         }
 
         .file-upload:hover {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             background: #f8fafc;
         }
 
@@ -201,7 +201,7 @@
 
         .file-upload-icon {
             font-size: 32px;
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             margin-bottom: 5px;
         }
 
@@ -213,14 +213,14 @@
         .file-name {
             margin-top: 5px;
             font-size: 10px;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         /* Submit Button - Compact */
         .submit-btn {
             width: 100%;
             padding: 10px;
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
             border: none;
             border-radius: 10px;
@@ -317,7 +317,7 @@
         }
 
         .btn-primary {
-            background: #1e3a8a;
+            background: #0D6EFD;
             border: none;
             padding: 8px 20px;
             font-size: 12px;

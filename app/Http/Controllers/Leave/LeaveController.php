@@ -163,22 +163,14 @@ class LeaveController extends Controller
 
             // Per-type policy: minimum notice period / max consecutive days
             // (leave_types columns — nullable, so existing types with
-            // neither configured are completely unaffected).
-            if ($leaveType && $leaveType->min_notice_days) {
-                $noticeGiven = now()->startOfDay()->diffInDays($start->copy()->startOfDay(), false);
-                if ($noticeGiven < $leaveType->min_notice_days) {
-                    return back()
-                        ->withInput()
-                        ->with('error', "{$leaveType->name} requires at least {$leaveType->min_notice_days} day(s) notice.");
-                }
-            }
-
-            if ($leaveType && $leaveType->max_consecutive_days) {
-                $consecutiveDays = abs($start->diffInDays($end)) + 1;
-                if ($consecutiveDays > $leaveType->max_consecutive_days) {
-                    return back()
-                        ->withInput()
-                        ->with('error', "{$leaveType->name} cannot be taken for more than {$leaveType->max_consecutive_days} consecutive day(s).");
+            // neither configured are completely unaffected). An employee's
+            // custom values (Employee 360 → Policies) win over the type's,
+            // and a type switched off for them is refused.
+            if ($leaveType) {
+                $refusal = app(\App\Services\EmployeePolicyService::class)
+                    ->leaveRefusal((int) $user->tenant_id, (int) $user->id, $leaveType, $start, $end);
+                if ($refusal) {
+                    return back()->withInput()->with('error', $refusal);
                 }
             }
 

@@ -59,7 +59,7 @@
         }
 
         .stats-icon-wrapper i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
             font-size: 15px;
         }
 
@@ -90,148 +90,23 @@
             margin-bottom: 0;
         }
 
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            padding: 10px 14px;
-            margin-bottom: 14px;
-            box-shadow: var(--shadow-sm);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11.5px;
-            font-weight: 600;
-            color: #0f172a;
-        }
 
-        .filter-title i {
-            color: var(--primary);
-            font-size: 12px;
-            background: var(--primary-light);
-            padding: 5px;
-            border-radius: 8px;
-        }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-        }
 
-        .filter-item.search {
-            min-width: 220px;
-        }
 
-        .search-wrapper {
-            position: relative;
-        }
 
-        .search-wrapper i {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 12px;
-        }
 
-        .search-wrapper input {
-            height: 34px;
-            width: 100%;
-            padding: 6px 12px 6px 30px;
-            font-size: 11.5px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-            color: #0f172a;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
 
-        .search-wrapper input:focus {
-            border-color: var(--primary-mid);
-            outline: none;
-            background: white;
-            box-shadow: var(--shadow-focus);
-        }
 
-        .filter-item.select-filter {
-            min-width: 160px;
-        }
 
-        .filter-item.select-filter select {
-            width: 100%;
-            height: 34px;
-            padding: 6px 32px 6px 12px;
-            font-size: 11.5px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 10px center;
-            background-size: 14px;
-            appearance: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: #0f172a;
-            font-weight: 500;
-        }
 
-        .filter-item.select-filter select:hover {
-            background-color: white;
-            border-color: #cbd5e1;
-        }
 
-        .filter-item.select-filter select:focus {
-            border-color: var(--primary-mid);
-            outline: none;
-            background-color: white;
-            box-shadow: var(--shadow-focus);
-        }
 
-        .reset-btn {
-            height: 34px;
-            padding: 0 14px;
-            background: white;
-            color: #64748b;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 11.5px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.3s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover {
-            background: var(--primary-light);
-            border-color: var(--primary);
-            color: var(--primary);
-        }
 
-        .reset-btn i {
-            font-size: 12px;
-        }
 
         /* ==================== REGISTER ASSET BUTTON ==================== */
         .btn-register-asset {
@@ -245,7 +120,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, .25);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, .25);
             transition: all .2s ease;
         }
 
@@ -253,34 +128,11 @@
             background: var(--primary-dark);
             color: white;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, .35);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, .35);
         }
 
-        /* ==================== TABLE / CARD ==================== */
-        .card {
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            box-shadow: var(--shadow-sm);
-            overflow: hidden;
-        }
 
-        .card-header {
-            background: white;
-            border-bottom: 1px solid #f1f5f9;
-            padding: 14px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
 
-        .card-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #0f172a;
-            margin: 0;
-        }
 
         .badge-info-custom {
             background: var(--primary-light) !important;
@@ -298,21 +150,7 @@
             vertical-align: middle;
         }
 
-        .table thead th {
-            background: #f8fafc;
-            font-weight: 600;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #475569;
-            padding: 10px 12px;
-            white-space: nowrap;
-            border-bottom: 2px solid #e2e8f0;
-        }
 
-        .table tbody tr:hover td {
-            background-color: #f8fafc;
-        }
 
         .asset-info {
             display: flex;
@@ -361,29 +199,7 @@
             font-weight: 600;
         }
 
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            border: 1px solid transparent;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            cursor: pointer;
-            font-size: 12px;
-            text-decoration: none;
-            background: var(--primary-light);
-            color: var(--primary);
-            border-color: var(--border-focus);
-        }
 
-        .action-btn:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
-        }
 
         .action-btn-group {
             display: flex;
@@ -411,7 +227,7 @@
         .action-btn-sm:hover {
             background: var(--primary);
             color: white;
-            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
         }
 
         .action-btn-sm.danger {
@@ -442,22 +258,9 @@
                 gap: 10px;
             }
 
-            .filter-wrapper {
-                padding: 12px 14px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
 
-            .reset-btn {
-                width: 100%;
-                justify-content: center;
-            }
         }
     </style>
 @endsection
@@ -600,15 +403,6 @@
 
         <!-- Assets Table -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title">
-                    <i class="feather-hard-drive me-2" style="color: var(--primary);"></i>
-                    Assets
-                </h5>
-                <span class="badge badge-info-custom">
-                    <i class="feather-list me-1"></i>Total: {{ $assets->total() ?? count($assets) }}
-                </span>
-            </div>
             <div class="card-body p-0">
                 @if ($assets->isEmpty())
                     <x-ui.empty-state icon="hard-drive" title="No assets found" subtitle="Register your first asset or adjust the filters above." />

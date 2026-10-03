@@ -2,33 +2,33 @@
 
 @section('style')
 <style>
-    .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #dfe5f0; }
+    .personal-info .input-group-text { background: #EFF6FF; color: #0D6EFD; border-color: #dfe5f0; }
     .personal-info .form-control[readonly] { background: #f8fafc; border-color: #dfe5f0; color: #1a2236; }
-    .customers-nav-tabs .nav-link.active { color: #1e3a8a; border-color: #dfe5f0 #dfe5f0 #fff; }
+    .customers-nav-tabs .nav-link.active { color: #0D6EFD; border-color: #dfe5f0 #dfe5f0 #fff; }
     .customers-nav-tabs .nav-link { color: #6b7385; font-size: 11.5px; }
 
     .prj-badge { padding: 3px 10px; border-radius: 30px; font-size: 10px; font-weight: 700; letter-spacing: .2px; }
     .badge-ongoing { background: #3b82f6; color: #fff; }
-    .badge-pending { background: #93c5fd; color: #1e3a8a; }
-    .badge-hold { background: #2563eb; color: #fff; }
-    .badge-completed { background: #1e3a8a; color: #fff; }
+    .badge-pending { background: #93c5fd; color: #0D6EFD; }
+    .badge-hold { background: #0D6EFD; color: #fff; }
+    .badge-completed { background: #0D6EFD; color: #fff; }
     .badge-cancelled { background: #6b7385; color: #fff; }
-    .badge-priority-low { background: #e3edfe; color: #1e3a8a; }
-    .badge-priority-medium { background: #93c5fd; color: #1e3a8a; }
-    .badge-priority-high { background: #2563eb; color: #fff; }
-    .badge-priority-critical { background: #1e3a8a; color: #fff; }
+    .badge-priority-low { background: #EFF6FF; color: #0D6EFD; }
+    .badge-priority-medium { background: #93c5fd; color: #0D6EFD; }
+    .badge-priority-high { background: #0D6EFD; color: #fff; }
+    .badge-priority-critical { background: #0D6EFD; color: #fff; }
 
     .widget-card { background: #f4f6fb; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
     .widget-title { font-size: 9.5px; text-transform: uppercase; color: #6b7385; font-weight: 700; letter-spacing: .04em; margin-bottom: 8px; }
     .widget-value { font-size: 15px; font-weight: 700; color: #1a2236; }
     .widget-label { font-size: 9.5px; color: #6b7385; }
 
-    .progress-track { height: 8px; border-radius: 5px; background: #e3edfe; overflow: hidden; }
-    .progress-fill { height: 100%; background: #1e3a8a; }
+    .progress-track { height: 8px; border-radius: 5px; background: #EFF6FF; overflow: hidden; }
+    .progress-fill { height: 100%; background: #0D6EFD; }
 
-    .timeline-strip { position: relative; height: 6px; background: #e3edfe; border-radius: 4px; margin: 24px 0 8px; }
-    .timeline-fill { position: absolute; top: 0; left: 0; height: 100%; background: #1e3a8a; border-radius: 4px; }
-    .timeline-dot { position: absolute; top: -4px; width: 14px; height: 14px; border-radius: 50%; background: #1e3a8a; border: 2px solid #fff; box-shadow: 0 0 0 1px #dfe5f0; transform: translateX(-50%); }
+    .timeline-strip { position: relative; height: 6px; background: #EFF6FF; border-radius: 4px; margin: 24px 0 8px; }
+    .timeline-fill { position: absolute; top: 0; left: 0; height: 100%; background: #0D6EFD; border-radius: 4px; }
+    .timeline-dot { position: absolute; top: -4px; width: 14px; height: 14px; border-radius: 50%; background: #0D6EFD; border: 2px solid #fff; box-shadow: 0 0 0 1px #dfe5f0; transform: translateX(-50%); }
     .timeline-dot.milestone { background: #3b82f6; width: 10px; height: 10px; top: -2px; }
     .timeline-labels { display: flex; justify-content: space-between; font-size: 9px; color: #6b7385; }
 
@@ -56,19 +56,12 @@
 @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title"><h5 class="m-b-10">Project Management</h5></div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('project.index') }}">Projects</a></li>
-                <li class="breadcrumb-item">{{ $project->name }}</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto d-flex align-items-center gap-2">
+    <x-ui.page-header class="content-area-header sticky-top" title="Project Management" :current="$project->name" :crumbs="[['label' => 'Projects', 'url' => route('project.index')]]">
+        <x-slot:actions>
             <span class="prj-badge badge-priority-{{ $project->priority }}">{{ ucfirst($project->priority) }}</span>
             <span class="prj-badge badge-{{ $project->status }}">{{ ucfirst($project->status) }}</span>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="row">
@@ -125,7 +118,7 @@
                                                 <div class="input-group"><div class="input-group-text"><i class="feather-calendar"></i></div>
                                                     <input type="text" value="{{ \Carbon\Carbon::parse($project->deadline_date)->format('d M, Y') }}" class="form-control" readonly>
                                                     @if (\Carbon\Carbon::parse($project->deadline_date)->isPast() && !in_array($project->status, ['completed','cancelled']))
-                                                        <span class="input-group-text" style="background:#1e3a8a;color:#fff;"><i class="feather-alert-triangle"></i> Overdue</span>
+                                                        <span class="input-group-text" style="background:#0D6EFD;color:#fff;"><i class="feather-alert-triangle"></i> Overdue</span>
                                                     @endif
                                                 </div>
                                             </div>

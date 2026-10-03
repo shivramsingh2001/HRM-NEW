@@ -82,6 +82,13 @@ class ShiftReportController extends Controller
                             default => 'Unassigned',
                         },
                     ]);
+                    // Additional (2nd+) shifts that day get their own line.
+                    foreach ($cell['extra'] ?? [] as $x) {
+                        $this->writeCsvRow($handle, [
+                            $ds, $d->format('D'), $row['employee_id'], $row['name'], $row['department'], $row['branch'],
+                            $x['name'], $x['start'], $x['end'], 'Additional shift',
+                        ]);
+                    }
                 }
             }
 
@@ -150,8 +157,9 @@ class ShiftReportController extends Controller
         $assignments = $userIds === [] ? collect() : UserShift::where('tenant_id', $tenantId)
             ->whereIn('user_id', $userIds)
             ->whereBetween('date', [$dateStrings[0], end($dateStrings)])
-            ->get(['user_id', 'shift_id', 'date'])
-            ->keyBy(fn ($r) => $r->user_id . '|' . Carbon::parse($r->date)->format('Y-m-d'));
+            ->orderBy('is_additional')
+            ->get(['user_id', 'shift_id', 'date', 'is_additional'])
+            ->groupBy(fn ($r) => $r->user_id . '|' . Carbon::parse($r->date)->format('Y-m-d'));
 
         $weekoffs = $userIds === [] ? collect() : UserWeekoffs::where('tenant_id', $tenantId)
             ->where('status', 1)
@@ -171,17 +179,18 @@ class ShiftReportController extends Controller
                 $ds = $d->format('Y-m-d');
                 $isWeekOff = ($w = $weekoffs->get($user->id)) ? WeekOffPredicate::isWeekOff($w, $d) : false;
 
-                if ($customShifts) {
-                    $assigned = $assignments->get($user->id . '|' . $ds);
-                    $shift = $assigned ? $shifts->get($assigned->shift_id) : null;
-                } else {
-                    $shift = $isWeekOff ? null : $defaultShift;
-                }
+                // Primary shift first, then any additional (2nd+) shifts that day.
+                $dayShifts = $customShifts
+                    ? $assignments->get($user->id . '|' . $ds, collect())->map(fn ($a) => $shifts->get($a->shift_id))->filter()->values()
+                    : collect($isWeekOff || !$defaultShift ? [] : [$defaultShift]);
+                $shift = $dayShifts->first();
 
                 if ($shift) {
-                    $cells[$ds] = $this->shiftCell($shift);
+                    $cells[$ds] = $this->shiftCell($shift) + [
+                        'extra' => $dayShifts->slice(1)->map(fn ($x) => $this->shiftCell($x))->values()->all(),
+                    ];
                     $counts['shift']++;
-                    if ($shiftFilter !== null && (int) $shift->id === $shiftFilter) {
+                    if ($shiftFilter !== null && $dayShifts->contains(fn ($x) => (int) $x->id === $shiftFilter)) {
                         $hasFilteredShift = true;
                     }
                 } elseif ($isWeekOff) {
@@ -211,7 +220,8 @@ class ShiftReportController extends Controller
         }
 
         // Legend: only the shifts that actually appear this month.
-        $usedIds = $rows->flatMap(fn ($r) => collect($r['cells'])->where('type', 'shift')->pluck('shift_id'))->unique()->values();
+        $usedIds = $rows->flatMap(fn ($r) => collect($r['cells'])->where('type', 'shift')
+            ->flatMap(fn ($c) => array_merge([$c['shift_id']], array_column($c['extra'] ?? [], 'shift_id'))))->unique()->values();
         $legend = $usedIds->map(fn ($id) => $shifts->get($id))->filter()->map(fn ($s) => $this->shiftCell($s))->sortBy('name')->values();
 
         return [
@@ -243,7 +253,7 @@ class ShiftReportController extends Controller
 
     private function shiftCell(Shift $shift): array
     {
-        $color = preg_match('/^#[0-9a-fA-F]{6}$/', (string) $shift->color_code) ? $shift->color_code : '#1e3a8a';
+        $color = preg_match('/^#[0-9a-fA-F]{6}$/', (string) $shift->color_code) ? $shift->color_code : '#0D6EFD';
 
         return [
             'type' => 'shift',

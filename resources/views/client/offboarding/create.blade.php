@@ -30,7 +30,7 @@
 
         .ob-card__title i {
             font-size: 14px;
-            color: var(--primary, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
         }
 
         .ob-card__body {
@@ -63,8 +63,8 @@
 
         .field-input:focus,
         .field-select:focus {
-            border-color: var(--primary, #1e3a8a);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08);
+            border-color: var(--primary, #0D6EFD);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.08);
         }
 
         .field-hint {
@@ -80,13 +80,13 @@
             padding: 9px 12px;
             border-radius: 8px;
             background: #f8fafc;
-            border-left: 3px solid var(--primary, #1e3a8a);
+            border-left: 3px solid var(--primary, #0D6EFD);
             margin: 4px 0 16px;
         }
 
         .hint-bar i {
             font-size: 12px;
-            color: var(--primary, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
             margin-top: 2px;
             flex-shrink: 0;
         }
@@ -101,7 +101,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
             border: none;
             font-size: 12.5px;
@@ -113,7 +113,7 @@
 
         .btn-save:hover {
             filter: brightness(0.9);
-            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
         }
 
         .alert-box {

@@ -113,6 +113,7 @@ class PunchSessionCalculator
             'session_count' => count($sessions) + ($openSession ? 1 : 0),
             'open_session' => $openSession,
             'open_in' => $openSession ? $openIn['at'] : null,
+            'open_in_punch' => $openSession ? $openIn['punch'] : null,
             'leading_orphan_outs' => $leadingOrphanOuts,
             'orphaned_ins' => $orphanedIns,
             'needs_review' => !empty($leadingOrphanOuts) || !empty($orphanedIns),

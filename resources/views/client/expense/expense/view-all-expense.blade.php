@@ -19,8 +19,8 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            border-color: #0D6EFD;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
         /* Consistent initials style - same color for all */
@@ -28,7 +28,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border-radius: 50%;
             display: inline-flex;
@@ -69,12 +69,12 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #1e3a8a !important;
+            color: #0D6EFD !important;
             opacity: 0.8;
         }
 
@@ -99,7 +99,7 @@
         }
 
         .bg-soft-primary {
-            background-color: rgba(30, 58, 138, 0.1);
+            background-color: rgba(13, 110, 253, 0.1);
         }
 
         .bg-soft-success {
@@ -147,46 +147,10 @@
             text-decoration: none !important;
         }
 
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: #1e3a8a;
-            font-size: 16px;
-        }
 
-        .filter-title span {
-            background: #e3edfe;
-            color: #1e3a8a;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -223,18 +187,8 @@
             gap: 8px;
         }
 
-        .filter-item {
-            flex: 1 1 0;
-            min-width: 0;
-        }
 
-        .filter-item.search {
-            flex: 1.7 1 0;
-        }
 
-        .filter-item.reset {
-            flex: 0 0 auto;
-        }
 
         .filter-label {
             display: block;
@@ -250,38 +204,9 @@
             background-image: none !important;
         }
 
-        .search-wrapper {
-            position: relative;
-            width: 100%;
-        }
 
-        .search-wrapper i {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 14px;
-            pointer-events: none;
-        }
 
-        .search-wrapper .form-control {
-            width: 100%;
-            height: 34px;
-            padding: 5px 10px 5px 30px;
-            font-size: 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-            transition: all 0.2s;
-        }
 
-        .search-wrapper .form-control:focus {
-            background: white;
-            border-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
-            outline: none;
-        }
 
         .filter-select {
             width: 100%;
@@ -300,15 +225,15 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            border-color: #0D6EFD;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
             outline: none;
         }
 
         .apply-btn {
             height: 36px;
             padding: 0 16px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
             border-radius: 8px;
@@ -323,32 +248,11 @@
         }
 
         .apply-btn:hover {
-            background: #172c6b;
+            background: #0B5ED7;
             transform: translateY(-1px);
         }
 
-        .reset-btn {
-            height: 34px;
-            padding: 0 12px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-            color: #1e293b;
-        }
 
         .active-filters {
             margin-top: 12px;
@@ -385,7 +289,7 @@
         }
 
         .filter-tag i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
 
@@ -403,42 +307,17 @@
         }
 
         .filter-tag.clear-all {
-            background: #e3edfe;
-            border-color: #1e3a8a;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            border-color: #0D6EFD;
+            color: #0D6EFD;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
-       
-        /* ==================== TABLE STYLES ==================== */
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table th {
-            background-color: #f7f8fb;
-            font-weight: 600;
-            font-size: 10.5px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #64748b;
-            border-bottom: 1px solid #eaeef5;
-            padding: 9px 12px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 12px;
-            padding: 8px 12px;
-            border-bottom: 1px solid #eef1f7;
-        }
 
-        .table tbody tr:hover {
-            background-color: #f6f8fd;
-        }
 
         /* ==================== BADGES — one blue theme ==================== */
         .badge {
@@ -452,8 +331,8 @@
         }
 
         .badge.bg-success {
-            background: rgba(29, 78, 216, .14) !important;
-            color: #1d4ed8;
+            background: rgba(11, 94, 215, .14) !important;
+            color: #0B5ED7;
         }
 
         .badge.bg-danger {
@@ -468,61 +347,20 @@
 
         .badge.bg-warning {
             background: rgba(96, 165, 250, .20) !important;
-            color: #2563eb;
+            color: #0D6EFD;
         }
 
         .badge.bg-primary {
-            background: #e3edfe !important;
-            color: #1e3a8a;
+            background: #EFF6FF !important;
+            color: #0D6EFD;
         }
 
-        /* ==================== ACTION BUTTONS ==================== */
-        .action-btn {
-            width: 30px;
-            height: 30px;
-            padding: 0;
-            border-radius: 10%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #fff;
-            color: #475569;
-            border: 1px solid #dfe5f0;
-            transition: all 0.18s ease;
-            cursor: pointer;
-        }
 
-        .action-btn i {
-            font-size: 14px;
-            line-height: 1;
-        }
 
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.18);
-        }
 
-        /* Approve = filled theme blue, Reject = outlined — same colour family, clearly different weight */
-        .action-btn.approve {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
-            color: #fff;
-            border-color: transparent;
-        }
 
-        .action-btn.approve:hover {
-            background: linear-gradient(135deg, #172c6b, #1d4ed8);
-        }
 
-        .action-btn.reject {
-            background: #fff;
-            color: #1e3a8a;
-            border-color: #bcd0f5;
-        }
 
-        .action-btn.reject:hover {
-            background: #e3edfe;
-            border-color: #1e3a8a;
-        }
 
         /* ==================== FILE ATTACHMENT ==================== */
         .file-attachment {
@@ -535,7 +373,7 @@
         }
 
         .file-attachment:hover {
-            color: #1e3a8a;
+            color: #0D6EFD;
             transform: translateY(-1px);
         }
 
@@ -560,38 +398,10 @@
             padding: 24px;
         }
 
-        /* ==================== PAGINATION ==================== */
-        .pagination {
-            margin: 0;
-            gap: 4px;
-        }
 
-        .page-link {
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            font-size: 12px;
-            padding: 6px 12px;
-            border-radius: 6px !important;
-            transition: all 0.2s;
-        }
 
-        .page-link:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-            color: #1e293b;
-        }
 
-        .page-item.active .page-link {
-            background: #1e3a8a;
-            border-color: #1e3a8a;
-            color: white;
-        }
 
-        .page-item.disabled .page-link {
-            color: #94a3b8;
-            background: #f8fafc;
-            cursor: not-allowed;
-        }
 
         /* ==================== EMPTY STATE ==================== */
         .empty-state {
@@ -630,39 +440,16 @@
         }
 
         @media (max-width: 1199.98px) {
-            .filter-row {
-                flex-wrap: wrap;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(25% - 8px);
-                min-width: 130px;
-            }
 
-            .filter-item.search {
-                flex: 1 1 calc(50% - 8px);
-            }
 
-            .filter-item.reset {
-                flex: 0 0 auto;
-                min-width: 0;
-            }
+
         }
 
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 8px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(33.333% - 8px);
-                min-width: 120px;
-            }
 
-            .filter-item.search {
-                flex: 1 1 100%;
-                min-width: 100%;
-            }
+
 
             .col-xxl-4 {
                 flex: 0 0 auto;
@@ -676,24 +463,10 @@
         }
 
         @media (max-width: 768px) {
-            .filter-wrapper {
-                padding: 12px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
 
-            .filter-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
+
 
             .apply-btn,
             .reset-btn {
@@ -780,7 +553,7 @@
         }
 
         .text-primary {
-            color: #1e3a8a !important;
+            color: #0D6EFD !important;
         }
 
         .text-success {
@@ -837,8 +610,8 @@
             height: 26px;
             border-radius: 7px;
             flex: none;
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: var(--icon-color, #0D6EFD);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -887,8 +660,8 @@
             border-radius: 9px;
             font-size: 13px;
             flex-shrink: 0;
-            background: #e3edfe !important;
-            color: #1e3a8a !important;
+            background: #EFF6FF !important;
+            color: var(--icon-color, #0D6EFD) !important;
         }
 
         .exp-team .exp-card a {
@@ -929,7 +702,7 @@
         }
 
         .exp-team .bd-approved {
-            color: #1d4ed8;
+            color: #0B5ED7;
         }
 
         .exp-team .bd-complete {
@@ -941,14 +714,14 @@
         }
 
         .exp-team .exp-card a:hover .stat-sub {
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .exp-team .employee-avatar {
             width: 32px;
             height: 32px;
             font-size: 12px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         }
 
         .exp-team .employee-name {
@@ -958,52 +731,7 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Team Expense</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.view-all') }}">Expenses</a></li>
-                <li class="breadcrumb-item active">Expense Applications</li>
-            </ul>
-        </div>
-        <!--<div class="page-header-right ms-auto">-->
-        <!--    <div class="page-header-right-items">-->
-        <!--        <div class="d-flex d-md-none">-->
-        <!--            <a href="#" class="page-header-right-close-toggle">-->
-        <!--                <i class="feather-arrow-left me-2"></i>-->
-        <!--                <span>Back</span>-->
-        <!--            </a>-->
-        <!--        </div>-->
-        <!--        <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">-->
-        <!--            <div class="dropdown">-->
-        <!--                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"-->
-        <!--                    data-bs-auto-close="outside">-->
-        <!--                    <i class="feather-download"></i>-->
-        <!--                </a>-->
-        <!--                <div class="dropdown-menu dropdown-menu-end">-->
-        <!--                    <a href="#" class="dropdown-item" onclick="exportToCSV()">-->
-        <!--                        <i class="bi bi-filetype-csv me-3"></i>-->
-        <!--                        <span>Export CSV</span>-->
-        <!--                    </a>-->
-        <!--                </div>-->
-        <!--            </div>-->
-        <!--            <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal"-->
-        <!--                data-bs-target="#addexpenseModal">-->
-        <!--                <i class="feather-plus me-2"></i>-->
-        <!--                <span>Add Expense</span>-->
-        <!--            </a>-->
-        <!--        </div>-->
-        <!--    </div>-->
-        <!--    <div class="d-md-none d-flex align-items-center">-->
-        <!--        <a href="#" class="page-header-right-open-toggle">-->
-        <!--            <i class="feather-align-right fs-20"></i>-->
-        <!--        </a>-->
-        <!--    </div>-->
-        <!--</div>-->
-    </div>
+    <x-ui.page-header title="Team Expense" current="Expense Applications" :crumbs="[['label' => 'Expenses', 'url' => route('expense.view-all')]]" />
 
     <div class="main-content exp-team" style="padding: 20px !important;">
         <!-- Expense Overview (same tiles as the admin dashboard) -->
@@ -1500,17 +1228,7 @@
                         </div>
                     </div>
                     @if (method_exists($expenses, 'links') && $expenses->hasPages())
-                        <div class="card-footer">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-muted small">
-                                    Showing {{ $expenses->firstItem() }} to {{ $expenses->lastItem() }} of
-                                    {{ $expenses->total() }} entries
-                                </div>
-                                <div class="remove-internal-para">
-                                    {{ $expenses->appends(request()->query())->links() }}
-                                </div>
-                            </div>
-                        </div>
+                        <x-ui.pagination-footer :paginator="$expenses" label="expenses" />
                     @endif
                 </div>
             </div>

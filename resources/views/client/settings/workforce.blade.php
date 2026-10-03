@@ -29,7 +29,7 @@
 
         .wf-card__title i {
             font-size: 14px;
-            color: var(--primary, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
         }
 
         .wf-card__desc {
@@ -66,8 +66,8 @@
         }
 
         .field-input:focus {
-            border-color: var(--primary, #1e3a8a);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08);
+            border-color: var(--primary, #0D6EFD);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.08);
         }
 
         #employee_id_prefix {
@@ -110,7 +110,7 @@
         .eid-preview__value {
             font-size: 13px;
             font-weight: 700;
-            color: #1e3a8a;
+            color: #0D6EFD;
             letter-spacing: .5px;
         }
 
@@ -118,7 +118,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
             border: none;
             font-size: 12.5px;
@@ -131,14 +131,14 @@
 
         .btn-save:hover {
             filter: brightness(0.9);
-            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
         }
 
         .btn-update {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
             border: none;
             font-size: 12.5px;
@@ -151,7 +151,7 @@
 
         .btn-update:hover {
             filter: brightness(0.9);
-            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
         }
 
         .info-list {
@@ -204,7 +204,7 @@
         }
 
         .info-bar i {
-            color: var(--primary, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
             font-size: 12px;
             margin-top: 2px;
             flex-shrink: 0;
@@ -582,6 +582,45 @@
                     </div>
                 </div>
             </div>
+
+            @php $limit = fn ($v, string $unit) => (int) $v > 0 ? $v . ' ' . $unit : 'No limit'; @endphp
+            <div class="col-md-4">
+                <div class="wf-card">
+                    <div class="wf-card__head">
+                        <h5 class="wf-card__title">
+                            <i class="feather-sliders"></i>
+                            Request limits
+                        </h5>
+                        <p class="wf-card__desc">
+                            How much work from home and regularization an employee may request.
+                        </p>
+                    </div>
+                    <div class="wf-card__body">
+                        <div class="info-list">
+                            <div class="info-row">
+                                <span class="info-row__label">WFH days / month</span>
+                                <span class="info-row__value">{{ $limit($tenant->wfh_max_days_per_month, 'days') }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">WFH notice</span>
+                                <span class="info-row__value">{{ $limit($tenant->wfh_min_notice_days, 'days') }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Regularizations / month</span>
+                                <span class="info-row__value">{{ $limit($tenant->regularization_max_per_month, 'requests') }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Regularize up to</span>
+                                <span class="info-row__value">{{ (int) $tenant->regularization_max_days_back > 0 ? $tenant->regularization_max_days_back . ' days back' : 'No limit' }}</span>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#requestLimitsModal">
+                            <i class="feather-edit-2"></i> Update
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -916,6 +955,49 @@
                             </label>
                         </div>
                     </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn-save">
+                        <i class="feather-check"></i> Save
+                    </button>
+                </div>
+            </form>
+        </x-ui.modal>
+
+        {{-- Request limits (RequestLimitsSettingsController) --}}
+        <x-ui.modal id="requestLimitsModal" title="Request limits" size="md">
+            <form action="{{ route('request-limits-settings.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="field-label">WFH days allowed per month</label>
+                        <input type="number" min="0" max="31" step="1" class="field-input" name="wfh_max_days_per_month"
+                               value="{{ old('wfh_max_days_per_month', (int) $tenant->wfh_max_days_per_month) }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">WFH notice needed (days)</label>
+                        <input type="number" min="0" max="90" step="1" class="field-input" name="wfh_min_notice_days"
+                               value="{{ old('wfh_min_notice_days', (int) $tenant->wfh_min_notice_days) }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Regularization requests per month</label>
+                        <input type="number" min="0" max="31" step="1" class="field-input" name="regularization_max_per_month"
+                               value="{{ old('regularization_max_per_month', (int) $tenant->regularization_max_per_month) }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Regularize at most (days back)</label>
+                        <input type="number" min="0" max="365" step="1" class="field-input" name="regularization_max_days_back"
+                               value="{{ old('regularization_max_days_back', (int) $tenant->regularization_max_days_back) }}">
+                    </div>
+                </div>
+                <div class="field-hint mt-2">
+                    0 = no limit. WFH days are counted per calendar month from pending + approved WFH requests (travel
+                    requests are not limited); regularizations count pending + approved requests for the month of the
+                    day being corrected. Applies on the web and in the mobile app. One employee can be given different
+                    limits on their profile (Employee 360 → Policies).
                 </div>
 
                 <div class="mt-3">

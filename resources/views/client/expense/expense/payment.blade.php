@@ -15,13 +15,13 @@
         }
 
         .payment-type-card.active {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             background: white;
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.1);
         }
 
         .payment-type-card:hover {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             transform: translateY(-2px);
         }
 
@@ -29,7 +29,7 @@
             width: 50px;
             height: 50px;
             border-radius: 12px;
-            background: rgba(30, 58, 138, 0.1);
+            background: rgba(13, 110, 253, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -38,7 +38,7 @@
 
         .payment-type-icon i {
             font-size: 24px;
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .expense-option {
@@ -49,7 +49,7 @@
         .expense-option:hover {
             background: #f8fafc;
             transform: translateX(4px);
-            border-color: #1e3a8a !important;
+            border-color: #0D6EFD !important;
         }
 
         .cursor-pointer {
@@ -80,13 +80,7 @@
                 grid-template-columns: 1fr;
             }
 
-            .filter-row {
-                flex-direction: column;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
         }
 
         .payment-type-card {
@@ -100,13 +94,13 @@
         }
 
         .payment-type-card.active {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             background: white;
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.1);
         }
 
         .payment-type-card:hover {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             transform: translateY(-2px);
         }
 
@@ -114,7 +108,7 @@
             width: 50px;
             height: 50px;
             border-radius: 12px;
-            background: rgba(30, 58, 138, 0.1);
+            background: rgba(13, 110, 253, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -123,7 +117,7 @@
 
         .payment-type-icon i {
             font-size: 24px;
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         /* Reimbursement Card Specific */
@@ -143,18 +137,8 @@
 
 @section('content-area')
     
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Payment Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.view-all') }}">Expenses</a></li>
-                <li class="breadcrumb-item active">Payments</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Payment Management" current="Payments" :crumbs="[['label' => 'Expenses', 'url' => route('expense.view-all')]]" :back="route('expense.view-all')">
+        <x-slot:actions>
             <div class="d-flex gap-2">
                 @if (($bulkEnabled ?? false) && ($canManage ?? false))
                     <a href="{{ route('expense.payments.batch') }}" class="btn btn-primary btn-sm">
@@ -169,12 +153,9 @@
                         <i class="feather-plus me-2"></i>Add Payment
                     </button>
                 @endif
-                <a href="{{ route('expense.view-all') }}" class="btn btn-light-brand btn-sm">
-                    <i class="feather-arrow-left me-2"></i>Back
-                </a>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content ex-page" style="padding: 20px !important;">
         {{-- Success/Error Messages --}}
@@ -376,10 +357,6 @@
 
         {{-- Payments Table --}}
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Payment History</h5>
-                <span class="badge bg-info"><i class="feather-list"></i> Total: {{ $payments->total() }}</span>
-            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table" id="paymentTable">
@@ -478,17 +455,7 @@
                 </div>
             </div>
             @if ($payments->hasPages())
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted small">
-                            Showing {{ $payments->firstItem() }} to {{ $payments->lastItem() }} of
-                            {{ $payments->total() }} entries
-                        </div>
-                        <div>
-                            {{ $payments->appends(request()->query())->links() }}
-                        </div>
-                    </div>
-                </div>
+                <x-ui.pagination-footer :paginator="$payments" label="payments" />
             @endif
         </div>
     </div>

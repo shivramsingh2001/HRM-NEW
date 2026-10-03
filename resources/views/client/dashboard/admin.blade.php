@@ -18,11 +18,11 @@
             --d-shadow: 0 1px 2px rgba(20, 30, 60, .04), 0 2px 8px rgba(20, 30, 60, .04);
             --d-shadow-hover: 0 6px 22px rgba(30, 50, 110, .10);
             /* All-blue palette — shades only, no other hues, per dashboard request. */
-            --d-primary: #1e3a8a;
-            --d-primary-2: #2563eb;
+            --d-primary: #0D6EFD;
+            --d-primary-2: #0D6EFD;
             --d-success: #3b82f6;
             --d-warning: #60a5fa;
-            --d-danger: #1d4ed8;
+            --d-danger: #0B5ED7;
             --d-info: #0ea5e9;
             --d-purple: #93c5fd;
         }
@@ -30,7 +30,7 @@
         /* .main-content { padding: 20px !important; background: var(--d-bg); } */
 
         th { font-size: 10.5px !important; font-weight: 600 !important; letter-spacing: .2px; text-transform: uppercase; color: var(--d-text-muted) !important; }
-        td { font-size: 12px !important; color: var(--d-text); }
+
 
         h5.card-title { font-size: 14px; font-weight: 700; color: var(--d-text); letter-spacing: -.2px; }
 
@@ -45,27 +45,17 @@
         .section-hdr .section-hdr-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
         .section-hdr .section-hdr-icon {
             width: 26px; height: 26px; border-radius: 7px; flex: none;
-            background: #e3edfe; color: #1e3a8a;
+            background: #EFF6FF; color: var(--icon-color, #0D6EFD);
             display: inline-flex; align-items: center; justify-content: center; font-size: 13px;
         }
         .section-hdr .section-hdr-title { font-size: 13px; font-weight: 700; color: var(--d-text); margin: 0; }
         .section-hdr .section-hdr-view {
-            font-size: 10.5px; font-weight: 600; color: #1e3a8a; background: #fff;
+            font-size: 10.5px; font-weight: 600; color: #0D6EFD; background: #fff;
             border: 1px solid var(--d-border-strong); padding: 3px 11px; border-radius: 999px;
             white-space: nowrap; transition: background .15s ease, color .15s ease;
         }
-        .section-hdr .section-hdr-view:hover { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
+        .section-hdr .section-hdr-view:hover { background: #0D6EFD; color: #fff; border-color: #0D6EFD; }
 
-        /* ============================================
-           CARD SYSTEM
-           ============================================ */
-        .card {
-            background: var(--d-card);
-            border: 1px solid var(--d-border);
-            border-radius: var(--d-radius);
-            box-shadow: var(--d-shadow);
-            margin-bottom: 0% !important;
-        }
         .card .card-header {
             padding: 10px 12px;
             border-bottom: 1px solid var(--d-border);
@@ -105,8 +95,8 @@
            with its own !important color that otherwise wins regardless of source order. */
         .bg-soft-primary, .bg-soft-success, .bg-soft-danger, .bg-soft-warning,
         .bg-soft-info, .bg-soft-purple, .bg-soft-dark {
-            background: #e3edfe !important;
-            color: #1e3a8a !important;
+            background: #EFF6FF !important;
+            color: var(--icon-color, #0D6EFD) !important;
         }
 
         /* Bootstrap's own text-* utilities carry their own colors — pin them to the same blue tokens. */
@@ -124,9 +114,9 @@
 
         /* pill badges */
         .pill { padding: 1px 7px; border-radius: 999px; font-size: 9.5px; font-weight: 700; letter-spacing: .2px; }
-        .pill-success { background: rgba(59,130,246,.14);  color: #1d4ed8; }
-        .pill-danger  { background: rgba(30,58,138,.14);   color: #1e3a8a; }
-        .pill-warning { background: rgba(96,165,250,.18);  color: #2563eb; }
+        .pill-success { background: rgba(59,130,246,.14);  color: #0B5ED7; }
+        .pill-danger  { background: rgba(13, 110, 253,.14);   color: #0D6EFD; }
+        .pill-warning { background: rgba(96,165,250,.18);  color: #0D6EFD; }
         .pill-info    { background: rgba(14,165,233,.12);  color: #0c87c4; }
 
         /* TOP KPI CARDS: .kpi5-* is now centralized in
@@ -191,7 +181,7 @@
             cursor: pointer; width: 18px; height: 18px; border-radius: 5px; flex: none;
             display: inline-flex; align-items: center; justify-content: center;
         }
-        .cal-nav-btn:hover { background: #e3edfe; color: var(--d-primary); }
+        .cal-nav-btn:hover { background: #EFF6FF; color: var(--d-primary); }
         .cal-nav-label { min-width: 62px; text-align: center; white-space: nowrap; }
 
         /* card-body stretches to fill the fixed-height card, and the day
@@ -239,12 +229,12 @@
         .funnel-list { display: flex; flex-direction: column; gap: 8px; }
         .funnel-row { display: flex; align-items: center; gap: 8px; }
         .funnel-label { flex: 0 0 5.2rem; font-size: 11px; font-weight: 600; color: var(--d-text-soft); }
-        .funnel-track { flex: 1; height: 8px; border-radius: 999px; background: #e3edfe; overflow: hidden; }
+        .funnel-track { flex: 1; height: 8px; border-radius: 999px; background: #EFF6FF; overflow: hidden; }
         .funnel-fill { background: #60a5fa; height: 100%; border-radius: 999px; transition: width .3s ease; }
         .funnel-count { flex: 0 0 1.8rem; text-align: right; font-size: 11px; font-weight: 700; color: var(--d-primary); }
         /* Bootstrap's own bg-* utilities on progress bars carry their own colors — blue-ify them too. */
-        .progress-bar.bg-primary { background-color: #1e3a8a !important; }
-        .progress-bar.bg-info    { background-color: #2563eb !important; }
+        .progress-bar.bg-primary { background-color: #0D6EFD !important; }
+        .progress-bar.bg-info    { background-color: #0D6EFD !important; }
         .progress-bar.bg-success { background-color: #3b82f6 !important; }
         .progress-bar.bg-warning { background-color: #60a5fa !important; }
         .progress-bar.bg-danger  { background-color: #93c5fd !important; }
@@ -253,12 +243,12 @@
            WELCOME BANNER
            ============================================ */
         .welcome-banner {
-            background: linear-gradient(120deg, #1e3a8a 0%, #1d4ed8 55%, #2563eb 100%);
+            background: linear-gradient(120deg, #0D6EFD, #0D6EFD);
             border-radius: var(--d-radius);
             position: relative;
             overflow: hidden;
             border: none;
-            box-shadow: 0 8px 24px rgba(30, 58, 138, .22);
+            box-shadow: 0 8px 24px rgba(13, 110, 253, .22);
         }
         .welcome-banner::after {
             content: '';
@@ -296,15 +286,11 @@
         .exp-card .breakdown-row + .breakdown-row { border-top: 1px dashed var(--d-border); }
         .exp-card a { transition: color .15s ease; }
 
-        /* ============================================
-           TABLES
-           ============================================ */
-        .table { margin: 0; }
-        .table thead th { background: #fafbfe; padding: 9px 14px; border-bottom: 1px solid var(--d-border); }
-        .table tbody td { padding: 10px 14px; vertical-align: middle; border-bottom: 1px solid var(--d-border); }
-        .table tbody tr { cursor: pointer; transition: background .14s ease; }
-        .table tbody tr:hover { background: #f6f8fd; }
-        .table tbody tr:last-child td { border-bottom: none; }
+
+
+
+
+
         .table-responsive .table tr td { padding-top: 4px; padding-bottom: 4px; }
 
         /* avatar in tables */
@@ -315,10 +301,10 @@
            STATUS BADGES
            ============================================ */
         .badge { padding: 3px 10px; border-radius: 999px; font-size: 10.5px; font-weight: 700; }
-        .badge-active, .badge-approved, .badge-completed { background: rgba(59,130,246,.14); color: #1d4ed8; }
-        .badge-ongoing, .badge-in-progress { background: rgba(30,58,138,.12); color: var(--d-primary); }
-        .badge-pending, .badge-on-hold { background: rgba(96,165,250,.18); color: #2563eb; }
-        .badge-rejected, .badge-cancelled, .badge-on-danger { background: rgba(29,78,216,.14); color: #1e3a8a; }
+        .badge-active, .badge-approved, .badge-completed { background: rgba(59,130,246,.14); color: #0B5ED7; }
+        .badge-ongoing, .badge-in-progress { background: rgba(13, 110, 253,.12); color: var(--d-primary); }
+        .badge-pending, .badge-on-hold { background: rgba(96,165,250,.18); color: #0D6EFD; }
+        .badge-rejected, .badge-cancelled, .badge-on-danger { background: rgba(11, 94, 215,.14); color: #0D6EFD; }
         .badge-secondary { background: #eef1f7; color: var(--d-text-soft); }
         .bg-soft-success.badge, .bg-soft-warning.badge, .bg-soft-danger.badge { font-weight: 700; }
 
@@ -326,9 +312,9 @@
            RANK BADGE
            ============================================ */
         .rank-badge { width: 26px; height: 26px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
-        .rank-1 { background: linear-gradient(135deg,#1e3a8a,#2563eb); color: #fff; }
-        .rank-2 { background: linear-gradient(135deg,#2563eb,#60a5fa); color: #fff; }
-        .rank-3 { background: linear-gradient(135deg,#bfdbfe,#93c5fd); color: #1e3a8a; }
+        .rank-1 { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; }
+        .rank-2 { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; }
+        .rank-3 { background: linear-gradient(135deg,#bfdbfe,#93c5fd); color: #0D6EFD; }
 
         /* ============================================
            INFO / EVENT CARDS
@@ -339,8 +325,8 @@
         .wd-7 { width: 8px; } .ht-7 { height: 8px; }
         .wd-50 { width: 46px; } .ht-50 { height: 46px; }
 
-        .deadline-urgent  { color: #1e3a8a; font-weight: 700; }
-        .deadline-warning { color: #2563eb; font-weight: 700; }
+        .deadline-urgent  { color: #0D6EFD; font-weight: 700; }
+        .deadline-warning { color: #0D6EFD; font-weight: 700; }
         .deadline-normal  { color: #60a5fa; font-weight: 700; }
 
         /* compact gutters */
@@ -353,17 +339,7 @@
 
 @section('content-area')
     <!-- [ page-header ] start -->
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Admin Dashboard</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Admin Dashboard</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Admin Dashboard" :back="false" />
     <!-- [ page-header ] end -->
 
     <!-- [ Main Content ] start -->
@@ -737,7 +713,7 @@
                     <div class="card-body">
                         <div id="project-status-chart" style="height: 190px; width: 100%;"></div>
                         @php
-                            $statusColors = ['active'=>'#1e3a8a','ongoing'=>'#2563eb','completed'=>'#3b82f6','on_hold'=>'#60a5fa','cancelled'=>'#bfdbfe'];
+                            $statusColors = ['active'=>'#0D6EFD','ongoing'=>'#0D6EFD','completed'=>'#3b82f6','on_hold'=>'#60a5fa','cancelled'=>'#bfdbfe'];
                         @endphp
                         <table class="mini-table" id="project-status-table-view" style="display:none;">
                             <tbody>
@@ -1027,9 +1003,9 @@
         calRender();
 
         $(document).ready(function() {
-            const colorPalette = ['#1e3a8a', '#1d4ed8', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#0ea5e9'];
+            const colorPalette = ['#0D6EFD', '#0B5ED7', '#0D6EFD', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#0ea5e9'];
             const statusColors = {
-                'active': '#1e3a8a', 'ongoing': '#2563eb', 'completed': '#3b82f6', 'on_hold': '#60a5fa', 'cancelled': '#bfdbfe'
+                'active': '#0D6EFD', 'ongoing': '#0D6EFD', 'completed': '#3b82f6', 'on_hold': '#60a5fa', 'cancelled': '#bfdbfe'
             };
 
             // Attendance Chart
@@ -1082,7 +1058,7 @@
                             toolbar: { show: false },
                             fontFamily: 'inherit'
                         },
-                        colors: ['#1e3a8a', '#93c5fd'],
+                        colors: ['#0D6EFD', '#93c5fd'],
                         plotOptions: {
                             bar: {
                                 horizontal: false,
@@ -1215,7 +1191,7 @@
                             { name: 'Loan / Other Transactions (₹)', data: trendLoanOther }
                         ],
                         chart: { type: 'line', height: 240, toolbar: { show: false }, fontFamily: 'inherit' },
-                        colors: ['#1e3a8a', '#2563eb', '#60a5fa'],
+                        colors: ['#0D6EFD', '#0D6EFD', '#60a5fa'],
                         stroke: { width: 2.5, curve: 'smooth' },
                         markers: { size: 3 },
                         xaxis: { categories: trendLabels, labels: { style: { fontSize: '10.5px' } } },

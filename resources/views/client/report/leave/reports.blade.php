@@ -8,17 +8,16 @@
             background: white; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px;
             display: flex; align-items: center; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
         }
-        .stats-icon { width: 30px; height: 30px; background: #e3edfe; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
-        .stats-icon i { font-size: 13px; color: #1e3a8a; }
+        .stats-icon { width: 30px; height: 30px; background: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
+        .stats-icon i { font-size: 13px; color: var(--icon-color, #0D6EFD); }
         .stats-info h3 { font-size: 15px; font-weight: 700; margin: 0 0 1px 0; color: #1a2236; line-height: 1.2; }
         .stats-info p { font-size: 9.5px; color: #6b7385; margin: 0; }
 
-        .filter-section { background: #fff; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
-        .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
         .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; background-color: #fff; }
-        .form-control-sm-custom:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30, 58, 138, .12); outline: none; }
+        .form-control-sm-custom:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); outline: none; }
         .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; }
-        .btn-sm-custom-outline:hover { background: #e3edfe; color: #1e3a8a; }
+        .btn-sm-custom-outline:hover { background: #EFF6FF; color: #0D6EFD; }
 
         #reportTable { font-size: 11px; }
         #reportTable th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; color: #6b7385; padding: 6px 10px; white-space: nowrap; background: #f7faff; }
@@ -30,8 +29,8 @@
             font-size: 11px; font-weight: 600; padding: 6px 14px; border-radius: 20px; text-decoration: none;
             color: #475569; background: #f4f6fb; border: 1px solid #dfe5f0;
         }
-        .rpt-subnav a.active { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
-        .rpt-subnav a:hover:not(.active) { background: #e3edfe; color: #1e3a8a; }
+        .rpt-subnav a.active { background: #0D6EFD; color: #fff; border-color: #0D6EFD; }
+        .rpt-subnav a:hover:not(.active) { background: #EFF6FF; color: #0D6EFD; }
 
         /* ==================== Leave Balance tab — same card/table anatomy
            as Leave Credit Management (kpi5-* anatomy is centralized in
@@ -43,15 +42,15 @@
 
         #balanceTable .employee-avatar {
             width: 36px; height: 36px; border-radius: 50%;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff; display: flex; align-items: center; justify-content: center;
             font-weight: 600; font-size: 14px;
         }
         #balanceTable .badge { padding: 4px 10px; font-weight: 500; font-size: 11px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
-        #balanceTable .badge.bg-success { background: #e3edfe !important; color: #1d4ed8; }
-        #balanceTable .badge.bg-danger { background: #e3edfe !important; color: #1e3a8a; }
+        #balanceTable .badge.bg-success { background: #EFF6FF !important; color: #0B5ED7; }
+        #balanceTable .badge.bg-danger { background: #EFF6FF !important; color: #0D6EFD; }
         #balanceTable .badge.bg-secondary { background: #f1f5f9 !important; color: #475569; }
-        #balanceTable .badge.bg-purple { background: #e0e7ff !important; color: #1e3a8a; }
+        #balanceTable .badge.bg-purple { background: #e0e7ff !important; color: #0D6EFD; }
 
         .empty-state {
             padding: 48px 24px;
@@ -63,15 +62,14 @@
         .empty-state h4 { color: #334155; font-size: 18px; font-weight: 600; margin-bottom: 8px; }
         .empty-state p { color: #64748b; font-size: 14px; margin-bottom: 0; }
 
-        .pagination-wrapper { padding: 16px 20px; border-top: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .pagination-info { font-size: 12px; color: #64748b; }
-        .pagination-info strong { color: #1e293b; font-weight: 600; }
-        .pagination { display: flex; gap: 5px; margin: 0; padding: 0; list-style: none; }
-        .page-item { margin: 0; }
-        .page-link { display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #475569; font-size: 12px; font-weight: 500; text-decoration: none; transition: all .2s; }
-        .page-link:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
-        .page-item.active .page-link { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }
-        .page-item.disabled .page-link { background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; pointer-events: none; }
+
+
+
+
+
+
+
+
     </style>
 @endsection
 
@@ -82,23 +80,13 @@
         $tileIcons = ['feather-users', 'feather-check-circle', 'feather-clock', 'feather-x-circle'];
     @endphp
 
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">{{ $title }}</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}#leaveReportTab">Reports</a></li>
-                <li class="breadcrumb-item">{{ $reports[$report] }}</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" :title="$title" :current="$reports[$report]" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index') . '#leaveReportTab']]">
+        <x-slot:actions>
             <a href="{{ $csvUrl }}" class="btn btn-sm btn-primary">
                 <i class="feather-download me-1"></i> Export CSV
             </a>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body" style="padding: 20px !important;">
         <div class="rpt-subnav">
@@ -181,7 +169,7 @@
         @endif
 
         {{-- Filters (one row, no captions) --}}
-        <div class="filter-section">
+        <x-ui.filter-card title="Filter Report">
             <form action="{{ route('report.leave.show', $report) }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     @if ($needsPeriod)
@@ -272,21 +260,11 @@
                     <div class="filter-item"><a href="{{ route('report.leave.show', $report) }}" class="btn-sm-custom-outline" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         @if ($report === 'balance')
             <!-- Employee Leave Balances table — same anatomy as Leave Credit Management -->
             <div class="card stretch stretch-full">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        <i class="feather-users me-2"></i>
-                        Employee Leave Balances
-                    </h5>
-                    <div class="d-flex gap-2">
-                        <span class="badge bg-primary">{{ $balanceRows->total() }} Rows</span>
-                        <span class="badge bg-success">{{ $balanceStats['employees'] }} Employees</span>
-                    </div>
-                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0" id="balanceTable">

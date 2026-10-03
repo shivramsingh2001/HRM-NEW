@@ -237,12 +237,18 @@ class LeaveService
      * only the deducted/reported day count excludes non-working days.
      */
     public function computeLeaveDays(
-        Carbon $start,
-        Carbon $end,
+        // Any Carbon date: the web controllers pass Illuminate\Support\Carbon,
+        // the mobile API passes Carbon\Carbon (a strict type here broke /api/apply-leave).
+        \Carbon\CarbonInterface $start,
+        \Carbon\CarbonInterface $end,
         string $startSession,
         string $endSession,
         ?int $tenantId = null
     ): float {
+        // Work on mutable copies (the day loop below advances $current in place).
+        $start = Carbon::instance($start);
+        $end = Carbon::instance($end);
+
         $holidays = $tenantId
             ? Holiday::where('tenant_id', $tenantId)->where('status', 1)->get(['start_date', 'end_date'])
             : collect();

@@ -13,9 +13,8 @@
     <div class="main-content" style="padding: 20px !important;">
 
     @if (session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
-
-    <div class="s-card"><div class="s-body">
-        <form method="GET" class="d-flex gap-2 align-items-center flex-wrap mb-3">
+    <x-ui.filter-card title="Filter Punches">
+<form method="GET" class="d-flex gap-2 align-items-center flex-wrap filter-row">
             <input type="search" name="q" value="{{ $q }}" class="form-control form-control-sm" style="max-width:280px"
                    placeholder="Search enroll no., employee or device…">
             <select name="status" class="form-control form-control-sm" style="width:150px" onchange="this.form.submit()">
@@ -29,6 +28,9 @@
                 <a href="{{ route('settings.biometric.punches') }}" class="btn btn-sm btn-outline-secondary" title="Clear filters">×</a>
             @endif
         </form>
+</x-ui.filter-card>
+
+    <div class="s-card"><div class="s-body">
         @if ($punches->isEmpty())
             @if ($q !== '')
                 <x-ui.empty-state icon="activity" title="No matches" subtitle="No punches match your search." />

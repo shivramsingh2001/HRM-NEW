@@ -12,7 +12,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
             display: flex;
             align-items: center;
@@ -68,18 +68,9 @@
             border-bottom: 2px solid var(--gray-100);
         }
 
-        .card-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--gray-800);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 0;
-        }
 
         .card-title i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
             font-size: 16px;
         }
 
@@ -259,7 +250,7 @@
 
         .hour-based-info-bar .info-item {
             font-size: 12px;
-            color: #1e40af;
+            color: #0D6EFD;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -423,7 +414,7 @@
         }
 
         .modal-header i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
         }
 
         .modal-body {
@@ -463,7 +454,7 @@
         .form-control:focus {
             border-color: var(--primary);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
         /* ==================== RESPONSIVE ==================== */
@@ -519,18 +510,7 @@
 
 @section('content-area')
 
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Monthly Payroll Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('monthly-payrolls.index') }}">Monthly Payroll</a></li>
-                <li class="breadcrumb-item active">Payroll Details</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Monthly Payroll Management" current="Payroll Details" :crumbs="[['label' => 'Monthly Payroll', 'url' => route('monthly-payrolls.index')]]" />
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Success/Error Messages -->
@@ -790,10 +770,10 @@
 
                         @if($calcType === 'hour_based' && $monthlyPayroll->expected_hours > 0)
                             <div class="info-row" style="background: #eff6ff; padding: 4px 8px; border-radius: 6px; border-bottom-color: #93c5fd;">
-                                <span class="info-label" style="color: #1e40af;">
+                                <span class="info-label" style="color: #0D6EFD;">
                                     <i class="feather-clock"></i> Hours Calculation
                                 </span>
-                                <span class="info-value" style="font-size: 10px; color: #1e40af;">
+                                <span class="info-value" style="font-size: 10px; color: #0D6EFD;">
                                     {{ number_format($monthlyPayroll->actual_worked_hours ?? 0, 2) }} hrs × ₹{{ number_format($monthlyPayroll->hourly_rate ?? 0, 2) }}
                                     @if(($monthlyPayroll->paid_leaves ?? 0) > 0)
                                         + {{ ($monthlyPayroll->paid_leaves ?? 0) * ($userPayroll && $userPayroll->payrollMaster ? $userPayroll->payrollMaster->working_hours_per_day ?? 8 : 8) }} hrs (leaves)
@@ -916,7 +896,7 @@
                 <div class="detail-card net-payable-card">
                     <div class="card-header-custom" style="border-bottom-color: #93c5fd;">
                         <h6 class="card-title">
-                            <i class="fa-solid fa-rupee-sign" style="color: var(--primary);"></i>
+                            <i class="fa-solid fa-rupee-sign" style="color: var(--icon-color, #0D6EFD);"></i>
                             Net Payable
                         </h6>
                     </div>

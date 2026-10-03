@@ -34,26 +34,15 @@
 
 @section('content-area')
 <!-- [ page-header ] start -->
-<div class="page-header">
-    <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title">
-            <h5 class="m-b-10">HR Dashboard</h5>
+<x-ui.page-header title="HR Dashboard" :back="false">
+    <x-slot:actions>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ route('employees.create') }}" class="btn btn-primary btn-sm">
+                <i class="feather-plus me-2"></i>Add Employee
+            </a>
         </div>
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item">HR Dashboard</li>
-        </ul>
-    </div>
-    <div class="page-header-right ms-auto">
-        <div class="page-header-right-items">
-            <div class="d-flex align-items-center gap-2">
-                <a href="{{ route('employees.create') }}" class="btn btn-primary btn-sm">
-                    <i class="feather-plus me-2"></i>Add Employee
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
+    </x-slot:actions>
+</x-ui.page-header>
 
 <!-- [ Main Content ] start -->
 <div class="main-content" style="padding: 20px !important;">

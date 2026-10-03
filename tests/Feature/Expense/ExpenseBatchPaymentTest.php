@@ -478,9 +478,10 @@ class ExpenseBatchPaymentTest extends TestCase
         $voided = $this->as($this->hr)->get(route('expense.payments.index', ['search' => $voucher, 'status' => 'voided']))->assertOk();
         $this->assertCount(0, $voided->viewData('payments'));
 
-        // Vouchers page: same layout, search by voucher no. and by an employee on one of its lines
+        // Vouchers page: same layout (the shared filter card, heading "Filter Vouchers"), search by voucher no.
+        // and by an employee on one of its lines
         $this->as($this->hr)->get(route('expense.vouchers.index'))->assertOk()
-            ->assertDontSee('Voucher Overview')->assertDontSee('Filter Vouchers')->assertDontSee('<label class="filter-label"', false)
+            ->assertDontSee('Voucher Overview')->assertSee('Filter Vouchers')->assertDontSee('<label class="filter-label"', false)
             ->assertSee('name="search"', false)->assertSee('Sr. No.');
 
         // Pay Batch page: compact single-row filter (auto-applies, so no Apply button), voucher panel intact

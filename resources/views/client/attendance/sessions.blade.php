@@ -105,7 +105,7 @@
             align-items: center;
             justify-content: center;
             background: var(--primary-light);
-            color: var(--primary-mid);
+            color: var(--icon-color, #0D6EFD);
             font-size: 10.5px;
             flex: none;
         }
@@ -230,13 +230,7 @@
 @endsection
 
 @section('content-area')
-    <x-ui.page-header title="Attendance Sessions" :parent="['label' => 'Team', 'route' => 'team.index']">
-        <x-slot:actions>
-            <a href="{{ url()->previous() }}" class="btn btn-light btn-sm">
-                <i class="feather-arrow-left me-1"></i>Back
-            </a>
-        </x-slot:actions>
-    </x-ui.page-header>
+    <x-ui.page-header title="Attendance Sessions" back :parent="['label' => 'Team', 'route' => 'team.index']" />
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="sessions-container">
@@ -283,7 +277,7 @@
                                 </h5>
                             </div>
                             <div class="icon-circle" style="background: var(--primary-light);">
-                                <i class="feather-check-circle" style="color: var(--primary);"></i>
+                                <i class="feather-check-circle" style="color: var(--icon-color, #0D6EFD);"></i>
                             </div>
                         </div>
                     </div>
@@ -295,7 +289,7 @@
                                 <h5 class="mb-0">{{ $attendance->total_hours ?? '0:00:00' }}</h5>
                             </div>
                             <div class="icon-circle" style="background: var(--primary-light);">
-                                <i class="feather-clock" style="color: var(--primary-mid);"></i>
+                                <i class="feather-clock" style="color: var(--icon-color, #0D6EFD);"></i>
                             </div>
                         </div>
                     </div>
@@ -328,7 +322,7 @@
                                 </h6>
                             </div>
                             <div class="icon-circle" style="background: var(--primary-light);">
-                                <i class="feather-clock" style="color: var(--primary);"></i>
+                                <i class="feather-clock" style="color: var(--icon-color, #0D6EFD);"></i>
                             </div>
                         </div>
                     </div>
@@ -455,7 +449,7 @@
                     <div id="sessionLocationMap" class="location-map"></div>
                     <div class="d-flex flex-wrap gap-3 mb-2" style="font-size: 10.5px; color: #64748b;">
                         <span><span class="map-legend-dot" style="background:#22c55e;"></span> Start</span>
-                        <span><span class="map-legend-dot" style="background:#2563eb;"></span> Waypoint</span>
+                        <span><span class="map-legend-dot" style="background:#0D6EFD;"></span> Waypoint</span>
                         <span><span class="map-legend-dot" style="background:#ef4444;"></span> End</span>
                     </div>
 
@@ -553,7 +547,7 @@
             // were recorded — the full path the employee's location switched
             // through during this session.
             L.polyline(latlngs, {
-                color: '#2563eb',
+                color: '#0D6EFD',
                 weight: 4,
                 opacity: 0.85,
                 lineJoin: 'round',
@@ -569,7 +563,7 @@
             validTracks.forEach((track, index) => {
                 const isStart = index === 0;
                 const isEnd = index === validTracks.length - 1 && validTracks.length > 1;
-                const color = isStart ? '#22c55e' : (isEnd ? '#ef4444' : '#2563eb');
+                const color = isStart ? '#22c55e' : (isEnd ? '#ef4444' : '#0D6EFD');
                 const size = (isStart || isEnd) ? 16 : 10;
 
                 const marker = L.marker([track.latitude, track.longitude], {

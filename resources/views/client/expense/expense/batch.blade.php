@@ -103,8 +103,8 @@
         }
 
         .batch-page #payableTable .pay-input:focus {
-            border-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, .10);
+            border-color: #0D6EFD;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, .10);
             outline: none;
         }
 
@@ -117,13 +117,13 @@
         }
 
         .batch-page #payableTable input[type="checkbox"] {
-            accent-color: #1e3a8a;
+            accent-color: #0D6EFD;
         }
 
         .batch-page .emp-select-link {
             font-size: 10.5px;
             cursor: pointer;
-            color: #2563eb;
+            color: #0D6EFD;
             text-decoration: underline;
         }
 
@@ -134,8 +134,8 @@
         }
 
         .batch-page .type-badge-advance {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .batch-page .type-badge-reimbursement {
@@ -175,13 +175,13 @@
 
         .batch-page .bp-input:focus {
             background: #fff;
-            border-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, .10);
+            border-color: #0D6EFD;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, .10);
             outline: none;
         }
 
         .batch-page .total-box {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: #fff;
             border-radius: 12px;
             padding: 10px 14px;
@@ -209,19 +209,19 @@
         }
 
         .batch-page .bp-btn.btn-primary {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             border-color: transparent;
         }
 
         .batch-page .bp-btn.btn-outline-primary {
-            color: #1e3a8a;
+            color: #0D6EFD;
             border-color: #bcd0f5;
             background: #fff;
         }
 
         .batch-page .bp-btn.btn-outline-primary:hover:not(:disabled) {
-            background: #e3edfe;
-            border-color: #1e3a8a;
+            background: #EFF6FF;
+            border-color: #0D6EFD;
         }
 
         .batch-page .bp-note {
@@ -259,31 +259,18 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Pay Batch</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.view-all') }}">Expenses</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.payments.index') }}">Payments</a></li>
-                <li class="breadcrumb-item active">Pay Batch</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Pay Batch" :crumbs="[['label' => 'Expenses', 'url' => route('expense.view-all')], ['label' => 'Payments', 'url' => route('expense.payments.index')]]" :back="route('expense.payments.index')">
+        <x-slot:actions>
             <div class="d-flex gap-2">
                 <a href="{{ route('expense.vouchers.index') }}" class="btn btn-light-brand btn-sm"><i
                         class="feather-file-text me-1"></i>Vouchers</a>
-                <a href="{{ route('expense.payments.index') }}" class="btn btn-light-brand btn-sm"><i
-                        class="feather-arrow-left me-1"></i>Back</a>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content ex-page batch-page">
         {{-- ============ Filters (one row) + lump-sum shortcut ============ --}}
-        <div class="filter-wrapper">
+        <x-ui.filter-card title="Filter Expenses">
             <div class="filter-row">
                 <div class="filter-item">
                     <select id="f_user" class="filter-select" aria-label="Employee">
@@ -337,7 +324,7 @@
             </div>
 
             <div class="bp-alloc">
-                <div class="bp-alloc-text"><i class="feather-zap me-1" style="color:#1e3a8a"></i><b>Pay a lump sum to one employee</b>
+                <div class="bp-alloc-text"><i class="feather-zap me-1" style="color:var(--icon-color, #0D6EFD)"></i><b>Pay a lump sum to one employee</b>
                     — the amount is spread over their outstanding expenses, oldest first.</div>
                 <select id="alloc_user" class="filter-select" aria-label="Employee for lump sum">
                     <option value="">Choose employee…</option>
@@ -349,7 +336,7 @@
                     placeholder="Amount ₹" style="background-image:none">
                 <button type="button" id="btnAllocate" class="btn btn-outline-primary btn-suggest">Suggest lines</button>
             </div>
-        </div>
+        </x-ui.filter-card>
 
         <div class="row g-2">
             {{-- ============ LEFT: payable expenses ============ --}}

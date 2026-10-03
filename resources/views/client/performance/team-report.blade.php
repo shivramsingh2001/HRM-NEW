@@ -25,56 +25,11 @@
             }
         }
 
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 18px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
 
-        .filter-title i {
-            color: var(--primary);
-            font-size: 16px;
-        }
 
-        .filter-title span {
-            background: var(--primary-light);
-            color: var(--primary);
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
-        .filter-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .filter-item {
-            flex: 1;
-            min-width: 180px;
-        }
 
         .filter-select {
             width: 100%;
@@ -89,7 +44,7 @@
         .filter-select:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
         .clear-all-link {
@@ -235,10 +190,6 @@
         </div>
 
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Team Performance</h5>
-
-            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table">
@@ -320,17 +271,7 @@
             </div>
 
             @if (method_exists($teamData, 'links') && $teamData->hasPages())
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted small">
-                            Showing {{ $teamData->firstItem() }} to {{ $teamData->lastItem() }}
-                            of {{ $teamData->total() }} entries
-                        </div>
-                        <div class="remove-internal-para">
-                            {{ $teamData->appends(request()->query())->links() }}
-                        </div>
-                    </div>
-                </div>
+                <x-ui.pagination-footer :paginator="$teamData" label="members" />
             @endif
         </div>
     </div>

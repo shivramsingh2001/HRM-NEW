@@ -8,19 +8,18 @@
             background: white; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px;
             display: flex; align-items: center; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
         }
-        .stats-icon { width: 30px; height: 30px; background: #e3edfe; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
-        .stats-icon i { font-size: 13px; color: #1e3a8a; }
+        .stats-icon { width: 30px; height: 30px; background: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
+        .stats-icon i { font-size: 13px; color: var(--icon-color, #0D6EFD); }
         .stats-info h3 { font-size: 15px; font-weight: 700; margin: 0 0 1px 0; color: #1a2236; line-height: 1.2; }
         .stats-info p { font-size: 9.5px; color: #6b7385; margin: 0; }
 
-        .filter-section { background: #fff; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
-        .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
         .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; background-color: #fff; }
-        .form-control-sm-custom:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30, 58, 138, .12); outline: none; }
-        .btn-sm-custom { background: #1e3a8a; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; }
-        .btn-sm-custom:hover { background: #2563eb; color: #fff; }
+        .form-control-sm-custom:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); outline: none; }
+        .btn-sm-custom { background: #0D6EFD; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; }
+        .btn-sm-custom:hover { background: #0D6EFD; color: #fff; }
         .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; }
-        .btn-sm-custom-outline:hover { background: #e3edfe; color: #1e3a8a; }
+        .btn-sm-custom-outline:hover { background: #EFF6FF; color: #0D6EFD; }
         .filter-note { font-size: 10.5px; color: #6b7385; }
 
         #reportTable { font-size: 11px; }
@@ -28,7 +27,7 @@
         #reportTable td { padding: 6px 10px; vertical-align: middle; }
         #reportTable tr.totals-row td { font-weight: 700; background: #f7faff; color: #1a2236; }
 
-        .report-note { background: #eff6ff; border: 1px solid #dbeafe; border-radius: 10px; padding: 8px 12px; font-size: 10.5px; color: #1e40af; margin-bottom: 12px; }
+        .report-note { background: #eff6ff; border: 1px solid #dbeafe; border-radius: 10px; padding: 8px 12px; font-size: 10.5px; color: #0D6EFD; margin-bottom: 12px; }
     </style>
 @endsection
 
@@ -40,23 +39,13 @@
         $modes = ['cash', 'bank_transfer', 'cheque', 'upi', 'payroll'];
     @endphp
 
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">{{ $title }}</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}#expenseReportTab">Reports</a></li>
-                <li class="breadcrumb-item">{{ $reports[$report] ?? 'Expense' }}</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" :title="$title" :current="$reports[$report] ?? 'Expense'" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index') . '#expenseReportTab']]">
+        <x-slot:actions>
             <a href="{{ $csvUrl }}" class="btn btn-sm btn-primary">
                 <i class="feather-download me-1"></i> Export CSV
             </a>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body" style="padding: 20px !important;">
         {{-- Summary tiles --}}
@@ -73,7 +62,7 @@
         </div>
 
         {{-- Filters (one row, no captions — same as the other reports) --}}
-        <div class="filter-section">
+        <x-ui.filter-card title="Filter Report">
             <form action="{{ route('expense.reports.show', $report) }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     @unless ($isAgeing)
@@ -154,7 +143,7 @@
                     <div class="filter-item"><a href="{{ route('expense.reports.show', $report) }}" class="btn-sm-custom-outline" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         @isset($note)
             <div class="report-note"><i class="feather-info me-1"></i>{{ $note }}</div>

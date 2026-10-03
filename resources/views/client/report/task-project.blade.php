@@ -8,8 +8,8 @@
         background: white; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px;
         display: flex; align-items: center; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
-    .stats-icon { width: 30px; height: 30px; background: #e3edfe; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
-    .stats-icon i { font-size: 13px; color: #1e3a8a; }
+    .stats-icon { width: 30px; height: 30px; background: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
+    .stats-icon i { font-size: 13px; color: var(--icon-color, #0D6EFD); }
     .stats-info h3 { font-size: 15px; font-weight: 700; margin: 0 0 1px 0; color: #1a2236; line-height: 1.2; }
     .stats-info p { font-size: 9.5px; color: #6b7385; margin: 0; }
 
@@ -17,40 +17,29 @@
     .tp-filter-bar .form-control, .tp-filter-bar select {
         font-size: 10.5px; padding: 4px 8px; height: auto; border-radius: 7px; border: 1px solid #dfe5f0;
     }
-    .tp-filter-bar .form-control:focus, .tp-filter-bar select:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30,58,138,.12); }
-    .tp-filter-bar .btn-apply { background: #1e3a8a; border-color: #1e3a8a; color: #fff; font-size: 10.5px; padding: 4px 14px; border-radius: 7px; }
-    .tp-filter-bar .btn-apply:hover { background: #16295e; border-color: #16295e; }
+    .tp-filter-bar .form-control:focus, .tp-filter-bar select:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253,.12); }
+    .tp-filter-bar .btn-apply { background: #0D6EFD; border-color: #0D6EFD; color: #fff; font-size: 10.5px; padding: 4px 14px; border-radius: 7px; }
+    .tp-filter-bar .btn-apply:hover { background: #0B5ED7; border-color: #0B5ED7; }
 
     .section-title { font-size: 12.5px; font-weight: 700; color: #1a2236; margin: 1rem 0 .5rem; }
 
     #workloadTable, #projectsTable { font-size: 10.5px; }
-    #workloadTable th, #projectsTable th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: #6b7385; background: #f7faff; padding: 6px 8px; border-bottom: 1px solid #e3edfe; }
+    #workloadTable th, #projectsTable th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: #6b7385; background: #f7faff; padding: 6px 8px; border-bottom: 1px solid #EFF6FF; }
     #workloadTable td, #projectsTable td { padding: 6px 8px; vertical-align: middle; }
     #workloadTable tr:hover td, #projectsTable tr:hover td { background: #fafcff; }
     .count-pill { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-    .pill-completed { background: #1e3a8a; color: #fff; }
-    .pill-pending { background: #93c5fd; color: #1e3a8a; }
-    .pill-progress { background: #bfd3f7; color: #1e3a8a; }
+    .pill-completed { background: #0D6EFD; color: #fff; }
+    .pill-pending { background: #93c5fd; color: #0D6EFD; }
+    .pill-progress { background: #bfd3f7; color: #0D6EFD; }
     .pill-overdue { background: #e2e8f0; color: #475569; }
-    .completion-rate { font-weight: 700; color: #1e3a8a; }
-    .progress-track { background: #e3edfe; border-radius: 999px; height: 6px; width: 100px; overflow: hidden; }
-    .progress-fill { background: #1e3a8a; height: 100%; border-radius: 999px; }
+    .completion-rate { font-weight: 700; color: #0D6EFD; }
+    .progress-track { background: #EFF6FF; border-radius: 999px; height: 6px; width: 100px; overflow: hidden; }
+    .progress-fill { background: #0D6EFD; height: 100%; border-radius: 999px; }
 </style>
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Task & Project Report</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item">Task & Project</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header class="content-area-header sticky-top" title="Task & Project Report" current="Task & Project" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]" />
 
     <div class="content-area-body" style="padding: 20px !important;">
         <div class="stats-grid">
@@ -98,7 +87,8 @@
             </div>
         </div>
 
-        <form method="GET" class="tp-filter-bar row g-2 align-items-end">
+        <x-ui.filter-card title="Filter Report">
+<form method="GET" class="tp-filter-bar row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="d-block text-muted mb-1" style="font-size:9.5px;">Month</label>
                 <input type="month" name="month" class="form-control" onchange="this.form.submit()" value="{{ $month }}">
@@ -113,6 +103,7 @@
                 </select>
             </div>
         </form>
+</x-ui.filter-card>
 
         <div class="section-title">Per-Employee Workload</div>
         <div class="card">
@@ -136,7 +127,7 @@
                                     <td>
                                         <div class="employee-info">
                                             <div class="employee-avatar"
-                                                style="background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
+                                                style="background:#0D6EFD;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
                                                 {{ strtoupper(substr($row->name, 0, 2)) }}</div>
                                             <div class="employee-details">
                                                 <div class="employee-name">

@@ -51,27 +51,25 @@
             flex-shrink: 0; transition: all 0.3s ease;
             background: var(--primary-light);
         }
-        .bcast-stat-icon-wrapper i { color: var(--primary); font-size: 15px; }
+        .bcast-stat-icon-wrapper i { color: var(--icon-color, #0D6EFD); font-size: 15px; }
         .bcast-stat-card:hover .bcast-stat-icon-wrapper { transform: scale(1.05); }
 
         .bcast-stat-content { flex: 1; min-width: 0; }
         .bcast-stat-value { font-size: 15px; font-weight: 700; color: #0f172a; line-height: 1.2; margin-bottom: 1px; letter-spacing: -0.5px; }
         .bcast-stat-label { font-size: 10.5px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0; }
 
-        /* ==================== Filter bar ==================== */
-        .filter-section { background: #fff; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
-        .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
         .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; background-color: #fff; }
-        .form-control-sm-custom:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30, 58, 138, .12); outline: none; }
+        .form-control-sm-custom:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); outline: none; }
         .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; }
-        .btn-sm-custom-outline:hover { background: #e3edfe; color: #1e3a8a; }
+        .btn-sm-custom-outline:hover { background: #EFF6FF; color: #0D6EFD; }
 
         /* ==================== Status badges ==================== */
         .bcast-status { padding: 3px 10px; border-radius: 20px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; }
         .bcast-status.draft { background: #f1f5f9; color: #475569; }
         .bcast-status.scheduled { background: #e0f2fe; color: #0369a1; }
         .bcast-status.sending { background: #fef3c7; color: #b45309; }
-        .bcast-status.sent { background: #e3edfe; color: #1d4ed8; }
+        .bcast-status.sent { background: #EFF6FF; color: #0B5ED7; }
         .bcast-status.failed { background: #fee2e2; color: #b91c1c; }
         .bcast-status.cancelled { background: #f1f5f9; color: #94a3b8; }
         .bcast-status.expired { background: #f1f5f9; color: #94a3b8; }
@@ -80,7 +78,7 @@
            standalone create.blade.php page) ==================== */
         .bcast-card { background: #fff; border: 1px solid #eaeef5; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
         .bcast-card h6 { font-size: 13px; font-weight: 700; color: #1a2236; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
-        .bcast-card h6 i { color: #1e3a8a; }
+        .bcast-card h6 i { color: var(--icon-color, #0D6EFD); }
         .bcast-form-label { font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block; }
         .bcast-form-label .req { color: #dc2626; }
 
@@ -90,7 +88,7 @@
         .bcast-role-check { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid #dfe5f0; border-radius: 20px; font-size: 11.5px; margin-right: 6px; margin-bottom: 6px; cursor: pointer; }
         .bcast-role-check input { margin: 0; }
 
-        .bcast-count-chip { display: inline-flex; align-items: center; gap: 8px; background: #e3edfe; color: #1e3a8a; font-weight: 700; font-size: 13px; padding: 8px 16px; border-radius: 30px; }
+        .bcast-count-chip { display: inline-flex; align-items: center; gap: 8px; background: #EFF6FF; color: #0D6EFD; font-weight: 700; font-size: 13px; padding: 8px 16px; border-radius: 30px; }
         .bcast-count-chip .n { font-size: 18px; }
         .bcast-count-chip.loading { opacity: .6; }
 
@@ -141,7 +139,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="filter-section">
+        <x-ui.filter-card title="Filter Broadcasts">
             <form action="{{ route('broadcast.index') }}" method="GET" id="broadcastFilterForm">
                 <div class="filter-row">
                     <div class="filter-item">
@@ -165,7 +163,7 @@
                     <div class="filter-item"><a href="{{ route('broadcast.index') }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         <div class="card">
             <div class="card-body p-0">

@@ -109,7 +109,7 @@ class AttendanceDayResolver
                 'overtime' => 'overtime',
                 'early_departure' => 'early_departure',
                 'absent' => 'absent',
-                default => $this->classifyWorked($agg['worked_hours'], $agg['expected_seconds'], $policy),
+                default => $this->classifyWorked($agg['classify_hours'], $agg['expected_seconds'], $policy),
             };
             $fraction = in_array($token, ['half_day'], true) ? 0.50 : ($token === 'absent' ? 0.00 : 1.00);
             return $mk($token, $fraction);
@@ -151,6 +151,7 @@ class AttendanceDayResolver
     private function aggregate(iterable $rows): array
     {
         $totalSeconds = 0;
+        $classifySeconds = 0;
         $late = 0;
         $overtime = 0;
         $early = 0;
@@ -179,6 +180,11 @@ class AttendanceDayResolver
                     Carbon::parse($entry->clock_in),
                     Carbon::parse($entry->clock_out)
                 );
+                // Multi-shift day: first-in → last-out spans the gap between
+                // shifts; the punched sessions' own total is the work done.
+                if ((int) ($entry->shift_count ?? 0) > 1 && isset($entry->worked_hours)) {
+                    $seconds = (int) round(((float) $entry->worked_hours) * 3600);
+                }
                 if ($seconds > $max) {
                     Log::warning('AttendanceDayResolver: session exceeds 24h, clamping', [
                         'entry_id' => $entry->id ?? null,
@@ -187,6 +193,8 @@ class AttendanceDayResolver
                 }
                 if ($seconds > 0) {
                     $totalSeconds += $seconds;
+                    // Multi-shift: only the primary shift's work classifies the day.
+                    $classifySeconds += $this->calc->primaryWorkedSeconds($entry, $seconds);
                     $completed = true;
                 }
             }
@@ -225,6 +233,7 @@ class AttendanceDayResolver
         return [
             'worked_hours' => $this->calc->decimalHours($totalSeconds),
             'worked_seconds' => $totalSeconds,
+            'classify_hours' => $this->calc->decimalHours($classifySeconds),
             'late_minutes' => $late,
             'overtime_minutes' => $overtime,
             'early_departure_minutes' => $early,

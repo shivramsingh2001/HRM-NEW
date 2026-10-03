@@ -163,6 +163,19 @@ class LeaveController extends Controller
                 ], 200);
             }
 
+            // This employee's custom leave rules (Employee 360 → Policies): a
+            // type switched off for them, or their own notice / length limit.
+            // The leave type's company-wide notice / length rules are not
+            // enforced on this endpoint (unchanged).
+            if ($leaveTypeModel = LeaveType::find($leaveTypeId)) {
+                $refusal = app(\App\Services\EmployeePolicyService::class)
+                    ->leaveRefusal((int) $user->tenant_id, (int) $user->id, $leaveTypeModel, $start, $end, customOnly: true);
+                if ($refusal) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'message' => $refusal], 200);
+                }
+            }
+
             // One request, one row: total_days excludes weekends/holidays,
             // but start_date/end_date still store the full requested range.
             $totalLeaveDays = $this->leaveService->computeLeaveDays(

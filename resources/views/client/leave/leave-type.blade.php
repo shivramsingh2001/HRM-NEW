@@ -17,7 +17,7 @@
     }
 
     .leave-type-card .side-stick {
-        background-color: #1e3a8a;
+        background-color: #0D6EFD;
     }
 
     .lt-title {
@@ -56,18 +56,18 @@
     }
 
     .badge-inactive {
-        background: #1e3a8a;
+        background: #0D6EFD;
         color: #fff;
     }
 
     .badge-system {
-        background: #e3edfe;
-        color: #1e3a8a;
+        background: #EFF6FF;
+        color: #0D6EFD;
     }
 
     .badge-unpaid {
         background: #93c5fd;
-        color: #1e3a8a;
+        color: #0D6EFD;
     }
 
     .lt-info-row {
@@ -94,7 +94,7 @@
     }
 
     .lt-info-value i {
-        color: #1e3a8a;
+        color: var(--icon-color, #0D6EFD);
     }
 
     .lt-description {
@@ -113,28 +113,7 @@
         border-top: 1px solid #eaeef5;
     }
 
-    .action-btn {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: #f4f6fb;
-        border: 1px solid #eaeef5;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6b7385;
-        font-size: 10px;
-        transition: all .2s;
-        cursor: pointer;
-        text-decoration: none;
-        flex-shrink: 0;
-    }
 
-    .action-btn:hover {
-        background: #1e3a8a;
-        color: #fff;
-        border-color: #1e3a8a;
-    }
 
     /* ==================== EMPTY STATE ==================== */
     .empty-state {
@@ -174,27 +153,16 @@
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Leave Type Management</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Leave Type</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Leave Type Management" current="Leave Type">
+        <x-slot:actions>
             <div class="hstack gap-2">
-                <div class="dropdown d-none d-sm-flex">
-                    <a href="javascript:void(0)" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                <a href="javascript:void(0)" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                         data-bs-target="#addLeaveType">
                         <i class="feather-plus me-2"></i>Add Leave Type
                     </a>
-                </div>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
     <div class="content-area-body pb-0 h-100">
         <div class="row note-has-grid" id="note-full-container">
             <!--! BEGIN: [Single Note Item] !-->

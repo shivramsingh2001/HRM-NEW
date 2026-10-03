@@ -17,14 +17,8 @@
             --d-shadow-hover: 0 6px 22px rgba(30, 50, 110, .10);
         }
 
-        th { font-size: 10.5px !important; font-weight: 600 !important; letter-spacing: .2px; text-transform: uppercase; color: var(--d-text-muted) !important; }
-        td { font-size: 12px !important; color: var(--d-text); }
 
-        .card {
-            border: 1px solid var(--d-border);
-            border-radius: var(--d-radius);
-            box-shadow: var(--d-shadow);
-        }
+
 
         .card .card-header {
             padding: 8px 12px;
@@ -36,34 +30,28 @@
 
         .card .card-body { padding: 10px; }
 
-        .card-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--d-text);
-            letter-spacing: -.2px;
-        }
 
         .row.g-compact { --bs-gutter-x: 10px; --bs-gutter-y: 10px; }
 
         /* Single blue theme lock */
         .bg-soft-primary, .bg-soft-success, .bg-soft-danger, .bg-soft-warning,
         .bg-soft-info, .bg-soft-purple, .bg-soft-dark {
-            background: #e3edfe !important;
-            color: #1e3a8a !important;
+            background: #EFF6FF !important;
+            color: #0D6EFD !important;
         }
         .text-primary { color: var(--primary) !important; }
-        .text-success { color: #1d4ed8 !important; }
-        .text-danger  { color: #1e3a8a !important; }
-        .text-warning { color: #2563eb !important; }
+        .text-success { color: #0B5ED7 !important; }
+        .text-danger  { color: #0D6EFD !important; }
+        .text-warning { color: #0D6EFD !important; }
         .text-info    { color: #0ea5e9 !important; }
-        .badge.bg-success, .badge.bg-danger, .badge.bg-warning, .badge.bg-info { background: #e3edfe !important; color: #1e3a8a !important; }
+        .badge.bg-success, .badge.bg-danger, .badge.bg-warning, .badge.bg-info { background: #EFF6FF !important; color: #0D6EFD !important; }
 
         .status-badge[data-status] { background: var(--primary-light) !important; color: var(--primary) !important; }
 
         .pill { padding: 1px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 700; letter-spacing: .2px; white-space: nowrap; }
-        .pill-success { background: rgba(59, 130, 246, .14); color: #1d4ed8; }
-        .pill-danger  { background: rgba(30, 58, 138, .14); color: #1e3a8a; }
-        .pill-warning { background: rgba(96, 165, 250, .18); color: #2563eb; }
+        .pill-success { background: rgba(59, 130, 246, .14); color: #0B5ED7; }
+        .pill-danger  { background: rgba(13, 110, 253, .14); color: #0D6EFD; }
+        .pill-warning { background: rgba(96, 165, 250, .18); color: #0D6EFD; }
         .pill-info    { background: rgba(14, 165, 233, .12); color: #0c87c4; }
 
         /* Employee avatar chip used across the team/leave/task tables */
@@ -81,7 +69,7 @@
 
         /* Welcome banner — same anatomy as the Employee/Admin dashboards */
         .welcome-banner {
-            background: linear-gradient(120deg, #1e3a8a 0%, #1d4ed8 55%, #2563eb 100%);
+            background: linear-gradient(120deg, #0D6EFD, #0D6EFD);
             border-radius: var(--d-radius);
             position: relative;
             overflow: hidden;
@@ -93,7 +81,7 @@
         .dash-icon-circle {
             width: 38px; height: 38px; border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            background: var(--primary-light); color: var(--primary); flex-shrink: 0;
+            background: var(--primary-light); color: var(--icon-color, #0D6EFD); flex-shrink: 0;
         }
         .dash-list-item {
             display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -118,7 +106,7 @@
         .qa-block .qa-icon {
             width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center; font-size: 13px;
-            background: var(--primary-light); color: var(--primary);
+            background: var(--primary-light); color: var(--icon-color, #0D6EFD);
         }
         .qa-block .qa-label { font-size: 11.5px; font-weight: 600; }
 
@@ -128,7 +116,7 @@
         .funnel-list { display: flex; flex-direction: column; gap: 8px; }
         .funnel-row { display: flex; align-items: center; gap: 8px; }
         .funnel-label { flex: 0 0 5.6rem; font-size: 11px; font-weight: 600; color: var(--d-text-soft); }
-        .funnel-track { flex: 1; height: 8px; border-radius: 999px; background: #e3edfe; overflow: hidden; }
+        .funnel-track { flex: 1; height: 8px; border-radius: 999px; background: #EFF6FF; overflow: hidden; }
         .funnel-fill { background: #60a5fa; height: 100%; border-radius: 999px; transition: width .3s ease; }
         .funnel-count { flex: 0 0 1.8rem; text-align: right; font-size: 11px; font-weight: 700; color: var(--primary); }
         .mini-table { width: 100%; font-size: 11px; border-collapse: collapse; }
@@ -156,7 +144,7 @@
 @endsection
 
 @section('content-area')
-    <x-ui.page-header title="Manager Dashboard" />
+    <x-ui.page-header title="Manager Dashboard" :back="false" />
 
     <div class="main-content" style="padding: 16px !important;">
 
@@ -629,7 +617,7 @@
                         { name: 'Leave', data: trendLeave }
                     ],
                     chart: { type: 'line', height: 210, toolbar: { show: false }, fontFamily: 'inherit' },
-                    colors: ['#1e3a8a', '#93c5fd', '#0ea5e9'],
+                    colors: ['#0D6EFD', '#93c5fd', '#0ea5e9'],
                     stroke: { curve: 'smooth', width: 2 },
                     markers: { size: 2 },
                     dataLabels: { enabled: false },

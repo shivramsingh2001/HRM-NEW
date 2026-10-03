@@ -29,7 +29,7 @@
         .profile-avatar {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, #1e3a8a 0%, #93c5fd 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -66,40 +66,13 @@
         }
 
         .profile-meta-item i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 10.5px;
         }
 
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: #1e3a8a;
-            font-size: 12px;
-        }
 
         .filter-select {
             width: 100%;
@@ -147,7 +120,7 @@
         .balance-summary-header i {
             width: 28px;
             height: 28px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border-radius: 8px;
             display: flex;
@@ -198,13 +171,13 @@
         }
 
         .table-header h5 i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 11.5px;
         }
 
         .table-badge {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
             padding: 3px 10px;
             border-radius: 999px;
             font-size: 10px;
@@ -230,23 +203,23 @@
         }
 
         .badge-credit {
-            background: #e3edfe;
-            color: #1d4ed8;
+            background: #EFF6FF;
+            color: #0B5ED7;
         }
 
         .badge-debit {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .badge-purple {
             background: #e0e7ff;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         /* ==================== AMOUNT STYLES ==================== */
         .amount-credit {
-            color: #1d4ed8;
+            color: #0B5ED7;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
@@ -254,7 +227,7 @@
         }
 
         .amount-debit {
-            color: #1d4ed8;
+            color: #0B5ED7;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
@@ -327,12 +300,12 @@
         }
 
         .btn-primary {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #1e3a8a;
+            background: #0D6EFD;
             transform: translateY(-2px);
         }
 
@@ -370,10 +343,6 @@
                 overflow-x: auto;
             }
 
-            .table td,
-            .table th {
-                white-space: nowrap;
-            }
         }
     </style>
 @endsection

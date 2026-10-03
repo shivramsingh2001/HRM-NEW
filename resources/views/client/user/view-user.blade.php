@@ -106,7 +106,7 @@
 
         .toggle-switch.active {
             background: var(--primary);
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         }
 
         .toggle-switch .toggle-circle {
@@ -148,11 +148,11 @@
         }
 
         .toggle-switch.face-toggle.active {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         }
 
         .toggle-switch.location-toggle.active {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         }
 
         /* ==================== ATTENDANCE TYPE SELECT ==================== */
@@ -182,46 +182,10 @@
             padding: 4px 8px;
         }
 
-        /* ==================== MODERN FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: var(--primary);
-            font-size: 16px;
-        }
 
-        .filter-title span {
-            background: var(--primary-light);
-            color: var(--primary);
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -244,66 +208,14 @@
             font-size: 14px;
         }
 
-        /* ==================== COMPACT FILTER ROW ==================== */
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 140px;
-        }
 
-        .filter-item.search {
-            flex: 1 1 200px;
-            min-width: 180px;
-        }
 
-        .filter-item .form-label {
-            display: none;
-        }
 
-        /* Search Box */
-        .search-wrapper {
-            position: relative;
-            width: 100%;
-        }
 
-        .search-wrapper i {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 14px;
-            pointer-events: none;
-        }
 
-        .search-wrapper .form-control {
-            width: 100%;
-            height: 36px;
-            padding: 6px 12px 6px 32px;
-            font-size: 13px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-            transition: all 0.2s;
-        }
 
-        .search-wrapper .form-control:focus {
-            background: white;
-            border-color: var(--primary);
-            box-shadow: var(--shadow-focus);
-            outline: none;
-        }
 
-        .search-wrapper .form-control::placeholder {
-            color: #94a3b8;
-            font-size: 12px;
-        }
 
         /* Select Dropdowns */
         .filter-select {
@@ -359,29 +271,7 @@
             font-size: 14px;
         }
 
-        /* Reset Button */
-        .reset-btn {
-            height: 36px;
-            padding: 0 12px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-            color: #1e293b;
-        }
 
         /* ==================== ACTIVE FILTER TAGS ==================== */
         .active-filters {
@@ -419,7 +309,7 @@
         }
 
         .filter-tag i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
 
@@ -454,46 +344,10 @@
             color: currentColor;
         }
 
-        /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
-           in client.layout.head (single blue-only theme) — no local copy. */
 
-        /* .employee-info/.employee-details/.employee-name/.employee-email are
-           centralized in client.layout.head — no local copy. .employee-avatar
-           IS overridden below (matches the Monthly Payroll list's no-image
-           initials style instead of the centralized photo-only version, since
-           this column falls back to initials, not an external avatar image). */
 
-        /* ==================== TABLE STYLES ==================== */
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 12px 16px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            /* font-size: 13px; */
-            padding: 12px 16px;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .table tbody tr {
-            transition: all 0.2s;
-        }
-
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
         /* ==================== BADGES ==================== */
         .badge {
@@ -560,44 +414,21 @@
         /* "Add Employee" — theme.min.css's .btn-primary sets
            background-color/border-color with !important (vendor default
            #3454d1), which beats any plain override regardless of source
-           order or specificity. This page's theme is #1e3a8a, so the
+           order or specificity. This page's theme is #0D6EFD, so the
            override has to fight !important with !important. */
         .add-employee-btn {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
-            border-color: #1e3a8a !important;
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD) !important;
+            border-color: #0D6EFD !important;
             font-size: 12px;
         }
 
         .add-employee-btn:hover {
-            background: linear-gradient(135deg, #16306f, #1e40af) !important;
-            border-color: #16306f !important;
+            background: #0B5ED7 !important;
+            border-color: #0B5ED7 !important;
         }
 
-        /* ==================== ACTION BUTTONS ==================== */
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-        }
 
-        .action-btn:hover {
-            background: white;
-            color: var(--primary);
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(30, 58, 138, 0.1);
-        }
 
-        .action-btn i {
-            font-size: 14px;
-        }
 
         .dropdown-item {
             font-size: 12px;
@@ -613,7 +444,7 @@
         }
 
         .dropdown-item:hover i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
         }
 
         /* ==================== EMPLOYEE ID BADGE ==================== */
@@ -628,31 +459,9 @@
             display: inline-block;
         }
 
-        /* ==================== PAGINATION ==================== */
-        .pagination {
-            margin: 0;
-            gap: 4px;
-        }
 
-        .page-link {
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            font-size: 12px;
-            padding: 6px 12px;
-            border-radius: 6px !important;
-            transition: all 0.2s;
-        }
 
-        .page-link:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-            color: #1e293b;
-        }
 
-        .page-item.active .page-link {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
 
         /* ==================== EMPTY STATE ==================== */
         .empty-state {
@@ -684,19 +493,9 @@
 
         /* ==================== RESPONSIVE ==================== */
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 8px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(33.333% - 8px);
-                min-width: 120px;
-            }
 
-            .filter-item.search {
-                flex: 1 1 100%;
-                min-width: 100%;
-            }
+
 
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -704,24 +503,10 @@
         }
 
         @media (max-width: 768px) {
-            .filter-wrapper {
-                padding: 12px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
 
-            .filter-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
+
 
             .apply-btn,
             .reset-btn {
@@ -733,11 +518,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .table th,
-            .table td {
-                padding: 8px 12px;
-                /* font-size: 12px; */
-            }
         }
 
         /* ==================== ADD/EDIT EMPLOYEE DRAWER — STEP WIZARD ====================
@@ -777,7 +557,7 @@
         }
 
         /* Next / Previous / Cancel / Submit — smaller buttons, unified to
-           the app's #1e3a8a blue theme instead of the default
+           the app's #0D6EFD blue theme instead of the default
            secondary-gray/success-green Bootstrap variants. theme.min.css
            sets .btn-primary/.btn-secondary/.btn-success background-color
            and border-color with !important (vendor defaults), which beats
@@ -1067,56 +847,32 @@
 
 @section('content-area')
     <!-- [ page-header ] start -->
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <!--<h5 class="m-b-10">Employees</h5>-->
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">View Employees</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex d-md-none">
-                    <a href="#" class="page-header-right-close-toggle">
-                        <i class="feather-arrow-left me-2"></i>
-                        <span>Back</span>
+    <x-ui.page-header title="Employees" current="View Employees">
+        <x-slot:actions>
+            <div class="dropdown">
+                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
+                    data-bs-auto-close="outside">
+                    <i class="feather-download"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end" >
+                    <a href="#" class="dropdown-item" onclick="exportToCSV()">
+                        <i class="bi bi-filetype-csv me-3"></i>
+                        <span>Export CSV</span>
                     </a>
                 </div>
-                <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
-                            data-bs-auto-close="outside">
-                            <i class="feather-download"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end" >
-                            <a href="#" class="dropdown-item" onclick="exportToCSV()">
-                                <i class="bi bi-filetype-csv me-3"></i>
-                                <span>Export CSV</span>
-                            </a>
-                        </div>
-                    </div>
-                    @if (in_array(auth()->user()->role, ['admin', 'hr']))
-                        <button type="button" class="btn btn-sm btn-light-brand" data-bs-toggle="modal" data-bs-target="#importEmployeeModal">
-                            <i class="feather-upload me-2"></i>
-                            <span>Import Employees</span>
-                        </button>
-                    @endif
-                    <button type="button" class="btn btn-sm btn-primary add-employee-btn" onclick="openAddEmployeeDrawer()">
-                        <i class="feather-plus me-2"></i>
-                        <span>Add Employee</span>
-                    </button>
-                </div>
             </div>
-            <div class="d-md-none d-flex align-items-center">
-                <a href="#" class="page-header-right-open-toggle">
-                    <i class="feather-align-right fs-20"></i>
-                </a>
-            </div>
-        </div>
-    </div>
+            @if (in_array(auth()->user()->role, ['admin', 'hr']))
+                <button type="button" class="btn btn-sm btn-light-brand" data-bs-toggle="modal" data-bs-target="#importEmployeeModal">
+                    <i class="feather-upload me-2"></i>
+                    <span>Import Employees</span>
+                </button>
+            @endif
+            <button type="button" class="btn btn-sm btn-primary add-employee-btn" onclick="openAddEmployeeDrawer()">
+                <i class="feather-plus me-2"></i>
+                <span>Add Employee</span>
+            </button>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <!-- [ page-header ] end -->
 
@@ -1413,23 +1169,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Employees List</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-info">
-                                <i class="feather-list me-1"></i>Total: {{ $totalEmployees }}
-                            </span>
-                            <span class="badge bg-primary">
-                                <i class="feather-check me-1"></i>Active: {{ $activeEmployees }}
-                            </span>
-                            @if (!empty($fieldTrackingEnabled))
-                                <span class="badge bg-primary" title="Field-tracking seats in use / purchased">
-                                    <i class="feather-map-pin me-1"></i>Field tracking:
-                                    <span id="ltSeatsUsed">{{ $fieldTrackingSeatsUsed }}</span> / {{ $fieldTrackingSeats }}
-                                </span>
-                            @endif
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         @if (!empty($fieldTrackingEnabled) || $pushDevices->isNotEmpty())
                             <div id="ltBulkBar" class="d-none align-items-center gap-2 px-3 py-2"
@@ -1618,17 +1357,7 @@
                         </div>
                     </div>
                     @if (method_exists($users, 'links') && $users->hasPages())
-                        <div class="card-footer">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-muted small">
-                                    Showing {{ $users->firstItem() }} to {{ $users->lastItem() }} of
-                                    {{ $users->total() }} entries
-                                </div>
-                                <div class="remove-internal-para">
-                                    {{ $users->appends(request()->query())->links() }}
-                                </div>
-                            </div>
-                        </div>
+                        <x-ui.pagination-footer :paginator="$users" label="employees" />
                     @endif
                 </div>
             </div>

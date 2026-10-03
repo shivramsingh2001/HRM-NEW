@@ -23,11 +23,11 @@
         /* ==================== BLUE THEME, COMPACT SPACING ==================== */
         .personal-info .row.mb-4 { margin-bottom: 14px !important; }
         .personal-info label { font-size: 12px; }
-        .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #eaeef5; }
+        .personal-info .input-group-text { background: #EFF6FF; color: #0D6EFD; border-color: #eaeef5; }
         .personal-info .form-control { font-size: 12px; border-color: #eaeef5; }
         .personal-info .fs-12 { font-size: 11px !important; }
         .card-body.personal-info { padding: 16px 18px; }
-        .alert-info { background: #e3edfe; border-color: #dfe5f0; color: #1e3a8a; font-size: 12px; }
+        .alert-info { background: #EFF6FF; border-color: #dfe5f0; color: #0D6EFD; font-size: 12px; }
         /* .btn-primary now matches the shared theme default exactly
            (theme-custom.css) — no page-local override needed. */
         .btn.btn-lg { padding: 8px 20px; font-size: 13px; }

@@ -19,8 +19,8 @@
             }
 
             .custom-employee-dropdown .btn:focus {
-                border-color: #1e3a8a;
-                box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+                border-color: #0D6EFD;
+                box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
             }
 
             /* Consistent initials style - same color for all */
@@ -28,7 +28,7 @@
             .employee-initials-sm {
                 width: 28px;
                 height: 28px;
-                background: #1e3a8a;
+                background: #0D6EFD;
                 /* Single consistent color */
                 color: white;
                 border-radius: 50%;
@@ -71,12 +71,12 @@
             }
 
             .custom-employee-dropdown .dropdown-item.active {
-                background: #e3edfe;
-                color: #1e3a8a;
+                background: #EFF6FF;
+                color: #0D6EFD;
             }
 
             .custom-employee-dropdown .dropdown-item.active .text-muted {
-                color: #1e3a8a !important;
+                color: #0D6EFD !important;
                 opacity: 0.8;
             }
 
@@ -134,49 +134,13 @@
             }
 
             .status-label.inactive {
-                color: #1e3a8a;
+                color: #0D6EFD;
             }
 
-            /* ==================== MODERN FILTER SECTION ==================== */
-            .filter-wrapper {
-                background: white;
-                border-radius: 12px;
-                border: 1px solid #edf2f7;
-                padding: 16px 20px;
-                margin-bottom: 24px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            }
 
-            .filter-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin-bottom: 12px;
-            }
 
-            .filter-title {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 12px;
-                font-weight: 600;
-                color: #1e293b;
-            }
 
-            .filter-title i {
-                color: #1e3a8a;
-                font-size: 13px;
-            }
 
-            .filter-title span {
-                background: #e3edfe;
-                color: #1e3a8a;
-                font-size: 11px;
-                font-weight: 600;
-                padding: 2px 8px;
-                border-radius: 20px;
-                margin-left: 6px;
-            }
 
             .clear-all-link {
                 display: flex;
@@ -191,70 +155,21 @@
             }
 
             .clear-all-link:hover {
-                background: #e3edfe;
-                color: #1e3a8a;
+                background: #EFF6FF;
+                color: #0D6EFD;
             }
 
             .clear-all-link i {
                 font-size: 12px;
             }
 
-            /* ==================== COMPACT FILTER ROW ==================== */
-            .filter-row {
-                display: flex;
-                flex-wrap: wrap;
-                align-items: center;
-                gap: 10px;
-            }
 
-            .filter-item {
-                flex: 0 0 auto;
-                min-width: 140px;
-            }
 
-            .filter-item.search {
-                flex: 1 1 200px;
-                min-width: 180px;
-            }
 
-            /* Search Box */
-            .search-wrapper {
-                position: relative;
-                width: 100%;
-            }
 
-            .search-wrapper i {
-                position: absolute;
-                left: 10px;
-                top: 50%;
-                transform: translateY(-50%);
-                color: #94a3b8;
-                font-size: 12px;
-                pointer-events: none;
-            }
 
-            .search-wrapper .form-control {
-                width: 100%;
-                height: 36px;
-                padding: 6px 12px 6px 32px;
-                font-size: 11.5px;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                background: #f8fafc;
-                transition: all 0.2s;
-            }
 
-            .search-wrapper .form-control:focus {
-                background: white;
-                border-color: #1e3a8a;
-                box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
-                outline: none;
-            }
 
-            .search-wrapper .form-control::placeholder {
-                color: #94a3b8;
-                font-size: 12px;
-            }
 
             /* Select Dropdowns */
             .filter-select {
@@ -273,8 +188,8 @@
 
             .filter-select:focus {
                 background-color: white;
-                border-color: #1e3a8a;
-                box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+                border-color: #0D6EFD;
+                box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
                 outline: none;
             }
 
@@ -287,7 +202,7 @@
             .apply-btn {
                 height: 36px;
                 padding: 0 16px;
-                background: #1e3a8a;
+                background: #0D6EFD;
                 color: white;
                 border: none;
                 border-radius: 8px;
@@ -302,7 +217,7 @@
             }
 
             .apply-btn:hover {
-                background: #1e3a8a;
+                background: #0D6EFD;
                 transform: translateY(-1px);
             }
 
@@ -310,29 +225,7 @@
                 font-size: 12px;
             }
 
-            /* Reset Button */
-            .reset-btn {
-                height: 36px;
-                padding: 0 12px;
-                background: white;
-                color: #64748b;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                font-size: 12px;
-                font-weight: 500;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                text-decoration: none;
-                transition: all 0.2s;
-                white-space: nowrap;
-            }
 
-            .reset-btn:hover {
-                background: #f8fafc;
-                border-color: #94a3b8;
-                color: #1e293b;
-            }
 
             /* ==================== ACTIVE FILTER TAGS ==================== */
             .active-filters {
@@ -370,7 +263,7 @@
             }
 
             .filter-tag i {
-                color: #1e3a8a;
+                color: var(--icon-color, #0D6EFD);
                 font-size: 11px;
             }
 
@@ -384,20 +277,20 @@
             }
 
             .filter-tag .remove-tag:hover {
-                color: #1e3a8a;
+                color: #0D6EFD;
             }
 
             .filter-tag.clear-all {
-                background: #e3edfe;
-                border-color: #1e3a8a;
-                color: #1e3a8a;
+                background: #EFF6FF;
+                border-color: #0D6EFD;
+                color: #0D6EFD;
                 font-weight: 600;
                 text-decoration: none;
                 padding: 3px 10px;
             }
 
             .filter-tag.clear-all:hover {
-                background: #1e3a8a;
+                background: #0D6EFD;
                 color: white;
             }
 
@@ -435,7 +328,7 @@
             .stats-icon {
                 width: 32px;
                 height: 32px;
-                background: #e3edfe;
+                background: #EFF6FF;
                 border-radius: 9px;
                 display: flex;
                 align-items: center;
@@ -445,7 +338,7 @@
 
             .stats-icon i {
                 font-size: 12px;
-                color: #1e3a8a;
+                color: var(--icon-color, #0D6EFD);
             }
 
             .stats-info h3 {
@@ -463,43 +356,10 @@
                 margin: 0;
             }
 
-            /* .employee-avatar/.employee-info/.employee-details/.employee-name/
-               .employee-email are centralized in client.layout.head — no local copy. */
 
-            /* ==================== TABLE STYLES ====================
-               font-size and td padding are centralized in client.layout.head
-               (11.5px / 3px 15px) — no local copy, only this page's own
-               margin-bottom addition stays. */
-            .table {
-                margin-bottom: 0;
-            }
 
-            .table th {
-                background-color: #f8fafc;
-                font-weight: 600;
-                font-size: 12px;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
-                color: #475569;
-                border-bottom-width: 1px;
-                padding: 12px 16px;
-                white-space: nowrap;
-            }
 
-            .table td {
-                vertical-align: middle;
-                font-size: 11.5px;
-                padding: 12px 16px;
-                border-bottom: 1px solid #f1f5f9;
-            }
 
-            .table tbody tr {
-                transition: all 0.2s;
-            }
-
-            .table tbody tr:hover {
-                background-color: #f8fafc;
-            }
 
             /* ==================== BADGES ==================== */
             .badge {
@@ -517,13 +377,13 @@
             }
 
             .badge.bg-success {
-                background: #e3edfe !important;
-                color: #1d4ed8;
+                background: #EFF6FF !important;
+                color: #0B5ED7;
             }
 
             .badge.bg-danger {
-                background: #e3edfe !important;
-                color: #1e3a8a;
+                background: #EFF6FF !important;
+                color: #0D6EFD;
             }
 
             .badge.bg-primary {
@@ -532,8 +392,8 @@
             }
 
             .badge.bg-warning {
-                background: #e3edfe !important;
-                color: #2563eb;
+                background: #EFF6FF !important;
+                color: #0D6EFD;
             }
 
             .badge.bg-info {
@@ -563,31 +423,8 @@
                 color: white;
             }
 
-            /* ==================== ACTION BUTTONS ==================== */
-            .action-btn {
-                width: 32px;
-                height: 32px;
-                border-radius: 8px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                background: #f8fafc;
-                color: #64748b;
-                transition: all 0.2s;
-                border: 1px solid #e2e8f0;
-            }
 
-            .action-btn:hover {
-                background: white;
-                color: #1e3a8a;
-                border-color: #1e3a8a;
-                transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(30, 58, 138, 0.1);
-            }
 
-            .action-btn i {
-                font-size: 12px;
-            }
 
             .dropdown-item {
                 font-size: 12px;
@@ -603,7 +440,7 @@
             }
 
             .dropdown-item:hover i {
-                color: #1e3a8a;
+                color: var(--icon-color, #0D6EFD);
             }
 
             /* ==================== REASON TEXT (NO SCROLLBAR) ==================== */
@@ -656,9 +493,9 @@
             }
 
             .file-preview:hover {
-                background: #e3edfe;
-                border-color: #1e3a8a;
-                color: #1e3a8a;
+                background: #EFF6FF;
+                border-color: #0D6EFD;
+                color: #0D6EFD;
             }
 
             .file-preview i {
@@ -669,7 +506,7 @@
                 background: #f8fafc;
                 padding: 12px 16px;
                 border-radius: 8px;
-                border-left: 3px solid #1e3a8a;
+                border-left: 3px solid #0D6EFD;
                 font-size: 11.5px;
                 line-height: 1.6;
                 color: #334155;
@@ -703,47 +540,15 @@
                 margin-bottom: 20px;
             }
 
-            /* ==================== PAGINATION ==================== */
-            .pagination {
-                margin: 0;
-                gap: 4px;
-            }
 
-            .page-link {
-                border: 1px solid #e2e8f0;
-                color: #475569;
-                font-size: 12px;
-                padding: 6px 12px;
-                border-radius: 6px !important;
-                transition: all 0.2s;
-            }
 
-            .page-link:hover {
-                background: #f8fafc;
-                border-color: #94a3b8;
-                color: #1e293b;
-            }
 
-            .page-item.active .page-link {
-                background: #1e3a8a;
-                border-color: #1e3a8a;
-            }
 
             /* ==================== RESPONSIVE ==================== */
             @media (max-width: 992px) {
-                .filter-row {
-                    gap: 8px;
-                }
 
-                .filter-item {
-                    flex: 1 1 calc(33.333% - 8px);
-                    min-width: 120px;
-                }
 
-                .filter-item.search {
-                    flex: 1 1 100%;
-                    min-width: 100%;
-                }
+
 
                 .stats-grid {
                     grid-template-columns: repeat(2, 1fr);
@@ -751,24 +556,10 @@
             }
 
             @media (max-width: 768px) {
-                .filter-wrapper {
-                    padding: 12px;
-                }
 
-                .filter-row {
-                    flex-direction: column;
-                    align-items: stretch;
-                }
 
-                .filter-item {
-                    width: 100%;
-                }
 
-                .filter-header {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    gap: 8px;
-                }
+
 
                 .apply-btn,
                 .reset-btn {
@@ -780,11 +571,6 @@
                     grid-template-columns: 1fr;
                 }
 
-                .table th,
-                .table td {
-                    padding: 8px 12px;
-                    font-size: 12px;
-                }
 
                 .detail-row {
                     flex-direction: column;
@@ -827,7 +613,7 @@
                 </div>
                 <div class="stats-card">
                     <div class="stats-icon" style="background: rgba(59, 130, 246, 0.1);">
-                        <i class="feather-check-circle" style="color: #3b82f6;"></i>
+                        <i class="feather-check-circle" style="color: var(--icon-color, #0D6EFD);"></i>
                     </div>
                     <div class="stats-info">
                         <h3>{{ $approvedLeaves ?? 0 }}</h3>
@@ -835,8 +621,8 @@
                     </div>
                 </div>
                 <div class="stats-card">
-                    <div class="stats-icon" style="background: rgba(30, 58, 138, 0.1);">
-                        <i class="feather-x-circle" style="color: #1e3a8a;"></i>
+                    <div class="stats-icon" style="background: rgba(13, 110, 253, 0.1);">
+                        <i class="feather-x-circle" style="color: var(--icon-color, #0D6EFD);"></i>
                     </div>
                     <div class="stats-info">
                         <h3>{{ $cancelledLeaves ?? 0 }}</h3>
@@ -1010,14 +796,6 @@
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card stretch stretch-full">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">Leave Applications</h5>
-                            <div class="d-flex gap-2">
-                                <span class="badge bg-info">
-                                    <i class="feather-list me-1"></i>Total: {{ $leaves->total() }}
-                                </span>
-                            </div>
-                        </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table" id="leaveList">
@@ -1047,7 +825,7 @@
                                                 <td>
                                                     <div class="employee-info">
                                                         <div class="employee-avatar"
-                                                            style="background: #1e3a8a; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600;">
+                                                            style="background: #0D6EFD; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600;">
                                                             {{ strtoupper(substr($leave->user_name ?? 'U', 0, 2)) }}
                                                         </div>
                                                         <div class="employee-details">
@@ -1155,17 +933,7 @@
                             </div>
                         </div>
                         @if (method_exists($leaves, 'links') && $leaves->hasPages())
-                            <div class="card-footer">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="text-muted small">
-                                        Showing {{ $leaves->firstItem() }} to {{ $leaves->lastItem() }} of
-                                        {{ $leaves->total() }} entries
-                                    </div>
-                                    <div class="remove-internal-para">
-                                        {{ $leaves->appends(request()->query())->links() }}
-                                    </div>
-                                </div>
-                            </div>
+                            <x-ui.pagination-footer :paginator="$leaves" label="leaves" />
                         @endif
                     </div>
                 </div>

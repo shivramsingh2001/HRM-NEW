@@ -295,3 +295,6 @@ Controller: `app/Http/Controllers/Api/Loan/LoanController.php`
 `progress` is only present when `status = "active"`; `repayment_schedule` is `null` if no installments exist.
 
 **Error responses:** `500 {"success": false, "message": "An error occurred. Please try again later."}` (covers both "not found" via `findOrFail` and genuine server errors — no distinct 404 shape).
+
+
+> **Per-employee monthly expense limit (2026-10-03).** `POST /api/create-expense` (and editing a claim) can refuse with HTTP 200, `success: false`, message `"Expense claims are limited to ₹X a month for this employee. ₹Y is already claimed for {Month YYYY}, so at most ₹Z more can be claimed."` when admin/HR set a monthly limit for the employee (Employee 360 → Policies). Counts reimbursements + settlements; advances are not limited.

@@ -56,7 +56,7 @@
         }
 
         .setting-label i {
-            color: #4f46e5;
+            color: var(--icon-color, #0D6EFD);
             margin-right: 8px;
         }
 
@@ -225,17 +225,7 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Overtime Settings</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Overtime Settings</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Overtime Settings" />
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="settings-container">

@@ -17,48 +17,10 @@
             }
         }
 
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: var(--primary);
-            font-size: 16px;
-        }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 140px;
-        }
 
         .filter-select {
             width: 100%;
@@ -86,40 +48,8 @@
             cursor: pointer;
         }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 12px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-        }
 
-        /* ==================== TABLE STYLES ==================== */
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #475569;
-            padding: 12px 16px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 13px;
-            padding: 12px 16px;
-        }
-
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
         /* ==================== BADGES ==================== */
         .badge {
@@ -167,40 +97,10 @@
             color: #e2e8f0;
         }
 
-        /* ==================== ACTION BUTTONS ==================== */
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-        }
 
-        .action-btn:hover {
-            background: white;
-            transform: translateY(-2px);
-        }
 
-        .action-btn.view:hover {
-            color: var(--primary);
-            border-color: var(--primary);
-        }
 
-        .action-btn.edit:hover {
-            color: #10b981;
-            border-color: #10b981;
-        }
 
-        .action-btn.delete:hover {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
 
         /* ==================== MODAL STYLES ==================== */
         .rating-input {
@@ -259,18 +159,8 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Performance Reviews</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('performance.team') }}">Performance</a></li>
-                <li class="breadcrumb-item active">Reviews</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Performance Reviews" current="Reviews" :crumbs="[['label' => 'Performance', 'url' => route('performance.team')]]">
+        <x-slot:actions>
             <div class="dropdown">
                 <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown">
                     <i class="feather-download"></i>
@@ -281,8 +171,8 @@
                     </a>
                 </div>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
 
@@ -421,10 +311,6 @@
 
         <!-- Reviews Table -->
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Employee Performance Reviews</h5>
-                <span class="badge bg-info">Month: {{ date('F Y', strtotime($month . '-01')) }}</span>
-            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table">
@@ -536,17 +422,7 @@
             </div>
 
             @if (method_exists($employees, 'links') && $employees->hasPages())
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted small">
-                            Showing {{ $employees->firstItem() }} to {{ $employees->lastItem() }} of
-                            {{ $employees->total() }} entries
-                        </div>
-                        <div class="remove-internal-para">
-                            {{ $employees->appends(request()->query())->links() }}
-                        </div>
-                    </div>
-                </div>
+                <x-ui.pagination-footer :paginator="$employees" label="employees" />
             @endif
         </div>
     </div>

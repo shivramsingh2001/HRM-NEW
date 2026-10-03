@@ -227,7 +227,18 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::post('/complete-store', [UserController::class, 'completeStore'])->name('complete.store');
             Route::get('/edit/{id}', [UserController::class, 'edit'])->name('edit');
             Route::post('/update/{id}', [UserController::class, 'update'])->name('update-store');
-            Route::get('/show/{id}', [UserController::class, 'show'])->name('show');
+            // Employee 360 page — admin + HR only.
+            Route::get('/show/{id}', [UserController::class, 'show'])->name('show')->middleware('role:admin,hr');
+            Route::get('/show/{id}/tab/{tab}', [\App\Http\Controllers\User\EmployeeProfileController::class, 'tab'])->name('profile.tab')->middleware('role:admin,hr');
+            // Its action forms (posted to each module's existing endpoint) + the three actions that had none.
+            Route::middleware('role:admin,hr')->controller(\App\Http\Controllers\User\EmployeeProfileActionController::class)->group(function () {
+                Route::get('/show/{id}/form/{form}', 'form')->name('profile.form');
+                Route::post('/show/{id}/reset-password', 'resetPassword')->name('profile.reset-password');
+                Route::post('/show/{id}/leave', 'applyLeave')->name('profile.apply-leave');
+                Route::post('/show/{id}/weekoffs', 'setWeekoffs')->name('profile.weekoffs');
+                // Company policy values customised for this one employee (employee_policy_overrides).
+                Route::post('/show/{id}/policies/{section}', 'savePolicy')->name('profile.policy');
+            });
             Route::get('/load-data', [UserController::class, 'loadSavedData'])->name('load.data');
 
             Route::get('/export/excel', [UserController::class, 'exportExcel'])->name('export.excel');
@@ -616,6 +627,7 @@ Route::group(['middleware' => ['tenant']], function () {
         Route::prefix('attendance-regularization')->name('attendance-regularization.')->middleware('feature:regularization')->group(function () {
             Route::get('/', [AttendanceRegularizationController::class, 'index'])->name('index');
             Route::post('/create', [AttendanceRegularizationController::class, 'store'])->name('store');
+            Route::get('/shifts', [AttendanceRegularizationController::class, 'shiftsForDate'])->name('shifts');
             Route::post('/update/{id}', [AttendanceRegularizationController::class, 'update'])->name('update');
             Route::DELETE('/destroy/{id}', [AttendanceRegularizationController::class, 'destroy'])->name('destroy');
 
@@ -773,6 +785,11 @@ Route::group(['middleware' => ['tenant']], function () {
         // Multiple-punches-per-day toggle (Company Policies) — tenants.allow_multiple_punches.
         Route::middleware('role:admin,hr')->prefix('multiple-punches-settings')->name('multiple-punches-settings.')->group(function () {
             Route::put('/', [\App\Http\Controllers\Settings\MultiplePunchesSettingsController::class, 'update'])->name('update');
+        });
+
+        // WFH + regularization request limits (Company Policies) — tenants.wfh_* / regularization_*.
+        Route::middleware('role:admin,hr')->prefix('request-limits-settings')->name('request-limits-settings.')->group(function () {
+            Route::put('/', [\App\Http\Controllers\Settings\RequestLimitsSettingsController::class, 'update'])->name('update');
         });
 
         // Day classification (present/half-day ratios) standalone card on the

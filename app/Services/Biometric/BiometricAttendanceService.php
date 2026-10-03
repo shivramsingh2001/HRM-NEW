@@ -18,6 +18,7 @@ use App\Services\Attendance\PolicyResolver;
 use App\Services\Attendance\PunchInput;
 use App\Services\Attendance\TenantShiftResolver;
 use App\Services\Attendance\TimezoneResolver;
+use App\Support\ShiftWindow;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -56,7 +57,10 @@ class BiometricAttendanceService
         $device = BiometricDevice::find($punch->biometric_device_id);
         $tenantId = (int) $punch->tenant_id;
 
-        if ((bool) DB::table('tenants')->where('id', $tenantId)->value('allow_multiple_punches')) {
+        // Multi-shift employees also need the punch pipeline: it matches each
+        // punch to its shift and allows the 2nd shift's clock-in.
+        if ((bool) DB::table('tenants')->where('id', $tenantId)->value('allow_multiple_punches')
+            || app(TenantShiftResolver::class)->hasAdditionalAround($user->id, $tenantId, Carbon::parse($punch->punched_at)->format('Y-m-d'))) {
             $this->applyViaPunchPipeline($punch, $user, $device, $tenantId);
 
             return;
@@ -457,10 +461,7 @@ class BiometricAttendanceService
         $overtime = 0;
         $expected = 0;
         if ($shift) {
-            $scheduledEnd = Carbon::parse($date . ' ' . $shift->end_time);
-            if ($this->calc->isOvernight(['start_time' => $shift->start_time, 'end_time' => $shift->end_time])) {
-                $scheduledEnd->addDay();
-            }
+            [, $scheduledEnd] = ShiftWindow::window($date, $shift);
             $grace = (int) ($shift->grace_minutes ?? 0);
             if ($at->lt($scheduledEnd)) {
                 $mins = (int) $at->diffInMinutes($scheduledEnd);
@@ -470,11 +471,12 @@ class BiometricAttendanceService
             }
             $expected = $this->calc->expectedWorkSeconds([
                 'start_time' => $shift->start_time, 'end_time' => $shift->end_time,
+                'is_overnight' => $shift->is_overnight ?? null,
             ]);
         }
         // Same tenant policy (ratios + Day Classification switch) as every other path.
         $status = app(PolicyResolver::class)
-            ->forTenantDate((int) $existing->tenant_id, $date)
+            ->forUserDate((int) $existing->tenant_id, (int) $existing->user_id, $date)
             ->classify($workedHours, (int) $expected);
 
         return [

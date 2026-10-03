@@ -27,8 +27,8 @@
         .bg-soft-success,
         .bg-soft-info,
         .bg-soft-dark {
-            background: #e3edfe !important;
-            color: #1e3a8a !important;
+            background: #EFF6FF !important;
+            color: var(--icon-color, #0D6EFD) !important;
         }
 
         .bg-soft-warning {
@@ -64,18 +64,18 @@
         .stat-card .text-warning { color: #60a5fa !important; }
         .stat-card .text-success { color: #3b82f6 !important; }
         .stat-card .text-info    { color: #0ea5e9 !important; }
-        .stat-card .text-danger  { color: #1d4ed8 !important; }
-        .stat-card .text-primary { color: #1e3a8a !important; }
-        .stat-card .text-dark    { color: #1e3a8a !important; }
+        .stat-card .text-danger  { color: #0B5ED7 !important; }
+        .stat-card .text-primary { color: #0D6EFD !important; }
+        .stat-card .text-dark    { color: #0D6EFD !important; }
 
         /* Amount column in the table uses the same 4-way status coloring —
            same blue shades, scoped to .table so form-validation text-danger
            elsewhere on the page stays real red. */
-        .table .text-warning { color: #2563eb !important; }
-        .table .text-success { color: #1e3a8a !important; }
-        .table .text-info    { color: #1d4ed8 !important; }
+        .table .text-warning { color: #0D6EFD !important; }
+        .table .text-success { color: #0D6EFD !important; }
+        .table .text-info    { color: #0B5ED7 !important; }
         .table .text-danger  { color: #64748b !important; }
-        .table .text-primary { color: #1e3a8a !important; }
+        .table .text-primary { color: #0D6EFD !important; }
 
         /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
            are centralized in client.layout.head (single blue-only theme —
@@ -98,46 +98,10 @@
             font-weight: 400;
         }
 
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: #1e3a8a;
-            font-size: 16px;
-        }
 
-        .filter-title span {
-            background: #e3edfe;
-            color: #1e3a8a;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -152,51 +116,18 @@
         }
 
         .clear-all-link:hover {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .clear-all-link i {
             font-size: 14px;
         }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 140px;
-        }
 
-        .search-wrapper {
-            position: relative;
-            width: 100%;
-        }
 
-        .search-wrapper i {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 14px;
-            pointer-events: none;
-        }
 
-        .search-wrapper .form-control {
-            width: 100%;
-            height: 36px;
-            padding: 6px 12px 6px 32px;
-            font-size: 13px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-            transition: all 0.2s;
-        }
 
         .filter-select {
             width: 100%;
@@ -212,22 +143,6 @@
             transition: all 0.2s;
         }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 12px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
         .active-filters {
             margin-top: 12px;
@@ -264,7 +179,7 @@
         }
 
         .filter-tag i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
 
@@ -280,41 +195,17 @@
         }
 
         .filter-tag.clear-all {
-            background: #e3edfe;
-            border-color: #1e3a8a;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            border-color: #0D6EFD;
+            color: #0D6EFD;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
-        /* ==================== TABLE STYLES ==================== */
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 12px 16px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 13px;
-            padding: 12px 16px;
-            border-bottom: 1px solid #f1f5f9;
-        }
 
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
         /* ==================== BADGES ==================== */
         .badge {
@@ -328,8 +219,8 @@
         }
 
         .badge.bg-success {
-            background: #e3edfe !important;
-            color: #1e3a8a;
+            background: #EFF6FF !important;
+            color: #0D6EFD;
         }
 
         .badge.bg-danger {
@@ -339,23 +230,23 @@
 
         .badge.bg-info {
             background: #dbeafe !important;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .badge.bg-warning {
             background: #bfd3f7 !important;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .badge.bg-primary {
-            background: #1e3a8a !important;
+            background: #0D6EFD !important;
             color: #fff;
         }
 
         /* ==================== PAYMENT DETAILS BUTTON ==================== */
         .payment-info-btn {
             background: #dbeafe;
-            color: #1e3a8a;
+            color: #0D6EFD;
             border: none;
             border-radius: 20px;
             padding: 4px 12px;
@@ -369,7 +260,7 @@
         }
 
         .payment-info-btn:hover {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             transform: translateY(-1px);
         }
@@ -384,7 +275,7 @@
             border-radius: 12px;
             padding: 16px;
             margin-top: 10px;
-            border-left: 3px solid #1e3a8a;
+            border-left: 3px solid #0D6EFD;
         }
 
         .payment-detail-row {
@@ -413,59 +304,28 @@
 
         .mode-cash {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .mode-bank {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .mode-cheque {
             background: #bfd3f7;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .mode-upi {
             background: #93c5fd;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
-        /* ==================== ACTION BUTTONS ==================== */
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-        }
 
-        .action-btn:hover {
-            background: white;
-            color: #1e3a8a;
-            border-color: #1e3a8a;
-            transform: translateY(-2px);
-        }
 
-        .action-btn i {
-            font-size: 14px;
-        }
 
-        .action-btn.delete:hover {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
 
-        .action-btn.info:hover {
-            color: #1e3a8a;
-            border-color: #1e3a8a;
-        }
 
         /* ==================== EMPTY STATE ==================== */
         .empty-state {
@@ -498,14 +358,8 @@
 
         /* ==================== RESPONSIVE ==================== */
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 8px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(33.333% - 8px);
-                min-width: 120px;
-            }
+
 
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -513,29 +367,11 @@
         }
 
         @media (max-width: 768px) {
-            .filter-wrapper {
-                padding: 12px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
 
-            .filter-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
 
-            .reset-btn {
-                width: 100%;
-                justify-content: center;
-            }
+
 
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -593,52 +429,27 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">My Expenses</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.index') }}">Expenses</a></li>
-                <li class="breadcrumb-item active">My Expenses</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex d-md-none">
-                    <a href="#" class="page-header-right-close-toggle">
-                        <i class="feather-arrow-left me-2"></i>
-                        <span>Back</span>
-                    </a>
-                </div>
-                <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
-                            data-bs-auto-close="outside">
-                            <i class="feather-download"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a href="#" class="dropdown-item" onclick="exportToCSV()">
-                                <i class="bi bi-filetype-csv me-3"></i>
-                                <span>Export CSV</span>
-                            </a>
-                        </div>
-                    </div>
-                    <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#addexpenseModal">
-                        <i class="feather-plus me-2"></i>
-                        <span>Add Expense</span>
-                    </a>
-                </div>
-            </div>
-            <div class="d-md-none d-flex align-items-center">
-                <a href="#" class="page-header-right-open-toggle">
-                    <i class="feather-align-right fs-20"></i>
+    <x-ui.page-header title="My Expenses" :crumbs="[['label' => 'Expenses', 'url' => route('expense.index')]]">
+        <x-slot:actions>
+            <div class="dropdown">
+                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10"
+                    data-bs-auto-close="outside">
+                    <i class="feather-download"></i>
                 </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="#" class="dropdown-item" onclick="exportToCSV()">
+                        <i class="bi bi-filetype-csv me-3"></i>
+                        <span>Export CSV</span>
+                    </a>
+                </div>
             </div>
-        </div>
-    </div>
+            <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                data-bs-target="#addexpenseModal">
+                <i class="feather-plus me-2"></i>
+                <span>Add Expense</span>
+            </a>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
 
@@ -934,17 +745,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">My Expense Applications</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-info">
-                                <i class="feather-list me-1"></i>Total: {{ count($expenses) }}
-                            </span>
-                            <span class="badge bg-primary">
-                                Total Amount: ₹{{ number_format($totalAmount ?? 0, 2) }}
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table" id="expenseList">

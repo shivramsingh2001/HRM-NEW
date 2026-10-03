@@ -3,7 +3,7 @@
 @section('style')
     <style>
         .asset-header {
-            background: linear-gradient(135deg, var(--primary, #1e3a8a) 0%, var(--primary-mid, #2563eb) 100%);
+            background: linear-gradient(135deg, var(--primary-mid, #0D6EFD), var(--primary-mid, #0D6EFD));
             color: white;
             border-radius: 10px;
             padding: 16px;

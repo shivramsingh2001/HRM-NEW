@@ -16,7 +16,7 @@
         border-color: #dfe5f0;
     }
 
-    .project-card .side-stick { background-color: #1e3a8a; }
+    .project-card .side-stick { background-color: #0D6EFD; }
 
     .prj-title {
         font-size: 11.5px !important;
@@ -39,16 +39,16 @@
     }
 
     .badge-ongoing { background: #3b82f6; color: #fff; }
-    .badge-pending { background: #93c5fd; color: #1e3a8a; }
-    .badge-hold { background: #2563eb; color: #fff; }
-    .badge-completed { background: #1e3a8a; color: #fff; }
+    .badge-pending { background: #93c5fd; color: #0D6EFD; }
+    .badge-hold { background: #0D6EFD; color: #fff; }
+    .badge-completed { background: #0D6EFD; color: #fff; }
     .badge-cancelled { background: #6b7385; color: #fff; }
-    .badge-priority-low { background: #e3edfe; color: #1e3a8a; }
-    .badge-priority-medium { background: #93c5fd; color: #1e3a8a; }
-    .badge-priority-high { background: #2563eb; color: #fff; }
-    .badge-priority-critical { background: #1e3a8a; color: #fff; }
+    .badge-priority-low { background: #EFF6FF; color: #0D6EFD; }
+    .badge-priority-medium { background: #93c5fd; color: #0D6EFD; }
+    .badge-priority-high { background: #0D6EFD; color: #fff; }
+    .badge-priority-critical { background: #0D6EFD; color: #fff; }
 
-    .prj-overdue { font-size: 9px; color: #1e3a8a; font-weight: 600; margin-bottom: 4px; }
+    .prj-overdue { font-size: 9px; color: #0D6EFD; font-weight: 600; margin-bottom: 4px; }
 
     .prj-dates { display: flex; justify-content: space-between; font-size: 9px; color: #6b7385; margin-bottom: 6px; }
 
@@ -64,10 +64,10 @@
 
     .prj-info-label { font-size: 8px; color: #6b7385; text-transform: uppercase; letter-spacing: .03em; }
     .prj-info-value { font-size: 9.5px; font-weight: 600; color: #1a2236; }
-    .prj-info-value i { color: #1e3a8a; }
+    .prj-info-value i { color: var(--icon-color, #0D6EFD); }
 
-    .prj-progress-track { height: 6px; border-radius: 4px; background: #e3edfe; overflow: hidden; flex: 1; }
-    .prj-progress-fill { height: 100%; background: #1e3a8a; }
+    .prj-progress-track { height: 6px; border-radius: 4px; background: #EFF6FF; overflow: hidden; flex: 1; }
+    .prj-progress-fill { height: 100%; background: #0D6EFD; }
     .prj-progress-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
     .prj-progress-row small { font-size: 9px; color: #6b7385; font-weight: 700; }
 
@@ -83,24 +83,7 @@
         border-top: 1px solid #eaeef5;
     }
 
-    .action-btn {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: #f4f6fb;
-        border: 1px solid #eaeef5;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6b7385;
-        font-size: 10px;
-        transition: all .2s;
-        cursor: pointer;
-        text-decoration: none;
-        flex-shrink: 0;
-    }
 
-    .action-btn:hover { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
 
     /* ==================== EMPTY STATE ==================== */
     .empty-state {
@@ -129,27 +112,18 @@
  @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title"><h5 class="m-b-10">Project Management</h5></div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Projects</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Project Management" current="Projects">
+        <x-slot:actions>
             <div class="hstack gap-2">
                 @if(in_array($role,['admin','hr']))
-                <div class="dropdown d-none d-sm-flex">
-                    <a href="javascript:void(0)" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                <a href="javascript:void(0)" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                         data-bs-target="#addProjectModal">
                         <i class="feather-plus me-2"></i>Add Project
                     </a>
-                </div>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
     <div class="content-area-body pb-0 h-100">
         <div class="row note-has-grid" id="note-full-container">
             @forelse ($projects as $project)

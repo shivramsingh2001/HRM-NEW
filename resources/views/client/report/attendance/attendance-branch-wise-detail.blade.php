@@ -2,179 +2,18 @@
 
 @section('style')
 <style>
-    /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
-       are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
-    /* ==================== FILTER SECTION ==================== */
-    .filter-wrapper {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid #eef2f6;
-        padding: 11px 14px;
-        margin-bottom: 17px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    }
 
-    .filter-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
 
-    .filter-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 11px;
-        font-weight: 600;
-        color: #0f172a;
-    }
-
-    .filter-title i {
-        color: #1e3a8a;
-        font-size: 12px;
-        background: #e3edfe;
-        padding: 4px;
-        border-radius: 8px;
-    }
-
-    .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .filter-item {
-        flex: 0 0 auto;
-    }
-
-    .filter-item.date-picker { min-width: 180px; }
-    .filter-item.status-filter { min-width: 200px; }
-    .filter-item.search-filter { flex: 1; min-width: 200px; }
-
-    .filter-item input, .filter-item select {
-        height: 38px;
-        padding: 4px 8px;
-        font-size: 10.5px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 8px;
-        background: #f8fafc;
-        transition: all 0.3s;
-        width: 100%;
-        color: #0f172a;
-        font-weight: 500;
-        cursor: pointer;
-    }
-
-    .filter-item input:hover, .filter-item select:hover {
-        background: white;
-        border-color: #cbd5e1;
-    }
-
-    .filter-item input:focus, .filter-item select:focus {
-        border-color: #1e3a8a;
-        outline: none;
-        background: white;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
-    }
-
-    .reset-btn {
-        height: 38px;
-        padding: 0 16px;
-        background: white;
-        color: #64748b;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 10.5px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        text-decoration: none;
-        transition: all 0.3s;
-        white-space: nowrap;
-    }
-
-    .reset-btn:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-        color: #0f172a;
-        transform: translateY(-2px);
-    }
-
-    .reset-btn i {
-        font-size: 11px;
-    }
-
-    /* ==================== CARD ==================== */
-    .card {
-        border: 1px solid #eef2f6;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        overflow: hidden;
-        transition: all 0.3s ease;
-    }
-
-    .card:hover {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-    }
-
-    .card-header {
-        background: white;
-        border-bottom: 1px solid #f1f5f9;
-        padding: 10px 14px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    .card-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: #0f172a;
-        margin: 0;
-    }
 
     .card-body { padding: 0; }
-    .card-footer { background: white; border-top: 1px solid #f1f5f9; padding: 8px 14px; }
 
-    /* ==================== TABLE ==================== */
-    .table { margin-bottom: 0; }
-    .table thead th {
-        background: #f8fafc;
-        font-weight: 600;
-        font-size: 9px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #475569;
-        padding: 7px 8px;
-        white-space: nowrap;
-        border-bottom: 2px solid #e2e8f0;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
 
-    .table tbody td {
-        vertical-align: middle;
-        font-size: 10px;
-        padding: 7px 8px;
-        border-bottom: 1px solid #f1f5f9;
-        color: #1e293b;
-    }
 
-    .table tbody tr {
-        transition: all 0.2s;
-    }
 
-    .table tbody tr:hover td { background-color: #f8fafc; }
-    .table tbody tr:last-child td { border-bottom: none; }
+
+
+
 
     .table-responsive {
         border-radius: 0 0 12px 12px;
@@ -194,11 +33,11 @@
         width: 34px;
         height: 34px;
         border-radius: 8px;
-        background: linear-gradient(135deg, #e3edfe, #e3edfe);
+        background: linear-gradient(135deg, #EFF6FF, #EFF6FF);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #1e3a8a;
+        color: #0D6EFD;
         font-weight: 600;
         font-size: 10px;
         text-transform: uppercase;
@@ -242,13 +81,13 @@
         transition: all 0.2s;
     }
 
-    .badge-present { background: #e3edfe !important; color: #1e3a8a; border-color: #93c5fd; }
-    .badge-halfday { background: #e3edfe !important; color: #2563eb; border-color: #93c5fd; }
-    .badge-checked_in_only { background: #bfd3f7 !important; color: #1e3a8a; border-color: #60a5fa; }
+    .badge-present { background: #EFF6FF !important; color: #0D6EFD; border-color: #93c5fd; }
+    .badge-halfday { background: #EFF6FF !important; color: #0D6EFD; border-color: #93c5fd; }
+    .badge-checked_in_only { background: #bfd3f7 !important; color: #0D6EFD; border-color: #60a5fa; }
     .badge-absent { background: #e2e8f0 !important; color: #475569; border-color: #cbd5e1; }
-    .badge-on_leave { background: #bfd3f7 !important; color: #1e3a8a; border-color: #60a5fa; }
-    .badge-holiday { background: #e3edfe !important; color: #16295e; border-color: #93c5fd; }
-    .badge-week_off { background: #dbeafe !important; color: #1e40af; border-color: #bfdbfe; }
+    .badge-on_leave { background: #bfd3f7 !important; color: #0D6EFD; border-color: #60a5fa; }
+    .badge-holiday { background: #EFF6FF !important; color: #0D6EFD; border-color: #93c5fd; }
+    .badge-week_off { background: #dbeafe !important; color: #0D6EFD; border-color: #bfdbfe; }
 
     /* ==================== STATUS DOTS ==================== */
     .status-dot {
@@ -259,46 +98,21 @@
         flex-shrink: 0;
     }
 
-    .status-dot.present { background: #1e3a8a; }
-    .status-dot.halfday { background: #2563eb; }
-    .status-dot.checked_in_only { background: #2563eb; }
+    .status-dot.present { background: #0D6EFD; }
+    .status-dot.halfday { background: #0D6EFD; }
+    .status-dot.checked_in_only { background: #0D6EFD; }
     .status-dot.absent { background: #475569; }
-    .status-dot.on_leave { background: #2563eb; }
-    .status-dot.holiday { background: #2563eb; }
+    .status-dot.on_leave { background: #0D6EFD; }
+    .status-dot.holiday { background: #0D6EFD; }
     .status-dot.week_off { background: #3b82f6; }
 
-    /* ==================== ACTION BUTTONS ==================== */
-    .action-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: 1px solid transparent;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        cursor: pointer;
-        font-size: 11px;
-        text-decoration: none;
-    }
 
-    .action-btn.view-btn {
-        background: #e3edfe;
-        color: #1e3a8a;
-        border-color: #93c5fd;
-    }
 
-    .action-btn.view-btn:hover {
-        background: #1e3a8a;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-    }
 
     /* ==================== BADGE INFO ==================== */
     .badge-info-custom {
-        background: #e3edfe !important;
-        color: #1e3a8a !important;
+        background: #EFF6FF !important;
+        color: #0D6EFD !important;
         font-weight: 600 !important;
         padding: 4px 12px !important;
         border-radius: 16px !important;
@@ -307,8 +121,8 @@
     }
 
     .badge-success-custom {
-        background: #e3edfe !important;
-        color: #1e3a8a !important;
+        background: #EFF6FF !important;
+        color: #0D6EFD !important;
         font-weight: 600 !important;
         padding: 4px 12px !important;
         border-radius: 16px !important;
@@ -329,20 +143,20 @@
 
     @media (max-width: 992px) {
         .stats-grid { grid-template-columns: repeat(4, 1fr); }
-        .filter-row { gap: 10px; }
-        .filter-item { flex: 1 1 calc(50% - 10px); min-width: 120px; }
-        .filter-item.search-filter { flex: 1 1 100%; }
+
+
+
     }
 
     @media (max-width: 768px) {
         .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .filter-wrapper { padding: 11px; }
-        .filter-row { flex-direction: column; }
-        .filter-item { width: 100%; }
-        .filter-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-        .reset-btn { width: 100%; justify-content: center; }
+
+
+
+
+
         .table-responsive { max-height: 500px; }
-        .table th, .table td { padding: 6px 7px; font-size: 9.5px; white-space: nowrap; }
+
         .employee-info { min-width: 120px; }
     }
 
@@ -353,26 +167,15 @@
 @endsection
 
 @section('content-area')
-<div class="page-header">
-    <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title">
-            <h5 class="m-b-10">Attendance Location Wise Report</h5>
-        </div>
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('report.attendance.branch-wise') }}">Attendance Location Wise Report</a></li>
-            <li class="breadcrumb-item active">{{ $branch->name }}</li>
-        </ul>
-    </div>
-    <div class="page-header-right ms-auto">
-        <div class="page-header-right-items">
-            <a href="{{ route('report.attendance.branch-wise.detail.export', $branch->id) }}?{{ http_build_query(request()->all()) }}" 
-               class="btn btn-sm btn-primary" target="_blank">
-                <i class="feather-download me-1"></i> Export CSV
-            </a>
-        </div>
-    </div>
-</div>
+<x-ui.page-header title="Attendance Location Wise Report" :current="$branch->name"
+    :crumbs="[['label' => 'Attendance Location Wise Report', 'url' => route('report.attendance.branch-wise')]]">
+    <x-slot:actions>
+        <a href="{{ route('report.attendance.branch-wise.detail.export', $branch->id) }}?{{ http_build_query(request()->all()) }}"
+           class="btn btn-sm btn-primary" target="_blank">
+            <i class="feather-download me-1"></i> Export CSV
+        </a>
+    </x-slot:actions>
+</x-ui.page-header>
 
 <div class="main-content" style="padding: 20px !important;">
     <!-- Statistics Cards - All Statuses -->
@@ -436,7 +239,7 @@
     </div>
 
     <!-- Filter Section -->
-    <div class="filter-wrapper">
+    <x-ui.filter-card title="Filter Report">
         <form action="{{ route('report.attendance.branch-wise.detail', $branch->id) }}" method="GET">
             <div class="filter-row">
                 <div class="filter-item date-picker">
@@ -461,26 +264,12 @@
                 </div>
             </div>
         </form>
-    </div>
+    </x-ui.filter-card>
 
     <!-- Employee Table -->
     <div class="row">
         <div class="col-lg-12">
             <div class="card stretch stretch-full">
-                <div class="card-header">
-                    <h5 class="card-title">
-                        <i class="feather-users me-2" style="color: #1e3a8a;"></i>
-                        Employees - {{ $branch->name }}
-                        <span class="badge badge-info-custom ms-2">
-                            {{ $dateObj->format('d M Y') }}
-                        </span>
-                    </h5>
-                    <div class="d-flex gap-2">
-                        <span class="badge badge-info-custom">
-                            <i class="feather-list me-1"></i>Total: {{ count($reportData) }}
-                        </span>
-                    </div>
-                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table" id="employeeTable">
@@ -589,7 +378,7 @@
                                         </td>
                                         <td>
                                             @if($dailyRecord['total_hours'])
-                                                <span style="font-weight: 600; color: #1e3a8a;">
+                                                <span style="font-weight: 600; color: #0D6EFD;">
                                                     {{ number_format((float)$dailyRecord['total_hours'], 2) }} hrs
                                                 </span>
                                             @else

@@ -26,7 +26,7 @@
         width: 100%;
         height: 140px;
         overflow: hidden;
-        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+        background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
     }
 
     .announcement-image {
@@ -59,7 +59,7 @@
     }
 
     .badge-inactive {
-        background: #1e3a8a;
+        background: #0D6EFD;
         color: white;
     }
 
@@ -72,11 +72,11 @@
         font-size: 9.5px;
         font-weight: 700;
         background: rgba(255, 255, 255, .92);
-        color: #1e3a8a;
+        color: #0D6EFD;
         z-index: 2;
     }
 
-    .expire-badge.expired { background: #1e3a8a; color: #fff; }
+    .expire-badge.expired { background: #0D6EFD; color: #fff; }
 
     .announcement-content {
         padding: 12px 14px;
@@ -110,7 +110,7 @@
         width: 28px;
         height: 28px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #1e3a8a, #2563eb);
+        background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -178,8 +178,8 @@
     }
 
     .file-attachment:hover {
-        background: #e3edfe;
-        color: #1e3a8a;
+        background: #EFF6FF;
+        color: #0D6EFD;
     }
 
     .file-attachment i {
@@ -198,7 +198,7 @@
 
     .acknowledge-badge.required {
         background: #dbeafe;
-        color: #1e3a8a;
+        color: #0D6EFD;
     }
 
     .acknowledge-badge.not-required {
@@ -210,25 +210,7 @@
         position: relative;
     }
 
-    .action-btn {
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        background: #f4f6fb;
-        border: 1px solid #eaeef5;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6b7385;
-        transition: all 0.2s;
-        cursor: pointer;
-    }
 
-    .action-btn:hover {
-        background: #1e3a8a;
-        color: white;
-        border-color: #1e3a8a;
-    }
 
     .dropdown-menu {
         border: 1px solid #eaeef5;
@@ -259,7 +241,7 @@
     }
 
     .dropdown-item:hover i {
-        color: #1e3a8a;
+        color: var(--icon-color, #0D6EFD);
     }
 
     .dropdown-divider {
@@ -267,36 +249,9 @@
         border-color: #eaeef5;
     }
 
-    /* ==================== FILTER SECTION ==================== */
-    .filter-wrapper {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid #eaeef5;
-        padding: 12px 14px;
-        margin-bottom: 14px;
-        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
-    }
 
-    .filter-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-    }
 
-    .filter-title {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12.5px;
-        font-weight: 600;
-        color: #1a2236;
-    }
 
-    .filter-title i {
-        color: #1e3a8a;
-        font-size: 15px;
-    }
 
     .filter-select {
         width: 180px;
@@ -313,36 +268,16 @@
 
     .filter-select:hover {
         background: white;
-        border-color: #1e3a8a;
+        border-color: #0D6EFD;
     }
 
     .filter-select:focus {
         outline: none;
-        border-color: #1e3a8a;
-        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        border-color: #0D6EFD;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
     }
 
-    .reset-btn {
-        height: 32px;
-        padding: 0 14px;
-        background: #f4f6fb;
-        border: 1px solid #dfe5f0;
-        border-radius: 8px;
-        color: #6b7385;
-        font-size: 11.5px;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
 
-    .reset-btn:hover {
-        background: white;
-        border-color: #1e3a8a;
-        color: #1e3a8a;
-    }
 
     /* ==================== STATS CARDS ==================== */
     .stats-grid {
@@ -377,12 +312,12 @@
         align-items: center;
         justify-content: center;
         margin-right: 10px;
-        background: #e3edfe;
+        background: #EFF6FF;
     }
 
     .stats-icon i {
         font-size: 15px;
-        color: #1e3a8a;
+        color: var(--icon-color, #0D6EFD);
     }
 
     .stats-info h3 {
@@ -407,44 +342,11 @@
         margin-bottom: 1rem;
     }
 
-    /* ==================== PAGINATION ==================== */
-    .pagination {
-        margin: 0;
-        gap: 4px;
-        justify-content: center;
-    }
 
-    .page-link {
-        border: 1px solid #e2e8f0;
-        color: #475569;
-        font-size: 11px;
-        padding: 5px 11px;
-        border-radius: 8px !important;
-        transition: all 0.2s;
-        background: white;
-    }
 
-    .page-link:hover {
-        background: #f4f6fb;
-        border-color: #94a3b8;
-        color: #1a2236;
-        transform: translateY(-1px);
-    }
 
-    .page-item.active .page-link {
-        background: #1e3a8a;
-        border-color: #1e3a8a;
-    }
 
-    .page-item.disabled .page-link {
-        background: #f4f6fb;
-        color: #94a3b8;
-    }
 
-    .pagination-info {
-        color: #6b7385;
-        font-size: 11px;
-    }
 
     /* ==================== EMPTY STATE ==================== */
     .empty-state {
@@ -512,18 +414,8 @@ $role = $user->role;
 @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Announcement Management</h5>
-            </div>
-            <ul class="breadcrumb" >
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">All Announcements</li>
-            </ul>
-        </div>
-     
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Announcement Management" current="All Announcements">
+        <x-slot:actions>
             <div class="hstack gap-2">
                 <!--@if(in_array($role,['admin','hr']))-->
                 <!--<div class="dropdown d-none d-sm-flex">-->
@@ -534,15 +426,15 @@ $role = $user->role;
                 <!--</div>-->
                 <!--@endif-->
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body pb-0 h-100">
         <!-- Statistics Cards -->
         <!--<div class="stats-grid">-->
         <!--    <div class="stats-card">-->
         <!--        <div class="stats-icon" style="background: #eef2ff;">-->
-        <!--            <i class="feather-check-circle" style="color: #4f46e5;"></i>-->
+        <!--            <i class="feather-check-circle" style="color: var(--icon-color, #0D6EFD);"></i>-->
         <!--        </div>-->
         <!--        <div class="stats-info">-->
         <!--            <h3>{{ $totalAnnouncements ?? 0 }}</h3>-->

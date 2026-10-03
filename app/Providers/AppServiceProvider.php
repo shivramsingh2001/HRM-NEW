@@ -26,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Central upload/storage service (config/file_storage.php) — one instance per request.
         $this->app->singleton(\App\Services\Storage\FileStorageService::class);
+        // Per-employee policy overrides are read many times per request (every graded day) — one instance, one query per employee.
+        $this->app->scoped(\App\Services\EmployeePolicyService::class);
     }
 
     /**

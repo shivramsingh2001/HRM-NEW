@@ -62,26 +62,7 @@
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
-        /* ── Filter ── */
-        .filter-wrapper {
-            background: #fff;
-            border-radius: 8px;
-            border: 1px solid #eef2f6;
-            padding: 12px 15px;
-            margin-bottom: 15px;
-        }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            gap: 10px;
-        }
-
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 160px;
-        }
 
         .filter-select {
             width: 100%;
@@ -118,47 +99,8 @@
             outline: none;
         }
 
-        .reset-btn {
-            height: 34px;
-            padding: 0 14px;
-            background: #fff;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-        }
 
-        /* ── Table ── */
-        .table th {
-            background: #f8fafc;
-            font-weight: 600;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: .3px;
-            color: #475569;
-            padding: 10px 12px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .table td {
-            font-size: 12px;
-            padding: 10px 12px;
-            vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
         /* ── Stage Badges ── */
         .stage-badge {
@@ -191,12 +133,12 @@
 
         .stage-interview_completed {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .stage-offer_released {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .stage-offer_accepted {
@@ -229,25 +171,7 @@
             color: #991b1b;
         }
 
-        /* ── Action Btn ── */
-        .action-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s;
-        }
 
-        .action-btn:hover {
-            background: #fff;
-            color: var(--primary);
-            border-color: var(--primary);
-        }
 
         .dropdown-item {
             font-size: 12px;
@@ -268,23 +192,8 @@
             text-decoration: underline;
         }
 
-        .pagination {
-            margin: 0;
-            gap: 4px;
-        }
 
-        .page-link {
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            font-size: 11px;
-            padding: 5px 10px;
-            border-radius: 6px !important;
-        }
 
-        .page-item.active .page-link {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
 
         .empty-state {
             padding: 40px 20px;
@@ -344,14 +253,8 @@
         }
 
         @media(max-width:768px) {
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
+
 
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -361,20 +264,8 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header" style="margin-bottom:10px;">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-5" style="font-size:16px;">Job Applications</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-left:12px;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('job-openings.index') }}">Job Openings</a></li>
-                <li class="breadcrumb-item"><a
-                        href="{{ route('job-openings.show', $jobOpening->id) }}">{{ $jobOpening->title }}</a></li>
-                <li class="breadcrumb-item active">Applications</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Job Applications" current="Applications"
+        :crumbs="[['label' => 'Job Openings', 'url' => route('job-openings.index')], ['label' => $jobOpening->title, 'url' => route('job-openings.show', $jobOpening->id)]]" />
 
     <div class="main-content" style="padding:10px 15px !important;">
 
@@ -479,7 +370,7 @@
         </div>
 
         {{-- Filters --}}
-        <div class="filter-wrapper">
+        <x-ui.filter-card title="Filter Applications">
             <form action="{{ route('job-openings.applications', $jobOpening->id) }}" method="GET">
                 <div class="filter-row">
                     <div class="filter-item">
@@ -516,18 +407,10 @@
                     </div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         {{-- Applications Table --}}
         <div class="card stretch stretch-full">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0" style="font-size:13px;font-weight:600;">
-                    <i class="feather-users"></i> Applicants List
-                </h5>
-                <span class="badge bg-light text-dark" style="font-size:10px;">
-                    {{ $applications->total() }} Total
-                </span>
-            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table mb-0">
@@ -732,15 +615,7 @@
                 </div>
 
                 @if ($applications->hasPages())
-                    <div class="card-footer">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div class="text-muted" style="font-size:11px;">
-                                Showing {{ $applications->firstItem() }} to {{ $applications->lastItem() }}
-                                of {{ $applications->total() }} entries
-                            </div>
-                            {{ $applications->appends(request()->query())->links() }}
-                        </div>
-                    </div>
+                    <x-ui.pagination-footer :paginator="$applications" label="applications" />
                 @endif
             </div>
         </div>

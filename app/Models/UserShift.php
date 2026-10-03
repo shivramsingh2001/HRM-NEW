@@ -9,10 +9,14 @@ class UserShift extends Model
 {
     use TenantTrait;
     protected $guarded = [];
-    
-    // protected $casts = [
-    //     'date' => 'date'
-    // ];
+
+    // `date` stays a plain string (varchar column) — callers Carbon::parse() it.
+    protected $casts = [
+        'is_additional' => 'boolean',
+    ];
+
+    /** Generated DB column backing the one-primary-per-day unique key. */
+    protected $hidden = ['primary_slot'];
 
     /**
      * Get the user that owns the shift

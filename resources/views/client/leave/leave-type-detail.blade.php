@@ -2,7 +2,7 @@
 
 @section('style')
 <style>
-    .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #dfe5f0; }
+    .personal-info .input-group-text { background: #EFF6FF; color: #0D6EFD; border-color: #dfe5f0; }
     .personal-info .form-control[readonly] { background: #f8fafc; border-color: #dfe5f0; color: #1a2236; }
     .personal-info label { font-size: 12px; }
 
@@ -15,12 +15,12 @@
     }
 
     .badge-active { background: #3b82f6; color: #fff; }
-    .badge-inactive { background: #1e3a8a; color: #fff; }
-    .badge-system { background: #e3edfe; color: #1e3a8a; }
-    .badge-unpaid { background: #93c5fd; color: #1e3a8a; }
+    .badge-inactive { background: #0D6EFD; color: #fff; }
+    .badge-system { background: #EFF6FF; color: #0D6EFD; }
+    .badge-unpaid { background: #93c5fd; color: #0D6EFD; }
 
     .customers-nav-tabs .nav-link.active {
-        color: #1e3a8a;
+        color: #0D6EFD;
         border-color: #dfe5f0 #dfe5f0 #fff;
     }
 
@@ -31,17 +31,8 @@
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Leave Type Management</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('leave-type.index') }}">Leave Types</a></li>
-                <li class="breadcrumb-item">Details</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto d-flex align-items-center gap-2">
+    <x-ui.page-header class="content-area-header sticky-top" title="Leave Type Management" current="Details" :crumbs="[['label' => 'Leave Types', 'url' => route('leave-type.index')]]">
+        <x-slot:actions>
             @if ($leaveType->isSystemType())
                 <span class="lt-detail-badge badge-system" title="System-managed leave type — cannot be edited or deleted">
                     <i class="feather-lock me-1"></i>System type — locked
@@ -53,8 +44,8 @@
             <span class="lt-detail-badge {{ $leaveType->status ? 'badge-active' : 'badge-inactive' }}">
                 {{ $leaveType->status ? 'Active' : 'Inactive' }}
             </span>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="row">

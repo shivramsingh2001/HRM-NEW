@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserWeekoffs;
 use App\Services\FeatureService;
+use App\Support\ShiftWindow;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -98,12 +99,8 @@ class ShiftSettingsController extends Controller
         $grace = (int) ($request->input('grace_minutes') ?? 0);
         $break = (int) ($request->input('break_time') ?? 0);
 
-        $s = Carbon::parse($start);
-        $e = Carbon::parse($end);
-        if ($e->lessThanOrEqualTo($s)) {
-            $e->addDay(); // overnight
-        }
-        $totalHours = round(max(0, $s->diffInMinutes($e) - $break) / 60, 2);
+        $overnight = $request->boolean('is_overnight');
+        $totalHours = ShiftWindow::workingHours($start, $end, $break, $overnight);
 
         $shift = $tenant->default_shift_id
             ? Shift::withoutGlobalScopes()->where('tenant_id', $tenant->id)->find($tenant->default_shift_id)
@@ -113,6 +110,7 @@ class ShiftSettingsController extends Controller
             'name' => $shift->name ?? 'Company Hours',
             'start_time' => $start,
             'end_time' => $end,
+            'is_overnight' => $overnight,
             'total_hours' => $totalHours,
             'grace_minutes' => $grace,
             'break_time' => $break,

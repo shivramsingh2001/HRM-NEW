@@ -1,22 +1,7 @@
 @extends('client.layout.master')
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Reimbursements via Payroll</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.payments.index') }}">Payments</a></li>
-                <li class="breadcrumb-item active">Via payroll</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <a href="{{ route('expense.payments.index') }}" class="btn btn-light-brand btn-sm"><i
-                    class="feather-arrow-left me-2"></i>Back</a>
-        </div>
-    </div>
+    <x-ui.page-header title="Reimbursements via Payroll" current="Via payroll" :crumbs="[['label' => 'Payments', 'url' => route('expense.payments.index')]]" :back="route('expense.payments.index')" />
 
     <div class="main-content" style="padding: 20px !important;">
         @unless ($enabled)

@@ -60,7 +60,7 @@
         }
         .decision-next_round {
             background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            color: #1e40af;
+            color: #0D6EFD;
             border: 1px solid #3b82f6;
         }
         .decision-rejected {

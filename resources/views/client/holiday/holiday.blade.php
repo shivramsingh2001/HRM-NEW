@@ -4,7 +4,7 @@
 <style>
     /* ==================== ALL-BLUE THEME ==================== */
     #holidayList .date-badge {
-        font-size: 11px; font-weight: 600; color: #1e3a8a; background: #e3edfe;
+        font-size: 11px; font-weight: 600; color: #0D6EFD; background: #EFF6FF;
         padding: 4px 10px; border-radius: 999px; display: inline-block;
     }
     #holidayList .duration-pill {
@@ -22,11 +22,11 @@
         border-radius: 8px; border: 1px solid #dfe5f0; background: #f4f6fb; color: #475569;
         transition: all .15s;
     }
-    .btn-icon-edit:hover { background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; }
+    .btn-icon-edit:hover { background: #EFF6FF; border-color: #0D6EFD; color: var(--icon-color, #0D6EFD); }
     .btn-icon-edit i { font-size: 14px; }
 
-    .compact-modal .btn-primary { background: #1e3a8a; border-color: #1e3a8a; }
-    .compact-modal .btn-primary:hover { background: #16295e; border-color: #16295e; }
+    .compact-modal .btn-primary { background: #0D6EFD; border-color: #0D6EFD; }
+    .compact-modal .btn-primary:hover { background: #0B5ED7; border-color: #0B5ED7; }
 </style>
 @endsection
  @php
@@ -34,36 +34,22 @@
  $role = $user->role;
  @endphp
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Holiday Management</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Holiday</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Holiday Management" current="Holiday">
+        <x-slot:actions>
             <div class="hstack gap-2">
                  @if(in_array($role,['admin','hr']))
-                <div class="dropdown d-none d-sm-flex">
-                    <a href="#" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                         data-bs-target="#addHolidayModal">
                         <i class="feather-plus me-1"></i>Add Holiday
                     </a>
-                </div>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
     <div class="content-area-body pb-0 h-100">
         <div class="row note-has-grid" id="note-full-container">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Holiday</h5>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover" id="holidayList">

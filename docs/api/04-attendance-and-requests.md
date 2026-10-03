@@ -52,9 +52,11 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-in \
   "status": true,
   "message": "Clock-In successful.",
   "tracking_enabled": true,
-  "next_ping_seconds": 60
+  "next_ping_seconds": 60,
+  "shift": {"user_shift_id": 812, "shift_id": 3, "name": "General Shift", "start_time": "09:30 AM", "end_time": "06:30 PM", "is_additional": false}
 }
 ```
+(`shift` — added 2026-10-02 — is the shift this clock-in counted for; `null` for a company on one fixed shift or when no shift applies.)
 
 **Error responses:**
 | Status | Condition | Body |
@@ -72,7 +74,8 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-in \
 **Special behavior / notes:**
 - Geofencing: if the employee's `job_details.type == 'office'` and `office_branch == 0`, the nearest active + geofenced `AttendanceLocation` within its radius (default 50m) is auto-selected; if `office_branch` names a specific branch, that branch's geofence (if enabled) is enforced.
 - Geofencing/location check is **skipped entirely** if the user has an `APPROVED` travel/WFH `Request` covering the attendance date (`hasApprovedRequest`).
-- Night-shift aware: the actual "attendance date" used is resolved by `AttendanceCalculator::resolveAttendanceDate()`, which can roll back to the previous calendar day for overnight shifts.
+- Night-shift aware: the actual "attendance date" used is resolved by `AttendanceCalculator::resolveAttendanceDate()`, which can roll back to the previous calendar day for overnight shifts (a shift's `is_overnight` flag decides).
+- Multi-shift (2026-10-02): for an employee with a 2nd+ ("additional") shift that day or a day either side, the clock-in is matched to the shift whose window `[start − 2h, end)` contains it and takes that shift's date. After finishing one shift, a clock-in for another shift not yet started that day is accepted even when the company does not allow multiple punches.
 - On success, also starts/updates a `TrackingSessionService` session and ingests one field-tracking GPS point; triggers a push notification (`AttendanceNotificationService::notifyClockIn`) — notification failures are swallowed and logged, never surfaced to the client.
 - `tracking_enabled`/`next_ping_seconds` in the response tell the mobile app whether to run the background GPS tracker and at what interval (from `FieldTrackingService::resolveForUser`).
 - Every attempt (success or failure) writes an `AttendanceLog` audit row with device/network/GPS metadata.
@@ -114,7 +117,8 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-out \
     "total_hours": "8.53",
     "worked_hours": 8.53,
     "attendance_status": "Present",
-    "shift_status": "complete"
+    "shift_status": "complete",
+    "shift": {"user_shift_id": 812, "shift_id": 3, "name": "General Shift", "start_time": "09:30 AM", "end_time": "06:30 PM", "is_additional": false}
   },
   "tracking_enabled": false,
   "next_ping_seconds": 0
@@ -302,11 +306,15 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track-batch \
     "user_email": "asha@example.com",
     "designation": "Software Engineer",
     "shift": "General Shift (09:30 AM - 06:30 PM)",
-    "location_tracking": {"enabled": true, "ping_seconds": 60}
+    "location_tracking": {"enabled": true, "ping_seconds": 60},
+    "shifts": [
+      {"user_shift_id": 812, "shift_id": 3, "name": "General Shift", "start_time": "09:30 AM", "end_time": "06:30 PM", "is_overnight": false, "is_additional": false, "status": "ongoing", "clock_in": "2026-09-28 09:58:00", "clock_out": null, "worked_minutes": 0},
+      {"user_shift_id": 913, "shift_id": 7, "name": "Night Shift", "start_time": "10:00 PM", "end_time": "06:00 AM", "is_overnight": true, "is_additional": true, "status": "upcoming", "clock_in": null, "clock_out": null, "worked_minutes": 0}
+    ]
   }
 }
 ```
-(`shift` is `"Week Off"` on a weekoff day, or `"Shift not defined"` if no shift resolves.)
+(`shift` is `"Week Off"` on a weekoff day, or `"Shift not defined"` if no shift resolves — it always describes the day's main shift. `shifts` — added 2026-10-02 — lists every shift today, main first; `status` is `upcoming | ongoing | completed`. One item for a one-shift day.)
 
 **Error responses:** `200 {"status": false, "message": "User not found"}`; `500 {"status": false, "message": "An error occured. Please try again later."}`.
 
@@ -352,13 +360,16 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track-batch \
       {"id": 991, "direction": "in", "punched_at": "2026-09-28 09:58:00", "source": "mobile_app", "method": "gps", "lat": 28.6139, "long": 77.209, "address": "Connaught Place"}
     ],
     "sessions": [
-      {"clock_in": "2026-09-28 09:58:00", "clock_out": "2026-09-28 18:32:10", "worked_hours": 8.57}
+      {"clock_in": "2026-09-28 09:58:00", "clock_out": "2026-09-28 18:32:10", "worked_hours": 8.57,
+       "shift": {"user_shift_id": 812, "shift_id": 3, "name": "General Shift", "start_time": "09:30 AM", "end_time": "06:30 PM", "is_additional": false}}
     ],
     "open_session": null,
-    "session_count": 1
+    "session_count": 1,
+    "shifts": [ "...same items as GET /api/user/attendance/today → shifts..." ]
   }
 }
 ```
+(`sessions[].shift` and `shifts` added 2026-10-02.)
 
 **Error responses:** `500 {"status": false, "message": "An error occured. Please try again later."}`.
 
@@ -397,7 +408,8 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track-batch \
 | `date` | string `Y-m-d` | Yes | Must be today or earlier. |
 | `request_type` | string | Yes | One of `in_time,out_time,both,full_day,wfh_not_marked,technical_issue`. |
 | `in_time` | string `H:i` | Conditional | Required if `request_type` is `in_time` or `both`. |
-| `out_time` | string `H:i` | Conditional | Required if `request_type` is `out_time` or `both`; must be after `in_time`. |
+| `out_time` | string `H:i` | Conditional | Required if `request_type` is `out_time` or `both`. Must be after `in_time` — **except** for an overnight (night) shift, where an earlier out time means the next morning (e.g. in `22:00`, out `06:00`). |
+| `user_shift_id` | integer | No | Added 2026-10-02. Which of the day's shifts the request corrects — a `user_shift_id` from `GET /api/user/attendance/today` → `shifts`. Omit for the main shift. Must be one of the employee's shifts on `date`. |
 | `reason` | string | Yes | Max 500 chars. |
 | `file` | file | No | `jpg,jpeg,png,pdf,doc,docx`, max 2048 KB. |
 
@@ -416,7 +428,9 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/regularization \
 | Status | Condition | Body |
 |---|---|---|
 | 200 | Validation failure | `{"success": false, "message": "<first validator error>"}` |
-| 200 | Duplicate request for same date + type | `{"success": false, "message": "Request already exists for this date."}` |
+| 200 | Out time not after in time on a non-overnight shift | `{"success": false, "message": "Out time must be after in time"}` |
+| 200 | `user_shift_id` is not one of the employee's shifts that day | `{"success": false, "message": "Choose one of your shifts on this date."}` |
+| 200 | Duplicate request for same date + type (+ shift) | `{"success": false, "message": "Request already exists for this date."}` |
 | 500 | Unhandled | `{"success": false, "message": "An error occurred. Please try again later."}` |
 
 ---
@@ -750,6 +764,10 @@ curl -X POST https://vpshrms.shurttech.com/api/request/store \
 ---
 
 ## Overtime
+
+> **Per-employee overtime rules (2026-10-02).** Admin/HR can give one employee custom overtime rules (Employee 360 → Policies). On `POST /api/overtime/requests/store` and `POST /api/overtime/requests/update/{id}` the employee's own daily cap / approval / auto-approve values replace the company's, and two extra refusals are possible (HTTP 200, `success: false`): `"This employee is not eligible for overtime."` and `"Overtime cannot exceed {cap} hours in a month for this employee ({booked} already booked)."`. Response shapes are unchanged.
+
+> **Request limits (2026-10-03).** `POST /api/user/attendance/regularization` and `POST /api/request/store` (+ request update) can also refuse with HTTP 200, `success: false` when a company or per-employee limit is hit: `"Regularization can only be requested for the last N day(s)."`, `"At most N regularization request(s) can be raised for {Month YYYY} — that many are already pending or approved."`, `"Work from home must be requested at least N day(s) in advance."`, `"Work from home is limited to N day(s) a month — this would make M day(s) in {Month YYYY}."`. Travel requests are not limited. Response shapes are unchanged.
 
 Controller: `app/Http/Controllers/Api/Attendance/OvertimeController.php` (route prefix `overtime`)
 

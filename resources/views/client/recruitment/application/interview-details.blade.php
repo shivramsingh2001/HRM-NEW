@@ -4,7 +4,7 @@
 @section('style')
     <style>
         .profile-header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
@@ -87,9 +87,9 @@
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background: #1e3a8a;
+            background: #0D6EFD;
             border: 2px solid #fff;
-            box-shadow: 0 0 0 2px #1e3a8a;
+            box-shadow: 0 0 0 2px #0D6EFD;
         }
 
         .timeline-dot.completed {
@@ -197,7 +197,7 @@
 
         .sb-next_round {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .sb-on_hold {
@@ -236,12 +236,12 @@
 
         .stage-interview_completed {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .stage-offer_released {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .stage-offer_accepted {
@@ -262,26 +262,7 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header" style="margin-bottom:15px;">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-5" style="font-size:16px;">Interview Details</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-left:12px;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('job-openings.index') }}">Job Openings</a></li>
-                <li class="breadcrumb-item">
-                    <a href="{{ route('job-openings.applications', $jobOpening->id) }}">Applications</a>
-                </li>
-                <li class="breadcrumb-item active">Interview Details</li>
-            </ul>
-        </div>
-        <div class="page-header-right">
-            <a href="{{ route('job-openings.applications', $jobOpening->id) }}" class="btn btn-outline-secondary btn-sm">
-                <i class="feather-arrow-left"></i> Back
-            </a>
-        </div>
-    </div>
+    <x-ui.page-header title="Interview Details" :crumbs="[['label' => 'Job Openings', 'url' => route('job-openings.index')], ['label' => 'Applications', 'url' => route('job-openings.applications', $jobOpening->id)]]" :back="route('job-openings.applications', $jobOpening->id)" />
 
     <div class="main-content" style="padding:10px 20px !important;">
 
@@ -397,7 +378,7 @@
                     @endphp
                     <div class="d-flex justify-content-around text-center mt-1">
                         <div>
-                            <div style="font-size:22px;font-weight:700;color:#1e3a8a;">{{ $totalRounds }}</div>
+                            <div style="font-size:22px;font-weight:700;color:#0D6EFD;">{{ $totalRounds }}</div>
                             <div style="font-size:10px;color:#64748b;text-transform:uppercase;">Total</div>
                         </div>
                         <div>

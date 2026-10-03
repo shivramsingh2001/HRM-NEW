@@ -17,12 +17,12 @@
 
         .alert-card.warning {
             background: linear-gradient(135deg, #eef3fd, #bfd3f7);
-            border-left: 3px solid #1e3a8a;
+            border-left: 3px solid #0D6EFD;
         }
 
         .alert-card.info {
-            background: linear-gradient(135deg, #f7faff, #e3edfe);
-            border-left: 3px solid #2563eb;
+            background: linear-gradient(135deg, #f7faff, #EFF6FF);
+            border-left: 3px solid #0D6EFD;
         }
 
         .alert-card i {
@@ -31,11 +31,11 @@
         }
 
         .alert-card.warning i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .alert-card.info i {
-            color: #2563eb;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .alert-content {
@@ -69,12 +69,12 @@
 
         /* ==================== MONTH SELECTOR ==================== */
         .month-selector {
-            background: linear-gradient(145deg, #1e3a8a, #1e3a8a);
+            background: linear-gradient(145deg, #0D6EFD, #0D6EFD);
             padding: 18px 16px;
             border-radius: 10px;
             text-align: center;
             margin-bottom: 16px;
-            box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 10px 25px -5px rgba(13, 110, 253, 0.3);
         }
 
         .month-title {
@@ -146,11 +146,11 @@
         }
 
         .employee-selection-header h6 i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .employee-count-badge {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             padding: 2px 8px;
             border-radius: 30px;
@@ -191,7 +191,7 @@
             width: 28px;
             height: 28px;
             border-radius: 50%;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             display: flex;
             align-items: center;
@@ -297,7 +297,7 @@
         }
 
         .param-label i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         .param-value {
@@ -323,8 +323,8 @@
         }
 
         .option-card:hover {
-            border-color: #1e3a8a;
-            box-shadow: 0 8px 20px rgba(30, 58, 138, 0.08);
+            border-color: #0D6EFD;
+            box-shadow: 0 8px 20px rgba(13, 110, 253, 0.08);
             transform: translateY(-2px);
         }
 
@@ -345,7 +345,7 @@
         }
 
         .option-title i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 15px;
         }
 
@@ -374,9 +374,9 @@
         }
 
         .form-check-input:checked {
-            border-color: #1e3a8a;
-            background-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            border-color: #0D6EFD;
+            background-color: #0D6EFD;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
         }
 
         .form-check-label {
@@ -397,14 +397,14 @@
         }
 
         .form-check-input[type="checkbox"]:checked {
-            background-color: #1e3a8a;
-            border-color: #1e3a8a;
+            background-color: #0D6EFD;
+            border-color: #0D6EFD;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
         }
 
         /* ==================== PREVIEW SECTION ==================== */
         .preview-card {
-            background: linear-gradient(135deg, #e3edfe, #e0f2fe);
+            background: linear-gradient(135deg, #EFF6FF, #e0f2fe);
             border: none;
             border-radius: 10px;
             padding: 10px 14px;
@@ -412,12 +412,12 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            border-left: 3px solid #1e3a8a;
+            border-left: 3px solid #0D6EFD;
         }
 
         .preview-card i {
             font-size: 16px;
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             flex-shrink: 0;
         }
 
@@ -430,23 +430,11 @@
         }
 
         .preview-text strong {
-            color: #1e3a8a;
+            color: #0D6EFD;
             font-weight: 600;
         }
 
-        /* ==================== FORM ELEMENTS ==================== */
-        .card {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-        }
 
-        .card-header {
-            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-            border-bottom: 1px solid #e2e8f0;
-            padding: 10px 14px;
-            border-radius: 10px 10px 0 0 !important;
-        }
 
         .card-header h5 {
             font-size: 13.5px;
@@ -459,7 +447,7 @@
         }
 
         .card-header h5 i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 15px;
         }
 
@@ -467,15 +455,6 @@
             padding: 14px;
         }
 
-        .card-footer {
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-            padding: 12px 14px;
-            border-radius: 0 0 10px 10px !important;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
 
         /* ==================== BUTTONS ==================== */
         .btn {
@@ -490,15 +469,15 @@
         }
 
         .btn-primary {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
         }
 
         .btn-primary:hover {
-            background: #16295e;
+            background: #0B5ED7;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
         }
 
         .btn-outline-secondary {
@@ -514,13 +493,13 @@
         }
 
         .btn-info {
-            background: #2563eb;
+            background: #0D6EFD;
             color: white;
             border: none;
         }
 
         .btn-info:hover {
-            background: #1e3a8a;
+            background: #0D6EFD;
         }
 
         /* ==================== PROCESS PAYROLL BUTTON — enhanced, stands out
@@ -532,8 +511,8 @@
             font-weight: 700;
             letter-spacing: 0.2px;
             border-radius: 10px;
-            background: linear-gradient(135deg, #2563eb, #1e3a8a);
-            box-shadow: 0 4px 14px rgba(30, 58, 138, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
+            box-shadow: 0 4px 14px rgba(13, 110, 253, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
             border: none;
             position: relative;
             overflow: hidden;
@@ -544,14 +523,14 @@
         }
 
         #submitBtn:hover {
-            background: linear-gradient(135deg, #1e3a8a, #16295e);
+            background: #0B5ED7;
             transform: translateY(-2px);
-            box-shadow: 0 8px 22px rgba(30, 58, 138, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 22px rgba(13, 110, 253, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
 
         #submitBtn:active {
             transform: translateY(0);
-            box-shadow: 0 3px 10px rgba(30, 58, 138, 0.35);
+            box-shadow: 0 3px 10px rgba(13, 110, 253, 0.35);
         }
 
         #submitBtn:disabled {
@@ -591,7 +570,7 @@
             width: 40px;
             height: 40px;
             border: 3px solid #f1f5f9;
-            border-top-color: #1e3a8a;
+            border-top-color: #0D6EFD;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -660,19 +639,7 @@
 
 @section('content-area')
    
-     <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Monthly Payroll Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('monthly-payrolls.index') }}">Monthly Payroll</a></li>
-                <li class="breadcrumb-item active">Process New Month</li>
-            </ul>
-        </div>
-
-    </div>
+     <x-ui.page-header title="Monthly Payroll Management" current="Process New Month" :crumbs="[['label' => 'Monthly Payroll', 'url' => route('monthly-payrolls.index')]]" />
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">

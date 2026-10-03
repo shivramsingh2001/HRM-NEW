@@ -16,7 +16,7 @@
     $dynamicGroups = [
         'earnings' => ['label' => 'Earnings', 'icon' => 'feather-trending-up', 'color' => 'var(--primary)', 'editable' => true],
         'deductions' => ['label' => 'Deductions', 'icon' => 'feather-trending-down', 'color' => 'var(--gray-600)', 'editable' => true],
-        'employer_contributions' => ['label' => 'Employer', 'icon' => 'feather-briefcase', 'color' => '#1e3a8a', 'editable' => false],
+        'employer_contributions' => ['label' => 'Employer', 'icon' => 'feather-briefcase', 'color' => '#0D6EFD', 'editable' => false],
     ];
 @endphp
 
@@ -38,16 +38,16 @@
         @else
             <div class="component-card" @if ($groupKey === 'employer_contributions') style="border-color:#93c5fd;" @endif>
                 <div class="component-header" @if ($groupKey === 'employer_contributions') style="background:#dbeafe;border-bottom-color:#93c5fd;" @endif>
-                    <span class="component-title" @if ($groupKey === 'employer_contributions') style="color:#1e3a8a;" @endif>
+                    <span class="component-title" @if ($groupKey === 'employer_contributions') style="color:#0D6EFD;" @endif>
                         <i class="feather-dollar-sign"></i> Salary Components
                     </span>
-                    <span style="font-size: 9px; color: {{ $groupKey === 'employer_contributions' ? '#1e3a8a' : 'var(--gray-500)' }};">₹</span>
+                    <span style="font-size: 9px; color: {{ $groupKey === 'employer_contributions' ? '#0D6EFD' : 'var(--gray-500)' }};">₹</span>
                 </div>
                 <div class="component-body">
                     <div class="component-row">
                         @foreach ($groupComponents as $component)
                             <div class="input-group" @if ($groupKey === 'employer_contributions') style="border-color:#93c5fd;" @endif>
-                                <span class="input-group-text" @if ($groupKey === 'employer_contributions') style="background:#dbeafe;border-right-color:#93c5fd;color:#1e3a8a;" @endif>{{ $component['name'] }}</span>
+                                <span class="input-group-text" @if ($groupKey === 'employer_contributions') style="background:#dbeafe;border-right-color:#93c5fd;color:#0D6EFD;" @endif>{{ $component['name'] }}</span>
                                 @if ($groupMeta['editable'])
                                     <input type="number" step="0.01" name="components[{{ $component['code'] }}]"
                                         class="form-control dynamic-component-field" data-code="{{ $component['code'] }}"

@@ -174,6 +174,15 @@ class CreditWeeklyLeaves extends Command
 
     protected function creditLeaveForUser($user, $leaveType, $transactionDate)
     {
+        // This employee's custom leave rules (Employee 360 → Policies): a type switched
+        // off for them is not credited; a custom credit replaces the type's.
+        $employeePolicy = app(\App\Services\EmployeePolicyService::class);
+        if (! $employeePolicy->leaveAllowed((int) $user->tenant_id, (int) $user->id, (int) $leaveType->id)) {
+            $this->info("Skipped {$leaveType->name} for user ID: {$user->id} — switched off for this employee");
+
+            return;
+        }
+
         // Get current balance for this specific user and leave type
         $balance = LeaveBalance::where('user_id', $user->id)
             ->where('tenant_id', $user->tenant_id)
@@ -194,7 +203,7 @@ class CreditWeeklyLeaves extends Command
         }
 
         $beforeBalance = (float) $balance->balance;
-        $creditValue = (float) $leaveType->credit_value;
+        $creditValue = (float) $employeePolicy->leaveRule((int) $user->tenant_id, (int) $user->id, $leaveType)->credit_value;
         $afterBalance = $beforeBalance + $creditValue;
 
         if (!$this->option('dry-run')) {

@@ -600,7 +600,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/shift-plan?start_date=2026-09-
 | 403 | Role is not `admin`/`hr`/`manager`/`employee` | `{"success": false, "message": "Unauthorized access"}` |
 | 500 | Unhandled exception | `{"success": false, "message": "Failed to fetch shift plan"}`, plus an `"error"` field with the real exception message **only when `app.debug` is true** |
 
-**Special behavior / notes:** if a tenant has `custom_shifts_enabled = false` (checked via `TenantShiftResolver::isCustomShifts()`), every working day in range gets the tenant's single default shift instead of per-user `UserShift` rows — day-based week-off weekdays are still excluded. Users whose `joining_date` is inside the requested range have their effective start date pushed forward to their joining date; a user who joined after the entire requested range is silently omitted from `data`.
+**Special behavior / notes:** multi-shift (2026-10-02): each date item is the main shift and carries `additional_shifts` (the day's 2nd+ shifts, same item shape). If a tenant has `custom_shifts_enabled = false` (checked via `TenantShiftResolver::isCustomShifts()`), every working day in range gets the tenant's single default shift instead of per-user `UserShift` rows — day-based week-off weekdays are still excluded. Users whose `joining_date` is inside the requested range have their effective start date pushed forward to their joining date; a user who joined after the entire requested range is silently omitted from `data`.
 
 ---
 

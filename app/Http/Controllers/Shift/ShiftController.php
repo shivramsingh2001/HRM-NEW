@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Models\Department;
 use App\Services\Shift\ShiftAssignmentService;
 use App\Services\Shift\ShiftAssignmentValidator;
+use App\Services\Shift\ShiftOverlapGuard;
+use App\Support\ShiftWindow;
 use App\Support\WeekOffPredicate;
 use Carbon\Carbon;
 use Exception;
@@ -18,13 +20,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 
 class ShiftController extends Controller
 {
     public function __construct(
         private ShiftAssignmentService $shiftAssignmentService,
-        private ShiftAssignmentValidator $shiftAssignmentValidator
+        private ShiftAssignmentValidator $shiftAssignmentValidator,
+        private ShiftOverlapGuard $overlapGuard
     ) {
     }
 
@@ -91,15 +95,18 @@ class ShiftController extends Controller
      
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255|unique:shifts,name',
+                // Shift names are unique per company, not across all companies.
+                'name' => ['required', 'string', 'max:255', $this->uniqueShiftName()],
                 'start_time' => 'required|date_format:H:i',
-                // No after:start_time — end <= start means the shift crosses midnight.
+                // Overnight shifts end on/before their start time — checked in validateOvernightTimes().
                 'end_time' => 'required|date_format:H:i',
+                'is_overnight' => 'nullable|boolean',
                 'description' => 'nullable|string|max:500',
                 'grace_minutes' => 'nullable|integer|min:0|max:120',
                 'color_code' => 'nullable|string|max:7',
                 'break_time' => 'nullable|integer|min:0|max:180'
             ]);
+            $this->validateOvernightTimes($validator, $request);
        if ($validator->fails()) {
                 return response()->json([
                     'status' => false,
@@ -113,7 +120,8 @@ class ShiftController extends Controller
                 'name' => $request->name,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
-                'total_hours' => $this->computeTotalHours($request->start_time, $request->end_time, $request->break_time),
+                'is_overnight' => $request->boolean('is_overnight'),
+                'total_hours' => ShiftWindow::workingHours($request->start_time, $request->end_time, $request->break_time, $request->boolean('is_overnight')),
                 'description' => $request->description,
                 'grace_minutes' => $request->grace_minutes ?? 0,
                 'color_code' => $request->color_code ?? '#3b82f6',
@@ -156,16 +164,17 @@ class ShiftController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255|unique:shifts,name,' . $id,
+                'name' => ['required', 'string', 'max:255', $this->uniqueShiftName()->ignore($shift->id)],
                 'start_time' => 'required|date_format:H:i',
-                // No after:start_time — end <= start means the shift crosses midnight.
                 'end_time' => 'required|date_format:H:i',
+                'is_overnight' => 'nullable|boolean',
                 'description' => 'nullable|string|max:500',
                 'grace_minutes' => 'nullable|integer|min:0|max:120',
                 'status' => 'nullable|boolean',
                 'color_code' => 'nullable|string|max:7',
                 'break_time' => 'nullable|integer|min:0|max:180'
             ]);
+            $this->validateOvernightTimes($validator, $request);
 
             if ($validator->fails()) {
                 return response()->json([
@@ -180,7 +189,8 @@ class ShiftController extends Controller
                 'name' => $request->name,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
-                'total_hours' => $this->computeTotalHours($request->start_time, $request->end_time, $request->break_time),
+                'is_overnight' => $request->boolean('is_overnight'),
+                'total_hours' => ShiftWindow::workingHours($request->start_time, $request->end_time, $request->break_time, $request->boolean('is_overnight')),
                 'description' => $request->description,
                 'grace_minutes' => $request->grace_minutes ?? 0,
                 'color_code' => $request->color_code ?? '#3b82f6',
@@ -207,17 +217,27 @@ class ShiftController extends Controller
     }
 
     /**
-     * Working hours for a shift = span (handling midnight crossing) minus break.
+     * Shift name must be unique within the logged-in user's company.
      */
-    private function computeTotalHours($start, $end, $break): float
+    private function uniqueShiftName(): \Illuminate\Validation\Rules\Unique
     {
-        $s = Carbon::parse($start);
-        $e = Carbon::parse($end);
-        if ($e->lessThanOrEqualTo($s)) {
-            $e->addDay(); // crosses midnight
-        }
+        return Rule::unique('shifts', 'name')->where('tenant_id', Auth::user()->tenant_id);
+    }
 
-        return round(max(0, $s->diffInMinutes($e) - (int) ($break ?? 0)) / 60, 2);
+    /**
+     * Times must agree with the "Overnight shift" checkbox (ShiftWindow::timesError).
+     */
+    private function validateOvernightTimes(\Illuminate\Validation\Validator $validator, Request $request): void
+    {
+        $validator->after(function ($v) use ($request) {
+            if ($v->errors()->hasAny(['start_time', 'end_time'])) {
+                return;
+            }
+            $error = ShiftWindow::timesError($request->start_time, $request->end_time, $request->boolean('is_overnight'));
+            if ($error) {
+                $v->errors()->add('end_time', $error);
+            }
+        });
     }
 
     /**
@@ -365,13 +385,16 @@ class ShiftController extends Controller
             $users = $userQuery->orderBy('name')->paginate($request->input('per_page', 15))->withQueryString();
             $userIds = collect($users->items())->pluck('id');
 
-            // Bulk maps
+            // Bulk maps — every shift a user works on a date (primary first,
+            // then additional shifts by start time).
             $assignments = UserShift::with('shift')
                 ->where('tenant_id', $tenantId)
                 ->whereIn('user_id', $userIds)
                 ->whereIn('date', $dateStrings)
                 ->get()
-                ->keyBy(fn ($r) => $r->user_id . '|' . Carbon::parse($r->date)->format('Y-m-d'));
+                ->filter(fn ($r) => $r->shift)
+                ->sortBy(fn ($r) => [(int) $r->is_additional, (string) $r->shift->start_time])
+                ->groupBy(fn ($r) => $r->user_id . '|' . Carbon::parse($r->date)->format('Y-m-d'));
 
             $weekoffs = UserWeekoffs::where('tenant_id', $tenantId)
                 ->where('status', 1)
@@ -394,9 +417,10 @@ class ShiftController extends Controller
                 foreach ($dates as $d) {
                     $ds = $d->format('Y-m-d');
                     $key = $uid . '|' . $ds;
-                    $row = $assignments->get($key);
+                    $dayRows = $assignments->get($key, collect())->values();
+                    $row = $dayRows->first();
 
-                    if ($row && $row->shift) {
+                    if ($row) {
                         $cells[$uid][$ds] = [
                             'type' => 'shift',
                             'name' => $row->shift->name,
@@ -405,6 +429,14 @@ class ShiftController extends Controller
                             'end' => $row->shift->end_time,
                             'shift_id' => $row->shift_id,
                             'status' => $row->status,
+                            // 2nd+ shifts the same day (multi-shift).
+                            'extra' => $dayRows->slice(1)->map(fn ($x) => [
+                                'name' => $x->shift->name,
+                                'color' => $x->shift->color_code ?: '#4f46e5',
+                                'start' => $x->shift->start_time,
+                                'end' => $x->shift->end_time,
+                                'shift_id' => $x->shift_id,
+                            ])->values()->all(),
                         ];
                     } elseif ($this->isWeekOffOn($weekoffs->get($uid), $d)) {
                         $cells[$uid][$ds] = ['type' => 'weekoff'];
@@ -548,6 +580,8 @@ class ShiftController extends Controller
             'week_off_days.*' => 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'week_off_dates' => 'required_if:week_off_type,date_based|array',
             'week_off_dates.*' => 'date',
+            // 2nd+ shift on the same days, kept next to the primary shift.
+            'is_additional' => 'nullable|boolean',
         ];
 
         // Permanent is open-ended by definition — no end date, no 90-day cap,
@@ -620,6 +654,10 @@ class ShiftController extends Controller
             // a nullable enum(day_based,date_based), not "", so normalize here
             // rather than pushing an empty string all the way to the DB.
             $weekOffType = $request->week_off_type ?: null;
+
+            if ($request->boolean('is_additional')) {
+                return $this->assignAdditionalShift($request, $userIds, $shift, $type, $startDate, $endDate, $tenantId);
+            }
 
             foreach ($userIds as $userId) {
                 if ($request->week_off_type) {
@@ -724,6 +762,60 @@ class ShiftController extends Controller
                 ->with('error', 'Shift assignment failed: ' . $e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * "Add as additional shift": a 2nd+ shift on the same days, next to the
+     * employee's primary shift (which is left untouched). All-or-nothing — if
+     * the shift would overlap one any selected employee already works, nothing
+     * is assigned. Week-offs are not changed. Runs inside assignShift()'s
+     * transaction.
+     */
+    private function assignAdditionalShift(Request $request, array $userIds, Shift $shift, string $type, Carbon $startDate, Carbon $endDate, int $tenantId)
+    {
+        $names = User::whereIn('id', $userIds)->pluck('name', 'id');
+        $clashes = [];
+        foreach ($userIds as $userId) {
+            $conflicts = $this->shiftAssignmentService->additionalConflicts($tenantId, $userId, $shift, $type, $startDate, $type === 'flexible' ? $endDate : null);
+            if ($conflicts) {
+                $clashes[] = ($names[$userId] ?? "Employee #{$userId}") . ': ' . ShiftOverlapGuard::describe($conflicts, 2);
+            }
+        }
+
+        if ($clashes) {
+            DB::rollBack();
+            $message = "{$shift->name} overlaps a shift already assigned — nothing was assigned. "
+                . implode('; ', array_slice($clashes, 0, 3))
+                . (count($clashes) > 3 ? '; and ' . (count($clashes) - 3) . ' more employee(s).' : '.');
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => false, 'message' => $message, 'data' => ['conflicts' => $clashes]], 422);
+            }
+
+            return redirect()->back()->with('error', $message)->withInput();
+        }
+
+        $assigned = 0;
+        foreach ($userIds as $userId) {
+            $result = $this->shiftAssignmentService->assignAdditional(
+                $tenantId, $userId, $shift->id, $type, $startDate, $type === 'flexible' ? $endDate : null, Auth::id()
+            );
+            $assigned += $result['materialized']['assigned'];
+        }
+
+        DB::commit();
+
+        $message = "Additional shift {$shift->name} added to {$assigned} day(s) across " . count($userIds) . ' employee(s). Their main shift is unchanged.';
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => true,
+                'message' => $message,
+                'data' => ['type' => $type, 'is_additional' => true, 'assigned' => $assigned],
+            ], 200);
+        }
+
+        return redirect()->route('shift.roster')->with('success', $message);
     }
 
     /**
@@ -857,6 +949,12 @@ class ShiftController extends Controller
             DB::beginTransaction();
 
             $userShift = UserShift::find($request->user_shift_id);
+
+            if ($error = $this->overlapErrorFor($userShift, (int) $request->shift_id)) {
+                DB::rollBack();
+
+                return response()->json(['status' => false, 'message' => $error], 422);
+            }
 
             $userShift->shift_id = $request->shift_id;
 
@@ -1047,6 +1145,11 @@ class ShiftController extends Controller
             $updated = 0;
             foreach ($request->user_shifts as $item) {
                 $userShift = UserShift::find($item['id']);
+                if ($error = $this->overlapErrorFor($userShift, (int) $item['shift_id'], array_column($request->user_shifts, 'id'))) {
+                    DB::rollBack();
+
+                    return response()->json(['status' => false, 'message' => $error], 422);
+                }
                 $userShift->update([
                     'shift_id' => $item['shift_id'],
                     'status' => $item['status']
@@ -1100,7 +1203,7 @@ class ShiftController extends Controller
                 });
             }
 
-            $userShifts = $query->orderBy('date')->orderBy('user_id')->get();
+            $userShifts = $query->orderBy('date')->orderBy('user_id')->orderBy('is_additional')->get();
 
             $filename = 'user_shifts_' . $request->from_date . '_to_' . $request->to_date . '.csv';
             $headers = [
@@ -1111,18 +1214,20 @@ class ShiftController extends Controller
             $callback = function () use ($userShifts) {
                 $file = fopen('php://output', 'w');
 
-                fputcsv($file, ['Date', 'Employee ID', 'Employee Name', 'Shift', 'Start Time', 'End Time', 'Status', 'Type']);
+                fputcsv($file, ['Date', 'Employee ID', 'Employee Name', 'Shift', 'Start Time', 'End Time', 'Status', 'Type', 'Additional Shift']);
 
                 foreach ($userShifts as $shift) {
                     fputcsv($file, [
-                        $shift->date->format('Y-m-d'),
+                        // user_shifts.date is a varchar, not a Carbon.
+                        Carbon::parse($shift->date)->format('Y-m-d'),
                         $shift->user->employee_id ?? 'N/A',
                         $shift->user->name ?? 'N/A',
                         $shift->shift->name ?? 'N/A',
                         $shift->shift->start_time ?? 'N/A',
                         $shift->shift->end_time ?? 'N/A',
                         $shift->status,
-                        $shift->shiftAssignment->type ?? 'N/A'
+                        $shift->shiftAssignment->type ?? 'N/A',
+                        $shift->is_additional ? 'Yes' : 'No',
                     ]);
                 }
 
@@ -1171,6 +1276,7 @@ class ShiftController extends Controller
                     // Check if shift already exists
                     $existing = UserShift::where('user_id', $userId)
                         ->where('date', $date)
+                        ->where('is_additional', 0)
                         ->first();
 
                     if ($existing) {
@@ -1226,6 +1332,7 @@ class ShiftController extends Controller
 
                         UserShift::where('user_id', $userId)
                             ->whereBetween('date', [$range['start'], $range['end']])
+                            ->where('is_additional', 0)
                             ->update(['shift_assignment_id' => $shiftAssignment->id]);
                     }
                 }
@@ -1390,9 +1497,24 @@ class ShiftController extends Controller
     }
 
     /**
-     * Check if a specific date is a week-off for a user
-     * Uses pre-loaded week-offs for better performance
+     * Error message when changing $userShift to $shiftId would overlap another
+     * shift the employee works around that date, else null. $ignoreIds are rows
+     * being changed in the same request (bulk edit).
      */
+    private function overlapErrorFor(?UserShift $userShift, int $shiftId, array $ignoreIds = []): ?string
+    {
+        $shift = $userShift ? Shift::find($shiftId) : null;
+        if (!$shift || (int) $userShift->shift_id === $shiftId) {
+            return null;
+        }
+
+        $date = Carbon::parse($userShift->date)->toDateString();
+        $ignore = array_unique(array_merge([(int) $userShift->id], array_map('intval', $ignoreIds)));
+        $conflicts = $this->overlapGuard->conflicts((int) $userShift->tenant_id, (int) $userShift->user_id, $shift, [$date], $ignore);
+
+        return $conflicts ? "{$shift->name} would overlap " . ShiftOverlapGuard::describe($conflicts) . '.' : null;
+    }
+
     /**
      * Group consecutive dates into ranges
      */
@@ -1411,7 +1533,8 @@ class ShiftController extends Controller
                 $current = Carbon::parse($dates[$j]);
                 $prev = Carbon::parse($dates[$j - 1]);
 
-                if ($current->diffInDays($prev) == 1) {
+                // Carbon 3 diffs are signed — compare prev -> current (+1 day).
+                if ((int) $prev->diffInDays($current) === 1) {
                     $end = $dates[$j];
                     $j++;
                 } else {

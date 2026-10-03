@@ -25,7 +25,7 @@
         .card-header-custom i {
             width: 40px;
             height: 40px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border-radius: 12px;
             display: flex;
@@ -67,12 +67,12 @@
         }
 
         .form-label i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 16px;
         }
 
         .required-star {
-            color: #1e3a8a;
+            color: #0D6EFD;
             margin-left: 4px;
             font-size: 14px;
         }
@@ -114,15 +114,15 @@
         }
 
         .form-control-modern:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
             background: white;
         }
 
         .form-control-modern.is-invalid {
-            border-color: #1e3a8a;
-            background: #e3edfe;
+            border-color: #0D6EFD;
+            background: #EFF6FF;
         }
 
         textarea.form-control-modern {
@@ -155,7 +155,7 @@
         }
 
         .balance-preview-title i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 16px;
         }
 
@@ -186,7 +186,7 @@
         .employee-avatar {
             width: 40px;
             height: 40px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border-radius: 10px;
             display: flex;
@@ -235,15 +235,15 @@
         }
 
         .btn-primary-modern {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
-            box-shadow: 0 4px 6px rgba(30, 58, 138, 0.2);
+            box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
         }
 
         .btn-primary-modern:hover:not(:disabled) {
-            background: #1e3a8a;
+            background: #0D6EFD;
             transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(30, 58, 138, 0.3);
+            box-shadow: 0 6px 8px rgba(13, 110, 253, 0.3);
         }
 
         .btn-secondary-modern {
@@ -333,21 +333,21 @@
         }
 
         .alert-success {
-            background: #e3edfe;
+            background: #EFF6FF;
             border: 1px solid #93c5fd;
-            color: #1d4ed8;
+            color: #0B5ED7;
         }
 
         .alert-error {
-            background: #e3edfe;
+            background: #EFF6FF;
             border: 1px solid #93c5fd;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .alert-warning {
-            background: #e3edfe;
+            background: #EFF6FF;
             border: 1px solid #93c5fd;
-            color: #2563eb;
+            color: #0D6EFD;
         }
 
         .alert-info {

@@ -14,10 +14,8 @@
 @endsection
 
 @section('content-area')
+<x-ui.page-header title="Approval Workflows" back />
 <div class="page-content"><div class="container-fluid">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="mb-0">Approval Workflows</h4>
-    </div>
 
     @if (session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
     @if ($errors->any())

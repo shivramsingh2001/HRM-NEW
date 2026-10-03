@@ -40,7 +40,7 @@ class PerformanceRollupService
         }
         $rangeEnd = $monthEnd->lt($today) ? $monthEnd : $today;
 
-        $policy = $this->policies->forTenantMonth($tenantId, $month);
+        $policy = $this->policies->forUserMonth($tenantId, (int) $user->id, $month);
 
         $daysExpected = $rangeStart->lte($rangeEnd) ? $rangeStart->diffInDays($rangeEnd) + 1 : 0;
 
@@ -148,7 +148,7 @@ class PerformanceRollupService
     {
         $tenantId = (int) $kpiScore->tenant_id;
         $month = Carbon::parse($kpiScore->reporting_month)->format('Y-m');
-        $policy = $this->policies->forTenantMonth($tenantId, $month);
+        $policy = $this->policies->forUserMonth($tenantId, (int) $kpiScore->user_id, $month);
 
         $objectiveScore = $this->objectiveScoreFor($kpiScore);
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Report;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Concerns\SanitizesCsv;
+use App\Support\ShiftWindow;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Exception;
@@ -36,15 +37,8 @@ class AttendanceReportController extends Controller
         // ============================================================
         if ($attendance && isset($attendance->scheduled_shift_start) && $attendance->scheduled_shift_start && 
             isset($attendance->scheduled_shift_end) && $attendance->scheduled_shift_end) {
-            $shiftStart = Carbon::parse($attendance->scheduled_shift_start);
-            $shiftEnd = Carbon::parse($attendance->scheduled_shift_end);
-            
-            // Handle overnight shifts (e.g., 22:00 to 06:00)
-            if ($shiftEnd->lessThan($shiftStart)) {
-                $shiftEnd->addDay();
-            }
-            
-            $expectedHours = $shiftStart->diffInHours($shiftEnd);
+            // Overnight shifts (e.g. 22:00 to 06:00) end on the next day.
+            $expectedHours = ShiftWindow::spanMinutes($attendance->scheduled_shift_start, $attendance->scheduled_shift_end) / 60;
         }
         
         // ============================================================
@@ -61,15 +55,8 @@ class AttendanceReportController extends Controller
                     ->first();
                 
                 if ($shift) {
-                    $shiftStart = Carbon::parse($shift->start_time);
-                    $shiftEnd = Carbon::parse($shift->end_time);
-                    
-                    // Handle overnight shifts (e.g., 22:00 to 06:00)
-                    if ($shiftEnd->lessThan($shiftStart)) {
-                        $shiftEnd->addDay();
-                    }
-                    
-                    $expectedHours = $shiftStart->diffInHours($shiftEnd);
+                    // Overnight shifts (e.g. 22:00 to 06:00) end on the next day.
+                    $expectedHours = ShiftWindow::spanMinutes($shift->start_time, $shift->end_time, ShiftWindow::isOvernight($shift)) / 60;
                 }
             }
         }
@@ -83,7 +70,7 @@ class AttendanceReportController extends Controller
             ? (int) $shiftStart->diffInSeconds($shiftEnd)
             : 0;
         $policy = app(\App\Services\Attendance\PolicyResolver::class)
-            ->forTenantDate((int) $tenantId, Carbon::parse($date)->format('Y-m-d'));
+            ->forUserDate((int) $tenantId, (int) $userId, Carbon::parse($date)->format('Y-m-d'));
 
         return match ($policy->classify((float) ($totalHours ?? 0), $expectedSeconds)) {
             'present' => 'Present',
@@ -150,29 +137,10 @@ class AttendanceReportController extends Controller
     private function getUserShiftForDate($userId, $date, $tenantId)
     {
         try {
-            // Honours the tenant's custom-shifts toggle (fixed company shift when
-            // off, the per-date assignment chain when on).
-            $shift = app(\App\Services\Attendance\TenantShiftResolver::class)
-                ->forUserDate((int) $userId, (int) $tenantId, $date);
-
-            if (!$shift) {
-                return null;
-            }
-
-            $userShiftId = DB::table('user_shifts')
-                ->where('user_id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->where('date', $date)
-                ->value('id');
-
-            return [
-                'shift_id' => $shift->id,
-                'name' => $shift->name,
-                'start_time' => $shift->start_time,
-                'end_time' => $shift->end_time,
-                'grace_minutes' => $shift->grace_minutes ?? 0,
-                'user_shift_id' => $userShiftId,
-            ];
+            // The day's primary shift (fixed company shift when custom shifts are
+            // off) — one implementation in TenantShiftResolver.
+            return app(\App\Services\Attendance\TenantShiftResolver::class)
+                ->detailsForUserDate((int) $userId, (int) $tenantId, $date);
         } catch (Exception $e) {
             Log::error('Error getting user shift: ' . $e->getMessage());
             return null;
@@ -1067,6 +1035,9 @@ class AttendanceReportController extends Controller
                     'a.late_minutes',
                     'a.early_departure_minutes as earlyexitminutes',
                     'a.overtime_minutes',
+                    'a.extra_shift_minutes',
+                    'a.shift_count',
+                    'a.id as attendance_id',
                     'a.remarks',
                     'u.name',
                     'u.employee_id',
@@ -1078,6 +1049,16 @@ class AttendanceReportController extends Controller
                 ->where('a.date', $dayStart)
                 ->get()
                 ->keyBy('user_id');
+
+            // Multi-shift: per-shift breakdown for days worked across several shifts.
+            $segmentRows = DB::table('attendance_shift_segments as sg')
+                ->leftJoin('shifts as sh', 'sh.id', '=', 'sg.shift_id')
+                ->where('sg.tenant_id', $tenantId)
+                ->where('sg.date', $dayStart)
+                ->orderBy('sg.is_additional')
+                ->orderBy('sg.scheduled_start')
+                ->get(['sg.*', 'sh.name as shift_name'])
+                ->groupBy('attendance_id');
 
             // Fetch approved leaves for this day
             $leaveRows = DB::table('leaves')
@@ -1159,7 +1140,11 @@ class AttendanceReportController extends Controller
                 if ($persistedToken !== null) {
                     $status = $persistedToken;
                 } elseif ($attendance && $attendance->clock_in && $attendance->clock_out) {
-                    $status = $this->getAttendanceStatusByShift($totalHours, $user->id, $dayStart, $attendance);
+                    // Multi-shift: the primary shift's hours decide the status.
+                    $primaryHours = $totalHours !== null
+                        ? app(\App\Services\Attendance\AttendanceCalculator::class)->primaryWorkedSeconds($attendance, (int) round($totalHours * 3600)) / 3600
+                        : null;
+                    $status = $this->getAttendanceStatusByShift($primaryHours, $user->id, $dayStart, $attendance);
                     $status = strtolower($status);
                 } elseif ($attendance && $attendance->clock_in && !$attendance->clock_out) {
                     $status = 'checked_in_only';
@@ -1170,6 +1155,11 @@ class AttendanceReportController extends Controller
                 } elseif ($weekoff) {
                     $status = 'week_off';
                 }
+
+                // Multi-shift: every shift worked that day (primary first).
+                $daySegments = ($attendance && (int) ($attendance->shift_count ?? 0) > 1)
+                    ? $segmentRows->get($attendance->attendance_id, collect())
+                    : collect();
 
                 // Build report entry
                 $report[] = [
@@ -1197,9 +1187,17 @@ class AttendanceReportController extends Controller
                     'shift_end_time' => $attendance->shiftendtime ?? null,
                     'late_minutes' => $attendance->late_minutes ?? 0,
                     'early_exit_minutes' => $attendance->earlyexitminutes ?? 0,
-                    'overtime_minutes' => $overtime ? ($overtime->approved_hours * 60) : 0,
+                    'overtime_minutes' => ($overtime ? ($overtime->approved_hours * 60) : 0) + (int) ($attendance->extra_shift_minutes ?? 0),
                     'overtime_hours' => $overtime ? $overtime->approved_hours : null,
                     'overtime_reason' => $overtime ? $overtime->reason : null,
+                    'extra_shift_minutes' => (int) ($attendance->extra_shift_minutes ?? 0),
+                    'shifts' => $daySegments->map(fn ($seg) => [
+                        'name' => $seg->shift_name,
+                        'start' => $seg->scheduled_start,
+                        'end' => $seg->scheduled_end,
+                        'worked_minutes' => (int) $seg->worked_minutes,
+                        'is_additional' => (bool) $seg->is_additional,
+                    ])->values()->all(),
                     'remarks' => $attendance->remarks ?? null,
                     'leave_type' => $leave->leave_type ?? null,
                     'holiday_name' => $holiday->name ?? null,
@@ -1359,6 +1357,16 @@ class AttendanceReportController extends Controller
                 ->get()
                 ->keyBy('user_id');
 
+            // Multi-shift: per-shift breakdown for days worked across several shifts.
+            $segmentRows = DB::table('attendance_shift_segments as sg')
+                ->leftJoin('shifts as sh', 'sh.id', '=', 'sg.shift_id')
+                ->where('sg.tenant_id', $tenantId)
+                ->where('sg.date', $dayStart)
+                ->orderBy('sg.is_additional')
+                ->orderBy('sg.scheduled_start')
+                ->get(['sg.*', 'sh.name as shift_name'])
+                ->groupBy('attendance_id');
+
             // Fetch approved leaves for this day
             $leaveRows = DB::table('leaves')
                 ->where('tenant_id', $tenantId)
@@ -1430,7 +1438,11 @@ class AttendanceReportController extends Controller
                 if ($persistedToken !== null) {
                     $status = $persistedToken;
                 } elseif ($attendance && $attendance->clock_in && $attendance->clock_out) {
-                    $status = $this->getAttendanceStatusByShift($totalHours, $user->id, $dayStart, $attendance);
+                    // Multi-shift: the primary shift's hours decide the status.
+                    $primaryHours = $totalHours !== null
+                        ? app(\App\Services\Attendance\AttendanceCalculator::class)->primaryWorkedSeconds($attendance, (int) round($totalHours * 3600)) / 3600
+                        : null;
+                    $status = $this->getAttendanceStatusByShift($primaryHours, $user->id, $dayStart, $attendance);
                     $status = strtolower($status);
                 } elseif ($attendance && $attendance->clock_in && !$attendance->clock_out) {
                     $status = 'checked_in_only';
@@ -1441,6 +1453,11 @@ class AttendanceReportController extends Controller
                 } elseif ($weekoff) {
                     $status = 'week_off';
                 }
+
+                // Multi-shift: every shift worked that day (primary first).
+                $daySegments = ($attendance && (int) ($attendance->shift_count ?? 0) > 1)
+                    ? $segmentRows->get($attendance->id, collect())
+                    : collect();
 
                 // ✅ Apply status filter - WITH COMBINED PRESENT
                 if ($statusFilter) {
@@ -1492,9 +1509,17 @@ class AttendanceReportController extends Controller
                     'shift_end_time' => $attendance->scheduled_shift_end ?? null,
                     'late_minutes' => $attendance->late_minutes ?? 0,
                     'early_exit_minutes' => $attendance->early_departure_minutes ?? 0,
-                    'overtime_minutes' => $overtime ? ($overtime->approved_hours * 60) : 0,
+                    'overtime_minutes' => ($overtime ? ($overtime->approved_hours * 60) : 0) + (int) ($attendance->extra_shift_minutes ?? 0),
                     'overtime_hours' => $overtime ? $overtime->approved_hours : null,
                     'overtime_reason' => $overtime ? $overtime->reason : null,
+                    'extra_shift_minutes' => (int) ($attendance->extra_shift_minutes ?? 0),
+                    'shifts' => $daySegments->map(fn ($seg) => [
+                        'name' => $seg->shift_name,
+                        'start' => $seg->scheduled_start,
+                        'end' => $seg->scheduled_end,
+                        'worked_minutes' => (int) $seg->worked_minutes,
+                        'is_additional' => (bool) $seg->is_additional,
+                    ])->values()->all(),
                     'remarks' => $attendance->remarks ?? null,
                     'leave_type' => $leave->leave_type ?? null,
                     'holiday_name' => $holiday->name ?? null,
@@ -1568,6 +1593,13 @@ class AttendanceReportController extends Controller
                         ? Carbon::parse($row['shift_end_time'])->format('h:i A')
                         : '--';
                     $shift = $start . ' - ' . $end;
+                }
+                // Multi-shift: list every shift worked that day.
+                if (!empty($row['shifts'])) {
+                    $shift = collect($row['shifts'])->map(fn ($sg) => ($sg['is_additional'] ? '+ ' : '')
+                        . ($sg['name'] ?? 'Shift') . ' ' . Carbon::parse($sg['start'])->format('h:i A') . ' - '
+                        . Carbon::parse($sg['end'])->format('h:i A') . ' (' . round($sg['worked_minutes'] / 60, 2) . ' hrs)')
+                        ->implode(' | ');
                 }
 
                 // Format clock in/out
@@ -4024,6 +4056,14 @@ class AttendanceReportController extends Controller
                 ->get()
                 ->groupBy('user_id');
 
+            // Multi-shift: minutes worked in 2nd+ shifts are automatic overtime.
+            $extraShiftMinutes = DB::table('attendances')
+                ->where('tenant_id', $tenantId)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->where('extra_shift_minutes', '>', 0)
+                ->groupBy('user_id')
+                ->pluck(DB::raw('SUM(extra_shift_minutes)'), 'user_id');
+
             // Per-employee hourly rate, dynamic-or-legacy — same resolution
             // AttendanceAnalyticsService::overtimeCost() uses tenant-wide,
             // done per user here for an accurate per-row estimated cost.
@@ -4052,8 +4092,9 @@ class AttendanceReportController extends Controller
 
             foreach ($users as $user) {
                 $userRequests = $requests->get($user->id, collect());
+                $extraShiftHours = round(((int) ($extraShiftMinutes[$user->id] ?? 0)) / 60, 2);
 
-                if ($userRequests->isEmpty()) {
+                if ($userRequests->isEmpty() && $extraShiftHours <= 0) {
                     continue;
                 }
 
@@ -4069,7 +4110,7 @@ class AttendanceReportController extends Controller
                     ? (isset($dynamicRates[$user->id]) ? round(((float) $dynamicRates[$user->id] / 12) / (26 * 8), 2) : 0)
                     : (float) ($legacyRates[$user->id] ?? 0);
 
-                $estimatedCost = round($approvedHours * $rate * $multiplier, 2);
+                $estimatedCost = round(($approvedHours + $extraShiftHours) * $rate * $multiplier, 2);
 
                 if ($statusFilter) {
                     $countForStatus = $userRequests->where('status', $statusFilter)->count();
@@ -4090,6 +4131,7 @@ class AttendanceReportController extends Controller
                     'pending_count' => $pending->count(),
                     'rejected_count' => $rejected->count(),
                     'approved_hours' => $approvedHours,
+                    'extra_shift_hours' => $extraShiftHours,
                     'pending_hours' => $pendingHours,
                     'rejected_hours' => $rejectedHours,
                     'hourly_rate' => $rate,

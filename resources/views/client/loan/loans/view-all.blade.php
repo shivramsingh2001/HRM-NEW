@@ -4,57 +4,12 @@
 
 @section('style')
     <style>
-        /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
-           are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: var(--primary-mid);
-        }
 
-        .filter-title span {
-            background: var(--primary-light);
-            color: var(--primary-mid);
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 20px;
-        }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 160px;
-        }
 
         .filter-select,
         .filter-input {
@@ -79,40 +34,8 @@
             cursor: pointer;
         }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-        }
 
-        /* ==================== TABLE STYLES ==================== */
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #475569;
-            padding: 12px 16px;
-            white-space: nowrap;
-        }
-
-        .table td {
-            vertical-align: middle;
-            font-size: 13px;
-            padding: 12px 16px;
-        }
 
         /* ==================== BADGES ==================== */
         .badge {
@@ -213,64 +136,14 @@
             color: #64748b;
         }
 
-        /* ==================== ACTION BUTTONS ==================== */
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-            margin: 0 2px;
-        }
 
-        .action-btn:hover {
-            background: white;
-            transform: translateY(-2px);
-        }
 
-        .action-btn.view:hover {
-            color: var(--primary-mid);
-            border-color: var(--primary-mid);
-        }
 
-        .action-btn.approve {
-            background: var(--success-light);
-            color: var(--success);
-            border-color: #a7f3d0;
-        }
 
-        .action-btn.approve:hover {
-            background: var(--success);
-            color: white;
-        }
 
-        .action-btn.reject {
-            background: var(--danger-light);
-            color: var(--danger);
-            border-color: #fecaca;
-        }
 
-        .action-btn.reject:hover {
-            background: var(--danger);
-            color: white;
-        }
 
-        .action-btn.disburse {
-            background: var(--warning-light);
-            color: var(--warning);
-            border-color: #fde68a;
-        }
 
-        .action-btn.disburse:hover {
-            background: var(--warning);
-            color: white;
-        }
 
         /* ==================== DETAIL CARD ==================== */
         .detail-card {
@@ -396,35 +269,15 @@
 
         /* ==================== RESPONSIVE ==================== */
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 8px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(50% - 8px);
-                min-width: 120px;
-            }
+
         }
 
         @media (max-width: 768px) {
-            .filter-wrapper {
-                padding: 12px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
 
-            .filter-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
+
 
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -440,34 +293,23 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Loan Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Loan Approvals</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown">
-                            <i class="feather-download"></i>
+    <x-ui.page-header title="Loan Management" current="Loan Approvals">
+        <x-slot:actions>
+            <div class="d-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown">
+                        <i class="feather-download"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a href="#" class="dropdown-item" onclick="exportToCSV()">
+                            <i class="bi bi-filetype-csv me-3"></i>
+                            <span>Export CSV</span>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a href="#" class="dropdown-item" onclick="exportToCSV()">
-                                <i class="bi bi-filetype-csv me-3"></i>
-                                <span>Export CSV</span>
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
@@ -609,10 +451,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Loan Approval & Disbursement</h5>
-                        <span class="badge" style="background: var(--primary-light); color: var(--primary-mid);"><i class="feather-list me-1"></i>Total: {{ $loans->total() }}</span>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table" id="approvalsTable">
@@ -748,7 +586,7 @@
                         </div>
                     </div>
                     @if ($loans->hasPages())
-                        <div class="card-footer">{{ $loans->links() }}</div>
+                        <x-ui.pagination-footer :paginator="$loans" label="loans" />
                     @endif
                 </div>
             </div>

@@ -65,12 +65,29 @@ class AttendancePunchService
         $hasOpenSession = $latestActive && $latestActive->direction === 'in';
 
         // An `out` closing an in-progress session inherits that session's
-        // date (the cross-midnight rule) rather than its own calendar day.
+        // date (the cross-midnight rule) and shift rather than its own day.
+        $userShiftId = null;
+        $matchedShift = null;
         if ($input->direction === 'out' && $hasOpenSession) {
             $date = $latestActive->date;
+            $userShiftId = $latestActive->user_shift_id;
         } else {
-            $shiftForDate = $this->shifts->forUserDate($input->userId, $input->tenantId, $input->punchedAt->format('Y-m-d'));
-            $date = $this->calc->resolveAttendanceDate($input->punchedAt, $shiftForDate);
+            // Multi-shift: an employee with a 2nd+ shift nearby has the punch
+            // matched to the shift whose window it falls in, and that shift's
+            // date wins. Everyone else keeps the long-standing date rule.
+            $punchDay = $input->punchedAt->format('Y-m-d');
+            if ($input->direction === 'in' && $this->shifts->hasAdditionalAround($input->userId, $input->tenantId, $punchDay)) {
+                $matchedShift = $this->shifts->instanceForPunch($input->userId, $input->tenantId, $input->punchedAt);
+            }
+
+            if ($matchedShift) {
+                $date = $matchedShift['date'];
+                $userShiftId = $matchedShift['user_shift_id'];
+            } else {
+                $shiftForDate = $this->shifts->forUserDate($input->userId, $input->tenantId, $punchDay);
+                $date = $this->calc->resolveAttendanceDate($input->punchedAt, $shiftForDate);
+                $userShiftId = $this->shifts->primaryRow($input->userId, $input->tenantId, Carbon::parse($date)->toDateString())?->id;
+            }
         }
 
         $yearMonth = Carbon::parse($date)->format('Y-m');
@@ -140,7 +157,9 @@ class AttendancePunchService
                     ->where('status', 'active')
                     ->where('direction', 'out')
                     ->exists();
-                if ($hasCompletedToday) {
+                // Clocking in for a shift not yet started today (multi-shift)
+                // is a new session even when multiple punches are off.
+                if ($hasCompletedToday && ! $this->isUnstartedShift($input, $date, $matchedShift)) {
                     throw new OpenPunchSessionException();
                 }
             }
@@ -181,6 +200,7 @@ class AttendancePunchService
             'reason' => $input->audit?->reason,
             'status' => 'active',
             'client_ref' => $input->clientRef,
+            'user_shift_id' => $userShiftId,
             'metadata' => $outOfOrder ? array_merge($input->metadata, ['out_of_order' => true]) : ($input->metadata ?: null),
         ]);
 
@@ -200,6 +220,11 @@ class AttendancePunchService
             $punch->forceFill(['session_seq' => $seq + 1])->save();
         }
 
+        if ($userShiftId) {
+            DB::table('user_shifts')->where('id', $userShiftId)
+                ->update(['status' => $input->direction === 'in' ? 'ongoing' : 'complete', 'updated_at' => now()]);
+        }
+
         $this->trackingSessions->onPunchCaptured($punch);
 
         $ctx = $input->audit ?? new AuditContext(
@@ -208,6 +233,26 @@ class AttendancePunchService
         $this->rollup->recompute($input->userId, $input->tenantId, $date, $ctx);
 
         return $punch->fresh();
+    }
+
+    /**
+     * Is this clock-in for a shift the user has not clocked in for yet on
+     * $date? Only true for a punch matched to a specific shift instance.
+     */
+    private function isUnstartedShift(PunchInput $input, string $date, ?array $matchedShift): bool
+    {
+        if (! $matchedShift || ! $matchedShift['user_shift_id']) {
+            return false;
+        }
+
+        return ! AttendancePunch::withoutGlobalScopes()
+            ->where('tenant_id', $input->tenantId)
+            ->where('user_id', $input->userId)
+            ->where('date', $date)
+            ->where('status', 'active')
+            ->where('direction', 'in')
+            ->where('user_shift_id', $matchedShift['user_shift_id'])
+            ->exists();
     }
 
     private function resolveTimezone(PunchInput $input): string

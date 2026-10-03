@@ -322,18 +322,7 @@
 @section('content-area')
     <!-- Page Header -->
 
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                {{-- <h5 class="m-b-10">Apply Leave</h5> --}}
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('employee.index') }}">Employees</a></li>
-                <li class="breadcrumb-item active">Add Employee</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Add Employee" :crumbs="[['label' => 'Employees', 'url' => route('employee.index')]]" />
 
     <div class="main-content" style="padding: 20px !important;">
         {{-- <div class="container-fluid"> --}}

@@ -5,18 +5,8 @@
         .bud-sm { font-size: 12px; padding: 3px 8px; }
         .bud-lbl { font-size: 11.5px; font-weight: 600; color: #64748b; }
     </style>
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Expense Budgets</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.view-all') }}">Expenses</a></li>
-                <li class="breadcrumb-item active">Budgets</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Expense Budgets" current="Budgets" :crumbs="[['label' => 'Expenses', 'url' => route('expense.view-all')]]" :back="route('expense.view-all')">
+        <x-slot:actions>
             <div class="d-flex gap-2 align-items-center flex-nowrap text-nowrap">
                 <form method="GET" class="d-flex gap-1 align-items-center flex-nowrap mb-0">
                     <label class="mb-0 text-muted fw-semibold" style="font-size:12px">Fiscal year</label>
@@ -28,11 +18,9 @@
                 </form>
                 <button type="button" class="btn btn-primary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#budgetModal"
                     onclick="openBudgetCreate()"><i class="feather-plus me-1"></i>Add budget</button>
-                <a href="{{ route('expense.view-all') }}" class="btn btn-light-brand btn-sm text-nowrap"><i
-                        class="feather-arrow-left me-1"></i>Back</a>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="alert alert-info small">

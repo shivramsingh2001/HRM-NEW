@@ -22,7 +22,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
         .header {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
             padding: 30px 20px;
             text-align: center;
@@ -56,7 +56,7 @@
         }
         .info-box h3 {
             margin: 0 0 15px 0;
-            color: #1e40af;
+            color: #0D6EFD;
             font-size: 16px;
         }
         .info-row {
@@ -97,7 +97,7 @@
             text-align: center;
         }
         .calendar-btn:hover {
-            background: #2563eb;
+            background: #0D6EFD;
         }
         .company-footer {
             background: #1f2937;

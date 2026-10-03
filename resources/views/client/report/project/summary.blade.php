@@ -2,47 +2,39 @@
 
 @section('style')
 <style>
-    .filter-section { background: #fff; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
-    .filter-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; overflow-x: auto; }
-    .filter-row > .filter-item { flex: 0 1 auto; min-width: 0; }
-    .filter-row select.form-control-sm-custom { min-width: 96px; max-width: 150px; }
-    .filter-row input[type="date"].form-control-sm-custom { width: 118px; padding: 6px 6px; }
-    .filter-row > .filter-item.fi-search { flex: 1 1 140px; }
-    .filter-row input[name="search"] { width: 100%; min-width: 120px; }
-    .filter-row .btn-sm-custom-outline { display: inline-block; white-space: nowrap; padding: 6px 10px; }
+
+
+
+
+
+
+
     .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; }
     .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; }
-    .btn-sm-custom-outline:hover { background: #e3edfe; color: #1e3a8a; }
+    .btn-sm-custom-outline:hover { background: #EFF6FF; color: #0D6EFD; }
 
     #reportTable { font-size: 11px; }
     #reportTable th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; color: #6b7385; padding: 6px 10px; }
     #reportTable td { padding: 6px 10px; vertical-align: middle; }
     .rpt-badge { padding: 2px 8px; border-radius: 30px; font-size: 8.5px; font-weight: 700; }
     .badge-active { background: #3b82f6; color: #fff; }
-    .badge-inactive { background: #1e3a8a; color: #fff; }
-    .progress-track { height: 6px; border-radius: 4px; background: #e3edfe; overflow: hidden; width: 90px; }
-    .progress-fill { height: 100%; background: #1e3a8a; }
+    .badge-inactive { background: #0D6EFD; color: #fff; }
+    .progress-track { height: 6px; border-radius: 4px; background: #EFF6FF; overflow: hidden; width: 90px; }
+    .progress-fill { height: 100%; background: #0D6EFD; }
 </style>
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title"><h5 class="m-b-10">Project Summary Report</h5></div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item">Project Summary</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Project Summary Report" current="Project Summary" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
             <a href="{{ route('report.project.summary.export', request()->query()) }}" class="btn btn-sm btn-primary" target="_blank">
                 <i class="feather-download me-1"></i> Export CSV
             </a>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body pb-3">
-        <div class="filter-section">
+        <x-ui.filter-card title="Filter Report">
             <form action="{{ route('report.project.summary.index') }}" method="GET">
                 <div class="filter-row">
                     <div class="filter-item">
@@ -99,7 +91,7 @@
                     <div class="filter-item"><a href="{{ route('report.project.summary.index') }}" class="btn-sm-custom-outline" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         <div class="card mb-0">
             <div class="card-body p-0">

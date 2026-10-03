@@ -51,7 +51,19 @@ class PayrollAttendanceContextBuilder
         }
 
         $overtime = $this->approvedOvertimeHours($userId, $tenantId, $start->toDateString(), $end->toDateString());
-        $overtimeRateMultiplier = $this->overtimeRateMultiplier($tenantId);
+        // Multi-shift: 2nd+ shift hours are automatic overtime, on top of requests.
+        $extraShift = app(\App\Services\Attendance\ExtraShiftOvertime::class)
+            ->forPeriod($userId, $tenantId, $start->toDateString(), $end->toDateString());
+        $employeePolicy = app(\App\Services\EmployeePolicyService::class);
+        // Marked "not eligible for overtime" on their profile: nothing is paid,
+        // neither approved requests nor additional-shift hours.
+        if (! $employeePolicy->overtimeEligible($tenantId, $userId)) {
+            $overtime = ['total_hours' => 0.0, 'request_count' => 0];
+            $extraShift = ['total_hours' => 0.0, 'details' => []];
+        }
+        // An employee's custom overtime rate wins over the company's.
+        $overtimeRateMultiplier = (float) ($employeePolicy->section($tenantId, $userId, 'overtime')['rate_multiplier']
+            ?? $this->overtimeRateMultiplier($tenantId));
         $loanDeduction = $this->loanDeduction($userId, $tenantId, $yearMonth);
 
         // start/end are always the first/last day of the same calendar
@@ -80,7 +92,8 @@ class PayrollAttendanceContextBuilder
             'actual_worked_hours' => $days['actual_worked_hours'],
             'attendance_overtime_hours' => $days['overtime_hours'],
 
-            'approved_overtime_hours' => $overtime['total_hours'],
+            'approved_overtime_hours' => round($overtime['total_hours'] + $extraShift['total_hours'], 2),
+            'extra_shift_overtime_hours' => $extraShift['total_hours'],
             'overtime_rate_multiplier' => $overtimeRateMultiplier,
 
             'loan_deduction_amount' => $loanDeduction,

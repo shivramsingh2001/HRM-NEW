@@ -12,8 +12,8 @@
     <x-ui.page-header title="Employee-wise Assets" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']" />
 
     <div class="main-content" style="padding: 20px !important;">
-        <div class="card mb-3"><div class="card-body">
-            <form method="GET" class="d-flex flex-wrap gap-2">
+        <x-ui.filter-card title="Filter Report">
+<form method="GET" class="d-flex flex-wrap gap-2 filter-row">
                 <select name="branch_id" class="form-control form-control-sm" style="width:auto;" onchange="this.form.submit()">
                     <option value="">All Branches</option>
                     @foreach ($branches as $b)
@@ -23,7 +23,7 @@
                 <input type="text" name="search" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" class="form-control form-control-sm" style="width:auto;" placeholder="Search employee or ID…" value="{{ request('search') }}">
                 <a href="{{ route('report.asset.employee-wise.index') }}" class="btn btn-light btn-sm" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a>
             </form>
-        </div></div>
+</x-ui.filter-card>
 
         @forelse ($users as $user)
             <div class="card mb-2">

@@ -46,6 +46,25 @@ class PerformancePolicyResolver
         return $this->forTenantDate($tenantId, Carbon::parse($yearMonth . '-01')->format('Y-m-d'));
     }
 
+    /**
+     * The policy ONE employee is scored with: the company policy with that
+     * employee's custom values (Employee 360 → Policies) on top. Identical to
+     * forTenantDate() for an employee with no custom values.
+     */
+    public function forUserDate(int $tenantId, int $userId, string $date): PerformancePolicySnapshot
+    {
+        $company = $this->forTenantDate($tenantId, $date);
+        $custom = app(\App\Services\EmployeePolicyService::class)->section($tenantId, $userId, 'performance');
+
+        return $custom ? $company->withOverrides($custom) : $company;
+    }
+
+    /** forUserDate() anchored to the 1st of the month — see forTenantMonth(). */
+    public function forUserMonth(int $tenantId, int $userId, string $yearMonth): PerformancePolicySnapshot
+    {
+        return $this->forUserDate($tenantId, $userId, Carbon::parse($yearMonth . '-01')->format('Y-m-d'));
+    }
+
     public function forget(): void
     {
         $this->memo = [];

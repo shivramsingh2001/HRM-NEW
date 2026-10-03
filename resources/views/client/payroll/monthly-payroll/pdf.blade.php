@@ -47,13 +47,13 @@
                             @endif
                         </td>
                         <td style="padding: 8px; width: 80%;">
-                            <h3 style="text-align: center; padding-right: 80px; font-size: 30px; color: #1e3a8a; margin-bottom: 2px;">{{ $company->company_name ?? 'Company Name' }}</h3>
+                            <h3 style="text-align: center; padding-right: 80px; font-size: 30px; color: #0D6EFD; margin-bottom: 2px;">{{ $company->company_name ?? 'Company Name' }}</h3>
                             <h5 style="text-align: center; padding-right: 80px; font-size: 11px; font-weight: 400; color: #475569;">{{ $company->address ?? 'Company Address' }}</h5>
                         </td>
                     </tr>
                     <tr>
                         <td colspan="2" style="padding-top: 6px; padding-bottom: 18px; width: 90%;">
-                            <h4 style="text-align: center; font-size: 13px; font-weight: 600; color: #1e3a8a;">Pay Slip For The Month of {{ \Carbon\Carbon::createFromFormat('Y-m', $monthlyPayroll->payroll_month)->format('M-Y') }}</h4>
+                            <h4 style="text-align: center; font-size: 13px; font-weight: 600; color: #0D6EFD;">Pay Slip For The Month of {{ \Carbon\Carbon::createFromFormat('Y-m', $monthlyPayroll->payroll_month)->format('M-Y') }}</h4>
                         </td>
                     </tr>
                 </tbody>
@@ -304,16 +304,16 @@
                         <td style="width: 50%;">
                             <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
                                 <tbody>
-                                    <th style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; font-size: 11px; color: #1e3a8a; text-align: left;">Earnings</th>
-                                    <th style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; font-size: 11px; color: #1e3a8a; text-align: right;">Amount (Rs.)</th>
+                                    <th style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; font-size: 11px; color: #0D6EFD; text-align: left;">Earnings</th>
+                                    <th style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; font-size: 11px; color: #0D6EFD; text-align: right;">Amount (Rs.)</th>
                                 </tbody>
                             </table>
                         </td>
                         <td style="width: 50%;">
                             <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
                                 <tbody>
-                                    <th style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; font-size: 11px; color: #1e3a8a; text-align: left;">Deductions</th>
-                                    <th style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; font-size: 11px; color: #1e3a8a; text-align: right;">Amount (Rs.)</th>
+                                    <th style="width: 60%; border: 1px solid #e5e7eb; padding: 5px 8px; font-size: 11px; color: #0D6EFD; text-align: left;">Deductions</th>
+                                    <th style="width: 40%; border: 1px solid #e5e7eb; padding: 5px 8px; font-size: 11px; color: #0D6EFD; text-align: right;">Amount (Rs.)</th>
                                 </tbody>
                             </table>
                         </td>
@@ -363,21 +363,21 @@
                 </tbody>
             </table>
 
-            <table style="width: 100%; margin-top: 14px; border-collapse: collapse; border-spacing: 0px; border: 1px solid #1e3a8a;">
+            <table style="width: 100%; margin-top: 14px; border-collapse: collapse; border-spacing: 0px; border: 1px solid #0D6EFD;">
                 <tbody>
                     <tr>
-                        <th style="border: 1px solid #1e3a8a; padding: 7px 8px; text-align: left; font-size: 13px; color: #1e3a8a; width: 50%;">
+                        <th style="border: 1px solid #0D6EFD; padding: 7px 8px; text-align: left; font-size: 13px; color: #0D6EFD; width: 50%;">
                             Net Pay (A-B)
                         </th>
-                        <th style="border: 1px solid #1e3a8a; padding: 7px 8px; text-align: right; font-size: 14px; color: #1e3a8a; width: 50%;">
+                        <th style="border: 1px solid #0D6EFD; padding: 7px 8px; text-align: right; font-size: 14px; color: #0D6EFD; width: 50%;">
                             {{ number_format($monthlyPayroll->net_payable ?? 0, 2) }}
                         </th>
                     </tr>
                     {{-- <tr>
-                        <th style="border: 1px solid #1e3a8a; padding: 7px 8px; text-align: left; font-size: 12px; width: 50%;">
+                        <th style="border: 1px solid #0D6EFD; padding: 7px 8px; text-align: left; font-size: 12px; width: 50%;">
                             In Words
                         </th>
-                        <th style="border: 1px solid #1e3a8a; padding: 7px 8px; text-align: right; font-size: 12px; width: 50%;">
+                        <th style="border: 1px solid #0D6EFD; padding: 7px 8px; text-align: right; font-size: 12px; width: 50%;">
                             {{ $monthlyPayroll->net_payable > 0 ? 'Rupees ' . App\Helpers\NumberToWords::transformINR($monthlyPayroll->net_payable) : 'Zero' }}
                         </th>
                     </tr> --}}
@@ -402,10 +402,10 @@
                 <table style="width: 100%; margin-top: 14px; border-collapse: collapse; border-spacing: 0px; border: 1px solid #e5e7eb;">
                     <tbody>
                         <tr>
-                            <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 11px; color: #1e3a8a; width: 50%;">
+                            <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; font-size: 11px; color: #0D6EFD; width: 50%;">
                                 Employer Contribution
                             </th>
-                            <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 11px; color: #1e3a8a; width: 50%;">
+                            <th style="border: 1px solid #e5e7eb; padding: 5px 8px; text-align: right; font-size: 11px; color: #0D6EFD; width: 50%;">
                                 Amount (Rs.)
                             </th>
                         </tr>

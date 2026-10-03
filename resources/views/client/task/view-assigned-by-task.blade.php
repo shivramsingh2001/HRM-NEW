@@ -12,7 +12,7 @@
         .ui-drawer .form-control, .ui-drawer select.form-control {
             font-size: 11.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid #dfe5f0;
         }
-        .ui-drawer .form-control:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30,58,138,.12); }
+        .ui-drawer .form-control:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253,.12); }
         .ui-drawer .form-hint { font-size: 10px; color: #6b7385; margin-top: 3px; display: block; }
         .ui-drawer .error-text { font-size: 10px; color: #dc3545; display: block; margin-top: 2px; }
         .ui-drawer #recordButton { font-size: 11px; padding: 5px 12px; }
@@ -75,7 +75,7 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
@@ -84,7 +84,7 @@
         .employee-initials-sm {
             width: 28px;
             height: 28px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             /* Single consistent color */
             color: white;
             border-radius: 50%;
@@ -126,12 +126,12 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #1e3a8a !important;
+            color: #0D6EFD !important;
             opacity: 0.8;
         }
 
@@ -170,8 +170,8 @@
         }
 
         .priority-critical {
-            background-color: #e3edfe;
-            color: #1e3a8a;
+            background-color: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .task-status {
@@ -189,7 +189,7 @@
 
         .status-in_progress {
             background-color: #dbeafe;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .status-hold {
@@ -217,51 +217,10 @@
             color: #4b5563;
         }
 
-        /* .stats-grid/.stats-card/.stats-card.active/.stats-info/.stats-icon
-           are centralized in client.layout.head (single blue-only theme,
-           click-to-filter JS below still targets .stats-card/data-status
-           unchanged) — no local copy. */
 
-        /* ==================== MODERN FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: #1e3a8a;
-            font-size: 16px;
-        }
-
-        .filter-title span {
-            background: #e3edfe;
-            color: #1e3a8a;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -284,32 +243,9 @@
             font-size: 14px;
         }
 
-        /* Filter Row */
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            gap: 12px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 120px;
-        }
 
-        .filter-item.date-range {
-            min-width: 100px;
-        }
 
-        .filter-item .form-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            margin-bottom: 4px;
-            display: block;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
 
         /* Select Dropdowns */
         .filter-select {
@@ -328,7 +264,7 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
             outline: none;
         }
@@ -353,34 +289,12 @@
 
         .filter-date:focus {
             background-color: white;
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
             outline: none;
         }
 
-        /* Reset Button */
-        .reset-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-            color: #1e293b;
-        }
 
         /* Active Filter Tags */
         .active-filters {
@@ -418,7 +332,7 @@
         }
 
         .filter-tag i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
 
@@ -437,16 +351,16 @@
         }
 
         .filter-tag.clear-all {
-            background: #e3edfe;
-            border-color: #1e3a8a;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            border-color: #0D6EFD;
+            color: #0D6EFD;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
         .filter-tag.clear-all:hover {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
         }
 
@@ -454,58 +368,12 @@
             color: currentColor;
         }
 
-        /* Table Styles */
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 12px 12px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 12px;
-            padding: 10px 12px;
-            border-bottom: 1px solid #f1f5f9;
-        }
 
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
-        /* Action Button */
-        .action-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-        }
 
-        .action-btn:hover {
-            background: white;
-            color: #1e3a8a;
-            border-color: #1e3a8a;
-        }
 
-        .action-btn.delete:hover {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
 
         .dropdown-item {
             font-size: 12px;
@@ -521,8 +389,8 @@
 
         /* Attachment Badge */
         .attachment-badge {
-            background-color: #e3edfe;
-            color: #1e3a8a;
+            background-color: #EFF6FF;
+            color: #0D6EFD;
             padding: 4px 8px;
             border-radius: 16px;
             font-size: 11px;
@@ -552,7 +420,7 @@
         }
 
         .audio-player-compact button {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
             border-radius: 50%;
@@ -567,7 +435,7 @@
         }
 
         .audio-player-compact button:hover {
-            background: #16295e;
+            background: #0B5ED7;
             transform: scale(1.05);
         }
 
@@ -593,42 +461,22 @@
 
         .audio-player-compact .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #1e3a8a, #60a5fa);
+            background: linear-gradient(90deg, #0D6EFD, #0D6EFD);
             width: 0%;
             transition: width 0.1s linear;
         }
 
         .audio-player-compact .download-btn {
-            color: #1e3a8a;
+            color: #0D6EFD;
             font-size: 12px;
             padding: 2px;
             border-radius: 4px;
             transition: all 0.2s ease;
         }
 
-        /* Pagination */
-        .pagination {
-            margin: 0;
-            gap: 4px;
-        }
 
-        .page-link {
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            font-size: 11px;
-            padding: 5px 10px;
-            border-radius: 6px !important;
-        }
 
-        .page-link:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-        }
 
-        .page-item.active .page-link {
-            background: #1e3a8a;
-            border-color: #1e3a8a;
-        }
 
         /* Empty State */
         .empty-state {
@@ -656,14 +504,8 @@
 
         /* Responsive */
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 10px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(33.333% - 10px);
-                min-width: 120px;
-            }
+
 
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -671,45 +513,22 @@
         }
 
         @media (max-width: 768px) {
-            .filter-wrapper {
-                padding: 12px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
+
 
             .stats-grid {
                 grid-template-columns: 1fr;
             }
 
-            .table th,
-            .table td {
-                padding: 8px 10px;
-            }
         }
     </style>
 @endsection
 
 @section('content-area')
     <!-- Page Header -->
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Tasks Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('task.assigned-by-me') }}">Tasks</a></li>
-                <li class="breadcrumb-item active">Assigned By Me</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Tasks Management" current="Assigned By Me" :crumbs="[['label' => 'Tasks', 'url' => route('task.assigned-by-me')]]">
+        <x-slot:actions>
             <div class="d-flex align-items-center gap-2">
                 <!-- Export Dropdown -->
                 <div class="dropdown">
@@ -732,15 +551,14 @@
                         </a> --}}
                     </div>
                 </div>
-
                 <!-- Create Task Button -->
                 <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#addTaskDrawer">
                     <i class="feather-plus me-1"></i>
                     <span>New Task</span>
                 </button>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <!-- Main Content -->
     <div class="main-content" style="padding: 20px !important;">
@@ -1054,14 +872,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Tasks Assigned By Me</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-light text-dark">
-                                <i class="feather-calendar me-1"></i>Sorted by: Priority then Deadline
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         @if (session('success'))
                             <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
@@ -1158,7 +968,7 @@
                                                         @foreach ($task->members as $m)
                                                             <div class="d-flex align-items-center gap-2 mb-1">
                                                                 <div class="employee-avatar"
-                                                                    style="width:24px;height:24px;background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;">
+                                                                    style="width:24px;height:24px;background:#0D6EFD;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;">
                                                                     {{ strtoupper(substr($m->name ?? 'U', 0, 2)) }}
                                                                 </div>
                                                                 <small>
@@ -1180,7 +990,7 @@
                                                     {{-- your existing single-assignee block --}}
                                                     <div class="employee-info">
                                                         <div class="employee-avatar"
-                                                            style="background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
+                                                            style="background:#0D6EFD;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
                                                             {{ strtoupper(substr($task->assigned_to_name ?? 'U', 0, 2)) }}
                                                         </div>
                                                         <div class="employee-details">
@@ -1297,17 +1107,7 @@
 
                         <!-- Pagination -->
                         @if ($tasks->hasPages())
-                            <div class="card-footer">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="text-muted small">
-                                        Showing {{ $tasks->firstItem() }} to {{ $tasks->lastItem() }} of
-                                        {{ $tasks->total() }} entries
-                                    </div>
-                                    <div class="remove-internal-para">
-                                        {{ $tasks->appends(request()->query())->links() }}
-                                    </div>
-                                </div>
-                            </div>
+                            <x-ui.pagination-footer :paginator="$tasks" label="tasks" />
                         @endif
                     </div>
                 </div>

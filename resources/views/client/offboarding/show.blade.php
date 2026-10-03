@@ -6,23 +6,23 @@
         .ob-panel { background: #fff; border: 1px solid #edf2f7; border-radius: 10px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 1px 2px rgba(15,23,42,.02); }
         .ob-panel__head { padding: 8px 14px; border-bottom: 1px solid #f1f5f9; background: #fafbfc; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
         .ob-panel__title { margin: 0; font-size: 11.5px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 5px; text-transform: uppercase; letter-spacing: .02em; }
-        .ob-panel__title i { font-size: 12px; color: var(--primary, #1e3a8a); }
+        .ob-panel__title i { font-size: 12px; color: var(--icon-color, #0D6EFD); }
         .ob-panel__body { padding: 12px 14px; font-size: 11.5px; }
         .ob-panel__body p { font-size: 11px; }
 
         /* ==================== BUTTONS ==================== */
-        .ob-btn { display: inline-flex; align-items: center; gap: 5px; background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; border: none; font-size: 11px; font-weight: 500; padding: 5px 12px; border-radius: 6px; cursor: pointer; text-decoration: none; line-height: 1.4; transition: filter .15s ease, box-shadow .15s ease; }
-        .ob-btn:hover { filter: brightness(0.92); color: #fff; box-shadow: 0 2px 6px rgba(30,58,138,.25); }
+        .ob-btn { display: inline-flex; align-items: center; gap: 5px; background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; border: none; font-size: 11px; font-weight: 500; padding: 5px 12px; border-radius: 6px; cursor: pointer; text-decoration: none; line-height: 1.4; transition: filter .15s ease, box-shadow .15s ease; }
+        .ob-btn:hover { filter: brightness(0.92); color: #fff; box-shadow: 0 2px 6px rgba(13, 110, 253,.25); }
         .ob-btn i { font-size: 11px; }
-        .ob-btn--outline { background: #fff; color: var(--primary, #1e3a8a); border: 1px solid #cbd5e1; }
-        .ob-btn--outline:hover { border-color: var(--primary, #1e3a8a); background: #f8fafc; }
+        .ob-btn--outline { background: #fff; color: var(--primary, #0D6EFD); border: 1px solid #cbd5e1; }
+        .ob-btn--outline:hover { border-color: var(--primary, #0D6EFD); background: #f8fafc; }
         .ob-btn--danger { background: linear-gradient(135deg, #b91c1c, #ef4444); }
         .ob-btn--sm { padding: 3px 9px; font-size: 10px; }
 
         /* ==================== FORM FIELDS ==================== */
         .field-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: #64748b; margin-bottom: 3px; display: block; }
         .field-input, .field-select, textarea.field-input { width: 100%; font-size: 11px; color: #1e293b; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
-        .field-input:focus, .field-select:focus, textarea.field-input:focus { outline: none; border-color: var(--primary, #1e3a8a); box-shadow: 0 0 0 3px rgba(30,58,138,.08); }
+        .field-input:focus, .field-select:focus, textarea.field-input:focus { outline: none; border-color: var(--primary, #0D6EFD); box-shadow: 0 0 0 3px rgba(13, 110, 253,.08); }
 
         /* ==================== META GRID ==================== */
         .ob-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 14px; }
@@ -47,7 +47,7 @@
 
         /* ==================== INLINE (details/summary) FORMS ==================== */
         details.ob-inline-form { margin-top: 6px; }
-        details.ob-inline-form summary { cursor: pointer; font-size: 10.5px; color: var(--primary,#1e3a8a); font-weight: 600; list-style: none; padding: 3px 0; }
+        details.ob-inline-form summary { cursor: pointer; font-size: 10.5px; color: var(--primary,#0D6EFD); font-weight: 600; list-style: none; padding: 3px 0; }
         details.ob-inline-form summary::-webkit-details-marker { display: none; }
         details.ob-inline-form summary::before { content: '›'; display: inline-block; margin-right: 4px; transition: transform .15s ease; }
         details.ob-inline-form[open] summary::before { transform: rotate(90deg); }

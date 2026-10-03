@@ -45,6 +45,26 @@ class PolicyResolver
         return $this->forTenantDate($tenantId, Carbon::parse($yearMonth . '-01')->format('Y-m-d'));
     }
 
+    /**
+     * The policy ONE employee follows on a date: the company policy with that
+     * employee's custom values (Employee 360 → Policies) on top. Identical to
+     * forTenantDate() for an employee with no custom values. Use this wherever
+     * a single employee's day / month is being graded.
+     */
+    public function forUserDate(int $tenantId, int $userId, string $date): AttendancePolicySnapshot
+    {
+        $company = $this->forTenantDate($tenantId, $date);
+        $custom = app(\App\Services\EmployeePolicyService::class)->section($tenantId, $userId, 'attendance');
+
+        return $custom ? $company->withOverrides($custom) : $company;
+    }
+
+    /** forUserDate() anchored to the 1st of the month — see forTenantMonth(). */
+    public function forUserMonth(int $tenantId, int $userId, string $yearMonth): AttendancePolicySnapshot
+    {
+        return $this->forUserDate($tenantId, $userId, Carbon::parse($yearMonth . '-01')->format('Y-m-d'));
+    }
+
     public function forget(): void
     {
         $this->memo = [];

@@ -193,7 +193,7 @@ curl "https://vpshrms.shurttech.com/api/user/shift/plan?start_date=2026-09-01&en
 | 400 | Range exceeds 6 months | `{"success": false, "message": "Date range cannot exceed 6 months"}` |
 | 500 | Unhandled | `{"success": false, "message": "Failed to fetch shift plan", "error": "<exception message, only when app.debug is true>"}` |
 
-**Special behavior / notes:** If the tenant has custom shifts **disabled** (`tenant->custom_shifts_enabled = false`), every working day is filled with the tenant's single default/fixed shift instead of reading per-user `user_shifts` assignments (day-based week-off patterns are still honored). Default start date has joining-date-aware logic: joined this month after the 15th → starts next month; otherwise starts this month; joined in a future month → starts that month.
+**Special behavior / notes:** Multi-shift (added 2026-10-02): each date item is the day's main shift (same keys as before) and carries `additional_shifts` — an array of the day's 2nd+ shifts in the same item shape (empty when there is only one). If the tenant has custom shifts **disabled** (`tenant->custom_shifts_enabled = false`), every working day is filled with the tenant's single default/fixed shift instead of reading per-user `user_shifts` assignments (day-based week-off patterns are still honored). Default start date has joining-date-aware logic: joined this month after the 15th → starts next month; otherwise starts this month; joined in a future month → starts that month.
 
 ---
 

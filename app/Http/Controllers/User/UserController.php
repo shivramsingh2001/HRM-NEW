@@ -1091,10 +1091,15 @@ class UserController extends Controller
             ])->values()->all();
             $user->documents = $documents;
 
-            return view('client.user.user-detail', compact('user', 'languageNames', 'locationNames'));
+            // Employee 360: the extra lazy tabs this company's plan includes.
+            $profile = app(EmployeeProfileController::class);
+            $profileTabs = $profile->enabledTabs();
+            $can = $profile->abilities(); // which action buttons to show
+
+            return view('client.user.user-detail', compact('user', 'languageNames', 'locationNames', 'profileTabs', 'can'));
         } catch (\Exception $e) {
             Log::error('Error fetching employee details: ' . $e->getMessage());
-            return redirect()->route('employee')
+            return redirect()->route('employee.index')
                 ->with('error', 'Employee not found or error loading details.');
         }
     }

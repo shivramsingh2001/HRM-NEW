@@ -14,7 +14,7 @@
         h1 {
             font-size: 18px;
             margin: 0 0 2px;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .muted {
@@ -32,7 +32,7 @@
         }
 
         .lines th {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: #fff;
             text-align: left;
             padding: 6px;
@@ -50,7 +50,7 @@
 
         .total td {
             font-weight: bold;
-            border-top: 2px solid #1e3a8a;
+            border-top: 2px solid #0D6EFD;
             padding: 8px 6px;
         }
 

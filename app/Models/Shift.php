@@ -9,6 +9,10 @@ class Shift extends Model
 {
      use TenantTrait;
     protected $guarded = [];
+
+    protected $casts = [
+        'is_overnight' => 'boolean',
+    ];
     // protected $casts = [
     //     'start_time' => 'string',
     //     'end_time' => 'string',

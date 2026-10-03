@@ -24,6 +24,7 @@ class ShiftAssignmentValidator
             ->where('tenant_id', $tenantId)
             ->where('user_id', $userId)
             ->where('type', 'permanent')
+            ->where('is_additional', 0)
             ->where('status', 'active')
             ->first();
     }
@@ -39,6 +40,7 @@ class ShiftAssignmentValidator
             ->where('tenant_id', $tenantId)
             ->where('user_id', $userId)
             ->where('type', 'flexible')
+            ->where('is_additional', 0)
             ->where('status', 'active')
             ->where('start_date', '<=', $end->toDateString())
             ->where(function ($q) use ($start) {

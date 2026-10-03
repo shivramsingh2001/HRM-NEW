@@ -23,7 +23,7 @@
         /* ==================== BLUE THEME, COMPACT SPACING ==================== */
         .personal-info .row.mb-4 { margin-bottom: 14px !important; }
         .personal-info label { font-size: 12px; }
-        .personal-info .input-group-text { background: #e3edfe; color: #1e3a8a; border-color: #eaeef5; }
+        .personal-info .input-group-text { background: #EFF6FF; color: #0D6EFD; border-color: #eaeef5; }
         .personal-info .form-control { font-size: 12px; border-color: #eaeef5; }
         .personal-info .fs-12 { font-size: 11px !important; }
         .card-body.personal-info { padding: 16px 18px; }

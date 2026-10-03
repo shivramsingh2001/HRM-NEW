@@ -106,6 +106,19 @@ final class AttendancePolicySnapshot
     }
 
     /**
+     * A copy with some columns replaced — $columns is keyed like the
+     * attendance_policies table (one employee's custom values).
+     */
+    public function withOverrides(array $columns): self
+    {
+        return self::fromRow(
+            ['tenant_id' => $this->tenantId, 'effective_from' => $this->effectiveFrom]
+            + array_intersect_key($columns, $this->toPersistableArray())
+            + $this->toPersistableArray()
+        );
+    }
+
+    /**
      * All columns as an array, keyed like the attendance_policies table
      * (excluding tenant_id/effective_from/created_by, which callers set
      * explicitly). Lets every settings-card controller do

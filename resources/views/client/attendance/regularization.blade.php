@@ -35,46 +35,9 @@
         }
     }
 
-    /* ==================== FILTER SECTION ==================== */
-    .filter-wrapper {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid #edf2f7;
-        padding: 16px 20px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-    }
 
-    .filter-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-    }
 
-    .filter-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #1e293b;
-    }
 
-    .filter-title i {
-        color: #1e3a8a;
-        font-size: 16px;
-    }
-
-    .filter-title span {
-        background: #e3edfe;
-        color: #1e3a8a;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 2px 8px;
-        border-radius: 20px;
-        margin-left: 6px;
-    }
 
     .clear-all-link {
         display: flex;
@@ -97,43 +60,10 @@
         font-size: 14px;
     }
 
-    .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
-    }
 
-    .filter-item {
-        flex: 0 0 auto;
-        min-width: 140px;
-    }
 
-    .search-wrapper {
-        position: relative;
-        width: 100%;
-    }
 
-    .search-wrapper i {
-        position: absolute;
-        left: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-        font-size: 14px;
-        pointer-events: none;
-    }
 
-    .search-wrapper .form-control {
-        width: 100%;
-        height: 36px;
-        padding: 6px 12px 6px 32px;
-        font-size: 13px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background: #f8fafc;
-        transition: all 0.2s;
-    }
 
     .filter-select {
         width: 100%;
@@ -150,7 +80,7 @@
     }
 
     .filter-select:focus {
-        border-color: #1e3a8a;
+        border-color: #0D6EFD;
         outline: none;
         background-color: white;
     }
@@ -158,7 +88,7 @@
     .apply-btn {
         height: 36px;
         padding: 0 16px;
-        background: #1e3a8a;
+        background: #0D6EFD;
         color: white;
         border: none;
         border-radius: 8px;
@@ -173,30 +103,10 @@
     }
 
     .apply-btn:hover {
-        background: #16295e;
+        background: #0B5ED7;
     }
 
-    .reset-btn {
-        height: 36px;
-        padding: 0 12px;
-        background: white;
-        color: #64748b;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        text-decoration: none;
-        transition: all 0.2s;
-        white-space: nowrap;
-    }
 
-    .reset-btn:hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-    }
 
     .active-filters {
         margin-top: 12px;
@@ -233,7 +143,7 @@
     }
 
     .filter-tag i {
-        color: #1e3a8a;
+        color: var(--icon-color, #0D6EFD);
         font-size: 11px;
     }
 
@@ -249,41 +159,17 @@
     }
 
     .filter-tag.clear-all {
-        background: #e3edfe;
-        border-color: #1e3a8a;
-        color: #1e3a8a;
+        background: #EFF6FF;
+        border-color: #0D6EFD;
+        color: #0D6EFD;
         font-weight: 600;
         text-decoration: none;
         padding: 3px 10px;
     }
 
-    /* ==================== TABLE STYLES ==================== */
-    .table {
-        margin-bottom: 0;
-    }
 
-    .table th {
-        background-color: #f8fafc;
-        font-weight: 600;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        color: #475569;
-        border-bottom-width: 1px;
-        padding: 12px 16px;
-        white-space: nowrap;
-    }
 
-    .table td {
-        vertical-align: middle;
-        font-size: 13px;
-        padding: 12px 16px;
-        border-bottom: 1px solid #f1f5f9;
-    }
 
-    .table tbody tr:hover {
-        background-color: #f8fafc;
-    }
 
     /* ==================== BADGES ==================== */
     .badge {
@@ -313,12 +199,12 @@
 
     .badge.bg-info {
         background: #dbeafe !important;
-        color: #1e40af;
+        color: #0D6EFD;
     }
 
     .badge.bg-purple {
-        background: #e3edfe !important;
-        color: #1e3a8a;
+        background: #EFF6FF !important;
+        color: #0D6EFD;
     }
 
     /* Status column — the shared status-badge Blade component's centralized
@@ -328,43 +214,43 @@
        below) instead of collapsing them all into one indistinguishable color. */
     .status-badge[data-status="pending"] {
         background: #dbeafe !important;
-        color: #1e40af !important;
+        color: #0D6EFD !important;
     }
 
     .status-badge[data-status="approved"] {
-        background: #e3edfe !important;
-        color: #1e3a8a !important;
+        background: #EFF6FF !important;
+        color: #0D6EFD !important;
     }
 
     .status-badge[data-status="rejected"] {
-        background: #1e3a8a !important;
+        background: #0D6EFD !important;
         color: #ffffff !important;
     }
 
     /* Request Type Badges - single blue theme */
     .badge-type-in {
-        background: #e3edfe !important;
-        color: #1e3a8a;
+        background: #EFF6FF !important;
+        color: #0D6EFD;
     }
 
     .badge-type-out {
         background: #dbeafe !important;
-        color: #2563eb;
+        color: #0D6EFD;
     }
 
     .badge-type-both {
         background: #bfd3f7 !important;
-        color: #1e3a8a;
+        color: #0D6EFD;
     }
 
     .badge-type-fullday {
         background: #93c5fd !important;
-        color: #1e3a8a;
+        color: #0D6EFD;
     }
 
     .badge-type-wfh {
         background: #eef3fd !important;
-        color: #2563eb;
+        color: #0D6EFD;
         border: 1px solid #bfd3f7;
     }
 
@@ -373,60 +259,14 @@
         color: #475569;
     }
 
-    /* ==================== ACTION BUTTONS ==================== */
-    .action-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8fafc;
-        color: #64748b;
-        transition: all 0.2s;
-        border: 1px solid #e2e8f0;
-        cursor: pointer;
-        margin: 0 2px;
-    }
 
-    .action-btn:hover {
-        background: white;
-        color: #1e3a8a;
-        border-color: #1e3a8a;
-        transform: translateY(-2px);
-    }
 
-    .action-btn i {
-        font-size: 14px;
-    }
 
-    .action-btn.delete:hover {
-        color: #ef4444;
-        border-color: #ef4444;
-    }
 
-    .action-btn.info:hover {
-        color: #1e3a8a;
-        border-color: #1e3a8a;
-    }
 
-    .action-btn.approve {
-        color: #10b981;
-    }
 
-    .action-btn.approve:hover {
-        color: #059669;
-        border-color: #059669;
-    }
 
-    .action-btn.reject {
-        color: #ef4444;
-    }
 
-    .action-btn.reject:hover {
-        color: #dc2626;
-        border-color: #dc2626;
-    }
 
     /* ==================== FILE PREVIEW ==================== */
     .file-preview {
@@ -436,7 +276,7 @@
     }
 
     .file-preview a {
-        color: #1e3a8a;
+        color: #0D6EFD;
         text-decoration: none;
         font-size: 11px;
         display: flex;
@@ -478,35 +318,15 @@
 
     /* ==================== RESPONSIVE ==================== */
     @media (max-width: 992px) {
-        .filter-row {
-            gap: 8px;
-        }
 
-        .filter-item {
-            flex: 1 1 calc(33.333% - 8px);
-            min-width: 120px;
-        }
+
     }
 
     @media (max-width: 768px) {
-        .filter-wrapper {
-            padding: 12px;
-        }
 
-        .filter-row {
-            flex-direction: column;
-            align-items: stretch;
-        }
 
-        .filter-item {
-            width: 100%;
-        }
 
-        .filter-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-        }
+
 
         .apply-btn,
         .reset-btn {
@@ -557,27 +377,27 @@
 
     #addRegularizationModal .btn-primary,
     #editRegularizationModal .btn-primary {
-        background: #1e3a8a !important;
-        border-color: #1e3a8a !important;
+        background: #0D6EFD !important;
+        border-color: #0D6EFD !important;
     }
 
     #addRegularizationModal .btn-primary:hover,
     #editRegularizationModal .btn-primary:hover {
-        background: #16295e !important;
-        border-color: #16295e !important;
+        background: #0B5ED7 !important;
+        border-color: #0B5ED7 !important;
     }
 
     #addRegularizationModal .btn-modal-cancel,
     #editRegularizationModal .btn-modal-cancel {
         background: #eef3fd !important;
         border-color: #bfd3f7 !important;
-        color: #1e3a8a !important;
+        color: #0D6EFD !important;
     }
 
     #addRegularizationModal .btn-modal-cancel:hover,
     #editRegularizationModal .btn-modal-cancel:hover {
         background: #dbeafe !important;
-        color: #1e3a8a !important;
+        color: #0D6EFD !important;
     }
 </style>
 @endsection
@@ -806,14 +626,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">My Regularization Requests</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-info">
-                                <i class="feather-list me-1"></i>Total: {{ $regularizations->count() }}
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table" id="regularizationList">
@@ -990,6 +802,14 @@
                                             <input type="date" class="form-control" name="date" required
                                                 id="date" max="{{ date('Y-m-d') }}">
                                             <small class="text-danger error-text date_error"></small>
+                                        </div>
+                                    </div>
+                                    {{-- Multi-shift: which of the day's shifts this request corrects. --}}
+                                    <div class="col-md-6 mb-3 d-none" id="shift_container">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="user_shift_id">Shift *</label>
+                                            <select class="form-control" name="user_shift_id" id="user_shift_id"></select>
+                                            <small class="text-danger error-text user_shift_id_error"></small>
                                         </div>
                                     </div>
                                     <div class="col-md-6 mb-3" id="in_time_container">
@@ -1225,6 +1045,21 @@
             // Edit modal - request type change
             $('#edit_request_type').on('change', function() {
                 toggleTimeFields($(this).val(), 'edit');
+            });
+
+            // Multi-shift: offer a shift picker when the chosen date has more than one shift.
+            $('#date').on('change', function() {
+                const $box = $('#shift_container').addClass('d-none');
+                const $select = $('#user_shift_id').empty();
+                if (!this.value) return;
+                $.get("{{ route('attendance-regularization.shifts') }}", { date: this.value }, function(r) {
+                    const shifts = (r && r.data) || [];
+                    if (shifts.length < 2) return;
+                    shifts.forEach(function(s) {
+                        $select.append($('<option>').val(s.is_additional ? s.user_shift_id : '').text(s.label));
+                    });
+                    $box.removeClass('d-none');
+                });
             });
 
             // Add Regularization Form Submission

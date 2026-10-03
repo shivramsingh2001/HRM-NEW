@@ -5,9 +5,9 @@
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f7fa; margin:0; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; }
-        .header { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; padding: 28px 20px; text-align: center; }
+        .header { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: white; padding: 28px 20px; text-align: center; }
         .content { padding: 24px; }
-        .info-box { background: #eef2ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #1e3a8a; }
+        .info-box { background: #eef2ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #0D6EFD; }
         .footer { text-align: center; padding: 20px; font-size: 12px; color: #6b7280; }
     </style>
 </head>

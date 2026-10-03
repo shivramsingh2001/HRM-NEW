@@ -13,46 +13,10 @@
             padding: 0 12px;
         }
 
-        /* .stats-grid/.stats-card/.stats-icon-wrapper/.stats-content/.stats-amount-main/.stats-label
-           are centralized in client.layout.head (single blue-only theme) — no local copy. */
 
-        /* Filter Section */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: #1e3a8a;
-        }
-
-        .filter-title span {
-            background: #e3edfe;
-            color: #1e3a8a;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -66,21 +30,11 @@
         }
 
         .clear-all-link:hover {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 140px;
-        }
 
         .filter-select {
             width: 100%;
@@ -98,8 +52,8 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            border-color: #0D6EFD;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
             outline: none;
         }
 
@@ -108,24 +62,7 @@
             border-color: #94a3b8;
         }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 12px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-        }
 
         /* Active Filters */
         .active-filters {
@@ -168,26 +105,8 @@
             color: #ef4444;
         }
 
-        /* Table Styles */
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            padding: 12px 16px;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 13px;
-            padding: 12px 16px;
-        }
 
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
         /* Badges */
         .badge {
@@ -198,18 +117,18 @@
         }
 
         .badge.bg-success {
-            background: #e3edfe !important;
-            color: #1e3a8a;
+            background: #EFF6FF !important;
+            color: #0D6EFD;
         }
 
         .badge.bg-info {
             background: #dbeafe !important;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .badge.bg-warning {
             background: #bfd3f7 !important;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .badge.bg-danger {
@@ -218,29 +137,10 @@
         }
 
         .table .text-success {
-            color: #1e3a8a !important;
+            color: #0D6EFD !important;
         }
 
-        /* Action Buttons */
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-            margin: 0 2px;
-        }
 
-        .action-btn:hover {
-            background: white;
-            color: #1e3a8a;
-            border-color: #1e3a8a;
-        }
 
         /* Empty State */
         .empty-state {
@@ -259,12 +159,8 @@
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            .filter-row {
-                flex-direction: column;
-            }
-            .filter-item {
-                width: 100%;
-            }
+
+
         }
 
         @media (max-width: 576px) {
@@ -276,34 +172,23 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">My Salary Slips</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Salary Slips</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="dropdown">
-                        <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown">
-                            <i class="feather-download"></i>
+    <x-ui.page-header title="My Salary Slips" current="Salary Slips">
+        <x-slot:actions>
+            <div class="d-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown">
+                        <i class="feather-download"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a href="#" class="dropdown-item" onclick="exportToCSV()">
+                            <i class="bi bi-filetype-csv me-3"></i>
+                            <span>Export CSV</span>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a href="#" class="dropdown-item" onclick="exportToCSV()">
-                                <i class="bi bi-filetype-csv me-3"></i>
-                                <span>Export CSV</span>
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
@@ -427,14 +312,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Salary Slips</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-info">
-                                <i class="feather-list me-1"></i>Total: {{ $salarySlips->total() }}
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table" id="salarySlipsTable">
@@ -515,17 +392,7 @@
                         </div>
                     </div>
                     @if (method_exists($salarySlips, 'links') && $salarySlips->hasPages())
-                        <div class="card-footer">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-muted small">
-                                    Showing {{ $salarySlips->firstItem() }} to {{ $salarySlips->lastItem() }} of
-                                    {{ $salarySlips->total() }} entries
-                                </div>
-                                <div class="remove-internal-para">
-                                    {{ $salarySlips->appends(request()->query())->links() }}
-                                </div>
-                            </div>
-                        </div>
+                        <x-ui.pagination-footer :paginator="$salarySlips" label="salary slips" />
                     @endif
                 </div>
             </div>

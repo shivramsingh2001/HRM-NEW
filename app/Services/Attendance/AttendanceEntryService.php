@@ -5,6 +5,7 @@ namespace App\Services\Attendance;
 use App\Enums\AttendanceStatus;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
+use App\Models\AttendancePunch;
 use App\Models\AttendanceRegularization;
 use App\Models\User;
 use App\Models\UserJobDetail;
@@ -192,6 +193,9 @@ class AttendanceEntryService
                 'late_minutes' => 0,
                 'early_departure_minutes' => 0,
                 'overtime_minutes' => 0,
+                // Multi-shift numbers come from punches, which a hand-set day replaces.
+                'shift_count' => null,
+                'extra_shift_minutes' => 0,
                 'remarks' => $ctx->reason,
             ];
 
@@ -216,6 +220,22 @@ class AttendanceEntryService
 
             $attendance = $this->record($userId, $tenantId, $date, $attrs, $ctx);
 
+            // The admin's decision is authoritative for the whole day: void the
+            // day's punches (soft — kept for audit) so a later punch's rollup
+            // can no longer overwrite it, and drop the per-shift breakdown.
+            // After the write, so a period-lock refusal leaves punches alone.
+            AttendancePunch::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)->where('user_id', $userId)
+                ->where('date', $date)->where('status', 'active')
+                ->update([
+                    'status' => 'void',
+                    'voided_by' => $actor->id,
+                    'voided_at' => now(),
+                    'void_reason' => 'Superseded by manual attendance marking',
+                ]);
+            \App\Models\AttendanceShiftSegment::withoutGlobalScopes()->where('attendance_id', $attendance->id)->delete();
+
+            // Every shift that day (primary and additional) is settled.
             DB::table('user_shifts')
                 ->where('tenant_id', $tenantId)->where('user_id', $userId)->where('date', $date)
                 ->update(['status' => 'complete', 'updated_at' => now()]);
@@ -254,9 +274,21 @@ class AttendanceEntryService
     }
 
     /**
-     * Materialise an approved regularization into a complete `attendances` row.
-     * Fixes the historical gaps (status left 'present', shift snapshot NULL,
-     * is_regularized never persisted, no audit log).
+     * Materialise an approved regularization.
+     *
+     * Times are written as regularized PUNCHES (the punches they replace are
+     * voided, never deleted) and the day is re-derived through
+     * AttendanceRollupService — so the attendance row, its sessions and the
+     * punch log agree, and the next punch/rollup can no longer silently undo
+     * the correction (the old direct row write was overwritten that way).
+     *
+     * Multi-shift: only the punches of the shift the request names
+     * (user_shift_id, default the primary shift) are replaced; other shifts
+     * that day are kept. Overnight: an out time on/before the in time (or, for
+     * a night shift, an early-morning time) lands on the next day.
+     *
+     * Requests without any time (full_day / wfh_not_marked / technical_issue
+     * on a day with no punches) keep the flags-only row write.
      */
     public function applyRegularization(AttendanceRegularization $reg, User $approver): Attendance
     {
@@ -268,54 +300,14 @@ class AttendanceEntryService
             throw new \RuntimeException('Cannot regularize a future date.');
         }
 
-        $shift = app(TenantShiftResolver::class)->forUserDate($userId, $tenantId, $date);
+        $resolver = app(TenantShiftResolver::class);
+        $instances = $resolver->instancesForUserDate($userId, $tenantId, $date);
+        $target = $reg->user_shift_id
+            ? $instances->first(fn ($i) => (int) $i['user_shift_id'] === (int) $reg->user_shift_id)
+            : null;
+        $target ??= $instances->first();
+        $shift = $target['shift'] ?? $resolver->forUserDate($userId, $tenantId, $date);
         $jobDetail = UserJobDetail::where('user_id', $userId)->where('tenant_id', $tenantId)->first();
-
-        $attrs = [
-            'regularization_id' => $reg->id,
-            'is_regularized' => 1,
-            'regularized_by' => $approver->id,
-            'regularized_at' => now(),
-            'marked_by' => $approver->id,
-            'status' => 1,
-            'shift_id' => $shift->id ?? null,
-            'scheduled_shift_start' => $shift->start_time ?? null,
-            'scheduled_shift_end' => $shift->end_time ?? null,
-            'branch_id' => $jobDetail->office_branch ?? null,
-            'effective_status' => null,
-            'policy_note' => null,
-        ];
-
-        $clockIn = $clockOut = null;
-        if (!empty($reg->in_time)) {
-            $clockIn = Carbon::parse($date . ' ' . $reg->in_time);
-            $attrs['clock_in'] = $clockIn->format('Y-m-d H:i:s');
-        }
-        if (!empty($reg->out_time)) {
-            $clockOut = $this->calc->resolveClockOut(
-                $clockIn ?? Carbon::parse($date . ' ' . $reg->out_time),
-                Carbon::parse($date . ' ' . $reg->out_time),
-                $shift
-            );
-            $attrs['clock_out'] = $clockOut->format('Y-m-d H:i:s');
-        }
-
-        if ($clockIn && $clockOut) {
-            $seconds = $this->calc->workedSeconds($clockIn, $clockOut);
-            $attrs['worked_hours'] = $this->calc->decimalHours($seconds);
-            $attrs['total_hours'] = $this->calc->formatDuration($seconds);
-            $attrs['late_minutes'] = $shift
-                ? $this->calc->lateMinutes($shift, Carbon::parse($date . ' ' . $shift->start_time), $clockIn)
-                : 0;
-            $expected = $shift ? $this->calc->expectedWorkSeconds([
-                'start_time' => $shift->start_time, 'end_time' => $shift->end_time,
-            ]) : 0;
-            $worked = (float) $attrs['worked_hours'];
-            $policy = app(PolicyResolver::class)->forTenantDate($tenantId, $date);
-            $base = $this->resolver->classifyWorked($worked, (int) $expected, $policy);
-            $attrs['attendance_status'] = ($base === 'present' && $policy->isLate((int) ($attrs['late_minutes'] ?? 0))) ? 'late' : $base;
-            $attrs['day_fraction'] = $base === 'half_day' ? 0.50 : ($base === 'absent' ? 0.00 : 1.00);
-        }
 
         $ctx = new AuditContext(
             actorId: $approver->id,
@@ -324,9 +316,162 @@ class AttendanceEntryService
             reason: 'Regularization #' . $reg->id . ' approved',
         );
 
-        return $this->record($userId, $tenantId, $date, $attrs, $ctx);
+        $flags = [
+            'regularization_id' => $reg->id,
+            'is_regularized' => 1,
+            'regularized_by' => $approver->id,
+            'regularized_at' => now(),
+            'marked_by' => $approver->id,
+            'status' => 1,
+            'effective_status' => null,
+            'policy_note' => null,
+        ];
+
+        $clockIn = filled($reg->in_time) ? $this->regularizedTime($date, $reg->in_time, $shift, 'in', null) : null;
+        $clockOut = filled($reg->out_time) ? $this->regularizedTime($date, $reg->out_time, $shift, 'out', $clockIn) : null;
+
+        return DB::transaction(function () use ($reg, $approver, $userId, $tenantId, $date, $instances, $target, $shift, $jobDetail, $ctx, $flags, $clockIn, $clockOut) {
+            $punches = $this->punchesOfShift($userId, $tenantId, $date, $instances, $target);
+            $existing = Attendance::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)->where('user_id', $userId)->where('date', $date)->first();
+
+            // Keep whichever side the request does not change.
+            $firstIn = $punches->where('direction', 'in')->sortBy('punched_at')->first();
+            $lastOut = $punches->where('direction', 'out')->sortByDesc('punched_at')->first();
+            $onlyShift = $instances->count() <= 1;
+            $clockIn ??= $firstIn ? Carbon::parse($firstIn->punched_at)
+                : (($onlyShift && !empty($existing?->clock_in)) ? Carbon::parse($existing->clock_in) : null);
+            $clockOut ??= $lastOut ? Carbon::parse($lastOut->punched_at)
+                : (($onlyShift && !empty($existing?->clock_out)) ? Carbon::parse($existing->clock_out) : null);
+
+            if (!$clockIn && !$clockOut) {
+                // Nothing to time — flags only, as before.
+                return $this->record($userId, $tenantId, $date, $flags + [
+                    'shift_id' => $shift->id ?? null,
+                    'scheduled_shift_start' => $shift->start_time ?? null,
+                    'scheduled_shift_end' => $shift->end_time ?? null,
+                    'branch_id' => $jobDetail->office_branch ?? null,
+                ], $ctx);
+            }
+
+            $voidReason = 'Replaced by regularization #' . $reg->id;
+            foreach ($punches as $p) {
+                $p->forceFill([
+                    'status' => 'void',
+                    'voided_by' => $approver->id,
+                    'voided_at' => now(),
+                    'void_reason' => $voidReason,
+                ])->save();
+            }
+
+            $tz = app(TimezoneResolver::class)->forUser($userId, $tenantId);
+            $base = [
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'date' => $date,
+                'timezone' => $tz,
+                'source' => 'manual',
+                'method' => 'regularization',
+                'actor_id' => $approver->id,
+                'actor_role' => $approver->role,
+                'reason' => $voidReason,
+                'status' => 'active',
+                'session_seq' => 1,
+                'regularization_id' => $reg->id,
+                'is_regularized' => 1,
+                'user_shift_id' => $target['user_shift_id'] ?? null,
+                'attendance_location_id' => $jobDetail->office_branch ?? null,
+            ];
+
+            $in = $clockIn ? AttendancePunch::create($base + [
+                'direction' => 'in',
+                'punched_at' => $clockIn->format('Y-m-d H:i:s'),
+                'punched_at_utc' => $this->calc->toUtc($clockIn->format('Y-m-d H:i:s'), $tz),
+                'address' => 'Regularized by ' . $approver->name,
+                'original_punch_id' => $firstIn->id ?? null,
+            ]) : null;
+            $out = $clockOut ? AttendancePunch::create($base + [
+                'direction' => 'out',
+                'punched_at' => $clockOut->format('Y-m-d H:i:s'),
+                'punched_at_utc' => $this->calc->toUtc($clockOut->format('Y-m-d H:i:s'), $tz),
+                'address' => 'Regularized by ' . $approver->name,
+                'original_punch_id' => $lastOut->id ?? null,
+                'paired_punch_id' => $in->id ?? null,
+            ]) : null;
+            if ($in && $out) {
+                $in->forceFill(['paired_punch_id' => $out->id])->save();
+            }
+
+            $row = app(AttendanceRollupService::class)->recompute($userId, $tenantId, $date, $ctx);
+
+            // Same day classification the direct write used, on the primary
+            // shift's work (multi-shift: 2nd+ shift hours are overtime).
+            $attrs = $flags;
+            if (!empty($row->clock_in) && !empty($row->clock_out)) {
+                $daySeconds = (int) round(((float) $row->worked_hours) * 3600);
+                $primaryHours = $this->calc->primaryWorkedSeconds($row, $daySeconds) / 3600;
+                $expected = (int) $this->calc->expectedWorkSeconds($row->scheduled_shift_start ? [
+                    'start_time' => $row->scheduled_shift_start, 'end_time' => $row->scheduled_shift_end,
+                ] : null);
+                $policy = app(PolicyResolver::class)->forUserDate($tenantId, $userId, $date);
+                $baseStatus = $this->resolver->classifyWorked($primaryHours, $expected, $policy);
+                $attrs['attendance_status'] = ($baseStatus === 'present' && $policy->isLate((int) $row->late_minutes)) ? 'late' : $baseStatus;
+                $attrs['day_fraction'] = $baseStatus === 'half_day' ? 0.50 : ($baseStatus === 'absent' ? 0.00 : 1.00);
+            }
+
+            return $this->record($userId, $tenantId, $date, $attrs, $ctx);
+        });
     }
 
+    /**
+     * The day's active punches belonging to the shift being regularized: all
+     * of them on a one-shift day; on a multi-shift day those matched to the
+     * target shift (for the primary also those with no / an unknown shift).
+     */
+    private function punchesOfShift(int $userId, int $tenantId, string $date, $instances, ?array $target)
+    {
+        $punches = AttendancePunch::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)->where('user_id', $userId)
+            ->where('date', $date)->where('status', 'active')
+            ->get();
+
+        if ($instances->count() <= 1 || !$target) {
+            return $punches;
+        }
+
+        $known = $instances->pluck('user_shift_id')->filter()->map(fn ($id) => (int) $id)->all();
+        $targetId = (int) $target['user_shift_id'];
+        $isPrimary = !$target['is_additional'];
+
+        return $punches->filter(function ($p) use ($targetId, $isPrimary, $known) {
+            $id = (int) $p->user_shift_id;
+
+            return $id === $targetId || ($isPrimary && !in_array($id, $known, true));
+        })->values();
+    }
+
+    /**
+     * A regularized wall-clock time as an instant. Night shift: an in time in
+     * the early-morning part (on/before the shift's end) and an out time
+     * before the shift's start fall on the next day; any out time on/before
+     * the in time is the next day too.
+     */
+    private function regularizedTime(string $date, string $time, $shift, string $direction, ?Carbon $clockIn): Carbon
+    {
+        $at = Carbon::parse($date . ' ' . $time);
+        $overnight = $shift && \App\Support\ShiftWindow::isOvernight($shift);
+        $minutes = \App\Support\ShiftWindow::toMinutes($time);
+
+        if ($direction === 'in') {
+            return ($overnight && $minutes <= \App\Support\ShiftWindow::toMinutes($shift->end_time)) ? $at->addDay() : $at;
+        }
+
+        if ($clockIn) {
+            return $at->lte($clockIn) ? $at->addDay() : $at;
+        }
+
+        return ($overnight && $minutes < \App\Support\ShiftWindow::toMinutes($shift->start_time)) ? $at->addDay() : $at;
+    }
     /**
      * For paths that own their row write (mobile clock-in/out, fingerprint,
      * auto clock-out) — write only the audit-log row for a change already saved.

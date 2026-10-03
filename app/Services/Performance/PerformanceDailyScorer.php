@@ -58,7 +58,7 @@ class PerformanceDailyScorer
     public function scoreDay(int $userId, int $tenantId, string $date): array
     {
         $date = Carbon::parse($date)->format('Y-m-d');
-        $policy = $this->performancePolicies->forTenantDate($tenantId, $date);
+        $policy = $this->performancePolicies->forUserDate($tenantId, $userId, $date);
 
         $attendance = $this->scoreAttendance($userId, $tenantId, $date, $policy);
 
@@ -145,7 +145,7 @@ class PerformanceDailyScorer
             ->exists();
 
         $isWeekoff = $this->isWeekoff($userId, $tenantId, $date);
-        $attendancePolicy = $this->attendancePolicies->forTenantDate($tenantId, $date);
+        $attendancePolicy = $this->attendancePolicies->forUserDate($tenantId, $userId, $date);
 
         $resolved = $this->dayResolver->resolve($dayRows, $leaves, $leaveDetail, $isHoliday, $isWeekoff, $date, $attendancePolicy);
         $token = $resolved['token'];

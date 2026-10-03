@@ -4,54 +4,13 @@
 
 @section('style')
     <style>
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 10px;
-            border: 1px solid #edf2f7;
-            padding: 12px 14px;
-            margin-bottom: 14px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i { color: var(--primary-mid); font-size: 14px; }
 
-        .filter-title .badge-count {
-            background: var(--primary-light);
-            color: var(--primary-mid);
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
-        }
 
-        .filter-item { flex: 0 0 auto; }
-        .filter-item.grow { flex: 1; min-width: 150px; }
+
 
         .filter-input,
         .filter-select {
@@ -151,9 +110,9 @@
             flex-shrink: 0;
         }
 
-        .stat-mini-icon.primary  { background: var(--primary-light); color: var(--primary-mid); }
+        .stat-mini-icon.primary  { background: var(--primary-light); color: var(--icon-color, #0D6EFD); }
         .stat-mini-icon.warning  { background: #fef3c7; color: #f59e0b; }
-        .stat-mini-icon.info     { background: #dbeafe; color: #3b82f6; }
+        .stat-mini-icon.info     { background: #dbeafe; color: var(--icon-color, #0D6EFD); }
         .stat-mini-icon.secondary{ background: #f1f5f9; color: #475569; }
         .stat-mini-icon.success  { background: #d1fae5; color: #10b981; }
         .stat-mini-icon.purple   { background: #ede9fe; color: #8b5cf6; }
@@ -178,35 +137,11 @@
             overflow: hidden;
         }
 
-        .table { margin-bottom: 0; }
 
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 10px 12px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 12px;
-            padding: 8px 12px;
-            border-bottom: 1px solid #f1f5f9;
-        }
 
-        .table tbody tr:hover { background-color: #f8fafc; }
 
-        .table tfoot { background-color: #fffff; font-weight: 600; }
-        .table tfoot td {
-            padding: 10px 12px;
-            border-top: 2px solid #e2e8f0;
-            font-size: 12px;
-        }
+
 
         /* Employee Info */
         .employee-info {
@@ -285,7 +220,7 @@
         .badge-primary   { background: #dbeafe; color: #336ef3; }
         .badge-warning   { background: #fef3c7; color: #92400e; }
         .badge-danger    { background: #fee2e2; color: #991b1b; }
-        .badge-info      { background: #dbeafe; color: #1e40af; }
+        .badge-info      { background: #dbeafe; color: #0D6EFD; }
         .badge-purple    { background: #ede9fe; color: #5b21b6; }
         .badge-secondary { background: #f1f5f9; color: #475569; }
         .badge-dark      { background: #e2e8f0; color: #0f172a; }
@@ -296,70 +231,32 @@
         .empty-state h4 { color: #0f172a; font-size: 16px; margin-top: 14px; }
         .empty-state p  { color: #94a3b8; font-size: 13px; }
 
-        /* ==================== PAGINATION ==================== */
-        .pagination-wrapper {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 14px;
-            padding: 8px 4px;
-        }
 
-        .pagination-info { font-size: 12px; color: #64748b; }
-        .pagination-info strong { color: #0f172a; }
+
 
         .pagination-wrapper nav { margin-left: auto; }
         .pagination-wrapper .pagination { margin: 0; gap: 3px; }
 
-        .pagination-wrapper .page-link {
-            border-radius: 6px !important;
-            font-size: 12px;
-            padding: 5px 10px;
-            color: #475569;
-            border: 1px solid #e2e8f0;
-            min-width: 32px;
-            text-align: center;
-            transition: all 0.2s;
-            line-height: 1.4;
-        }
 
-        .pagination-wrapper .page-link:hover {
-            background: var(--primary-light);
-            color: var(--primary-mid);
-            border-color: #c7d2fe;
-        }
 
-        .pagination-wrapper .page-item.active .page-link {
-            background: var(--primary-mid);
-            border-color: var(--primary-mid);
-            color: white;
-            font-weight: 600;
-        }
 
         /* Responsive */
         @media (max-width: 768px) {
             .stats-strip { grid-template-columns: repeat(2, 1fr); }
-            .filter-row  { flex-direction: column; width: 100%; }
-            .filter-item { width: 100%; }
+
+
             .btn-sm-custom-outline, .reset-button {
                 width: 100%;
                 justify-content: center;
             }
-            .table { min-width: 1050px; }
-            .pagination-wrapper { justify-content: center; }
+
+
             .pagination-wrapper nav { margin-left: 0; }
         }
 
         @media print {
-            .filter-wrapper { display: none; }
-            .pagination-wrapper { display: none; }
-            .table th {
-                background-color: #f1f5f9 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
+
+
             .badge, .employee-avatar {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
@@ -369,26 +266,14 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Employee Date-wise Task Report</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item active">Employee Date-wise Task</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <span class="badge badge-info-custom">
-                    <i class="feather-calendar me-1"></i>
-                    {{ \Carbon\Carbon::parse($selectedDate)->format('d M Y, l') }}
-                </span>
-            </div>
-        </div>
-    </div>
+    <x-ui.page-header title="Employee Date-wise Task Report" current="Employee Date-wise Task" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
+            <span class="badge badge-info-custom">
+                <i class="feather-calendar me-1"></i>
+                {{ \Carbon\Carbon::parse($selectedDate)->format('d M Y, l') }}
+            </span>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 16px !important;">
 

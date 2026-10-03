@@ -3,44 +3,10 @@
 @section('style')
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
     <style>
-        /* ==================== FILTER SECTION — same design as the Task
-           "Assigned By Me" page (view-assigned-by-task.blade.php), adapted
-           to Meeting's actual fields (search/status/date range). ==================== */
-        .filter-wrapper {
-            background: var(--surface);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, .02);
-        }
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        .filter-title i {
-            color: var(--primary);
-            font-size: 16px;
-        }
-        .filter-title span {
-            background: var(--primary-light);
-            color: var(--primary);
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
+
+
+
+
         .clear-all-link {
             display: flex;
             align-items: center;
@@ -59,28 +25,10 @@
         .clear-all-link i {
             font-size: 14px;
         }
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            gap: 12px;
-        }
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 160px;
-        }
-        .filter-item.date-range {
-            min-width: 140px;
-        }
-        .filter-item .form-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-            display: block;
-            text-transform: uppercase;
-            letter-spacing: .3px;
-        }
+
+
+
+
         .filter-select,
         .filter-input {
             width: 100%;
@@ -104,7 +52,7 @@
         .filter-input:focus {
             background-color: var(--surface);
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, .1);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, .1);
             outline: none;
         }
         .filter-select:hover,
@@ -126,30 +74,11 @@
         .filter-date:focus {
             background-color: var(--surface);
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, .1);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, .1);
             outline: none;
         }
-        .reset-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: var(--surface);
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all .2s;
-            white-space: nowrap;
-        }
-        .reset-btn:hover {
-            background: var(--surface-2);
-            border-color: var(--gray-400, #94a3b8);
-            color: var(--text-primary);
-        }
+
+
         .active-filters {
             margin-top: 16px;
             padding-top: 12px;
@@ -184,7 +113,7 @@
             text-decoration: none;
         }
         .filter-tag i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
         .filter-tag .remove-tag {
@@ -211,13 +140,13 @@
             color: #fff;
         }
         @media (max-width: 992px) {
-            .filter-row { gap: 10px; }
-            .filter-item { flex: 1 1 calc(33.333% - 10px); min-width: 140px; }
+
+
         }
         @media (max-width: 768px) {
-            .filter-wrapper { padding: 12px; }
-            .filter-row { flex-direction: column; align-items: stretch; }
-            .filter-item { width: 100%; }
+
+
+
         }
         .meetings-table td, .meetings-table th {
             vertical-align: middle;
@@ -244,7 +173,7 @@
             justify-content: center;
             font-size: 12px;
         }
-        .type-icon-sm.physical { background: var(--primary-light); color: var(--primary-mid); }
+        .type-icon-sm.physical { background: var(--primary-light); color: var(--icon-color, #0D6EFD); }
         .type-icon-sm.virtual { background: var(--success-light); color: var(--success); }
         .type-icon-sm.hybrid { background: var(--purple-light); color: var(--purple); }
 
@@ -275,7 +204,7 @@
         #meetingDrawer .form-control:focus,
         #meetingEditDrawer .form-control:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 .15rem rgba(30, 58, 138, .12);
+            box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12);
         }
 
         /* Schedule Meeting button — a small lift/shadow on hover, matching
@@ -283,12 +212,12 @@
            reapplied scoped here rather than touching .btn-primary globally. */
         .btn-schedule-meeting {
             padding: 7px 18px;
-            box-shadow: 0 1px 3px rgba(30, 58, 138, .15);
+            box-shadow: 0 1px 3px rgba(13, 110, 253, .15);
             transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
         }
         .btn-schedule-meeting:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 14px rgba(30, 58, 138, .3);
+            box-shadow: 0 6px 14px rgba(13, 110, 253, .3);
         }
 
         /* Meeting Details / MOM drawers */

@@ -13,8 +13,8 @@
         .perf-page .mb-block { margin-bottom: 10px; }
 
         .perf-hero {
-            background: #1e3a8a;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: #0D6EFD;
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             border-radius: 12px; padding: 12px 16px; color: #fff;
             display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
         }
@@ -98,8 +98,8 @@
         $worst = $scored->sortBy('overall_daily_score')->first();
         $fmtDay = fn ($d) => $d ? \Carbon\Carbon::parse($d['performance_date'])->format('d M') : '';
         $components = [
-            ['Attendance', $kpiScore->attendance_score, $weights['attendance'] ?? null, '#1e3a8a'],
-            ['Task Completion', $kpiScore->task_completion_score, $weights['task_completion'] ?? null, '#2563eb'],
+            ['Attendance', $kpiScore->attendance_score, $weights['attendance'] ?? null, '#0D6EFD'],
+            ['Task Completion', $kpiScore->task_completion_score, $weights['task_completion'] ?? null, '#0D6EFD'],
             ['On-Time', $kpiScore->deadline_met_score, $weights['task_ontime'] ?? null, '#059669'],
             ['Project Participation', $kpiScore->project_participation_score, $weights['project_participation'] ?? null, '#d97706'],
             ['Regularization', $kpiScore->regularization_score, $weights['regularization'] ?? null, '#7c3aed'],
@@ -343,7 +343,7 @@
         $(function () {
             const overall = {{ (float) ($overallScore ?? 0) }};
             const grade = @json($grade ?? 'N/A');
-            const gaugeColor = overall >= 80 ? '#059669' : (overall >= 60 ? '#1e3a8a' : (overall >= 40 ? '#d97706' : '#dc2626'));
+            const gaugeColor = overall >= 80 ? '#059669' : (overall >= 60 ? '#0D6EFD' : (overall >= 40 ? '#d97706' : '#dc2626'));
 
             try {
                 new ApexCharts(document.querySelector('#overallGauge'), {
@@ -372,7 +372,7 @@
                         {{ (float) ($kpiScore->regularization_score ?? 0) }},
                     ],
                     labels: ['Attendance', 'Task Completion', 'On-Time', 'Project Participation', 'Regularization'],
-                    colors: ['#1e3a8a', '#2563eb', '#059669', '#d97706', '#7c3aed'],
+                    colors: ['#0D6EFD', '#0D6EFD', '#059669', '#d97706', '#7c3aed'],
                     legend: { show: false },
                     dataLabels: { enabled: false },
                     plotOptions: { pie: { donut: { size: '62%' } } },
@@ -429,7 +429,7 @@
                     xaxis: { categories: d.categories, labels: { style: { fontSize: '9.5px' } } },
                     annotations: { yaxis: refLines },
                     yaxis: { min: 0, max: 100, tickAmount: 5, labels: { formatter: v => v + '%', style: { fontSize: '9.5px' } } },
-                    colors: ['#1e3a8a'],
+                    colors: ['#0D6EFD'],
                     stroke: { curve: 'smooth', width: 2 },
                     markers: { size: period === 'daily' ? 3 : 4 },
                     grid: { borderColor: '#eef1f7', strokeDashArray: 4 },

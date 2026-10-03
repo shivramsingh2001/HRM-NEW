@@ -101,7 +101,7 @@
         }
 
         .section-title i {
-            color: #4f46e5;
+            color: var(--icon-color, #0D6EFD);
             font-size: 18px;
         }
 
@@ -286,7 +286,7 @@
         }
 
         .employee-id-badge i {
-            color: #4f46e5;
+            color: var(--icon-color, #0D6EFD);
             margin-right: 6px;
         }
 
@@ -469,18 +469,7 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                {{-- <h5 class="m-b-10">Edit Employee</h5> --}}
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url('/dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('employee.index') }}">Employees</a></li>
-                <li class="breadcrumb-item">Edit Employee</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Edit Employee" :crumbs="[['label' => 'Employees', 'url' => route('employee.index')]]" />
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Main Form -->

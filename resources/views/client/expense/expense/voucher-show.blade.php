@@ -1,35 +1,20 @@
 @extends('client.layout.master')
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Voucher {{ $batch->voucher_number }}</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.payments.index') }}">Payments</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.vouchers.index') }}">Vouchers</a></li>
-                <li class="breadcrumb-item active">{{ $batch->voucher_number }}</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="d-flex gap-2">
-                <a href="{{ route('expense.vouchers.pdf', $batch->id) }}" class="btn btn-light-brand btn-sm"><i
-                        class="feather-file-text me-2"></i>PDF</a>
-                <a href="{{ route('expense.vouchers.csv', $batch->id) }}" class="btn btn-light-brand btn-sm"><i
-                        class="feather-download me-2"></i>Bank CSV</a>
-                @if ($batch->payment_mode === 'payroll')
-                    <span class="badge bg-info align-self-center" title="Reverse it by reopening the payslip">Paid through payroll</span>
-                @elseunless ($batch->isVoided())
-                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal"
-                        data-bs-target="#voidModal"><i class="feather-slash me-2"></i>Void voucher</button>
-                @endif
-                <a href="{{ route('expense.vouchers.index') }}" class="btn btn-light-brand btn-sm"><i
-                        class="feather-arrow-left me-2"></i>Back</a>
-            </div>
-        </div>
-    </div>
+    <x-ui.page-header :title="'Voucher ' . $batch->voucher_number" :current="$batch->voucher_number"
+        :crumbs="[['label' => 'Payments', 'url' => route('expense.payments.index')], ['label' => 'Vouchers', 'url' => route('expense.vouchers.index')]]"
+        :back="route('expense.vouchers.index')">
+        <x-slot:actions>
+            <a href="{{ route('expense.vouchers.pdf', $batch->id) }}" class="btn btn-light-brand btn-sm"><i class="feather-file-text me-2"></i>PDF</a>
+            <a href="{{ route('expense.vouchers.csv', $batch->id) }}" class="btn btn-light-brand btn-sm"><i class="feather-download me-2"></i>Bank CSV</a>
+            @if ($batch->payment_mode === 'payroll')
+                <span class="badge bg-info align-self-center" title="Reverse it by reopening the payslip">Paid through payroll</span>
+            @elseunless ($batch->isVoided())
+                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal"
+                    data-bs-target="#voidModal"><i class="feather-slash me-2"></i>Void voucher</button>
+            @endif
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         @if ($batch->isVoided())
@@ -80,7 +65,7 @@
             </div>
             <div class="col-lg-4">
                 <div class="card h-100"
-                    style="background: linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; border:0;">
+                    style="background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color:#fff; border:0;">
                     <div class="card-body">
                         <div class="small opacity-75">Voucher total</div>
                         <div class="fs-2 fw-bold">₹{{ number_format((float) $batch->total_amount, 2) }}</div>

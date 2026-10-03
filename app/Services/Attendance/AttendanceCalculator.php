@@ -4,6 +4,7 @@ namespace App\Services\Attendance;
 
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use App\Support\ShiftWindow;
 
 /**
  * Pure time math for attendance. No tenant, no policy, no DB.
@@ -16,18 +17,13 @@ use Carbon\CarbonInterface;
 class AttendanceCalculator
 {
     /**
-     * A shift is "overnight" when its end time is at or before its start time
-     * (e.g. 22:00 -> 06:00).  $shift may be an Eloquent model, stdClass or array
-     * exposing start_time / end_time as "HH:MM" or "HH:MM:SS" strings.
+     * A shift is "overnight" when its is_overnight flag is set or, without the
+     * flag, when its end time is at or before its start time (e.g. 22:00 ->
+     * 06:00). See App\Support\ShiftWindow.
      */
     public function isOvernight($shift): bool
     {
-        [$start, $end] = $this->shiftTimes($shift);
-        if ($start === null || $end === null) {
-            return false;
-        }
-
-        return $this->toMinutes($end) <= $this->toMinutes($start);
+        return ShiftWindow::isOvernight($shift);
     }
 
     /**
@@ -180,11 +176,8 @@ class AttendanceCalculator
         }
 
         $shiftStart = Carbon::parse($start);
-        $shiftEnd = Carbon::parse($end);
-        $isNightShift = $shiftEnd->format('H:i') < $shiftStart->format('H:i')
-            || ($shiftEnd->format('H:i') <= '04:00' && $shiftStart->format('H:i') >= '20:00');
 
-        if ($isNightShift) {
+        if (ShiftWindow::isOvernight($shift)) {
             $hour = (int) $punchedAt->format('H');
             $startHour = (int) $shiftStart->format('H');
             if ($hour >= 0 && $hour < 6 && $hour < $startHour) {
@@ -206,15 +199,33 @@ class AttendanceCalculator
             return 0;
         }
 
-        $span = $this->toMinutes($end) - $this->toMinutes($start);
-        if ($span <= 0) {
-            $span += 24 * 60; // overnight
-        }
+        $span = ShiftWindow::spanMinutes($start, $end, ShiftWindow::isOvernight($shift));
 
         $break = (int) ($this->prop($shift, 'break_time') ?? 0);
         $span = max(0, $span - $break);
 
         return $span * 60;
+    }
+
+    /**
+     * Seconds that decide present / half-day / absent for an attendance row.
+     * Multi-shift: on a day with additional (2nd+) shift work, only the
+     * primary shift's work counts — the day's worked_hours minus
+     * extra_shift_minutes (the extra is paid as overtime instead). Any other
+     * day keeps $daySeconds unchanged.
+     *
+     * @param  object|array  $row  needs worked_hours, extra_shift_minutes
+     */
+    public function primaryWorkedSeconds($row, int $daySeconds): int
+    {
+        $extra = (int) ($this->prop($row, 'extra_shift_minutes') ?? 0);
+        if ($extra <= 0) {
+            return $daySeconds;
+        }
+
+        $worked = (int) round(((float) ($this->prop($row, 'worked_hours') ?? 0)) * 3600);
+
+        return max(0, $worked - $extra * 60);
     }
 
     // ---------------------------------------------------------------------
@@ -236,20 +247,5 @@ class AttendanceCalculator
             return $obj->{$key} ?? null;
         }
         return null;
-    }
-
-    /**
-     * "HH:MM" / "HH:MM:SS" -> minutes since midnight. Returns 0 on garbage.
-     */
-    private function toMinutes(?string $time): int
-    {
-        if (!$time) {
-            return 0;
-        }
-        $parts = explode(':', trim($time));
-        $h = (int) ($parts[0] ?? 0);
-        $m = (int) ($parts[1] ?? 0);
-
-        return $h * 60 + $m;
     }
 }

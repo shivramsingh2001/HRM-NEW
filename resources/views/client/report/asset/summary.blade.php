@@ -4,8 +4,8 @@
     <x-ui.page-header title="Asset Status &amp; Category Summary" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']" />
 
     <div class="main-content" style="padding: 20px !important;">
-        <div class="card mb-3"><div class="card-body">
-            <form method="GET" class="d-flex flex-wrap gap-2">
+        <x-ui.filter-card title="Filter Report">
+<form method="GET" class="d-flex flex-wrap gap-2 filter-row">
                 <select name="branch_id" class="form-control form-control-sm" style="width:auto;" onchange="this.form.submit()">
                     <option value="">All Branches</option>
                     @foreach ($branches as $b)
@@ -14,8 +14,8 @@
                 </select>
                 <a href="{{ route('report.asset.summary.index') }}" class="btn btn-light btn-sm" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a>
             </form>
+</x-ui.filter-card>
             <p class="text-muted mb-0 mt-1" style="font-size:10.5px;">Status and Category counts respect the Branch filter above; the By Branch breakdown always shows every branch.</p>
-        </div></div>
 
         <div class="row g-3">
             <div class="col-md-4">

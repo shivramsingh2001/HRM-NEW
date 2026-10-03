@@ -297,6 +297,7 @@ class ShiftController extends Controller
             $shifts = UserShift::with('shift')
                 ->where('user_id', $userId)
                 ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+                ->orderBy('is_additional')
                 ->get()
                 ->map(function ($userShift) {
                     // Parse the date string to Carbon
@@ -312,7 +313,9 @@ class ShiftController extends Controller
                         'type' => 'Shift',
                         'color_code' => $userShift->shift->color_code ?? '#3b82f6'
                     ];
-                })->keyBy('date');
+                })->groupBy('date')
+                // Primary shift stays the day's item; 2nd+ shifts ride along.
+                ->map(fn ($items) => $items->first() + ['additional_shifts' => $items->slice(1)->values()->all()]);
         }
 
         // ✅ FIX: Parse week off dates properly

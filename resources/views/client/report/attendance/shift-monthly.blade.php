@@ -8,19 +8,18 @@
         background: white; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px;
         display: flex; align-items: center; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
-    .stats-icon { width: 30px; height: 30px; background: #e3edfe; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
-    .stats-icon i { font-size: 13px; color: #1e3a8a; }
+    .stats-icon { width: 30px; height: 30px; background: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
+    .stats-icon i { font-size: 13px; color: var(--icon-color, #0D6EFD); }
     .stats-info h3 { font-size: 15px; font-weight: 700; margin: 0 0 1px 0; color: #1a2236; line-height: 1.2; }
     .stats-info p { font-size: 9.5px; color: #6b7385; margin: 0; }
 
-    .filter-section { background: #fff; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
-    .filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
     .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; background-color: #fff; }
-    .form-control-sm-custom:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .15rem rgba(30, 58, 138, .12); outline: none; }
-    .btn-sm-custom { background: #1e3a8a; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; }
-    .btn-sm-custom:hover { background: #2563eb; color: #fff; }
+    .form-control-sm-custom:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); outline: none; }
+    .btn-sm-custom { background: #0D6EFD; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; }
+    .btn-sm-custom:hover { background: #0D6EFD; color: #fff; }
     .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; }
-    .btn-sm-custom-outline:hover { background: #e3edfe; color: #1e3a8a; }
+    .btn-sm-custom-outline:hover { background: #EFF6FF; color: #0D6EFD; }
 
     /* legend */
     .shift-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 10px; font-size: 10.5px; color: #475569; }
@@ -31,7 +30,7 @@
     .shift-matrix-wrap { overflow-x: auto; }
     #shiftMatrix { font-size: 10.5px; border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
     #shiftMatrix th, #shiftMatrix td { padding: 4px 3px; vertical-align: middle; text-align: center; border-bottom: 1px solid #eef1f7; }
-    #shiftMatrix thead th { font-size: 9.5px; font-weight: 700; color: #6b7385; background: #f7faff; border-bottom: 1px solid #e3edfe; line-height: 1.2; }
+    #shiftMatrix thead th { font-size: 9.5px; font-weight: 700; color: #6b7385; background: #f7faff; border-bottom: 1px solid #EFF6FF; line-height: 1.2; }
     #shiftMatrix thead th .dow { display: block; font-weight: 600; color: #94a3b8; font-size: 8.5px; text-transform: uppercase; }
     #shiftMatrix thead th.is-weekend { background: #eef3fd; }
     #shiftMatrix .col-sr { position: sticky; left: 0; z-index: 2; background: #fff; min-width: 40px; max-width: 40px; color: #6b7385; }
@@ -55,23 +54,13 @@
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Shift Report (Monthly)</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item">Shift Monthly</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Shift Report (Monthly)" current="Shift Monthly" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
             <a href="{{ route('report.attendance.shift-monthly.export', request()->query()) }}" class="btn btn-sm btn-primary">
                 <i class="feather-download me-1"></i> Export CSV
             </a>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body" style="padding: 20px !important;">
         @if (session('error'))
@@ -102,7 +91,7 @@
         </div>
 
         {{-- Filters (one row, no captions — same as the other reports) --}}
-        <div class="filter-section">
+        <x-ui.filter-card title="Filter Report">
             <form action="{{ route('report.attendance.shift-monthly.index') }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     <div class="filter-item">
@@ -141,7 +130,7 @@
                     <div class="filter-item"><a href="{{ route('report.attendance.shift-monthly.index') }}" class="btn-sm-custom-outline" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a></div>
                 </div>
             </form>
-        </div>
+        </x-ui.filter-card>
 
         @unless ($customShifts)
             <div class="alert alert-info py-2" style="font-size:10.5px;border-radius:10px;">
@@ -198,6 +187,10 @@
                                             @if ($c['type'] === 'shift')
                                                 <span class="shift-chip" style="background: {{ $c['color'] }}22; color: {{ $c['color'] }}"
                                                     title="{{ $c['name'] }} ({{ $c['start'] }}–{{ $c['end'] }}) — {{ $d->format('d M Y') }}">{{ $c['short'] }}</span>
+                                                @foreach ($c['extra'] ?? [] as $x)
+                                                    <span class="shift-chip" style="background: {{ $x['color'] }}22; color: {{ $x['color'] }}; margin-top: 2px"
+                                                        title="Additional: {{ $x['name'] }} ({{ $x['start'] }}–{{ $x['end'] }}) — {{ $d->format('d M Y') }}">+{{ $x['short'] }}</span>
+                                                @endforeach
                                             @elseif ($c['type'] === 'weekoff')
                                                 <span class="shift-chip wo" title="Week off — {{ $d->format('d M Y') }}">WO</span>
                                             @else
@@ -221,12 +214,7 @@
                 </div>
             </div>
             @if ($pagedRows->hasPages())
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <div class="text-muted small">
-                        Showing {{ $pagedRows->firstItem() }} to {{ $pagedRows->lastItem() }} of {{ $pagedRows->total() }} employees
-                    </div>
-                    <div>{{ $pagedRows->links('pagination::bootstrap-4') }}</div>
-                </div>
+                <x-ui.pagination-footer :paginator="$pagedRows" label="employees" />
             @endif
         </div>
     </div>

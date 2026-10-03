@@ -4,7 +4,7 @@
     <style>
         .ob-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 14px; }
         .ob-filters .field-input, .ob-filters .field-select { font-size: 12px; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 7px; }
-        .ob-btn { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; border: none; font-size: 12.5px; font-weight: 500; padding: 7px 16px; border-radius: 8px; text-decoration: none; }
+        .ob-btn { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; border: none; font-size: 12.5px; font-weight: 500; padding: 7px 16px; border-radius: 8px; text-decoration: none; }
         .ob-btn:hover { filter: brightness(0.9); color: #fff; }
         .ob-table-card { background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 4px 14px; }
     </style>
@@ -26,7 +26,8 @@
             <div class="col-6 col-md-3"><x-ui.stat-card icon="x-circle" label="Rejected" value="{{ $stats['rejected'] }}" /></div>
         </div>
 
-        <form method="GET" class="ob-filters">
+        <x-ui.filter-card title="Filter Requests">
+<form method="GET" class="ob-filters">
             <div>
                 <select name="employee_id" class="field-select" onchange="this.form.submit()">
                     <option value="">All team members</option>
@@ -42,6 +43,7 @@
                 <button type="submit" class="ob-btn"><i class="feather-search"></i> Filter</button>
             </div>
         </form>
+</x-ui.filter-card>
 
         <div class="ob-table-card">
             @if ($offboardings->isEmpty())

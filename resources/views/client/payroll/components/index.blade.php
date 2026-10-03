@@ -19,7 +19,7 @@
         border-radius: var(--radius-md); border: 1px solid #dfe5f0; background: #f4f6fb; color: #475569;
         transition: all .15s;
     }
-    .btn-icon-edit:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+    .btn-icon-edit:hover { background: var(--primary-light); border-color: var(--primary); color: var(--icon-color, #0D6EFD); }
     .btn-icon-edit i { font-size: 14px; }
 
     /* ==================== COMPONENT DRAWERS (Add / Edit) ====================
@@ -50,17 +50,8 @@
 @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Payroll Components</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.57rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Payroll Components</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Payroll Components">
+        <x-slot:actions>
             <div class="hstack gap-2">
                 @if (in_array($role, ['admin', 'hr']))
                     <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#addComponentModal">
@@ -68,8 +59,8 @@
                     </a>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body">
         <div class="card">

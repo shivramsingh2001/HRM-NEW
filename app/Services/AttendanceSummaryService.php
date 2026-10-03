@@ -56,7 +56,7 @@ class AttendanceSummaryService
             // Rules in force on the 1st of this month (Tier 1 / W1). Anchored to
             // the month start so a later policy change can't re-grade it.
             $policy = app(\App\Services\Attendance\PolicyResolver::class)
-                ->forTenantMonth((int) $tenantId, $yearMonth);
+                ->forUserMonth((int) $tenantId, (int) $userId, $yearMonth);
 
             $startStr = $startDate->format('Y-m-d');
             $endStr = $endDate->format('Y-m-d');

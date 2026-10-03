@@ -4,7 +4,7 @@
     <style>
         .bcast-notif-item { display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #f1f5f9; }
         .bcast-notif-item.unread { background: #f8fafc; }
-        .bcast-notif-icon { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
+        .bcast-notif-icon { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
         .bcast-notif-title { font-weight: 600; font-size: 13px; color: #1a2236; }
         .bcast-notif-message { font-size: 12px; color: #6b7385; margin-top: 2px; }
         .bcast-notif-time { font-size: 10.5px; color: #9aa1b1; margin-top: 4px; }

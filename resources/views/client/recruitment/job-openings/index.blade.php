@@ -3,41 +3,9 @@
 
 @section('style')
     <style>
-        /* .stats-grid/.stats-card/.stats-card.active/.stats-info/.stats-icon
-           are centralized in client.layout.head (single blue-only theme,
-           click-to-filter JS below still targets .stats-card/data-status
-           unchanged) — no local copy. */
 
-        /* ==================== MODERN FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .filter-title i {
-            color: var(--primary);
-            font-size: 16px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -56,18 +24,7 @@
             color: #ef4444;
         }
 
-        /* Filter Row */
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            gap: 12px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 140px;
-        }
 
         .filter-select {
             width: 100%;
@@ -90,28 +47,7 @@
             outline: none;
         }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-            color: #1e293b;
-        }
 
         /* Active Filter Tags */
         .active-filters {
@@ -215,13 +151,13 @@
            !important (vendor default), so the override needs !important too
            — see the identical note in client/user/view-user.blade.php. */
         .add-job-btn {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
-            border-color: #1e3a8a !important;
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD) !important;
+            border-color: #0D6EFD !important;
         }
 
         .add-job-btn:hover {
-            background: linear-gradient(135deg, #16306f, #1e40af) !important;
-            border-color: #16306f !important;
+            background: #0B5ED7 !important;
+            border-color: #0B5ED7 !important;
         }
 
         /* ==================== JOB STATUS BADGES ==================== */
@@ -250,7 +186,7 @@
 
         .status-on-hold {
             background-color: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         /* Employment Type Badges */
@@ -264,7 +200,7 @@
 
         .employment-full_time {
             background-color: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .employment-part_time {
@@ -287,58 +223,12 @@
             color: #4b5563;
         }
 
-        /* ==================== TABLE STYLES ==================== */
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 12px 12px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 12px;
-            padding: 10px 12px;
-            border-bottom: 1px solid #f1f5f9;
-        }
 
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
-        /* Action Button */
-        .action-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-        }
 
-        .action-btn:hover {
-            background: white;
-            color: var(--primary);
-            border-color: var(--primary);
-        }
 
-        .action-btn.text-danger:hover {
-            color: #ef4444 !important;
-            border-color: #ef4444;
-        }
 
         .dropdown-item {
             font-size: 12px;
@@ -406,40 +296,14 @@
             color: #64748b;
         }
 
-        /* Pagination */
-        .pagination {
-            margin: 0;
-            gap: 4px;
-        }
 
-        .page-link {
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            font-size: 11px;
-            padding: 5px 10px;
-            border-radius: 6px !important;
-        }
 
-        .page-link:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-        }
 
-        .page-item.active .page-link {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
 
         /* Responsive */
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 10px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(33.333% - 10px);
-                min-width: 120px;
-            }
+
 
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -447,27 +311,14 @@
         }
 
         @media (max-width: 768px) {
-            .filter-wrapper {
-                padding: 12px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
+
 
             .stats-grid {
                 grid-template-columns: 1fr;
             }
 
-            .table th,
-            .table td {
-                padding: 8px 10px;
-            }
         }
 
         /* Toast Notification */
@@ -494,23 +345,14 @@
 
 @section('content-area')
     <!-- Page Header -->
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Job Openings Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Job Openings</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Job Openings Management" current="Job Openings">
+        <x-slot:actions>
             <button type="button" class="btn btn-primary btn-sm add-job-btn" onclick="openAddJobDrawer()">
                 <i class="feather-plus me-1"></i>
                 <span>New Job Opening</span>
             </button>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <!-- Main Content -->
     <div class="main-content" style="padding: 20px !important;">
@@ -720,14 +562,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Job Openings List</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-light text-dark">
-                                <i class="feather-calendar me-1"></i>{{ $jobOpenings->total() }} Total Jobs
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
 
                         @if (session('success'))
@@ -896,17 +730,7 @@
 
                         <!-- Pagination -->
                         @if ($jobOpenings->hasPages())
-                            <div class="card-footer">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                    <div class="text-muted small">
-                                        Showing {{ $jobOpenings->firstItem() }} to {{ $jobOpenings->lastItem() }} of
-                                        {{ $jobOpenings->total() }} entries
-                                    </div>
-                                    <div>
-                                        {{ $jobOpenings->appends(request()->query())->links() }}
-                                    </div>
-                                </div>
-                            </div>
+                            <x-ui.pagination-footer :paginator="$jobOpenings" label="job openings" />
                         @endif
                     </div>
                 </div>

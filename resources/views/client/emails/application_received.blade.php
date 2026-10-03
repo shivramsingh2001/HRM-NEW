@@ -103,7 +103,7 @@
             align-items: center;
             justify-content: center;
             margin-right: 12px;
-            color: #4f46e5;
+            color: var(--icon-color, #0D6EFD);
             font-weight: bold;
         }
         .timeline-content {

@@ -20,7 +20,7 @@
         border-color: #dfe5f0;
     }
 
-    .branch-card .side-stick { background-color: #1e3a8a; }
+    .branch-card .side-stick { background-color: #0D6EFD; }
 
     .br-title {
         font-size: 11.5px !important;
@@ -45,7 +45,7 @@
     }
 
     .badge-active { background: #3b82f6; color: #fff; }
-    .badge-inactive { background: #1e3a8a; color: #fff; }
+    .badge-inactive { background: #0D6EFD; color: #fff; }
 
     .br-info-row {
         display: flex;
@@ -69,7 +69,7 @@
         color: #1a2236;
     }
 
-    .br-info-value i { color: #1e3a8a; }
+    .br-info-value i { color: var(--icon-color, #0D6EFD); }
 
     .br-description {
         color: #475569;
@@ -87,25 +87,8 @@
         border-top: 1px solid #eaeef5;
     }
 
-    .action-btn {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: #f4f6fb;
-        border: 1px solid #eaeef5;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6b7385;
-        font-size: 10px;
-        transition: all .2s;
-        cursor: pointer;
-        text-decoration: none;
-        flex-shrink: 0;
-    }
 
-    .action-btn:hover { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
-    .action-btn.danger:hover { background: #dc2626; border-color: #dc2626; }
+
 
     /* ==================== EMPTY STATE ==================== */
     .empty-state {
@@ -134,29 +117,18 @@
 @endphp
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Branch Management</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Branch</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Branch Management" current="Branch">
+        <x-slot:actions>
             <div class="hstack gap-2">
                 @if(in_array($role,['admin','hr']))
-                <div class="dropdown d-none d-sm-flex">
-                    <a href="javascript:void(0)" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                <a href="javascript:void(0)" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                         data-bs-target="#addBranchModal">
                         <i class="feather-plus me-2"></i>Add Branch
                     </a>
-                </div>
                 @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
     <div class="content-area-body pb-0 h-100">
         <div class="row note-has-grid" id="note-full-container">
             @forelse ($branches as $branch)

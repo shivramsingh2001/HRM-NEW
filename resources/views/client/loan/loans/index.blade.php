@@ -13,96 +13,26 @@
             color: #475569;
         }
         .status-badge[data-status="default"] {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: #ffffff;
         }
 
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #64748b;
-            transition: all 0.2s;
-            border: 1px solid #e2e8f0;
-        }
 
-        .action-btn:hover {
-            background: white;
-            transform: translateY(-2px);
-        }
 
-        .action-btn.view:hover {
-            color: #1e3a8a;
-            border-color: #1e3a8a;
-        }
 
-        .action-btn.edit:hover {
-            color: #1e3a8a;
-            border-color: #1e3a8a;
-        }
 
-        .action-btn.delete:hover {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
 
-        .action-btn.pay {
-            background: #dbeafe;
-            color: #1e40af;
-            border-color: #bfd3f7;
-        }
 
-        .action-btn.pay:hover {
-            background: #1e3a8a;
-            color: white;
-        }
 
         .badge.bg-info {
             background: #dbeafe !important;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
-        /* ==================== FILTER SECTION (matches Attendance Regularizations) ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #1a2236;
-        }
 
-        .filter-title i { color: #1e3a8a; font-size: 13px; }
 
-        .filter-title span {
-            background: #e3edfe;
-            color: #1e3a8a;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -116,17 +46,10 @@
             transition: all 0.2s;
         }
 
-        .clear-all-link:hover { background: #e3edfe; color: #1e3a8a; }
+        .clear-all-link:hover { background: #EFF6FF; color: #0D6EFD; }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .filter-item { flex: 0 0 auto; min-width: 160px; }
-        .filter-item.narrow { min-width: auto; }
+
 
         .filter-select,
         .filter-item .form-control {
@@ -149,37 +72,19 @@
             cursor: pointer;
         }
 
-        .filter-item .form-control { padding: 6px 10px; }
 
         .filter-select:focus,
         .filter-item .form-control:focus {
             background-color: white;
-            border-color: #1e3a8a;
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            border-color: #0D6EFD;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
             outline: none;
         }
 
         .filter-select:hover,
         .filter-item .form-control:hover { background-color: white; border-color: #94a3b8; }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 12px;
-            background: white;
-            color: #6b7385;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover { background: #f8fafc; border-color: #94a3b8; color: #1a2236; }
 
         .active-filters {
             margin-top: 12px;
@@ -214,7 +119,7 @@
             gap: 4px;
         }
 
-        .filter-tag i { color: #1e3a8a; font-size: 11px; }
+        .filter-tag i { color: var(--icon-color, #0D6EFD); font-size: 11px; }
 
         .filter-tag .remove-tag {
             color: #94a3b8;
@@ -224,12 +129,12 @@
             align-items: center;
         }
 
-        .filter-tag .remove-tag:hover { color: #1e3a8a; }
+        .filter-tag .remove-tag:hover { color: #0D6EFD; }
 
         .filter-tag.clear-all {
-            background: #e3edfe;
-            border-color: #1e3a8a;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            border-color: #0D6EFD;
+            color: #0D6EFD;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
@@ -294,7 +199,7 @@
 
         .progress-fill {
             height: 100%;
-            background: #1e3a8a;
+            background: #0D6EFD;
             border-radius: 10px;
             transition: width 0.3s ease;
         }
@@ -319,17 +224,17 @@
         }
 
         .repayment-paid {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .repayment-pending {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .repayment-overdue {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: #ffffff;
         }
 
@@ -395,23 +300,14 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Loan Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Loan Requests</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Loan Management" current="Loan Requests">
+        <x-slot:actions>
             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addLoanModal">
                 <i class="feather-plus me-2"></i>
                 <span>New Request</span>
             </button>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
 
 
@@ -541,9 +437,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">My Loan Requests</h5>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table">
@@ -639,9 +532,7 @@
                         </div>
                     </div>
                     @if ($loans->hasPages())
-                        <div class="card-footer">
-                            {{ $loans->links() }}
-                        </div>
+                        <x-ui.pagination-footer :paginator="$loans" label="loans" />
                     @endif
                 </div>
             </div>

@@ -19,6 +19,7 @@ use App\Services\RbacService;
 use App\Models\OvertimeRequest;
 use App\Models\PayrollAuditLog;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\ShiftWindow;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -70,24 +71,19 @@ class MonthlyPayrollController extends Controller
      * AttendancePolicySnapshot::default(), the same values this method's
      * old hardcoded fallback ladder approximated.
      */
-    private function getAttendanceStatusByShift($totalHours, $attendance = null, ?int $tenantId = null, ?string $date = null)
+    private function getAttendanceStatusByShift($totalHours, $attendance = null, ?int $tenantId = null, ?string $date = null, ?int $userId = null)
     {
         $policy = ($tenantId && $date)
-            ? app(\App\Services\Attendance\PolicyResolver::class)->forTenantDate($tenantId, $date)
+            ? ($userId
+                ? app(\App\Services\Attendance\PolicyResolver::class)->forUserDate($tenantId, $userId, $date)
+                : app(\App\Services\Attendance\PolicyResolver::class)->forTenantDate($tenantId, $date))
             : \App\Services\Attendance\AttendancePolicySnapshot::default();
 
         $expectedSeconds = 0;
         if ($attendance && isset($attendance->scheduled_shift_start) && $attendance->scheduled_shift_start &&
             isset($attendance->scheduled_shift_end) && $attendance->scheduled_shift_end) {
-            $shiftStart = Carbon::parse($attendance->scheduled_shift_start);
-            $shiftEnd = Carbon::parse($attendance->scheduled_shift_end);
-
-            // Handle overnight shifts (e.g., 22:00 to 06:00)
-            if ($shiftEnd->lessThan($shiftStart)) {
-                $shiftEnd->addDay();
-            }
-
-            $expectedSeconds = $shiftStart->diffInSeconds($shiftEnd);
+            // Overnight shifts (e.g. 22:00 to 06:00) end on the next day.
+            $expectedSeconds = ShiftWindow::spanMinutes($attendance->scheduled_shift_start, $attendance->scheduled_shift_end) * 60;
         }
 
         return match ($policy->classify((float) ($totalHours ?? 0), $expectedSeconds)) {
@@ -531,7 +527,7 @@ class MonthlyPayrollController extends Controller
             $approvedOvertimeHours = $overtimeData['total_hours'];
 
             if ($includeOvertime && $approvedOvertimeHours > 0) {
-                $overtimeSettings = $this->getOvertimeSettings($tenantId);
+                $overtimeSettings = $this->getOvertimeSettings($tenantId, (int) $employee->id);
                 $rateMultiplier = $overtimeSettings->rate_multiplier ?? 1.5;
                 $overtimeRateApplied = $hourlyRate * $rateMultiplier;
                 $overtimeAmount = $approvedOvertimeHours * $overtimeRateApplied;
@@ -595,7 +591,7 @@ class MonthlyPayrollController extends Controller
             $approvedOvertimeHours = $overtimeData['total_hours'];
 
             if ($includeOvertime && $approvedOvertimeHours > 0) {
-                $overtimeSettings = $this->getOvertimeSettings($tenantId);
+                $overtimeSettings = $this->getOvertimeSettings($tenantId, (int) $employee->id);
                 $rateMultiplier = $overtimeSettings->rate_multiplier ?? 1.5;
                 $hourlyRate = $this->overtimeHourlyRate(
                     $userPayroll->basic_salary, 'day_based', $workingHoursPerDay, $calendarDays, $workingDays,
@@ -1007,7 +1003,7 @@ class MonthlyPayrollController extends Controller
             $attendanceObj->scheduled_shift_end = $row->scheduled_shift_end;
             
             // Use shift-based status calculation
-            $status = $this->getAttendanceStatusByShift($hours, $attendanceObj, $tenantId, $dateStr);
+            $status = $this->getAttendanceStatusByShift($hours, $attendanceObj, $tenantId, $dateStr, $userId);
             
             if ($status === 'Present') {
                 $attendanceSet[$dateStr] = 'present';
@@ -1174,7 +1170,7 @@ class MonthlyPayrollController extends Controller
         // ------------------------------------------------------------------
         $yearMonthForPolicy = Carbon::parse($startDate)->format('Y-m');
         $sandwichEnabled = app(\App\Services\Attendance\PolicyResolver::class)
-            ->forTenantMonth((int) $tenantId, $yearMonthForPolicy)
+            ->forUserMonth((int) $tenantId, (int) $userId, $yearMonthForPolicy)
             ->sandwichLeave;
 
         // 'paid_leave' counts as "worked" for this boundary check — the
@@ -1315,7 +1311,7 @@ class MonthlyPayrollController extends Controller
             $attendanceObj->scheduled_shift_start = $row->scheduled_shift_start;
             $attendanceObj->scheduled_shift_end = $row->scheduled_shift_end;
 
-            $status = $this->getAttendanceStatusByShift($hours, $attendanceObj, $tenantId, $row->att_date);
+            $status = $this->getAttendanceStatusByShift($hours, $attendanceObj, $tenantId, $row->att_date, $userId);
             
             if ($status === 'Present') {
                 $fullDays++;
@@ -1482,6 +1478,12 @@ class MonthlyPayrollController extends Controller
         $startDate = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth()->format('Y-m-d');
         $endDate   = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth()->format('Y-m-d');
 
+        // Marked "not eligible for overtime" on their profile: nothing is paid,
+        // neither approved requests nor additional-shift hours.
+        if ($tenantId && ! app(\App\Services\EmployeePolicyService::class)->overtimeEligible((int) $tenantId, $userId)) {
+            return ['total_hours' => 0.0, 'details' => [], 'request_count' => 0, 'extra_shift_hours' => 0.0];
+        }
+
         $rows = DB::select("
             SELECT
                 DATE_FORMAT(date, '%Y-%m-%d') AS ot_date,
@@ -1506,10 +1508,17 @@ class MonthlyPayrollController extends Controller
             ];
         }
 
+        // Multi-shift: 2nd+ shift hours are automatic overtime, on top of requests.
+        $extraShift = app(\App\Services\Attendance\ExtraShiftOvertime::class)
+            ->forPeriod($userId, (int) $tenantId, $startDate, $endDate);
+        $totalHours += $extraShift['total_hours'];
+        $details = array_merge($details, $extraShift['details']);
+
         return [
             'total_hours'   => round($totalHours, 2),
             'details'       => $details,
             'request_count' => count($rows),
+            'extra_shift_hours' => $extraShift['total_hours'],
         ];
     }
 
@@ -1517,15 +1526,20 @@ class MonthlyPayrollController extends Controller
      * Fetch overtime settings for the tenant.
      * Tenant-specific row takes priority over a global (null tenant) fallback.
      */
-    private function getOvertimeSettings(?int $tenantId): ?object
+    private function getOvertimeSettings(?int $tenantId, ?int $userId = null): ?object
     {
-        return DB::selectOne("
+        $settings = DB::selectOne("
             SELECT *
             FROM   overtime_settings
             WHERE  tenant_id = ? OR tenant_id IS NULL
             ORDER BY (tenant_id IS NULL) ASC
             LIMIT 1
         ", [$tenantId]);
+
+        // An employee's custom overtime values (Employee 360 → Policies) win over the company's.
+        return ($tenantId && $userId)
+            ? app(\App\Services\EmployeePolicyService::class)->overtime($tenantId, $userId, $settings)
+            : $settings;
     }
 
     /**
@@ -1599,7 +1613,7 @@ class MonthlyPayrollController extends Controller
             $userPayroll->payrollMaster->ot_rate_divisor_mode ?? 'calendar_days',
             $userPayroll->payrollMaster->ot_fixed_working_days ?? 26
         );
-        $overtimeSettings = $this->getOvertimeSettings($tenantId);
+        $overtimeSettings = $this->getOvertimeSettings($tenantId, (int) $userPayroll->user_id);
         $rateMultiplier = (float) ($overtimeSettings->rate_multiplier ?? 1.5);
         $rate = round($hourlyRate * $rateMultiplier, 2);
 
@@ -1881,7 +1895,7 @@ class MonthlyPayrollController extends Controller
 
             $canApproveOvertime = $this->rbacService->can(auth()->user(), 'overtime', 'approve');
 
-            $overtimeSettings = $this->getOvertimeSettings($monthlyPayroll->tenant_id);
+            $overtimeSettings = $this->getOvertimeSettings($monthlyPayroll->tenant_id, (int) $monthlyPayroll->user_id);
             $overtimeRateMultiplier = (float) ($overtimeSettings->rate_multiplier ?? 1.5);
 
             $pendingOvertimeHours = round(

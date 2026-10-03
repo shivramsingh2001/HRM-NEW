@@ -119,19 +119,28 @@ class AttendanceRegularizationController extends Controller
             ], 422);
         }
 
-        // Validate time logic based on request type
-        if ($request->request_type == 'both') {
-            $inTime = strtotime($request->in_time);
-            $outTime = strtotime($request->out_time);
-            
-            if ($outTime <= $inTime) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => [
-                        'out_time' => ['Out time must be after in time']
-                    ]
-                ], 422);
-            }
+        // Company / employee request limits (Company Policies → Request limits, Employee 360 → Policies).
+        if ($limit = app(\App\Services\RequestLimitService::class)->regularizationRefusal(
+            (int) Auth::user()->tenant_id, (int) Auth::id(), \Carbon\Carbon::parse($request->date)->toDateString(), null
+        )) {
+            return response()->json(['success' => false, 'message' => $limit], 422);
+        }
+
+        // Shift (multi-shift) + time logic — an overnight shift's out time is
+        // on the next day, so it may be earlier than the in time.
+        $shiftCheck = app(\App\Services\Attendance\RegularizationShiftCheck::class)->check(
+            (int) Auth::id(),
+            (int) Auth::user()->tenant_id,
+            \Carbon\Carbon::parse($request->date)->toDateString(),
+            $request->input('user_shift_id'),
+            $request->request_type == 'both' ? $request->in_time : null,
+            $request->request_type == 'both' ? $request->out_time : null,
+        );
+        if ($shiftCheck['error']) {
+            return response()->json([
+                'success' => false,
+                'errors' => [$shiftCheck['field'] => [$shiftCheck['error']]],
+            ], 422);
         }
         
          DB::beginTransaction();
@@ -139,10 +148,11 @@ class AttendanceRegularizationController extends Controller
             $tenant_id = Auth::user()->tenant_id;
             $user_id = Auth::id();
 
-            // Check if already exists for this date and user
+            // Check if already exists for this date, user and shift
             $existing = AttendanceRegularization::where('user_id', $user_id)
                 ->where('tenant_id', $tenant_id)
                 ->where('date', $request->date)
+                ->where('user_shift_id', $shiftCheck['user_shift_id'])
                 ->whereIn('status', ['pending', 'approved'])
                 ->first();
 
@@ -163,6 +173,7 @@ class AttendanceRegularizationController extends Controller
                 'tenant_id' => $tenant_id,
                 'user_id' => $user_id,
                 'date' => $request->date,
+                'user_shift_id' => $shiftCheck['user_shift_id'],
                 'request_type' => $request->request_type,
                 'in_time' => $request->in_time,
                 'out_time' => $request->out_time,
@@ -229,19 +240,28 @@ class AttendanceRegularizationController extends Controller
             ], 422);
         }
 
-        // Validate time logic based on request type
-        if ($request->request_type == 'both') {
-            $inTime = strtotime($request->in_time);
-            $outTime = strtotime($request->out_time);
-            
-            if ($outTime <= $inTime) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => [
-                        'out_time' => ['Out time must be after in time']
-                    ]
-                ], 422);
-            }
+        // Company / employee request limits — this request itself is not counted again.
+        if ($limit = app(\App\Services\RequestLimitService::class)->regularizationRefusal(
+            (int) Auth::user()->tenant_id, (int) Auth::id(), \Carbon\Carbon::parse($request->date)->toDateString(), (int) $regularization->id
+        )) {
+            return response()->json(['success' => false, 'message' => $limit], 422);
+        }
+
+        // Shift (multi-shift) + time logic — an overnight shift's out time is
+        // on the next day, so it may be earlier than the in time.
+        $shiftCheck = app(\App\Services\Attendance\RegularizationShiftCheck::class)->check(
+            (int) Auth::id(),
+            (int) Auth::user()->tenant_id,
+            \Carbon\Carbon::parse($request->date)->toDateString(),
+            $request->input('user_shift_id'),
+            $request->request_type == 'both' ? $request->in_time : null,
+            $request->request_type == 'both' ? $request->out_time : null,
+        );
+        if ($shiftCheck['error']) {
+            return response()->json([
+                'success' => false,
+                'errors' => [$shiftCheck['field'] => [$shiftCheck['error']]],
+            ], 422);
         }
         
           DB::beginTransaction();
@@ -251,6 +271,7 @@ class AttendanceRegularizationController extends Controller
             $existing = AttendanceRegularization::where('user_id', $user_id)
                 ->where('tenant_id', $tenant_id)
                 ->where('date', $request->date)
+                ->where('user_shift_id', $shiftCheck['user_shift_id'])
                 ->where('id', '!=', $id)
                 ->whereIn('status', ['pending', 'approved'])
                 ->first();
@@ -274,6 +295,7 @@ class AttendanceRegularizationController extends Controller
             // Update regularization
             $updateData = [
                 'date' => $request->date,
+                'user_shift_id' => $shiftCheck['user_shift_id'],
                 'request_type' => $request->request_type,
                 'in_time' => $request->in_time,
                 'out_time' => $request->out_time,
@@ -458,6 +480,27 @@ class AttendanceRegularizationController extends Controller
     /**
      * Check if user has any pending/approved request for a specific date
      */
+    /**
+     * The logged-in user's shifts on a date, for the regularization form's
+     * "Shift" picker (shown only when there is more than one).
+     */
+    public function shiftsForDate(Request $request)
+    {
+        $request->validate(['date' => 'required|date']);
+
+        $shifts = app(\App\Services\Attendance\TenantShiftResolver::class)
+            ->instancesForUserDate((int) Auth::id(), (int) Auth::user()->tenant_id, \Carbon\Carbon::parse($request->date)->toDateString())
+            ->map(fn ($i) => [
+                'user_shift_id' => $i['user_shift_id'],
+                'name' => $i['shift']->name,
+                'label' => $i['shift']->name . ' (' . $i['start']->format('h:i A') . ' – ' . $i['end']->format('h:i A') . ')',
+                'is_additional' => $i['is_additional'],
+            ])
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $shifts]);
+    }
+
     public function checkAvailability(Request $request)
     {
         $request->validate([

@@ -20,16 +20,8 @@
 @endsection
 
 @section('content-area')
+<x-ui.page-header title="Field Tracking" back />
 <div class="page-content"><div class="container-fluid">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="mb-0">Field Tracking</h4>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Field Tracking</li>
-            </ol>
-        </nav>
-    </div>
 
     @if (session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
     @if (session('error')) <div class="alert alert-warning">{{ session('error') }}</div> @endif

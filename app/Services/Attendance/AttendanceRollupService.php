@@ -4,6 +4,8 @@ namespace App\Services\Attendance;
 
 use App\Models\Attendance;
 use App\Models\AttendancePunch;
+use App\Models\AttendanceShiftSegment;
+use App\Support\ShiftWindow;
 use Carbon\Carbon;
 
 /**
@@ -40,15 +42,20 @@ class AttendanceRollupService
 
         $scheduledStart = $scheduledEnd = null;
         if ($shift) {
-            $scheduledStart = Carbon::parse($date . ' ' . $shift->start_time);
-            $scheduledEnd = Carbon::parse($date . ' ' . $shift->end_time);
-            if ($this->calc->isOvernight($shift)) {
-                $scheduledEnd->addDay();
-            }
+            [$scheduledStart, $scheduledEnd] = ShiftWindow::window($date, $shift);
         }
 
         $paired = $this->sessions->pairSessions($punches, $shift);
         $summary = $this->sessions->summarize($paired, $shift, $scheduledStart, $scheduledEnd);
+
+        // Multi-shift: split the day's sessions by the shift each one was
+        // clocked in for. A single-shift day keeps $summary exactly as is.
+        $segments = $this->segments($userId, $tenantId, $date, $paired, $shift, $scheduledStart, $scheduledEnd);
+        // (Also when the only shift worked was an additional one — its own
+        // window, not the primary's, decides late/early.)
+        if (count($segments) > 1 || ($segments[0]['row']['is_additional'] ?? false)) {
+            $summary = $this->multiShiftSummary($summary, $segments);
+        }
 
         $columns = [
             'clock_in' => $summary['clock_in'],
@@ -59,6 +66,12 @@ class AttendanceRollupService
             'early_departure_minutes' => $summary['early_departure_minutes'],
             'overtime_minutes' => $summary['overtime_minutes'],
             'session_count' => $summary['session_count'],
+            'shift_count' => count($segments) ?: null,
+            'expected_minutes' => $shift ? intdiv($this->calc->expectedWorkSeconds($shift), 60) : null,
+            'extra_shift_minutes' => array_sum(array_map(
+                fn ($seg) => $seg['row']['is_additional'] ? $seg['row']['worked_minutes'] : 0,
+                $segments
+            )),
             'punches_last_synced_at' => now(),
             'status' => 1,
         ];
@@ -121,7 +134,122 @@ class AttendanceRollupService
             ->whereNull('attendance_id')
             ->update(['attendance_id' => $row->id]);
 
+        AttendanceShiftSegment::withoutGlobalScopes()->where('attendance_id', $row->id)->delete();
+        foreach ($segments as $segment) {
+            AttendanceShiftSegment::create($segment['row'] + [
+                'tenant_id' => $tenantId,
+                'attendance_id' => $row->id,
+                'user_id' => $userId,
+                'date' => $date,
+            ]);
+        }
+
         return $row;
+    }
+
+    /**
+     * One entry per shift the user clocked in for on $date, primary first:
+     * ['summary' => summarize() output for that shift's sessions,
+     *  'row' => attendance_shift_segments columns]. A session belongs to the
+     * shift its clock-in punch was matched to (user_shift_id); punches with
+     * no / an unknown user_shift_id count toward the primary shift.
+     */
+    private function segments(int $userId, int $tenantId, string $date, array $paired, $shift, $scheduledStart, $scheduledEnd): array
+    {
+        $instances = $this->shifts->instancesForUserDate($userId, $tenantId, $date)->keyBy(fn ($i) => (string) $i['user_shift_id']);
+        $primary = $instances->first();
+        $primaryKey = $primary ? (string) $primary['user_shift_id'] : '';
+
+        $keyOf = function ($punch) use ($instances, $primaryKey) {
+            $key = (string) ($punch->user_shift_id ?? '');
+
+            return $instances->has($key) ? $key : $primaryKey;
+        };
+
+        $groups = [];
+        foreach ($paired['sessions'] as $session) {
+            $groups[$keyOf($session['in_punch'])]['sessions'][] = $session;
+        }
+        if ($paired['open_session'] && $paired['open_in_punch']) {
+            $groups[$keyOf($paired['open_in_punch'])]['open'] = $paired['open_in_punch'];
+        }
+
+        // Primary first, then additional shifts in start order.
+        $order = $instances->keys()->all();
+        uksort($groups, fn ($a, $b) => array_search($a, $order, true) <=> array_search($b, $order, true));
+
+        $segments = [];
+        foreach ($groups as $key => $group) {
+            $instance = $instances->get($key);
+            $segShift = $instance['shift'] ?? $shift;
+            [$start, $end] = $instance ? [$instance['start'], $instance['end']] : [$scheduledStart, $scheduledEnd];
+
+            $sub = $this->subPaired($group['sessions'] ?? [], $group['open'] ?? null);
+            $summary = $this->sessions->summarize($sub, $segShift, $start, $end);
+
+            $segments[] = [
+                'summary' => $summary,
+                'row' => [
+                    'user_shift_id' => $instance['user_shift_id'] ?? null,
+                    'shift_id' => $segShift?->id,
+                    'is_additional' => (bool) ($instance['is_additional'] ?? false),
+                    'scheduled_start' => $start?->format('Y-m-d H:i:s'),
+                    'scheduled_end' => $end?->format('Y-m-d H:i:s'),
+                    'first_in' => $summary['clock_in'],
+                    'last_out' => $summary['clock_out'],
+                    'worked_minutes' => intdiv($sub['worked_seconds'], 60),
+                    'expected_minutes' => $segShift ? intdiv($this->calc->expectedWorkSeconds($segShift), 60) : 0,
+                    'late_minutes' => $summary['late_minutes'],
+                    'early_departure_minutes' => $summary['early_departure_minutes'],
+                    'overtime_minutes' => $summary['overtime_minutes'],
+                    'session_count' => $summary['session_count'],
+                    'is_open' => $sub['open_session'],
+                ],
+            ];
+        }
+
+        return $segments;
+    }
+
+    /** pairSessions()-shaped subset for one shift's sessions (+ its open clock-in). */
+    private function subPaired(array $sessions, $openPunch): array
+    {
+        $open = $openPunch !== null;
+        $last = $sessions ? $sessions[count($sessions) - 1] : null;
+
+        return [
+            'sessions' => $sessions,
+            'first_clock_in' => $sessions[0]['in'] ?? ($open ? Carbon::parse($openPunch->punched_at) : null),
+            'last_clock_out' => (! $open && $last) ? $last['out'] : null,
+            'worked_seconds' => array_sum(array_column($sessions, 'worked_seconds')),
+            'session_count' => count($sessions) + ($open ? 1 : 0),
+            'open_session' => $open,
+        ];
+    }
+
+    /**
+     * Day-level numbers for a day worked across several shifts. Clock-in/out,
+     * worked hours and session count stay the whole day's (as with multiple
+     * punches today); late/early/overtime and the status come from the first
+     * shift worked (the primary when it was worked), and the day counts as
+     * late when ANY shift started late (late minutes are summed).
+     */
+    private function multiShiftSummary(array $day, array $segments): array
+    {
+        $lead = $segments[0]['summary'];
+        $late = array_sum(array_map(fn ($seg) => $seg['summary']['late_minutes'], $segments));
+
+        $status = $lead['attendance_status'] ?? $day['attendance_status'];
+        if ($late > 0 && in_array($status, ['present', null], true)) {
+            $status = 'late';
+        }
+
+        return array_merge($day, [
+            'late_minutes' => $late,
+            'early_departure_minutes' => $lead['early_departure_minutes'],
+            'overtime_minutes' => $lead['overtime_minutes'],
+            'attendance_status' => $day['clock_in'] ? $status : null,
+        ]);
     }
 
     /**

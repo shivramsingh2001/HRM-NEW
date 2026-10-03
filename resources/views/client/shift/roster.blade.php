@@ -48,24 +48,26 @@
         /* month view: tiny square */
         .mday { display: inline-block; width: 16px; height: 16px; border-radius: 4px; background: #e2e8f0; }
         .mday.off { background: #f1f5f9; border: 1px solid #e2e8f0; }
+        .mday.mday-extra { width: 8px; margin-left: 2px; }
+        .shift-chip.shift-chip-extra { margin-top: 3px; border-left-style: dashed; }
         .clockdot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; margin-left: 4px; vertical-align: middle; }
 
         /* ============ single blue-gradient theme ============ */
-        .grad-blue { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+        .grad-blue { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); }
         .btn-grad {
             display: inline-flex; align-items: center; gap: 6px;
-            background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; border: none;
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; border: none;
             font-size: 12.5px; font-weight: 500; padding: 6px 16px; border-radius: 999px;
             cursor: pointer; transition: all .15s ease; text-decoration: none;
         }
-        .btn-grad:hover { color: #fff; filter: brightness(1.08); box-shadow: 0 3px 10px rgba(30, 58, 138, 0.35); }
+        .btn-grad:hover { color: #fff; filter: brightness(1.08); box-shadow: 0 3px 10px rgba(13, 110, 253, 0.35); }
 
         .view-toggle { display: inline-flex; border: 1px solid #e2e8f0; border-radius: 999px; padding: 2px; background: #fff; }
         .view-toggle .btn {
             font-size: 12px; font-weight: 500; padding: 4px 16px; border: none !important; border-radius: 999px !important;
             background: transparent; color: #64748b;
         }
-        .view-toggle .btn.active { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; box-shadow: 0 2px 6px rgba(30, 58, 138, .25); }
+        .view-toggle .btn.active { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; box-shadow: 0 2px 6px rgba(13, 110, 253, .25); }
         .view-toggle .btn:not(.active):hover { background: #f1f5f9; color: #1e293b; }
 
         .quick-range { display: inline-flex; border: 1px solid #e2e8f0; border-radius: 999px; padding: 2px; background: #fff; }
@@ -73,7 +75,7 @@
             font-size: 11.5px; font-weight: 500; padding: 4px 13px; border: none !important; border-radius: 999px !important;
             background: transparent; color: #64748b;
         }
-        .quick-range .btn.active { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; }
+        .quick-range .btn.active { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; }
         .quick-range .btn:not(.active):hover { background: #f1f5f9; color: #1e293b; }
 
         .btn-reset {
@@ -88,7 +90,7 @@
             border-radius: 8px;
         }
         .rfilter input.form-control-sm:focus, .rfilter select.form-control-sm:focus {
-            border-color: #2563eb; box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08);
+            border-color: #0D6EFD; box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.08);
         }
         .search-box { position: relative; }
         .search-box i {
@@ -118,8 +120,8 @@
         }
         .seg label:hover span { background: #f1f5f9; color: #1e293b; }
         .seg input:checked + span, .seg input:checked + span:hover {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff;
-            box-shadow: 0 2px 6px rgba(30, 58, 138, .25);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff;
+            box-shadow: 0 2px 6px rgba(13, 110, 253, .25);
         }
         .preview-line { background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; border-radius: 9px; padding: 7px 11px; font-size: 11px; }
 
@@ -132,16 +134,17 @@
             transition: all .15s ease; cursor: pointer; text-decoration: none;
         }
         .row-action-btn i { font-size: 12px; }
-        .row-action-btn:hover { border-color: #1e3a8a; color: #1e3a8a; background: var(--primary-light, #e3edfe); }
+        .row-action-btn:hover { border-color: #0D6EFD; color: #0D6EFD; background: var(--primary-light, #EFF6FF); }
         .row-action-btn.danger:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
 
         /* Status/Type badges — theme blue, not Bootstrap's default bg-dark/bg-info/etc. */
         .badge-theme { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 6px; display: inline-block; }
         .badge-theme.sm { font-size: 9px; padding: 2px 7px; }
-        .badge-theme.upcoming { background: var(--primary-light, #e3edfe); color: var(--primary, #1e3a8a); }
-        .badge-theme.ongoing, .badge-theme.permanent, .badge-theme.active { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; }
-        .badge-theme.complete, .badge-theme.flexible { background: var(--primary-light, #e3edfe); color: var(--primary, #1e3a8a); }
+        .badge-theme.upcoming { background: var(--primary-light, #EFF6FF); color: var(--primary, #0D6EFD); }
+        .badge-theme.ongoing, .badge-theme.permanent, .badge-theme.active { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; }
+        .badge-theme.complete, .badge-theme.flexible { background: var(--primary-light, #EFF6FF); color: var(--primary, #0D6EFD); }
         .badge-theme.superseded, .badge-theme.ended, .badge-theme.cancelled { background: #f1f5f9; color: #64748b; }
+        .badge-theme.additional { background: #fef3c7; color: #92400e; }
         .error-text { display: block; font-size: 11px; }
         .wk-date-row { display: flex; gap: 6px; margin-bottom: 6px; }
         .shift-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; }
@@ -157,26 +160,16 @@
 
 @section('content-area')
     <div class="shift-roster">
-        <div class="content-area-header sticky-top">
-            <div class="page-header-left d-flex align-items-center gap-2">
-                <div class="page-header-title"><h5 class="m-b-10">Shift Roster</h5></div>
-                <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                    <li class="breadcrumb-item">Shift</li>
-                    <li class="breadcrumb-item">Roster</li>
-                </ul>
-            </div>
-            @if ($canManageShifts)
-                <div class="page-header-right ms-auto">
-                    <div class="hstack gap-2">
-                        <a href="{{ route('shift.index') }}" class="btn-reset"><i class="feather-clock"></i>Manage Shifts</a>
-                        <a href="#" class="btn-grad" data-bs-toggle="modal" data-bs-target="#assignShiftModal">
-                            <i class="feather-user-check"></i>Assign Shift
-                        </a>
-                    </div>
+        <x-ui.page-header class="content-area-header sticky-top" title="Shift Roster" current="Roster" :crumbs="[['label' => 'Shift']]">
+            <x-slot:actions>
+                <div class="hstack gap-2">
+                    <a href="{{ route('shift.index') }}" class="btn-reset"><i class="feather-clock"></i>Manage Shifts</a>
+                    <a href="#" class="btn-grad" data-bs-toggle="modal" data-bs-target="#assignShiftModal">
+                        <i class="feather-user-check"></i>Assign Shift
+                    </a>
                 </div>
-            @endif
-        </div>
+            </x-slot:actions>
+        </x-ui.page-header>
 
         <div class="content-area-body">
             @if (session('error'))<div class="alert alert-danger py-2">{{ session('error') }}</div>@endif
@@ -269,7 +262,7 @@
                                                 <td>
                                                     <div class="employee-info">
                                                         <div class="employee-avatar"
-                                                            style="background:linear-gradient(135deg, #1e3a8a, #2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
+                                                            style="background:linear-gradient(135deg, #0D6EFD, #0D6EFD);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;">
                                                             {{ $initials }}</div>
                                                         <div class="employee-details">
                                                             <div class="employee-name">{{ $user->name }}</div>
@@ -284,6 +277,10 @@
                                                             @if ($cell['type'] === 'shift')
                                                                 <span class="mday" style="background: {{ $cell['color'] }}"
                                                                       title="{{ $cell['name'] }} {{ \Carbon\Carbon::parse($cell['start'])->format('h:i A') }}–{{ \Carbon\Carbon::parse($cell['end'])->format('h:i A') }}"></span>
+                                                                @foreach ($cell['extra'] ?? [] as $x)
+                                                                    <span class="mday mday-extra" style="background: {{ $x['color'] }}"
+                                                                          title="+ {{ $x['name'] }} {{ \Carbon\Carbon::parse($x['start'])->format('h:i A') }}–{{ \Carbon\Carbon::parse($x['end'])->format('h:i A') }}"></span>
+                                                                @endforeach
                                                             @elseif ($cell['type'] === 'weekoff')
                                                                 <span class="mday off" title="Week Off"></span>
                                                             @else
@@ -296,6 +293,13 @@
                                                                     {{ $cell['name'] }}
                                                                     <span class="t">{{ \Carbon\Carbon::parse($cell['start'])->format('h:i A') }}&ndash;{{ \Carbon\Carbon::parse($cell['end'])->format('h:i A') }}</span>
                                                                 </span>
+                                                                @foreach ($cell['extra'] ?? [] as $x)
+                                                                    @php $xMuted = $shiftFilter && $shiftFilter != $x['shift_id']; @endphp
+                                                                    <span class="shift-chip shift-chip-extra {{ $xMuted ? 'chip-muted' : '' }}" title="Additional shift" style="border-left-color: {{ $x['color'] }}; background: {{ $x['color'] }}22;">
+                                                                        + {{ $x['name'] }}
+                                                                        <span class="t">{{ \Carbon\Carbon::parse($x['start'])->format('h:i A') }}&ndash;{{ \Carbon\Carbon::parse($x['end'])->format('h:i A') }}</span>
+                                                                    </span>
+                                                                @endforeach
                                                             @elseif ($cell['type'] === 'weekoff')
                                                                 <span class="chip chip-weekoff">Week Off</span>
                                                             @else
@@ -438,6 +442,10 @@
                             </div>
                             <div class="hint" id="typeHint">Assign for specific dates, as needed — today's normal behaviour.</div>
                             <div class="alert alert-warning py-1 px-2 d-none mt-1" id="permanentConflictNotice" style="font-size:12px"></div>
+                            <div class="form-check form-switch mt-2">
+                                <input type="checkbox" class="form-check-input" name="is_additional" value="1" id="is_additional">
+                                <label class="form-check-label" for="is_additional" style="font-size:12px">Add as additional shift (2nd shift on the same days — keeps the current shift)</label>
+                            </div>
                         </div>
 
                         <div class="assign-section">
@@ -496,7 +504,7 @@
                             </div>
                         </div>
 
-                        <div class="assign-section">
+                        <div class="assign-section" id="weekOffSection">
                             <h6>5. Weekly offs <span class="hint">(optional)</span></h6>
                             <div class="seg mb-2">
                                 <label><input type="radio" name="week_off_type" value="" checked><span>None</span></label>
@@ -657,7 +665,11 @@
 
             function syncType() {
                 const isPermanent = $('input[name="type"]:checked').val() === 'permanent';
-                $('#endDateCol,#singleDayRow,#optionsSection').toggle(!isPermanent);
+                const isAdditional = $('#is_additional').is(':checked');
+                $('#endDateCol,#singleDayRow').toggle(!isPermanent);
+                // An additional shift never replaces anything and leaves week-offs alone.
+                $('#optionsSection').toggle(!isPermanent && !isAdditional);
+                $('#weekOffSection').toggle(!isAdditional);
                 $('#datesHint').text(isPermanent ? '' : '(max 90 days)');
                 $('#typeHint').text(isPermanent
                     ? 'The employee keeps this shift every day until it is changed or ended — no need to reassign it later.'
@@ -668,11 +680,12 @@
                 updatePreview();
             }
             $('input[name="type"]').on('change', syncType);
+            $('#is_additional').on('change', syncType);
 
             let conflictCheckTimer = null;
             function checkPermanentConflicts() {
                 const $notice = $('#permanentConflictNotice').addClass('d-none').empty();
-                if ($('input[name="type"]:checked').val() !== 'permanent') return;
+                if ($('input[name="type"]:checked').val() !== 'permanent' || $('#is_additional').is(':checked')) return;
 
                 const userIds = $('input[name="assign_type"]:checked').val() === 'user' ? ($('#user_ids').val() || []) : [];
                 if (!userIds.length) return;
@@ -721,6 +734,8 @@
                 if (wt === 'day_based') { const d = $('input[name="week_off_days[]"]:checked').map((i, el) => el.value).get(); if (d.length) offTxt = ', skipping ' + d.join(', '); }
                 else if (wt === 'date_based') { const n = $('input[name="week_off_dates[]"]').filter((i, el) => el.value).length; if (n) offTxt = ', skipping ' + n + ' date(s)'; }
 
+                const extra = $('#is_additional').is(':checked');
+                if (extra) offTxt = ' as an additional shift (current shift stays)';
                 if ($('input[name="type"]:checked').val() === 'permanent') {
                     $('#previewLine').text('Assign ' + shiftTxt + ' to ' + who + ' permanently, starting ' + start + ' — ongoing until changed or ended' + offTxt + '.');
                     return;
@@ -790,7 +805,7 @@
                         '<td>' + fmtDate(r.date) + '</td>' +
                         '<td>' + fmtTime(r.shift?.start_time) + ' – ' + fmtTime(r.shift?.end_time) + '</td>' +
                         '<td>' + statusBadge(r.status) + '</td>' +
-                        '<td>' + typeBadge(sa) + '</td>' +
+                        '<td>' + typeBadge(sa) + (r.is_additional ? ' <span class="badge-theme sm additional" title="2nd+ shift on this day">Additional</span>' : '') + '</td>' +
                         '<td>' + (r.created_by ? 'Admin' : 'System') + '</td>' +
                         '<td class="text-end">' +
                             '<div class="row-actions">' +

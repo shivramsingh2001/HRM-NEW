@@ -2,55 +2,10 @@
 
 @section('style')
     <style>
-        /* .stats-grid/.stats-card/.stats-icon/.stats-info are centralized
-           in client.layout.head (single blue-only theme — the per-type
-           gradient borders and total/pending/approved/rejected/month-icon
-           colors are dropped so every icon shares the same blue) — no
-           local copy. */
 
-        /* ==================== MODERN FILTER SECTION ====================
-           Same markup/classes as the Tasks "Assigned By Me" page
-           (resources/views/client/task/view-assigned-by-task.blade.php) so
-           every list page in the app shares one filter look. */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: var(--primary-mid, #1e3a8a);
-            font-size: 16px;
-        }
-
-        .filter-title span {
-            background: var(--primary-light, #e3edfe);
-            color: var(--primary-mid, #1e3a8a);
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 20px;
-            margin-left: 6px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -73,31 +28,9 @@
             font-size: 14px;
         }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            gap: 12px;
-        }
 
-        .filter-item {
-            flex: 1;
-            min-width: 150px;
-        }
 
-        .filter-item.date-range {
-            min-width: 140px;
-        }
 
-        .filter-item .form-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            margin-bottom: 4px;
-            display: block;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
 
         .filter-select {
             width: 100%;
@@ -115,8 +48,8 @@
 
         .filter-select:focus {
             background-color: white;
-            border-color: var(--primary-mid, #1e3a8a);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            border-color: var(--primary-mid, #0D6EFD);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
             outline: none;
         }
 
@@ -139,33 +72,12 @@
 
         .filter-date:focus {
             background-color: white;
-            border-color: var(--primary-mid, #1e3a8a);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+            border-color: var(--primary-mid, #0D6EFD);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
             outline: none;
         }
 
-        .reset-btn {
-            height: 36px;
-            padding: 0 16px;
-            background: white;
-            color: #64748b;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
-            color: #1e293b;
-        }
 
         /* Active Filter Tags */
         .active-filters {
@@ -203,7 +115,7 @@
         }
 
         .filter-tag i {
-            color: var(--primary-mid, #1e3a8a);
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
 
@@ -222,16 +134,16 @@
         }
 
         .filter-tag.clear-all {
-            background: var(--primary-light, #e3edfe);
-            border-color: var(--primary-mid, #1e3a8a);
-            color: var(--primary-mid, #1e3a8a);
+            background: var(--primary-light, #EFF6FF);
+            border-color: var(--primary-mid, #0D6EFD);
+            color: var(--primary-mid, #0D6EFD);
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
         .filter-tag.clear-all:hover {
-            background: var(--primary-mid, #1e3a8a);
+            background: var(--primary-mid, #0D6EFD);
             color: white;
         }
 
@@ -337,33 +249,9 @@
             color: var(--primary-mid);
         }
 
-        /* Table Styles — matches Tasks "Assigned By Me" page */
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 12px 12px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 12px;
-            padding: 10px 12px;
-            border-bottom: 1px solid #f1f5f9;
-        }
 
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
         /* Badges */
         .badge {
@@ -400,19 +288,6 @@
             justify-content: center;
         }
 
-        .action-btn {
-            width: 28px;
-            height: 28px;
-            padding: 0;
-            border-radius: 7px;
-            font-size: 12px;
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
 
         .btn-approve {
             background: var(--success-light);
@@ -495,34 +370,12 @@
 
         /* Responsive — matches Tasks "Assigned By Me" page */
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 10px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(33.333% - 10px);
-                min-width: 120px;
-            }
+
         }
 
         @media (max-width: 768px) {
-            .filter-wrapper {
-                padding: 12px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .filter-item {
-                width: 100%;
-            }
-
-            .table th,
-            .table td {
-                padding: 8px 10px;
-            }
 
             .action-btns {
                 flex-direction: column;
@@ -532,35 +385,24 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Overtime Management</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">All Overtime Requests</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex align-items-center gap-2">
-                    @if (in_array($userRole, ['admin', 'hr']))
-                        <a href="{{ route('overtime.settings') }}" class="btn btn-sm btn-light-brand">
-                            <i class="feather-settings me-2"></i>
-                            <span>Settings</span>
-                        </a>
-                    @endif
-                    @if (!in_array($userRole, ['admin']))
-                    <a href="{{ route('overtime.index') }}" class="btn btn-sm btn-primary">
-                        <i class="feather-plus me-2"></i>
-                        <span>My Requests</span>
+    <x-ui.page-header title="Overtime Management" current="All Overtime Requests">
+        <x-slot:actions>
+            <div class="d-flex align-items-center gap-2">
+                @if (in_array($userRole, ['admin', 'hr']))
+                    <a href="{{ route('overtime.settings') }}" class="btn btn-sm btn-light-brand">
+                        <i class="feather-settings me-2"></i>
+                        <span>Settings</span>
                     </a>
-                    @endif
-                </div>
+                @endif
+                @if (!in_array($userRole, ['admin']))
+                <a href="{{ route('overtime.index') }}" class="btn btn-sm btn-primary">
+                    <i class="feather-plus me-2"></i>
+                    <span>My Requests</span>
+                </a>
+                @endif
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Statistics Cards -->
@@ -772,14 +614,6 @@
 
         <!-- Requests Table -->
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">All Overtime Requests</h5>
-                @if ($pendingCount > 0 && in_array($userRole, ['admin', 'manager']))
-                    <span class="badge bg-warning">
-                        <i class="feather-bell me-1"></i>{{ $pendingCount }} Pending Approvals
-                    </span>
-                @endif
-            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table">
@@ -872,9 +706,7 @@
                 </div>
             </div>
             @if ($requests->hasPages())
-                <div class="card-footer">
-                    {{ $requests->links() }}
-                </div>
+                <x-ui.pagination-footer :paginator="$requests" label="requests" />
             @endif
         </div>
     </div>

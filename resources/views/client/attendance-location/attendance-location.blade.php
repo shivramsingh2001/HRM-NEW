@@ -21,7 +21,7 @@
     }
 
     .location-card .side-stick {
-        background-color: #1e3a8a;
+        background-color: #0D6EFD;
     }
 
     .loc-title {
@@ -49,8 +49,8 @@
     }
 
     .badge-active { background: #3b82f6; color: #fff; }
-    .badge-inactive { background: #1e3a8a; color: #fff; }
-    .badge-geofence-off { background: #93c5fd; color: #1e3a8a; }
+    .badge-inactive { background: #0D6EFD; color: #fff; }
+    .badge-geofence-off { background: #93c5fd; color: #0D6EFD; }
 
     .loc-info-row {
         display: flex;
@@ -74,7 +74,7 @@
         color: #1a2236;
     }
 
-    .loc-info-value i { color: #1e3a8a; }
+    .loc-info-value i { color: var(--icon-color, #0D6EFD); }
 
     .loc-description {
         color: #475569;
@@ -92,25 +92,8 @@
         border-top: 1px solid #eaeef5;
     }
 
-    .action-btn {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: #f4f6fb;
-        border: 1px solid #eaeef5;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6b7385;
-        font-size: 10px;
-        transition: all .2s;
-        cursor: pointer;
-        text-decoration: none;
-        flex-shrink: 0;
-    }
 
-    .action-btn:hover { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
-    .action-btn.danger:hover { background: #dc2626; border-color: #dc2626; }
+
 
     /* ==================== EMPTY STATE ==================== */
     .empty-state {
@@ -128,7 +111,7 @@
     #addMap, #editMap { height: 200px; width: 100%; border-radius: 8px; border: 1px solid #dfe5f0; margin-bottom: 10px; }
     .location-status { font-size: 10.5px; margin-top: 5px; }
     .location-status i { font-size: 12px; }
-    .location-status.text-success { color: #2563eb; }
+    .location-status.text-success { color: #0D6EFD; }
     .location-status.text-warning { color: #93c5fd; }
     .location-status.text-danger { color: #dc2626; }
     .coordinate-input-group { display: flex; gap: 8px; align-items: center; }
@@ -145,27 +128,16 @@
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Attendance Location Management</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.5rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Attendance Locations</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header class="content-area-header sticky-top" title="Attendance Location Management" current="Attendance Locations">
+        <x-slot:actions>
             <div class="hstack gap-2">
-                <div class="dropdown d-none d-sm-flex">
-                    <a href="javascript:void(0)" class="btn btn-light-brand btn-sm rounded-pill" data-bs-toggle="modal"
+                <a href="javascript:void(0)" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                         data-bs-target="#addLocationModal">
                         <i class="feather-plus me-2"></i>Add Attendance Location
                     </a>
-                </div>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="content-area-body pb-0 h-100">
         <div class="row note-has-grid">

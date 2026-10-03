@@ -4,108 +4,19 @@
 
 @section('style')
     <style>
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #edf2f7;
-            padding: 11px 14px;
-            margin-bottom: 17px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i {
-            color: #1e3a8a;
-            font-size: 12px;
-        }
 
-        .filter-title .badge-count {
-            background: #e3edfe;
-            color: #1e3a8a;
-            font-size: 9.5px;
-            padding: 2px 7px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 12px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-        }
 
-        .filter-item.search-filter {
-            flex: 1;
-            min-width: 200px;
-        }
 
-        /* Search Wrapper */
-        .search-wrapper {
-            position: relative;
-            width: 100%;
-        }
 
-        .search-wrapper i {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 12px;
-            pointer-events: none;
-            transition: color 0.3s;
-        }
 
-        .search-wrapper:focus-within i {
-            color: #1e3a8a;
-        }
 
-        .search-wrapper .form-control {
-            width: 100%;
-            height: 40px;
-            padding: 6px 10px 6px 27px;
-            font-size: 10.5px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            background: #f8fafc;
-            transition: all 0.3s;
-            color: #0f172a;
-        }
 
-        .search-wrapper .form-control:focus {
-            border-color: #1e3a8a;
-            outline: none;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
-        }
 
-        .search-wrapper .form-control::placeholder {
-            color: #94a3b8;
-            font-size: 10px;
-        }
 
         /* Select Dropdowns */
         .filter-select {
@@ -130,7 +41,7 @@
         }
 
         .filter-select:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             outline: none;
             background-color: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -155,7 +66,7 @@
         }
 
         .month-select:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             outline: none;
             background: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -170,7 +81,7 @@
         .btn-sm-custom {
             height: 40px;
             padding: 0 20px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
             border-radius: 10px;
@@ -186,7 +97,7 @@
         }
 
         .btn-sm-custom:hover {
-            background: #16295e;
+            background: #0B5ED7;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
             color: white;
@@ -261,42 +172,11 @@
             overflow: hidden;
         }
 
-        .table {
-            margin-bottom: 0;
-        }
 
-        .table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-size: 9.5px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            color: #475569;
-            border-bottom-width: 1px;
-            padding: 10px 11px;
-            white-space: nowrap;
-        }
 
-        .table td {
-            vertical-align: middle;
-            font-size: 10.5px;
-            padding: 8px 11px;
-            border-bottom: 1px solid #f1f5f9;
-        }
 
-        .table tbody tr:hover {
-            background-color: #f8fafc;
-        }
 
-        .table tfoot {
-            background-color: #f1f5f9;
-            font-weight: 600;
-        }
 
-        .table tfoot td {
-            padding: 10px 11px;
-            border-top: 2px solid #e2e8f0;
-        }
 
         /* Employee Info */
         .employee-info {
@@ -315,11 +195,11 @@
             width: 36px;
             height: 36px;
             border-radius: 10px;
-            background: #e3edfe;
+            background: #EFF6FF;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #1e3a8a;
+            color: #0D6EFD;
             font-weight: 600;
             font-size: 10.5px;
             text-transform: uppercase;
@@ -371,13 +251,13 @@
         }
 
         .badge-success {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .badge-warning {
             background: #bfd3f7;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .badge-danger {
@@ -387,12 +267,12 @@
 
         .badge-info {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .badge-purple {
-            background: #e3edfe;
-            color: #16295e;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .badge-secondary {
@@ -439,24 +319,9 @@
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .filter-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-                width: 100%;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
 
-            .filter-item.search-filter {
-                width: 100%;
-            }
 
             .month-select {
                 width: 100%;
@@ -469,9 +334,6 @@
                 justify-content: center;
             }
 
-            .table {
-                min-width: 1200px;
-            }
 
             .employee-name {
                 font-size: 10px;
@@ -484,23 +346,17 @@
 
         /* Print Styles */
         @media print {
-            .filter-wrapper {
-                display: none;
-            }
+
             .page-header-right {
                 display: none;
             }
-            .table th {
-                background-color: #f1f5f9 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
+
             .badge {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
             .employee-avatar {
-                background: #e3edfe !important;
+                background: #EFF6FF !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -509,30 +365,18 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Attendance Summary Report</h5>
+    <x-ui.page-header title="Attendance Summary Report" current="Monthly Summary" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light" onclick="window.location.reload()" title="Refresh">
+                    <i class="feather-refresh-cw"></i>
+                </button>
+                <button class="btn btn-light" onclick="printReport()" title="Print Report">
+                    <i class="feather-printer"></i>
+                </button>
             </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item active">Monthly Summary</li>
-            </ul>
-        </div>
-        {{-- <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-light" onclick="window.location.reload()" title="Refresh">
-                        <i class="feather-refresh-cw"></i>
-                    </button>
-                    <button class="btn btn-light" onclick="printReport()" title="Print Report">
-                        <i class="feather-printer"></i>
-                    </button>
-                </div>
-            </div>
-        </div> --}}
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Filter Section -->
@@ -619,7 +463,7 @@
 
                     @if(request('month') && request('month') != now()->format('Y-m'))
                         <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 3px 8px 3px 7px; font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
-                            <i class="feather-calendar" style="color: #1e3a8a; font-size: 10px;"></i>
+                            <i class="feather-calendar" style="color: var(--icon-color, #0D6EFD); font-size: 10px;"></i>
                             {{ \Carbon\Carbon::createFromFormat('Y-m', request('month'))->format('F Y') }}
                             <a href="{{ route('team.attendance-summary', array_merge(request()->except(['month', 'page']))) }}"
                                class="remove-tag" style="color: #94a3b8; margin-left: 2px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; padding: 2px; border-radius: 50%; line-height: 1; text-decoration: none;">
@@ -634,7 +478,7 @@
                         @endphp
                         @if($deptName)
                             <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 3px 8px 3px 7px; font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
-                                <i class="feather-grid" style="color: #1e3a8a; font-size: 10px;"></i>
+                                <i class="feather-grid" style="color: var(--icon-color, #0D6EFD); font-size: 10px;"></i>
                                 {{ $deptName }}
                                 <a href="{{ route('team.attendance-summary', array_merge(request()->except(['department', 'page']))) }}"
                                    class="remove-tag" style="color: #94a3b8; margin-left: 2px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; padding: 2px; border-radius: 50%; line-height: 1; text-decoration: none;">
@@ -646,7 +490,7 @@
 
                     @if(request('search'))
                         <span class="filter-tag" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 30px; padding: 3px 8px 3px 7px; font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; color: #334155;">
-                            <i class="feather-search" style="color: #1e3a8a; font-size: 10px;"></i>
+                            <i class="feather-search" style="color: var(--icon-color, #0D6EFD); font-size: 10px;"></i>
                             "{{ request('search') }}"
                             <a href="{{ route('team.attendance-summary', array_merge(request()->except(['search', 'page']))) }}"
                                class="remove-tag" style="color: #94a3b8; margin-left: 2px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; padding: 2px; border-radius: 50%; line-height: 1; text-decoration: none;">
@@ -655,7 +499,7 @@
                         </span>
                     @endif
 
-                    <a href="{{ route('team.attendance-summary') }}" class="filter-tag clear-all" style="background: #e3edfe; border-color: #1e3a8a; color: #1e3a8a; font-weight: 600; text-decoration: none; padding: 3px 10px; border-radius: 30px; font-size: 10px; display: inline-flex; align-items: center; gap: 6px;">
+                    <a href="{{ route('team.attendance-summary') }}" class="filter-tag clear-all" style="background: #EFF6FF; border-color: #0D6EFD; color: #0D6EFD; font-weight: 600; text-decoration: none; padding: 3px 10px; border-radius: 30px; font-size: 10px; display: inline-flex; align-items: center; gap: 6px;">
                         <i class="feather-refresh-cw" style="color: currentColor; font-size: 10px;"></i>
                         Clear All
                     </a>

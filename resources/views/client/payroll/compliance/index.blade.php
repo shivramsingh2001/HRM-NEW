@@ -3,28 +3,28 @@
 @section('style')
 <style>
     /* ==================== ALL-BLUE THEME ==================== */
-    .form-section { background: #fff; border: 1px solid #e3edfe; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(20, 30, 60, .04); }
+    .form-section { background: #fff; border: 1px solid #EFF6FF; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(20, 30, 60, .04); }
     .form-section h6 { font-size: 12px; font-weight: 700; color: #1a2236; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
     .form-section h6 .section-icon {
-        width: 26px; height: 26px; border-radius: 8px; background: #e3edfe; color: #1e3a8a;
+        width: 26px; height: 26px; border-radius: 8px; background: #EFF6FF; color: var(--icon-color, #0D6EFD);
         display: inline-flex; align-items: center; justify-content: center; font-size: 13px;
     }
     .form-section label { font-size: 11.5px; font-weight: 600; margin-bottom: 4px; color: #475569; }
-    .form-control:focus { border-color: #1e3a8a; box-shadow: 0 0 0 .18rem rgba(30, 58, 138, .12); }
+    .form-control:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .18rem rgba(13, 110, 253, .12); }
 
     .current-rate-pill {
-        font-size: 10px; font-weight: 600; color: #1e3a8a; background: #e3edfe;
+        font-size: 10px; font-weight: 600; color: #0D6EFD; background: #EFF6FF;
         padding: 4px 10px; border-radius: 999px; display: inline-block; margin-bottom: 10px;
     }
     .current-rate-pill.not-configured { background: #f4f6fb; color: #6b7385; }
 
-    .btn-primary { background: #1e3a8a; border-color: #1e3a8a; }
-    .btn-primary:hover { background: #16295e; border-color: #16295e; }
+    .btn-primary { background: #0D6EFD; border-color: #0D6EFD; }
+    .btn-primary:hover { background: #0B5ED7; border-color: #0B5ED7; }
 
     .alert-info-blue {
-        background: #eef3fd; border: 1px solid #bfd3f7; color: #1e3a8a; border-radius: 10px; font-size: 11.5px; padding: 10px 14px;
+        background: #eef3fd; border: 1px solid #bfd3f7; color: #0D6EFD; border-radius: 10px; font-size: 11.5px; padding: 10px 14px;
     }
-    .alert-info-blue a { color: #1e3a8a; font-weight: 700; text-decoration: underline; }
+    .alert-info-blue a { color: #0D6EFD; font-weight: 700; text-decoration: underline; }
 
     /* summary stat tiles */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; margin-bottom: 1rem; }
@@ -33,23 +33,23 @@
         display: flex; align-items: center; transition: all 0.2s; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
     }
     .stats-card:hover { box-shadow: 0 4px 12px -4px rgba(30, 50, 110, .12); border-color: #dfe5f0; transform: translateY(-1px); }
-    .stats-icon { width: 34px; height: 34px; background: #e3edfe; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex: none; }
-    .stats-icon i { font-size: 15px; color: #1e3a8a; }
+    .stats-icon { width: 34px; height: 34px; background: #EFF6FF; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex: none; }
+    .stats-icon i { font-size: 15px; color: var(--icon-color, #0D6EFD); }
     .stats-info h3 { font-size: 17px; font-weight: 700; margin: 0 0 2px 0; color: #1a2236; line-height: 1.2; }
     .stats-info p { font-size: 11px; color: #6b7385; margin: 0; }
 
     /* PT slabs table */
     #ptSlabsTable { font-size: 11.5px; }
-    #ptSlabsTable th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: #6b7385; background: #f7faff; padding: 8px 10px; border-bottom: 1px solid #e3edfe; }
+    #ptSlabsTable th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: #6b7385; background: #f7faff; padding: 8px 10px; border-bottom: 1px solid #EFF6FF; }
     #ptSlabsTable td { padding: 8px 10px; vertical-align: middle; }
     #ptSlabsTable tr:hover td { background: #fafcff; }
-    #ptSlabsTable .state-badge { font-size: 10px; font-weight: 700; color: #1e3a8a; background: #e3edfe; padding: 3px 9px; border-radius: 999px; }
+    #ptSlabsTable .state-badge { font-size: 10px; font-weight: 700; color: #0D6EFD; background: #EFF6FF; padding: 3px 9px; border-radius: 999px; }
 
     .btn-icon-delete {
         width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
-        border-radius: 8px; border: 1px solid #bfd3f7; background: #eef3fd; color: #1e3a8a; transition: all .15s;
+        border-radius: 8px; border: 1px solid #bfd3f7; background: #eef3fd; color: var(--icon-color, #0D6EFD); transition: all .15s;
     }
-    .btn-icon-delete:hover { background: #dbe6fb; border-color: #1e3a8a; }
+    .btn-icon-delete:hover { background: #dbe6fb; border-color: #0D6EFD; }
     .btn-icon-delete i { font-size: 13px; }
 
     .add-slab-row { background: #fbfcfe; border: 1px dashed #bfd3f7; border-radius: 10px; padding: 14px; }
@@ -57,17 +57,7 @@
 @endsection
 
 @section('content-area')
-    <div class="content-area-header sticky-top">
-        <div class="page-header-left d-flex align-items-center gap-2">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Statutory Compliance Settings</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-bottom:0.57rem !important;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item">Compliance Settings</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header class="content-area-header sticky-top" title="Statutory Compliance Settings" current="Compliance Settings" />
 
     <div class="content-area-body">
         @if (session('success'))

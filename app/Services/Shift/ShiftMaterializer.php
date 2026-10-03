@@ -2,6 +2,7 @@
 
 namespace App\Services\Shift;
 
+use App\Models\Shift;
 use App\Models\ShiftAssignment;
 use App\Models\UserShift;
 use App\Models\UserWeekoffs;
@@ -22,9 +23,19 @@ use Illuminate\Support\Facades\Log;
  * always overwrites whatever is cached for its dates; Permanent
  * materialization skips any date an active Flexible assignment already owns.
  * TenantShiftResolver itself never changes.
+ *
+ * Additional shifts (multi-shift Phase 2): an assignment with is_additional = 1
+ * writes extra rows (user_shifts.is_additional = 1) next to the day's primary
+ * row and never replaces it — see materializeAdditional(). Every primary
+ * read/write below filters is_additional = 0, so additional rows are invisible
+ * to the Permanent/Flexible priority logic.
  */
 class ShiftMaterializer
 {
+    public function __construct(private ShiftOverlapGuard $overlapGuard)
+    {
+    }
+
     /** How far into the future an open-ended Permanent assignment is cached. */
     public const PERMANENT_HORIZON_DAYS = 120;
 
@@ -42,6 +53,10 @@ class ShiftMaterializer
         bool $overrideExisting = false,
         bool $applyToFutureOnly = false
     ): array {
+        if ($assignment->is_additional) {
+            return $this->materializeAdditional($assignment, $startDate, $endDate);
+        }
+
         $userId = $assignment->user_id;
         $tenantId = $assignment->tenant_id;
         $shiftId = $assignment->shift_id;
@@ -56,6 +71,7 @@ class ShiftMaterializer
             ->where('tenant_id', $tenantId)
             ->where('user_id', $userId)
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where('is_additional', 0)
             ->get()
             ->keyBy('date');
 
@@ -180,6 +196,10 @@ class ShiftMaterializer
             return ['assigned' => 0, 'skipped_flexible_owned' => 0];
         }
 
+        if ($assignment->is_additional) {
+            return $this->materializeAdditional($assignment, $from, $to) + ['skipped_flexible_owned' => 0];
+        }
+
         $userId = $assignment->user_id;
         $tenantId = $assignment->tenant_id;
         $shiftId = $assignment->shift_id;
@@ -194,6 +214,7 @@ class ShiftMaterializer
             ->where('tenant_id', $tenantId)
             ->where('user_id', $userId)
             ->where('type', 'flexible')
+            ->where('is_additional', 0)
             ->where('status', 'active')
             ->where('start_date', '<=', $to->toDateString())
             ->where(function ($q) use ($from) {
@@ -205,6 +226,7 @@ class ShiftMaterializer
             ->where('tenant_id', $tenantId)
             ->where('user_id', $userId)
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->where('is_additional', 0)
             ->get()
             ->keyBy('date');
 
@@ -253,6 +275,7 @@ class ShiftMaterializer
                         ->where('tenant_id', $tenantId)
                         ->where('user_id', $userId)
                         ->where('date', $dateString)
+                        ->where('is_additional', 0)
                         ->update([
                             'shift_id' => $shiftId,
                             'shift_assignment_id' => $assignment->id,
@@ -289,11 +312,13 @@ class ShiftMaterializer
             ->where('user_id', $userId)
             ->whereBetween('date', [$fromDate->toDateString(), $horizonEnd->toDateString()])
             ->whereNotNull('shift_assignment_id')
+            ->where('is_additional', 0)
             ->delete();
 
         $stillActive = ShiftAssignment::withoutGlobalScopes()
             ->where('tenant_id', $tenantId)
             ->where('user_id', $userId)
+            ->where('is_additional', 0)
             ->where('status', 'active')
             ->where('start_date', '<=', $horizonEnd->toDateString())
             ->where(function ($q) use ($fromDate) {
@@ -350,6 +375,72 @@ class ShiftMaterializer
         }
 
         return $totals;
+    }
+
+    /**
+     * Write an additional (2nd+) shift for every date in [from, to]: an extra
+     * user_shifts row with is_additional = 1, never touching the primary row.
+     * Skips week-offs, dates this assignment already covers, and dates where
+     * the shift would overlap one the employee already works
+     * (ShiftOverlapGuard) — callers pre-check overlaps so this is a safety net.
+     */
+    public function materializeAdditional(ShiftAssignment $assignment, Carbon $from, Carbon $to): array
+    {
+        $result = ['assigned' => 0, 'skipped' => 0, 'already_assigned' => 0, 'duplicate_skipped' => 0, 'week_off_skipped' => 0, 'overlap_skipped' => 0];
+
+        $shift = Shift::withoutGlobalScopes()->find($assignment->shift_id);
+        if (!$shift || $from->gt($to)) {
+            return $result;
+        }
+
+        $userWeekoffs = UserWeekoffs::withoutGlobalScopes()
+            ->where('tenant_id', $assignment->tenant_id)
+            ->where('user_id', $assignment->user_id)
+            ->where('status', 1)
+            ->get();
+
+        $alreadyCovered = UserShift::withoutGlobalScopes()
+            ->where('tenant_id', $assignment->tenant_id)
+            ->where('user_id', $assignment->user_id)
+            ->where('shift_assignment_id', $assignment->id)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->pluck('date')
+            ->map(fn ($d) => Carbon::parse($d)->toDateString())
+            ->flip();
+
+        $dates = [];
+        for ($d = $from->copy(); $d->lte($to); $d->addDay()) {
+            if (WeekOffPredicate::isWeekOff($userWeekoffs, $d)) {
+                $result['week_off_skipped']++;
+            } elseif ($alreadyCovered->has($d->toDateString())) {
+                $result['already_assigned']++;
+            } else {
+                $dates[] = $d->toDateString();
+            }
+        }
+
+        $conflicts = $this->overlapGuard->conflicts($assignment->tenant_id, $assignment->user_id, $shift, $dates);
+
+        foreach ($dates as $date) {
+            if (isset($conflicts[$date])) {
+                $result['overlap_skipped']++;
+                continue;
+            }
+
+            UserShift::create([
+                'tenant_id' => $assignment->tenant_id,
+                'user_id' => $assignment->user_id,
+                'shift_id' => $assignment->shift_id,
+                'shift_assignment_id' => $assignment->id,
+                'is_additional' => 1,
+                'date' => $date,
+                'status' => 'upcoming',
+                'created_by' => $assignment->created_by,
+            ]);
+            $result['assigned']++;
+        }
+
+        return $result;
     }
 
     private function dateOwnedByFlexible($flexibleAssignments, string $dateString): bool

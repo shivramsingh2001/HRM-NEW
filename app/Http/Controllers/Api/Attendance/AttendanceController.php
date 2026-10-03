@@ -13,6 +13,7 @@ use App\Models\UserShift;
 use App\Models\UserWeekoffs;
 use App\Services\FieldTracking\TrackingPointIngestService;
 use App\Services\FieldTracking\TrackingSessionService;
+use App\Support\ShiftWindow;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -49,22 +50,15 @@ class AttendanceController extends Controller
         $expectedSeconds = 0;
         if ($attendance && isset($attendance->scheduled_shift_start) && $attendance->scheduled_shift_start &&
             isset($attendance->scheduled_shift_end) && $attendance->scheduled_shift_end) {
-            $shiftStart = Carbon::parse($attendance->scheduled_shift_start);
-            $shiftEnd = Carbon::parse($attendance->scheduled_shift_end);
-
-            // Handle overnight shifts (e.g., 22:00 to 06:00)
-            if ($shiftEnd->lessThan($shiftStart)) {
-                $shiftEnd->addDay();
-            }
-
-            $expectedSeconds = (int) $shiftStart->diffInSeconds($shiftEnd);
+            // Overnight shifts (e.g. 22:00 to 06:00) end on the next day.
+            $expectedSeconds = ShiftWindow::spanMinutes($attendance->scheduled_shift_start, $attendance->scheduled_shift_end) * 60;
         }
 
         $tenantId = (int) ($attendance->tenant_id ?? Auth::user()->tenant_id);
         $date = $attendance && !empty($attendance->date)
             ? Carbon::parse($attendance->date)->format('Y-m-d')
             : now()->format('Y-m-d');
-        $policy = app(\App\Services\Attendance\PolicyResolver::class)->forTenantDate($tenantId, $date);
+        $policy = app(\App\Services\Attendance\PolicyResolver::class)->forUserDate($tenantId, (int) ($attendance->user_id ?? Auth::id()), $date);
 
         return match ($policy->classify((float) ($totalHours ?? 0), $expectedSeconds)) {
             'present' => 'Present',
@@ -382,6 +376,9 @@ class AttendanceController extends Controller
             $data['location_tracking'] = app(\App\Services\FieldTracking\FieldTrackingService::class)
                 ->resolveForUser((int) $userId);
 
+            // Additive (multi-shift): every shift today, with its own status.
+            $data['shifts'] = $this->shiftsForDay((int) $userId, (int) ($user->tenant_id ?? 0), $today);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Data fetch successfully!!!',
@@ -412,7 +409,7 @@ class AttendanceController extends Controller
                 ->where('date', $date)
                 ->where('status', 'active')
                 ->orderBy('punched_at')
-                ->get(['id', 'direction', 'punched_at', 'source', 'method', 'lat', 'long', 'address', 'session_seq']);
+                ->get(['id', 'direction', 'punched_at', 'source', 'method', 'lat', 'long', 'address', 'session_seq', 'user_shift_id']);
 
             $shift = $tenantId
                 ? app(\App\Services\Attendance\TenantShiftResolver::class)->forUserDate($userId, $tenantId, $date)
@@ -437,7 +434,9 @@ class AttendanceController extends Controller
                         'clock_in' => $s['in']->format('Y-m-d H:i:s'),
                         'clock_out' => $s['out']->format('Y-m-d H:i:s'),
                         'worked_hours' => round($s['worked_seconds'] / 3600, 2),
+                        'shift' => $this->punchShiftInfo($s['in_punch']),
                     ])->values(),
+                    'shifts' => $this->shiftsForDay($userId, $tenantId, $date),
                     'open_session' => $paired['open_session'],
                     'session_count' => $paired['session_count'],
                 ],
@@ -702,20 +701,8 @@ class AttendanceController extends Controller
             // END OF CHANGED: ENHANCED BRANCH HANDLING
             // =============================================
     
-            // Update user_shift status
-            $userShiftRecord = UserShift::where('user_id', $userId)
-                ->where('date', $attendanceDate)
-                ->first();
-
-            if ($userShiftRecord) {
-                $userShiftRecord->status = 'ongoing';
-                $userShiftRecord->save();
-            } elseif ($userShift) {
-                DB::table('user_shifts')
-                    ->where('id', $userShift['user_shift_id'])
-                    ->update(['status' => 'ongoing']);
-            }
-
+            // user_shifts status ('ongoing') is set by AttendancePunchService on
+            // the shift the punch was matched to (multi-shift aware).
             try {
                 $punchInput = new \App\Services\Attendance\PunchInput(
                     userId: $userId,
@@ -765,6 +752,8 @@ class AttendanceController extends Controller
                 ], 500);
             }
 
+            // The punch's own date — a 2nd shift / night shift may belong to another day.
+            $attendanceDate = Carbon::parse($capturedPunch->date)->format('Y-m-d');
             $attendance = Attendance::where('user_id', $userId)->where('date', $attendanceDate)->first();
 
             $this->createSuccessLog(
@@ -804,6 +793,8 @@ class AttendanceController extends Controller
                 'message' => 'Clock-In successful.',
                 'tracking_enabled' => $lt['enabled'],
                 'next_ping_seconds' => $lt['enabled'] ? (int) $lt['ping_seconds'] : 0,
+                // Additive: the shift this clock-in counted for.
+                'shift' => $this->punchShiftInfo($capturedPunch),
             ], 200);
         } catch (Exception $e) {
             return response()->json([
@@ -1143,16 +1134,8 @@ class AttendanceController extends Controller
             // END OF CHANGED: ENHANCED BRANCH HANDLING
             // =============================================
     
-            // Update user_shift status
-            $userShift = UserShift::where('user_id', $userId)
-                ->where('date', $attendance->date)
-                ->first();
-
-            if ($userShift) {
-                $userShift->status = 'complete';
-                $userShift->save();
-            }
-
+            // user_shifts status ('complete') is set by AttendancePunchService on
+            // the shift of the session being closed.
             try {
                 $punchInput = new \App\Services\Attendance\PunchInput(
                     userId: $userId,
@@ -1245,7 +1228,9 @@ class AttendanceController extends Controller
                     'total_hours' => $attendance->total_hours,
                     'worked_hours' => (float) $attendance->worked_hours,
                     'attendance_status' => $attendance->attendance_status,
-                    'shift_status' => 'complete'
+                    'shift_status' => 'complete',
+                    // Additive: the shift this clock-out closed.
+                    'shift' => $this->punchShiftInfo($capturedPunch),
                 ],
                 // Additive: the app stops the tracker on clock-out regardless.
                 'tracking_enabled' => false,
@@ -1258,6 +1243,70 @@ class AttendanceController extends Controller
                 'message' => 'An error occurred. Please try again later.'
             ], 500);
         }
+    }
+
+    /**
+     * {user_shift_id, shift_id, name, start_time, end_time, is_additional} of
+     * the shift a punch was matched to, or null (fixed company shift / none).
+     */
+    private function punchShiftInfo($punch): ?array
+    {
+        $userShiftId = $punch->user_shift_id ?? null;
+        if (!$userShiftId) {
+            return null;
+        }
+
+        $row = DB::table('user_shifts')
+            ->join('shifts', 'shifts.id', '=', 'user_shifts.shift_id')
+            ->where('user_shifts.id', $userShiftId)
+            ->first(['user_shifts.id', 'user_shifts.is_additional', 'shifts.id as shift_id', 'shifts.name', 'shifts.start_time', 'shifts.end_time']);
+
+        return $row ? [
+            'user_shift_id' => (int) $row->id,
+            'shift_id' => (int) $row->shift_id,
+            'name' => $row->name,
+            'start_time' => date('h:i A', strtotime($row->start_time)),
+            'end_time' => date('h:i A', strtotime($row->end_time)),
+            'is_additional' => (bool) $row->is_additional,
+        ] : null;
+    }
+
+    /**
+     * Every shift the user works on $date (primary first) with a per-shift
+     * status: upcoming | ongoing | completed. Empty when no shift applies.
+     */
+    private function shiftsForDay(int $userId, int $tenantId, string $date): array
+    {
+        if (!$tenantId) {
+            return [];
+        }
+
+        $segments = \App\Models\AttendanceShiftSegment::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)->where('user_id', $userId)->whereDate('date', $date)
+            ->get()
+            ->keyBy(fn ($seg) => (string) $seg->user_shift_id);
+
+        return app(\App\Services\Attendance\TenantShiftResolver::class)
+            ->instancesForUserDate($userId, $tenantId, $date)
+            ->map(function ($i) use ($segments) {
+                $seg = $segments->get((string) $i['user_shift_id']);
+
+                return [
+                    'user_shift_id' => $i['user_shift_id'],
+                    'shift_id' => $i['shift']->id,
+                    'name' => $i['shift']->name,
+                    'start_time' => $i['start']->format('h:i A'),
+                    'end_time' => $i['end']->format('h:i A'),
+                    'is_overnight' => \App\Support\ShiftWindow::isOvernight($i['shift']),
+                    'is_additional' => $i['is_additional'],
+                    'status' => !$seg ? 'upcoming' : ($seg->is_open ? 'ongoing' : 'completed'),
+                    'clock_in' => $seg?->first_in?->format('Y-m-d H:i:s'),
+                    'clock_out' => $seg?->last_out?->format('Y-m-d H:i:s'),
+                    'worked_minutes' => (int) ($seg->worked_minutes ?? 0),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function determineDayStatus($attendance, $holiday, $leave, $weekoff)
@@ -1300,28 +1349,22 @@ class AttendanceController extends Controller
             return null;
         }
 
-        // Honours the tenant's custom-shifts toggle (fixed company shift when
-        // off, the per-date assignment chain when on). Response keys unchanged.
-        $shift = app(\App\Services\Attendance\TenantShiftResolver::class)
-            ->forUserDate((int) $userId, $tenantId, $date);
+        // The day's primary shift (fixed company shift when custom shifts are
+        // off) — one implementation in TenantShiftResolver. Response keys unchanged.
+        $details = app(\App\Services\Attendance\TenantShiftResolver::class)
+            ->detailsForUserDate((int) $userId, $tenantId, $date);
 
-        if (!$shift) {
+        if (!$details) {
             return null;
         }
 
-        $userShiftId = UserShift::withoutGlobalScopes()
-            ->where('tenant_id', $tenantId)
-            ->where('user_id', $userId)
-            ->where('date', $date)
-            ->value('id');
-
         return [
-            'id' => $shift->id,
-            'user_shift_id' => $userShiftId,
-            'name' => $shift->name,
-            'start_time' => $shift->start_time,
-            'end_time' => $shift->end_time,
-            'grace_minutes' => $shift->grace_minutes ?? 0
+            'id' => $details['shift_id'],
+            'user_shift_id' => $details['user_shift_id'],
+            'name' => $details['name'],
+            'start_time' => $details['start_time'],
+            'end_time' => $details['end_time'],
+            'grace_minutes' => $details['grace_minutes'],
         ];
     }
 
@@ -1554,7 +1597,9 @@ class AttendanceController extends Controller
                 'date' => 'required|date_format:Y-m-d|before_or_equal:today',
                 'request_type' => 'required|in:in_time,out_time,both,full_day,wfh_not_marked,technical_issue',
                 'in_time' => 'required_if:request_type,in_time,both|nullable|date_format:H:i',
-                'out_time' => 'required_if:request_type,out_time,both|nullable|date_format:H:i|after:in_time',
+                // Out before in is allowed for an overnight shift — checked below.
+                'out_time' => 'required_if:request_type,out_time,both|nullable|date_format:H:i',
+                'user_shift_id' => 'nullable|integer',
                 'file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
                 'reason' => 'required|string|max:500',
             ]);
@@ -1566,9 +1611,28 @@ class AttendanceController extends Controller
                 ], 200);
             }
 
+            // Company / employee request limits (Company Policies → Request limits, Employee 360 → Policies).
+            if ($limit = app(\App\Services\RequestLimitService::class)->regularizationRefusal(
+                (int) $authUser->tenant_id, (int) $authUser->id, $request->date
+            )) {
+                return response()->json(['success' => false, 'message' => $limit], 200);
+            }
+
+            $shiftCheck = app(\App\Services\Attendance\RegularizationShiftCheck::class)->check(
+                (int) $authUser->id, (int) $authUser->tenant_id, $request->date,
+                $request->input('user_shift_id'), $request->in_time, $request->out_time,
+            );
+            if ($shiftCheck['error']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $shiftCheck['error'],
+                ], 200);
+            }
+
             if (AttendanceRegularization::where('user_id', $authUser->id)
                 ->where('date', $request->date)
                 ->where('request_type', $request->request_type)
+                ->where('user_shift_id', $shiftCheck['user_shift_id'])
                 ->exists()
             ) {
                 return response()->json([
@@ -1585,6 +1649,7 @@ class AttendanceController extends Controller
                 'tenant_id' => $authUser->tenant_id,
                 'user_id' => $authUser->id,
                 'date' => $request->date,
+                'user_shift_id' => $shiftCheck['user_shift_id'],
                 'request_type' => $request->request_type,
                 'in_time' => $request->in_time,
                 'out_time' => $request->out_time,

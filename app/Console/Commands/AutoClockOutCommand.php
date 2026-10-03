@@ -5,11 +5,17 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
+use App\Models\AttendancePunch;
 use App\Models\Shift;
 use App\Models\UserShift;
 use App\Services\Attendance\AttendanceCalculator;
+use App\Services\Attendance\AttendanceEntryService;
+use App\Services\Attendance\AttendancePunchService;
+use App\Services\Attendance\AuditContext;
+use App\Services\Attendance\PunchInput;
 use App\Services\Attendance\LatePolicyService;
 use App\Services\AttendanceSummaryService;
+use App\Support\ShiftWindow;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -76,12 +82,23 @@ class AutoClockOutCommand extends Command
 
         foreach ($due as $attendance) {
             try {
-                $clockIn = Carbon::parse($attendance->clock_in);
+                // The open session's own clock-in punch (punch pipeline days):
+                // with several sessions/shifts in a day, the cap and the shift
+                // end are measured from the session still open, not the day's
+                // first clock-in.
+                $openPunch = $this->openPunch($attendance);
+                $clockIn = Carbon::parse($openPunch->punched_at ?? $attendance->clock_in);
+
+                if ($openPunch && $now->getTimestamp() - $clockIn->getTimestamp() < $maxHours * 3600) {
+                    $bar->advance();
+                    continue; // an earlier session started long ago, but this one is recent
+                }
 
                 // Close at the earliest sane moment: clock_in + maxHours, or the
                 // scheduled shift end (with overnight handling) when that is earlier.
                 $cap = $clockIn->copy()->addHours($maxHours);
-                $shiftEnd = $this->scheduledShiftEnd($attendance, $clockIn);
+                $shiftEnd = ($openPunch ? $this->punchShiftEnd($openPunch) : null)
+                    ?? $this->scheduledShiftEnd($attendance, $clockIn);
                 $clockOut = ($shiftEnd && $shiftEnd->greaterThan($clockIn) && $shiftEnd->lessThan($cap))
                     ? $shiftEnd
                     : $cap;
@@ -92,6 +109,19 @@ class AutoClockOutCommand extends Command
                 $status = $this->classify($attendance, $workedHours);
 
                 if ($isDryRun) {
+                    $ok++;
+                    $bar->advance();
+                    continue;
+                }
+
+                // Punch-pipeline day: record a real `out` punch so the punch
+                // table, the day's sessions/shift segments and the attendance
+                // row all agree (writing the row directly left the `in` punch
+                // open, blocking the next clock-in and being undone by the next
+                // rollup).
+                if ($openPunch) {
+                    $this->closeViaPunch($attendance, $openPunch, $clockOut, $maxHours, $now);
+                    $touched[$attendance->tenant_id][$attendance->user_id][Carbon::parse($attendance->date)->format('Y-m')] = true;
                     $ok++;
                     $bar->advance();
                     continue;
@@ -150,6 +180,7 @@ class AutoClockOutCommand extends Command
                         ->where('tenant_id', $attendance->tenant_id)
                         ->where('user_id', $attendance->user_id)
                         ->where('date', $attendance->date)
+                        ->where('is_additional', 0)
                         ->update(['status' => 'complete']);
                 });
 
@@ -193,6 +224,66 @@ class AutoClockOutCommand extends Command
         return $errors ? self::FAILURE : self::SUCCESS;
     }
 
+    /** The still-open `in` punch behind this attendance row, if the day uses punches. */
+    private function openPunch($attendance): ?AttendancePunch
+    {
+        $latest = AttendancePunch::withoutGlobalScopes()
+            ->where('tenant_id', $attendance->tenant_id)
+            ->where('user_id', $attendance->user_id)
+            ->where('date', Carbon::parse($attendance->date)->format('Y-m-d'))
+            ->where('status', 'active')
+            ->orderByDesc('punched_at')
+            ->orderByDesc('id')
+            ->first();
+
+        return ($latest && $latest->direction === 'in') ? $latest : null;
+    }
+
+    /** End of the shift the open punch was clocked in for (multi-shift aware). */
+    private function punchShiftEnd(AttendancePunch $punch): ?Carbon
+    {
+        if (!$punch->user_shift_id) {
+            return null;
+        }
+
+        $row = UserShift::withoutGlobalScopes()->with('shift')->find($punch->user_shift_id);
+        if (!$row || !$row->shift) {
+            return null;
+        }
+
+        return ShiftWindow::window(Carbon::parse($row->date)->format('Y-m-d'), $row->shift)[1];
+    }
+
+    private function closeViaPunch($attendance, AttendancePunch $openPunch, Carbon $clockOut, int $maxHours, Carbon $now): void
+    {
+        $reason = "Auto clock-out (cap {$maxHours}h) on " . $now->format('Y-m-d H:i');
+
+        app(AttendancePunchService::class)->capture(new PunchInput(
+            userId: (int) $attendance->user_id,
+            tenantId: (int) $attendance->tenant_id,
+            direction: 'out',
+            punchedAt: $clockOut,
+            source: 'system',
+            method: 'auto_clockout',
+            address: 'Auto clock-out',
+            audit: new AuditContext(source: 'auto_clockout', reason: "Exceeded {$maxHours}h without clock-out"),
+            metadata: ['auto_clockout' => true, 'cap_hours' => $maxHours],
+        ));
+
+        // Same day classification + remark the direct path writes.
+        $row = $attendance->fresh();
+        app(AttendanceEntryService::class)->record(
+            (int) $row->user_id,
+            (int) $row->tenant_id,
+            Carbon::parse($row->date)->format('Y-m-d'),
+            [
+                'attendance_status' => $this->classify($row, (float) $row->worked_hours),
+                'remarks' => trim(($row->remarks ? $row->remarks . ' | ' : '') . $reason),
+            ],
+            new AuditContext(source: 'auto_clockout', reason: "Exceeded {$maxHours}h without clock-out"),
+        );
+    }
+
     /**
      * Scheduled shift end as a datetime on the attendance date (or the next day
      * for an overnight shift). Null when no shift info is available.
@@ -201,11 +292,13 @@ class AutoClockOutCommand extends Command
     {
         $start = $attendance->scheduled_shift_start;
         $end = $attendance->scheduled_shift_end;
+        $overnight = null;
 
         if ((!$start || !$end) && $attendance->shift_id) {
             $shift = Shift::withoutGlobalScopes()->find($attendance->shift_id);
             $start = $shift->start_time ?? null;
             $end = $shift->end_time ?? null;
+            $overnight = $shift->is_overnight ?? null;
         }
 
         if (!$end) {
@@ -216,7 +309,7 @@ class AutoClockOutCommand extends Command
         $endAt = Carbon::parse($date . ' ' . $end);
 
         // Overnight shift -> end is on the following day.
-        if ($start && $this->calc->isOvernight(['start_time' => $start, 'end_time' => $end])) {
+        if ($start && $this->calc->isOvernight(['start_time' => $start, 'end_time' => $end, 'is_overnight' => $overnight])) {
             $endAt->addDay();
         }
 
@@ -237,7 +330,7 @@ class AutoClockOutCommand extends Command
         }
 
         $policy = app(\App\Services\Attendance\PolicyResolver::class)
-            ->forTenantDate((int) $attendance->tenant_id, (string) $attendance->date);
+            ->forUserDate((int) $attendance->tenant_id, (int) $attendance->user_id, (string) $attendance->date);
 
         if ($expected > 0) {
             $ratio = ($workedHours * 3600) / $expected;

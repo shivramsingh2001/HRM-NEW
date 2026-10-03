@@ -32,7 +32,7 @@
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, #1e3a8a, #2563eb);
+            background: linear-gradient(90deg, #0D6EFD, #0D6EFD);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -48,11 +48,11 @@
         }
 
         .stats-card.total-card::before {
-            background: linear-gradient(90deg, #1e3a8a, #2563eb);
+            background: linear-gradient(90deg, #0D6EFD, #0D6EFD);
         }
 
         .stats-card.present-card::before {
-            background: linear-gradient(90deg, #1e3a8a, #2563eb);
+            background: linear-gradient(90deg, #0D6EFD, #0D6EFD);
         }
 
         .stats-card.absent-card::before {
@@ -60,7 +60,7 @@
         }
 
         .stats-card.leave-card::before {
-            background: linear-gradient(90deg, #2563eb, #2563eb);
+            background: linear-gradient(90deg, #0D6EFD, #0D6EFD);
         }
 
         .stats-icon-wrapper {
@@ -83,7 +83,7 @@
         }
 
         .total-card .stats-icon-wrapper i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 18px;
         }
 
@@ -92,7 +92,7 @@
         }
 
         .present-card .stats-icon-wrapper i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 18px;
         }
 
@@ -110,7 +110,7 @@
         }
 
         .leave-card .stats-icon-wrapper i {
-            color: #2563eb;
+            color: var(--icon-color, #0D6EFD);
             font-size: 18px;
         }
 
@@ -149,7 +149,7 @@
         }
 
         .stats-change.up {
-            color: #1e3a8a;
+            color: #0D6EFD;
             background: rgba(16, 185, 129, 0.1);
         }
 
@@ -158,56 +158,11 @@
             background: rgba(239, 68, 68, 0.1);
         }
 
-        /* ==================== MODERN FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 16px;
-            border: 1px solid #eef2f6;
-            padding: 14px 17px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s ease;
-        }
 
-        .filter-wrapper:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 11px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #0f172a;
-        }
 
-        .filter-title i {
-            color: #1e3a8a;
-            font-size: 14px;
-            background: #e3edfe;
-            padding: 4px;
-            border-radius: 8px;
-        }
 
-        .filter-title span {
-            background: #e3edfe;
-            color: #1e3a8a;
-            font-size: 9.5px;
-            font-weight: 600;
-            padding: 2px 7px;
-            border-radius: 20px;
-            margin-left: 3px;
-        }
 
         .clear-all-link {
             display: flex;
@@ -233,67 +188,14 @@
             font-size: 11px;
         }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 12px;
-        }
 
-        .filter-item {
-            flex: 0 0 auto;
-            min-width: 150px;
-        }
 
-        .filter-item.search-filter {
-            flex: 1;
-            min-width: 200px;
-        }
 
-        /* Search Wrapper */
-        .search-wrapper {
-            position: relative;
-            width: 100%;
-        }
 
-        .search-wrapper i {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 12px;
-            pointer-events: none;
-            transition: color 0.3s;
-        }
 
-        .search-wrapper:focus-within i {
-            color: #1e3a8a;
-        }
 
-        .search-wrapper .form-control {
-            width: 100%;
-            height: 40px;
-            padding: 6px 10px 6px 27px;
-            font-size: 10.5px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            background: #f8fafc;
-            transition: all 0.3s;
-            color: #0f172a;
-        }
 
-        .search-wrapper .form-control:focus {
-            border-color: #1e3a8a;
-            outline: none;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
-        }
 
-        .search-wrapper .form-control::placeholder {
-            color: #94a3b8;
-            font-size: 10px;
-        }
 
         /* Select Dropdowns */
         .filter-select {
@@ -318,7 +220,7 @@
         }
 
         .filter-select:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             outline: none;
             background-color: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -353,7 +255,7 @@
         }
 
         .date-picker input:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             outline: none;
             background: white;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
@@ -363,7 +265,7 @@
         .apply-btn {
             height: 40px;
             padding: 0 20px;
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
             border: none;
             border-radius: 10px;
@@ -378,7 +280,7 @@
         }
 
         .apply-btn:hover {
-            background: #16295e;
+            background: #0B5ED7;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
@@ -387,34 +289,8 @@
             transform: translateY(0);
         }
 
-        .reset-btn {
-            height: 40px;
-            padding: 0 16px;
-            background: white;
-            color: #64748b;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 10.5px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            transition: all 0.3s;
-            white-space: nowrap;
-        }
 
-        .reset-btn:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            color: #0f172a;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        }
 
-        .reset-btn i {
-            font-size: 11px;
-        }
 
         /* ==================== EMPLOYEE DROPDOWN ==================== */
         .custom-employee-dropdown .btn {
@@ -436,7 +312,7 @@
         }
 
         .custom-employee-dropdown .btn:focus {
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
         }
 
@@ -453,7 +329,7 @@
         .employee-initials {
             width: 30px;
             height: 30px;
-            background: linear-gradient(135deg, #1e3a8a, #1e3a8a);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
             border-radius: 50%;
             display: inline-flex;
@@ -469,7 +345,7 @@
             width: 26px;
             height: 26px;
             font-size: 9.5px;
-            background: linear-gradient(135deg, #1e3a8a, #1e3a8a);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
             border-radius: 50%;
             display: inline-flex;
@@ -505,13 +381,13 @@
         }
 
         .custom-employee-dropdown .dropdown-item.active {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
             font-weight: 500;
         }
 
         .custom-employee-dropdown .dropdown-item.active .text-muted {
-            color: #1e3a8a !important;
+            color: #0D6EFD !important;
             opacity: 0.8;
         }
 
@@ -562,7 +438,7 @@
         }
 
         .filter-tag i {
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
             font-size: 10px;
         }
 
@@ -584,66 +460,29 @@
         }
 
         .filter-tag.clear-all {
-            background: #e3edfe;
-            border-color: #1e3a8a;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            border-color: #0D6EFD;
+            color: #0D6EFD;
             font-weight: 600;
             text-decoration: none;
             padding: 3px 10px;
         }
 
         .filter-tag.clear-all:hover {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
-            border-color: #1e3a8a;
+            border-color: #0D6EFD;
         }
 
         .filter-tag.clear-all i {
             color: currentColor;
         }
 
-        /* ==================== TABLE STYLES ==================== */
-        .table {
-            margin-bottom: 0;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
 
-        .table thead th {
-            background: #f8fafc;
-            font-weight: 600;
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #475569;
-            padding: 8px 8px;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            border-bottom: 2px solid #e2e8f0;
-            border-top: none;
-        }
 
-        .table tbody td {
-            vertical-align: middle;
-            font-size: 10px;
-            padding: 7px 8px;
-            border-bottom: 1px solid #f1f5f9;
-            color: #1e293b;
-        }
 
-        .table tbody tr {
-            transition: all 0.2s;
-        }
 
-        .table tbody tr:hover td {
-            background-color: #f8fafc;
-        }
 
-        .table tbody tr:last-child td {
-            border-bottom: none;
-        }
 
         .table-responsive {
             border-radius: 0 0 16px 16px;
@@ -687,8 +526,8 @@
         }
 
         .badge-present {
-            background: #e3edfe !important;
-            color: #1e3a8a;
+            background: #EFF6FF !important;
+            color: #0D6EFD;
             border-color: #93c5fd;
         }
 
@@ -700,31 +539,31 @@
 
         .badge-on_leave {
             background: #bfd3f7 !important;
-            color: #1e3a8a;
+            color: #0D6EFD;
             border-color: #60a5fa;
         }
 
         .badge-halfday {
-            background: #e3edfe !important;
-            color: #2563eb;
-            border-color: #2563eb;
+            background: #EFF6FF !important;
+            color: #0D6EFD;
+            border-color: #0D6EFD;
         }
 
         .badge-holiday {
             background: #dbeafe !important;
-            color: #1e40af;
+            color: #0D6EFD;
             border-color: #bfdbfe;
         }
 
         .badge-week_off {
-            background: #e3edfe !important;
-            color: #16295e;
+            background: #EFF6FF !important;
+            color: #0D6EFD;
             border-color: #93c5fd;
         }
 
         .badge-checked_in_only {
             background: #bfd3f7 !important;
-            color: #1e3a8a;
+            color: #0D6EFD;
             border-color: #60a5fa;
         }
 
@@ -763,7 +602,7 @@
         }
 
         .status-dot.present {
-            background: #1e3a8a;
+            background: #0D6EFD;
         }
 
         .status-dot.absent {
@@ -771,7 +610,7 @@
         }
 
         .status-dot.on_leave {
-            background: #2563eb;
+            background: #0D6EFD;
         }
 
         .status-dot.holiday {
@@ -779,15 +618,15 @@
         }
 
         .status-dot.week_off {
-            background: #2563eb;
+            background: #0D6EFD;
         }
 
         .status-dot.checked_in_only {
-            background: #2563eb;
+            background: #0D6EFD;
         }
 
         .status-dot.halfday {
-            background: #2563eb;
+            background: #0D6EFD;
         }
 
         /* ==================== SHIFT TIME BADGE ==================== */
@@ -845,84 +684,20 @@
             margin-right: auto;
         }
 
-        /* ==================== PAGINATION ==================== */
-        .pagination {
-            margin: 0;
-            gap: 4px;
-        }
 
-        .page-item {
-            list-style: none;
-        }
 
-        .page-link {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px !important;
-            color: #475569;
-            font-size: 10.5px;
-            padding: 6px 10px;
-            transition: all 0.2s;
-            background: white;
-            font-weight: 500;
-        }
 
-        .page-link:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            color: #0f172a;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
-        }
 
-        .page-item.active .page-link {
-            background: #1e3a8a;
-            border-color: #1e3a8a;
-            color: white;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-        }
 
-        .page-item.disabled .page-link {
-            background: #f8fafc;
-            color: #94a3b8;
-            pointer-events: none;
-            opacity: 0.6;
-        }
 
-        /* ==================== CARD ==================== */
-        .card {
-            border: 1px solid #eef2f6;
-            border-radius: 16px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
 
-        .card:hover {
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-        }
 
-        .card-header {
-            background: white;
-            border-bottom: 1px solid #f1f5f9;
-            padding: 13px 17px;
-        }
 
-        .card-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #0f172a;
-            margin: 0;
-        }
 
         .card-body {
             padding: 0;
         }
 
-        .card-footer {
-            background: white;
-            border-top: 1px solid #f1f5f9;
-            padding: 10px 17px;
-        }
 
         /* ==================== TOOLTIP ==================== */
         .text-truncate {
@@ -931,8 +706,8 @@
         }
 
         .badge-info-custom {
-            background: #e3edfe !important;
-            color: #1e3a8a !important;
+            background: #EFF6FF !important;
+            color: #0D6EFD !important;
             font-weight: 600 !important;
             padding: 6px 14px !important;
             border-radius: 20px !important;
@@ -948,18 +723,9 @@
         }
 
         @media (max-width: 992px) {
-            .filter-row {
-                gap: 10px;
-            }
 
-            .filter-item {
-                flex: 1 1 calc(50% - 10px);
-                min-width: 120px;
-            }
 
-            .filter-item.search-filter {
-                flex: 1 1 100%;
-            }
+
         }
 
         @media (max-width: 768px) {
@@ -967,23 +733,9 @@
                 grid-template-columns: 1fr;
             }
 
-            .filter-wrapper {
-                padding: 11px;
-            }
 
-            .filter-row {
-                flex-direction: column;
-            }
 
-            .filter-item {
-                width: 100%;
-            }
 
-            .filter-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
 
             .apply-btn,
             .reset-btn {
@@ -995,12 +747,6 @@
                 max-height: 500px;
             }
 
-            .table th,
-            .table td {
-                padding: 6px 7px;
-                font-size: 9.5px;
-                white-space: nowrap;
-            }
 
             .employee-info {
                 min-width: 120px;
@@ -1043,38 +789,26 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Attendance Report</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item active">Attendance Report</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <div class="dropdown">
-                    <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10">
-                        <i class="feather-download"></i>
+    <x-ui.page-header title="Attendance Report" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
+            <div class="dropdown">
+                <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10">
+                    <i class="feather-download"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="{{ route('report.attendance.day.export', request()->query()) }}" class="dropdown-item"
+                        target="_blank">
+                        <i class="bi bi-filetype-csv me-3"></i>
+                        <span>Export CSV</span>
                     </a>
-                    <div class="dropdown-menu dropdown-menu-end">
-                        <a href="{{ route('report.attendance.day.export', request()->query()) }}" class="dropdown-item"
-                            target="_blank">
-                            <i class="bi bi-filetype-csv me-3"></i>
-                            <span>Export CSV</span>
-                        </a>
-                        <a href="#" class="dropdown-item" onclick="exportToExcel()">
-                            <i class="bi bi-file-earmark-excel me-3"></i>
-                            <span>Export Excel</span>
-                        </a>
-                    </div>
+                    <a href="#" class="dropdown-item" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel me-3"></i>
+                        <span>Export Excel</span>
+                    </a>
                 </div>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Stats Cards -->
@@ -1321,20 +1055,6 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="card stretch stretch-full">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">
-                            <i class="feather-calendar me-2" style="color: #1e3a8a;"></i>
-                            Attendance Report -
-                            <span style="color: #1e3a8a;">
-                                {{ \Carbon\Carbon::createFromFormat('Y-m-d', request('date', now()->format('Y-m-d')))->format('d F Y') }}
-                            </span>
-                        </h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge badge-info-custom">
-                                <i class="feather-list me-1"></i>Total: {{ $reportData->total() ?? $reportData->count() }}
-                            </span>
-                        </div>
-                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table" id="attendanceReportTable">
@@ -1445,7 +1165,7 @@
                                             </td>
                                             <td>
                                                 @if ($record['total_hours'])
-                                                    <span style="font-weight: 600; color: #1e3a8a;">
+                                                    <span style="font-weight: 600; color: #0D6EFD;">
                                                         {{ $record['total_hours'] }} hrs
                                                     </span>
                                                 @else
@@ -1453,7 +1173,14 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @if ($record['shift_start_time'] || $record['shift_end_time'])
+                                                @if (!empty($record['shifts']))
+                                                    @foreach ($record['shifts'] as $sg)
+                                                        <span class="shift-badge d-block mb-1" title="{{ round($sg['worked_minutes'] / 60, 2) }} hrs worked">
+                                                            {{ $sg['is_additional'] ? '+ ' : '' }}{{ $sg['name'] ?? 'Shift' }}
+                                                            {{ \Carbon\Carbon::parse($sg['start'])->format('h:i A') }} - {{ \Carbon\Carbon::parse($sg['end'])->format('h:i A') }}
+                                                        </span>
+                                                    @endforeach
+                                                @elseif ($record['shift_start_time'] || $record['shift_end_time'])
                                                     <span class="shift-badge">
                                                         {{ $record['shift_start_time'] ? \Carbon\Carbon::parse($record['shift_start_time'])->format('h:i A') : '--' }}
                                                         -
@@ -1506,7 +1233,8 @@
                                             <td>
                                                 @if ($record['overtime_minutes'] > 0)
                                                     <span class="text-success"
-                                                        style="font-weight: 600;">{{ $record['overtime_minutes'] }}
+                                                        style="font-weight: 600;"
+                                                        @if (!empty($record['extra_shift_minutes'])) title="Includes {{ $record['extra_shift_minutes'] }} min from additional shift(s)" @endif>{{ $record['overtime_minutes'] }}
                                                         Min</span>
                                                 @else
                                                     <span class="text-muted">0</span>
@@ -1541,18 +1269,7 @@
                         </div>
                     </div>
                     @if (method_exists($reportData, 'links') && $reportData->hasPages())
-                        <div class="card-footer">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <div class="text-muted small">
-                                    Showing <strong>{{ $reportData->firstItem() }}</strong> to
-                                    <strong>{{ $reportData->lastItem() }}</strong>
-                                    of <strong>{{ $reportData->total() }}</strong> entries
-                                </div>
-                                <div class="remove-internal-para">
-                                    {{ $reportData->appends(request()->query())->links() }}
-                                </div>
-                            </div>
-                        </div>
+                        <x-ui.pagination-footer :paginator="$reportData" label="entries" />
                     @endif
                 </div>
             </div>

@@ -527,22 +527,22 @@ class AttendanceContoller extends Controller
     private function getEventColor($status)
     {
         // Single-blue theme: every status is a shade of the app's primary
-        // blue (--primary #1e3a8a / --primary-mid #2563eb) instead of the
+        // blue (--primary #0D6EFD / --primary-mid #0D6EFD) instead of the
         // usual green/red/amber semantic colors, matching the rest of the app.
         $colorMap = [
             'Absent' => '#172554',
-            'Present' => '#1e3a8a',
-            'Checked In Only' => '#1e40af',
-            'Half Day' => '#1e40af',
-            'Holiday' => '#1d4ed8',
-            'First Half Leave' => '#2563eb',
-            'Second Half Leave' => '#2563eb',
-            'Full Day Leave' => '#2563eb',
+            'Present' => '#0D6EFD',
+            'Checked In Only' => '#0D6EFD',
+            'Half Day' => '#0D6EFD',
+            'Holiday' => '#0B5ED7',
+            'First Half Leave' => '#0D6EFD',
+            'Second Half Leave' => '#0D6EFD',
+            'Full Day Leave' => '#0D6EFD',
             'Week Off' => '#3b82f6',
             'Upcoming' => '#60a5fa',
         ];
 
-        return $colorMap[$status] ?? '#1e3a8a';
+        return $colorMap[$status] ?? '#0D6EFD';
     }
 
     public function calendarData(Request $request)

@@ -4,38 +4,9 @@
 
 @section('style')
 <style>
-  
 
-    /* ==================== FILTER SECTION ==================== */
-    .filter-wrapper {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid #edf2f7;
-        padding: 16px 20px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-    }
 
-    .filter-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-    }
 
-    .filter-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #1e293b;
-    }
-
-    .filter-title i {
-        color: #4f46e5;
-        font-size: 16px;
-    }
 
     .month-selector {
         display: flex;
@@ -92,42 +63,11 @@
         overflow: hidden;
     }
 
-    .table {
-        margin-bottom: 0;
-    }
 
-    .table th {
-        background-color: #f8fafc;
-        font-weight: 600;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        color: #475569;
-        border-bottom-width: 1px;
-        padding: 14px 16px;
-        white-space: nowrap;
-    }
 
-    .table td {
-        vertical-align: middle;
-        font-size: 13px;
-        padding: 12px 16px;
-        border-bottom: 1px solid #f1f5f9;
-    }
 
-    .table tbody tr:hover {
-        background-color: #f8fafc;
-    }
 
-    .table tfoot {
-        background-color: #f1f5f9;
-        font-weight: 600;
-    }
 
-    .table tfoot td {
-        padding: 14px 16px;
-        border-top: 2px solid #e2e8f0;
-    }
 
     /* Employee Info */
     .employee-info {
@@ -190,7 +130,7 @@
 
     .badge-info {
         background: #dbeafe;
-        color: #1e40af;
+        color: #0D6EFD;
     }
 
     .badge-purple {
@@ -230,12 +170,7 @@
         .stats-grid {
             grid-template-columns: repeat(2, 1fr);
         }
-        
-        .filter-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
+
         
         .month-selector {
             width: 100%;
@@ -250,36 +185,21 @@
             width: 100%;
             justify-content: center;
         }
-        
-        .table {
-            min-width: 1200px;
-        }
+
     }
 </style>
 @endsection
 
 @section('content-area')
-<div class="page-header">
-    <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title">
-            <h5 class="m-b-10">Attendance Summary Report</h5>
+<x-ui.page-header title="Attendance Summary Report" current="Attendance Summary" :crumbs="[['label' => 'Team', 'url' => route('team.index')]]">
+    <x-slot:actions>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-light" onclick="window.location.reload()">
+                <i class="feather-refresh-cw me-2"></i>Refresh
+            </button>
         </div>
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('team.index') }}">Team</a></li>
-            <li class="breadcrumb-item active">Attendance Summary</li>
-        </ul>
-    </div>
-    <div class="page-header-right ms-auto">
-        <div class="page-header-right-items">
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-light" onclick="window.location.reload()">
-                    <i class="feather-refresh-cw me-2"></i>Refresh
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+    </x-slot:actions>
+</x-ui.page-header>
 
 <div class="main-content" style="padding: 20px !important;">
   

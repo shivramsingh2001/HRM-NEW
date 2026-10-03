@@ -31,7 +31,7 @@ class LatePolicyService
     {
         // Anchor to the policy in force on the 1st of the month so a later-dated
         // policy change never retroactively re-grades a closed month.
-        $policy = $this->policies->forTenantMonth($tenantId, $yearMonth);
+        $policy = $this->policies->forUserMonth($tenantId, $userId, $yearMonth);
         $rows = $this->monthRows($tenantId, $userId, $yearMonth);
 
         DB::transaction(function () use ($rows, $policy) {
@@ -51,7 +51,7 @@ class LatePolicyService
      */
     public function excessCounts(int $userId, int $tenantId, string $yearMonth): array
     {
-        $policy = $this->policies->forTenantMonth($tenantId, $yearMonth);
+        $policy = $this->policies->forUserMonth($tenantId, $userId, $yearMonth);
         $rows = $this->monthRows($tenantId, $userId, $yearMonth);
         $classified = $this->classifyRows($rows, $policy);
 
@@ -250,6 +250,8 @@ class LatePolicyService
 
         $seconds = $this->calc->workedSeconds(Carbon::parse($row->clock_in), Carbon::parse($row->clock_out));
         $seconds = min($seconds, 24 * 3600);
+        // Multi-shift day: the primary shift alone decides present/half/absent.
+        $seconds = $this->calc->primaryWorkedSeconds($row, $seconds);
         $hours = $seconds / 3600;
 
         $expected = 0;

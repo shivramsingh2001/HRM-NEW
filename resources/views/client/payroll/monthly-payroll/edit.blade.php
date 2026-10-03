@@ -3,8 +3,8 @@
 @section('style')
     <style>
         :root {
-            --primary: #1e3a8a;
-            --primary-light: #e3edfe;
+            --primary: #0D6EFD;
+            --primary-light: #EFF6FF;
             --success: #22c55e;
             --danger: #ef4444;
             --warning: #f59e0b;
@@ -86,7 +86,7 @@
         .form-control:focus {
             border-color: var(--primary);
             outline: none;
-            box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
         }
 
         .form-control.is-invalid {
@@ -141,7 +141,7 @@
         .employee-avatar {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, var(--primary), #2563eb);
+            background: linear-gradient(135deg, var(--primary), #0D6EFD);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -181,7 +181,7 @@
         }
 
         .employee-info .employee-meta i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
             font-size: 11px;
         }
 
@@ -196,20 +196,20 @@
         }
 
         .alert-info {
-            background: #e3edfe;
+            background: #EFF6FF;
             border: 1px solid #93c5fd;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .alert-warning {
             background: #bfd3f7;
             border: 1px solid #60a5fa;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .alert-success {
-            background: #1e3a8a;
-            border: 1px solid #1e3a8a;
+            background: #0D6EFD;
+            border: 1px solid #0D6EFD;
             color: #ffffff;
         }
 
@@ -245,12 +245,12 @@
 
         .calculation-type-badge.day-based {
             background: #bfd3f7;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .calculation-type-badge.hour-based {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .total-box {
@@ -319,7 +319,7 @@
         }
 
         .btn-primary:hover {
-            background: #16295e;
+            background: #0B5ED7;
         }
 
         .btn-secondary {
@@ -382,7 +382,7 @@
         }
 
         .component-header .component-title i {
-            color: var(--primary);
+            color: var(--icon-color, #0D6EFD);
             font-size: 12px;
         }
 
@@ -412,7 +412,7 @@
 
         .input-group:focus-within {
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
         }
 
         .input-group-text {
@@ -448,13 +448,13 @@
 
         .employer-section .section-title {
             border-bottom-color: #93c5fd;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .employer-section .input-group-text {
             background: #dbeafe;
             border-right-color: #93c5fd;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .summary-grid {
@@ -542,17 +542,17 @@
         }
 
         .status-badge.pending {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
         }
 
         .status-badge.processed {
             background: #bfd3f7;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .status-badge.paid {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: #ffffff;
         }
 
@@ -646,13 +646,13 @@
 
         .hour-based-section .section-title {
             border-bottom-color: #93c5fd;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .hour-based-section .input-group-text {
             background: #dbeafe;
             border-right-color: #93c5fd;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .hour-based-info {
@@ -663,7 +663,7 @@
             background: #dbeafe;
             border-radius: 6px;
             font-size: 11px;
-            color: #1e40af;
+            color: #0D6EFD;
             margin-bottom: 10px;
         }
 
@@ -681,24 +681,6 @@
             font-size: 12px;
         }
 
-        .page-header-title h5 {
-            font-size: 16px !important;
-            margin-bottom: 0 !important;
-        }
-
-        .breadcrumb {
-            font-size: 11px !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        .breadcrumb-item {
-            font-size: 11px !important;
-        }
-
-        .card {
-            border-radius: 8px !important;
-        }
 
         .row {
             margin: 0 -6px !important;
@@ -711,21 +693,21 @@
         .annual-ctc-box {
             padding: 10px 14px;
             margin-top: 10px;
-            background: linear-gradient(135deg, #f5f3ff, #e3edfe);
+            background: linear-gradient(135deg, #f5f3ff, #EFF6FF);
             border-radius: 8px;
             border: 1px solid #93c5fd;
         }
 
         .annual-ctc-box .annual-label {
             font-size: 11px;
-            color: #16295e;
+            color: #0D6EFD;
             font-weight: 500;
         }
 
         .annual-ctc-box .annual-value {
             font-size: 22px;
             font-weight: 700;
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .annual-ctc-box .annual-breakdown {
@@ -734,7 +716,7 @@
             margin-top: 4px;
             flex-wrap: wrap;
             font-size: 10px;
-            color: #16295e;
+            color: #0D6EFD;
         }
 
         .calculation-toggle {
@@ -758,8 +740,8 @@
         }
 
         .badge-hour-based {
-            background: #e3edfe;
-            color: #1e3a8a;
+            background: #EFF6FF;
+            color: #0D6EFD;
             padding: 2px 10px;
             border-radius: 12px;
             font-size: 10px;
@@ -768,7 +750,7 @@
 
         .badge-day-based {
             background: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
             padding: 2px 10px;
             border-radius: 12px;
             font-size: 10px;
@@ -793,18 +775,8 @@
 
 @section('content-area')
     
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Edit Monthly Payroll</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('monthly-payrolls.index') }}">Monthly Payroll</a></li>
-                <li class="breadcrumb-item active">Edit</li>
-            </ul>
-        </div>
-        <div class="page-header-right no-print">
+    <x-ui.page-header title="Edit Monthly Payroll" current="Edit" :crumbs="[['label' => 'Monthly Payroll', 'url' => route('monthly-payrolls.index')]]">
+        <x-slot:actions>
             @php
                 $calcType = $userPayroll && $userPayroll->payrollMaster 
                     ? ($userPayroll->payrollMaster->payroll_calculation_type ?? 'day_based') 
@@ -817,8 +789,8 @@
             <span class="status-badge {{ $monthlyPayroll->payment_status }}">
                 {{ ucfirst($monthlyPayroll->payment_status) }}
             </span>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="card border-0 shadow-sm">
@@ -861,7 +833,7 @@
                                     @endif
                                 </span>
                                 @if ($isDynamic)
-                                    <span style="color:#1e3a8a;"><i class="feather-layers"></i> Dynamic structure</span>
+                                    <span style="color:#0D6EFD;"><i class="feather-layers"></i> Dynamic structure</span>
                                 @endif
                             </div>
                         </div>
@@ -883,7 +855,7 @@
                     <!-- Basic Information -->
                     <div class="form-section">
                         <div class="section-title">
-                            <span><i class="feather-file-text me-1" style="color: var(--primary);"></i>Basic Info</span>
+                            <span><i class="feather-file-text me-1" style="color: var(--icon-color, #0D6EFD);"></i>Basic Info</span>
                             <span class="badge-status status-badge {{ $monthlyPayroll->payment_status }}">
                                 {{ ucfirst($monthlyPayroll->payment_status) }}
                             </span>
@@ -930,7 +902,7 @@
                     <!-- ============================================================ -->
                     <div id="dayBasedAttendance" class="form-section" style="{{ $calcType === 'day_based' ? '' : 'display: none;' }}">
                         <div class="section-title">
-                            <span><i class="feather-users me-1" style="color: var(--primary);"></i>Attendance (Day-Based)</span>
+                            <span><i class="feather-users me-1" style="color: var(--icon-color, #0D6EFD);"></i>Attendance (Day-Based)</span>
                             <span class="proration-badge" id="prorationBadge" style="display: none;">
                                 <i class="feather-percent"></i>
                                 <span id="prorationText"></span>
@@ -1037,8 +1009,8 @@
                     <!-- ============================================================ -->
                     <div id="hourBasedAttendance" class="hour-based-section" style="{{ $calcType === 'hour_based' ? '' : 'display: none;' }}">
                         <div class="section-title">
-                            <span><i class="feather-clock me-1" style="color: #1e40af;"></i>Attendance (Hour-Based)</span>
-                            <span class="proration-badge" id="hourProrationBadge" style="display: none; background: #dbeafe; color: #1e40af;">
+                            <span><i class="feather-clock me-1" style="color: var(--icon-color, #0D6EFD);"></i>Attendance (Hour-Based)</span>
+                            <span class="proration-badge" id="hourProrationBadge" style="display: none; background: #dbeafe; color: #0D6EFD;">
                                 <i class="feather-percent"></i>
                                 <span id="hourProrationText"></span>
                             </span>
@@ -1060,7 +1032,7 @@
                                 @endphp
                             </span></span>
                             @if(($monthlyPayroll->paid_leaves ?? 0) > 0)
-                                <span class="info-item" style="background: #e3edfe; padding: 2px 8px; border-radius: 4px; color: #1e3a8a;">
+                                <span class="info-item" style="background: #EFF6FF; padding: 2px 8px; border-radius: 4px; color: #0D6EFD;">
                                     <i class="feather-calendar"></i> <strong>Paid Leaves:</strong> {{ $monthlyPayroll->paid_leaves ?? 0 }} days
                                     ({{ ($monthlyPayroll->paid_leaves ?? 0) * ($userPayroll && $userPayroll->payrollMaster ? $userPayroll->payrollMaster->working_hours_per_day ?? 8 : 8) }} hrs)
                                 </span>
@@ -1148,7 +1120,7 @@
                     @else
                     <div class="form-section">
                         <div class="section-title">
-                            <span><i class="feather-trending-up me-1" style="color: var(--primary);"></i>Earnings</span>
+                            <span><i class="feather-trending-up me-1" style="color: var(--icon-color, #0D6EFD);"></i>Earnings</span>
                             <span style="font-size: 10px; color: var(--gray-500);"><i class="feather-edit-2"></i> Editable</span>
                         </div>
                         <div class="component-card">
@@ -1213,7 +1185,7 @@
                                             value="{{ old('special_allowance', $monthlyPayroll->special_allowance ?? 0) }}">
                                     </div>
                                     <div class="input-group" style="background: #eef3fd; border-color: #93c5fd;">
-                                        <span class="input-group-text" style="background: #dbeafe; color: #1e3a8a;">OT</span>
+                                        <span class="input-group-text" style="background: #dbeafe; color: #0D6EFD;">OT</span>
                                         <input type="number" step="0.01" name="overtime_amount" id="overtime_amount"
                                             class="form-control" style="background: #eef3fd;"
                                             value="{{ old('overtime_amount', $monthlyPayroll->overtime_amount ?? 0) }}">
@@ -1421,36 +1393,36 @@
                     <!-- ============================================================ -->
                     <div class="employer-section">
                         <div class="section-title">
-                            <span><i class="feather-briefcase me-1" style="color: #1e3a8a;"></i>Employer</span>
-                            <span style="font-size: 9px; color: #1e3a8a;"><i class="feather-info"></i> Part of CTC</span>
+                            <span><i class="feather-briefcase me-1" style="color: var(--icon-color, #0D6EFD);"></i>Employer</span>
+                            <span style="font-size: 9px; color: #0D6EFD;"><i class="feather-info"></i> Part of CTC</span>
                         </div>
                         <div class="component-card" style="border-color: #93c5fd;">
                             <div class="component-header" style="background: #dbeafe; border-bottom-color: #93c5fd;">
-                                <span class="component-title" style="color: #1e3a8a;">
+                                <span class="component-title" style="color: #0D6EFD;">
                                     <i class="feather-plus-circle"></i> Employer Cost
                                 </span>
-                                <span style="font-size: 9px; color: #1e3a8a;">₹</span>
+                                <span style="font-size: 9px; color: #0D6EFD;">₹</span>
                             </div>
                             <div class="component-body">
                                 <div class="component-row">
                                     <div class="input-group" style="border-color: #93c5fd;">
-                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #1e3a8a;">Employer PF</span>
+                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #0D6EFD;">Employer PF</span>
                                         <input type="number" step="0.01" name="employer_provident_fund" id="employer_pf"
                                             class="form-control" style="background: #eef3fd;"
                                             value="{{ old('employer_provident_fund', $monthlyPayroll->employer_provident_fund ?? 0) }}" readonly>
                                     </div>
                                     <div class="input-group" style="border-color: #93c5fd;">
-                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #1e3a8a;">Employer ESI</span>
+                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #0D6EFD;">Employer ESI</span>
                                         <input type="number" step="0.01" name="employer_esi" id="employer_esi"
                                             class="form-control" style="background: #eef3fd;"
                                             value="{{ old('employer_esi', $monthlyPayroll->employer_esi ?? 0) }}" readonly>
                                     </div>
                                     <div class="input-group" style="border-color: #93c5fd; grid-column: span 2;">
-                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #1e3a8a; min-width: 90px;">
+                                        <span class="input-group-text" style="background: #dbeafe; border-right-color: #93c5fd; color: #0D6EFD; min-width: 90px;">
                                             <i class="feather-pie-chart"></i> Total
                                         </span>
                                         <input type="text" class="form-control" id="total_employer_cost"
-                                            style="background: #eef3fd; font-weight: 600; color: #1e3a8a;"
+                                            style="background: #eef3fd; font-weight: 600; color: #0D6EFD;"
                                             value="₹{{ number_format(($monthlyPayroll->employer_provident_fund ?? 0) + ($monthlyPayroll->employer_esi ?? 0), 2) }}" readonly>
                                     </div>
                                 </div>
@@ -1464,12 +1436,12 @@
                     <!-- ============================================================ -->
                     <div class="form-section">
                         <div class="section-title">
-                            <span><i class="feather-pie-chart me-1" style="color: var(--primary);"></i>Summary</span>
+                            <span><i class="feather-pie-chart me-1" style="color: var(--icon-color, #0D6EFD);"></i>Summary</span>
                             <span style="font-size: 10px; color: var(--gray-500);"><i class="feather-clock"></i> Auto</span>
                         </div>
                         <div class="summary-grid">
                             <div class="summary-item">
-                                <div class="summary-label"><i class="feather-trending-up" style="color: var(--primary);"></i> Gross</div>
+                                <div class="summary-label"><i class="feather-trending-up" style="color: var(--icon-color, #0D6EFD);"></i> Gross</div>
                                 <div class="summary-value" style="color: var(--primary);">
                                     <span id="gross_display">₹{{ number_format($monthlyPayroll->gross_earnings, 2) }}</span>
                                     <small>/m</small>
@@ -1483,7 +1455,7 @@
                                 </div>
                             </div>
                             <div class="summary-item highlight">
-                                <div class="summary-label"><i class="feather-check-circle" style="color: var(--primary);"></i> Net</div>
+                                <div class="summary-label"><i class="feather-check-circle" style="color: var(--icon-color, #0D6EFD);"></i> Net</div>
                                 <div class="summary-value" style="color: var(--primary);">
                                     <span id="net_display">₹{{ number_format($monthlyPayroll->net_payable, 2) }}</span>
                                     <small>/m</small>
@@ -1498,9 +1470,9 @@
                                     <small>/m</small>
                                 </div>
                             </div>
-                            <div class="summary-item" style="border-left: 2px solid #2563eb;">
-                                <div class="summary-label"><i class="feather-pie-chart" style="color: #2563eb;"></i> Monthly CTC</div>
-                                <div class="summary-value" style="font-size: 18px; color: #2563eb;">
+                            <div class="summary-item" style="border-left: 2px solid #0D6EFD;">
+                                <div class="summary-label"><i class="feather-pie-chart" style="color: var(--icon-color, #0D6EFD);"></i> Monthly CTC</div>
+                                <div class="summary-value" style="font-size: 18px; color: #0D6EFD;">
                                     <span id="monthly_ctc_display">
                                         ₹{{ number_format(($monthlyPayroll->gross_earnings ?? 0) + ($monthlyPayroll->employer_provident_fund ?? 0) + ($monthlyPayroll->employer_esi ?? 0), 2) }}
                                     </span>

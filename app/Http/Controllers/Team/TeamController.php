@@ -22,6 +22,7 @@ use App\Models\Language;
 use DateTime;
 use Exception;
 use Illuminate\Http\Request;
+use App\Support\ShiftWindow;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -298,21 +299,14 @@ class TeamController extends Controller
         // absolute-hours fallback).
         $expectedSeconds = 0;
         if ($attendance && $attendance->scheduled_shift_start && $attendance->scheduled_shift_end) {
-            $shiftStart = Carbon::parse($attendance->scheduled_shift_start);
-            $shiftEnd = Carbon::parse($attendance->scheduled_shift_end);
-
-            // Handle overnight shifts (e.g., 22:00 to 06:00)
-            if ($shiftEnd->lessThan($shiftStart)) {
-                $shiftEnd->addDay();
-            }
-
-            $expectedSeconds = (int) $shiftStart->diffInSeconds($shiftEnd);
+            // Overnight shifts (e.g. 22:00 to 06:00) end on the next day.
+            $expectedSeconds = ShiftWindow::spanMinutes($attendance->scheduled_shift_start, $attendance->scheduled_shift_end) * 60;
         }
 
         // The tenant's attendance policy (ratios + Day Classification switch),
         // same as Attendance summary and Payroll.
         $policy = app(\App\Services\Attendance\PolicyResolver::class)
-            ->forTenantDate((int) Auth::user()->tenant_id, Carbon::parse($date)->format('Y-m-d'));
+            ->forUserDate((int) Auth::user()->tenant_id, (int) $userId, Carbon::parse($date)->format('Y-m-d'));
 
         return match ($policy->classify((float) ($totalHours ?? 0), $expectedSeconds)) {
             'present' => 'Present',
@@ -1141,8 +1135,8 @@ class TeamController extends Controller
                 $statusLower = strtolower($status);
                 switch ($statusLower) {
                     case 'present':
-                        $bgColor = '#2563eb';
-                        $borderColor = '#1d4ed8';
+                        $bgColor = '#0D6EFD';
+                        $borderColor = '#0B5ED7';
                         $color = '#ffffff';
                         $title = 'Present' . $hoursText;
                         break;
@@ -1153,7 +1147,7 @@ class TeamController extends Controller
                         $title = 'halfday' . $hoursText;
                         break;
                     case 'absent':
-                        $bgColor = '#1e3a8a';
+                        $bgColor = '#0D6EFD';
                         $borderColor = '#1e293b';
                         $color = '#ffffff';
                         $title = 'Absent';
@@ -1163,13 +1157,13 @@ class TeamController extends Controller
                     case 'full day leave':
                         $bgColor = '#dbeafe';
                         $borderColor = '#93c5fd';
-                        $color = '#1d4ed8';
+                        $color = '#0B5ED7';
                         $title = 'Leave';
                         break;
                     case 'holiday':
                         $bgColor = '#bfdbfe';
                         $borderColor = '#93c5fd';
-                        $color = '#1d4ed8';
+                        $color = '#0B5ED7';
                         $title = $record->holiday_name ?? 'Holiday';
                         break;
                     case 'week off':
@@ -1181,7 +1175,7 @@ class TeamController extends Controller
                     case 'checked in only':
                         $bgColor = '#93c5fd';
                         $borderColor = '#60a5fa';
-                        $color = '#1e3a8a';
+                        $color = '#0D6EFD';
                         $title = 'Checked In Only';
                         break;
                     case 'upcoming':
@@ -3270,29 +3264,10 @@ class TeamController extends Controller
     private function getUserShiftForDate($userId, $date, $tenantId)
     {
         try {
-            // Honours the tenant's custom-shifts toggle (fixed company shift when
-            // off, the per-date assignment chain when on).
-            $shift = app(\App\Services\Attendance\TenantShiftResolver::class)
-                ->forUserDate((int) $userId, (int) $tenantId, $date);
-
-            if (!$shift) {
-                return null;
-            }
-
-            $userShiftId = DB::table('user_shifts')
-                ->where('user_id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->where('date', $date)
-                ->value('id');
-
-            return [
-                'shift_id' => $shift->id,
-                'name' => $shift->name,
-                'start_time' => $shift->start_time,
-                'end_time' => $shift->end_time,
-                'grace_minutes' => $shift->grace_minutes ?? 0,
-                'user_shift_id' => $userShiftId,
-            ];
+            // The day's primary shift (fixed company shift when custom shifts are
+            // off) — one implementation in TenantShiftResolver.
+            return app(\App\Services\Attendance\TenantShiftResolver::class)
+                ->detailsForUserDate((int) $userId, (int) $tenantId, $date);
         } catch (Exception $e) {
             Log::error('Error getting user shift: ' . $e->getMessage());
             return null;
@@ -3322,12 +3297,7 @@ class TeamController extends Controller
                     ->first();
 
                 if ($shift) {
-                    $isOvernight = false;
-                    $shiftStart = Carbon::parse($shift->start_time);
-                    $shiftEnd = Carbon::parse($shift->end_time);
-                    if ($shiftEnd->lte($shiftStart)) {
-                        $isOvernight = true;
-                    }
+                    $isOvernight = ShiftWindow::isOvernight($shift);
 
                     return response()->json([
                         'success' => true,

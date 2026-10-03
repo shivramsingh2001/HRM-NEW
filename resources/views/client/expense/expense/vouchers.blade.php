@@ -5,26 +5,14 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Payment Vouchers</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('expense.payments.index') }}">Payments</a></li>
-                <li class="breadcrumb-item active">Vouchers</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
+    <x-ui.page-header title="Payment Vouchers" current="Vouchers" :crumbs="[['label' => 'Payments', 'url' => route('expense.payments.index')]]" :back="route('expense.payments.index')">
+        <x-slot:actions>
             <div class="d-flex gap-2">
                 <a href="{{ route('expense.payments.batch') }}" class="btn btn-primary btn-sm"><i
                         class="feather-layers me-2"></i>Pay Batch</a>
-                <a href="{{ route('expense.payments.index') }}" class="btn btn-light-brand btn-sm"><i
-                        class="feather-arrow-left me-2"></i>Back</a>
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content ex-page" style="padding: 20px !important;">
         @php
@@ -78,7 +66,7 @@
         </div>
 
         {{-- Filter Section --}}
-        <div class="filter-wrapper">
+        <x-ui.filter-card title="Filter Vouchers">
             <form action="{{ route('expense.vouchers.index') }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     <div class="filter-item search">
@@ -150,14 +138,10 @@
                     <a href="{{ route('expense.vouchers.index') }}" class="filter-tag clear-all"><i class="feather-refresh-cw"></i> Clear All</a>
                 </div>
             @endif
-        </div>
+        </x-ui.filter-card>
 
         {{-- Vouchers Table --}}
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Voucher History</h5>
-                <span class="badge bg-info"><i class="feather-list"></i> Total: {{ $batches->total() }}</span>
-            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table">
@@ -218,14 +202,7 @@
                 </div>
             </div>
             @if ($batches->hasPages())
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted small">
-                            Showing {{ $batches->firstItem() }} to {{ $batches->lastItem() }} of {{ $batches->total() }} entries
-                        </div>
-                        <div>{{ $batches->links() }}</div>
-                    </div>
-                </div>
+                <x-ui.pagination-footer :paginator="$batches" label="vouchers" />
             @endif
         </div>
     </div>

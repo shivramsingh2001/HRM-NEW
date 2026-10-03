@@ -25,6 +25,12 @@ return new class extends Migration
         'marked_by', 'effective_status', 'policy_note', 'remarks', 'metadata',
     ];
 
+    /** Tables holding an attendance_id that must follow the kept row. */
+    private const CHILD_TABLES = [
+        'attendance_logs', 'attendance_tracks', 'attendance_punches',
+        'biometric_punches', 'attendance_tracking_sessions',
+    ];
+
     public function up(): void
     {
         // 1. Backfill NULL tenant_id from the user.
@@ -69,6 +75,14 @@ return new class extends Migration
                 DB::table('attendances')->where('id', $keeper->id)->update($patch);
             }
             $ids = $rows->pluck('id')->all();
+
+            // Move child rows to the keeper first — attendance_tracks cascades
+            // on delete and the others would be left pointing at a deleted id.
+            foreach (self::CHILD_TABLES as $child) {
+                if ($ids && Schema::hasTable($child) && Schema::hasColumn($child, 'attendance_id')) {
+                    DB::table($child)->whereIn('attendance_id', $ids)->update(['attendance_id' => $keeper->id]);
+                }
+            }
             $deleted += DB::table('attendances')->whereIn('id', $ids)->delete();
         }
 

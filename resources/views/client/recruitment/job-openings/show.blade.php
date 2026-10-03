@@ -51,7 +51,7 @@
         .detail-card-title i {
             margin-right: 6px;
             font-size: 12px;
-            color: #1e3a8a;
+            color: var(--icon-color, #0D6EFD);
         }
 
         /* Info Grid */
@@ -117,7 +117,7 @@
 
         .status-on-hold {
             background-color: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         /* Employment Type Badges */
@@ -131,7 +131,7 @@
 
         .employment-full_time {
             background-color: #dbeafe;
-            color: #1e40af;
+            color: #0D6EFD;
         }
 
         .employment-part_time {
@@ -187,7 +187,7 @@
 
         .stat-mini-number.text-info,
         .stat-mini-number.text-primary {
-            color: #1e3a8a;
+            color: #0D6EFD;
         }
 
         .stat-mini-label {
@@ -209,7 +209,7 @@
 
         .progress-bar-custom {
             height: 100%;
-            background: #1e3a8a;
+            background: #0D6EFD;
             border-radius: 3px;
             transition: width 0.3s;
         }
@@ -235,21 +235,21 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #1e40af;
+            background: #0D6EFD;
         }
 
         .btn-info {
-            background: #1e3a8a;
+            background: #0D6EFD;
             color: white;
         }
 
         .btn-info:hover {
-            background: #1e40af;
+            background: #0D6EFD;
         }
 
         .btn-success {
@@ -297,7 +297,7 @@
             font-family: monospace;
             font-size: 12px;
             font-weight: 600;
-            color: #1e3a8a;
+            color: #0D6EFD;
             display: inline-block;
         }
 
@@ -337,18 +337,8 @@
 @endsection
 
 @section('content-area')
-    <div class="page-header" style="margin-bottom: 10px;">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-5" style="font-size: 16px;">Job Opening Details</h5>
-            </div>
-            <ul class="breadcrumb" style="margin-left: 12px;">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('job-openings.index') }}">Job Openings</a></li>
-                <li class="breadcrumb-item active">{{ $jobOpening->title }}</li>
-            </ul>
-        </div>
-    </div>
+    <x-ui.page-header title="Job Opening Details" :current="$jobOpening->title"
+        :crumbs="[['label' => 'Job Openings', 'url' => route('job-openings.index')]]" />
 
     <div class="main-content" style="padding: 10px 15px !important;">
         <!-- Flash Messages -->

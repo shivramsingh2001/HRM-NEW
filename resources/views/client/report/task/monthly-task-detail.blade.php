@@ -4,54 +4,13 @@
 
 @section('style')
     <style>
-        /* ==================== FILTER SECTION ==================== */
-        .filter-wrapper {
-            background: white;
-            border-radius: 10px;
-            border: 1px solid #edf2f7;
-            padding: 12px 14px;
-            margin-bottom: 14px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-        }
 
-        .filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
 
-        .filter-title {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #1e293b;
-        }
 
-        .filter-title i { color: var(--primary-mid); font-size: 14px; }
 
-        .filter-title .badge-count {
-            background: var(--primary-light);
-            color: var(--primary-mid);
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
-        }
 
-        .filter-item { flex: 0 0 auto; }
-        .filter-item.grow { flex: 1; min-width: 130px; }
+
 
         .filter-input,
         .filter-select {
@@ -200,7 +159,7 @@
         .badge-success   { background: #d1fae5; color: #065f46; }
         .badge-warning   { background: #fef3c7; color: #92400e; }
         .badge-danger    { background: #fee2e2; color: #991b1b; }
-        .badge-info      { background: #dbeafe; color: #1e40af; }
+        .badge-info      { background: #dbeafe; color: #0D6EFD; }
         .badge-purple    { background: #ede9fe; color: #5b21b6; }
         .badge-secondary { background: #f1f5f9; color: #475569; }
         .badge-dark      { background: #e2e8f0; color: #0f172a; }
@@ -233,7 +192,7 @@
             gap: 4px;
         }
 
-        .task-section-title i { color: var(--primary-mid); font-size: 11px; }
+        .task-section-title i { color: var(--icon-color, #0D6EFD); font-size: 11px; }
 
         /* People chips */
         .person-chip {
@@ -385,9 +344,9 @@
         }
 
         .btn-view-detail:hover {
-            background: linear-gradient(135deg, #16295e, var(--primary-mid));
+            background: linear-gradient(135deg, var(--primary-mid), var(--primary-mid));
             transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 3px 8px rgba(13, 110, 253, 0.3);
             color: white;
         }
 
@@ -399,51 +358,14 @@
         .empty-state h4 { color: #0f172a; font-size: 16px; margin-top: 14px; }
         .empty-state p  { color: #94a3b8; font-size: 13px; }
 
-        /* Pagination */
-        .pagination-wrapper {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 14px;
-            padding: 8px 4px;
-        }
 
-        .pagination-info {
-            font-size: 12px;
-            color: #64748b;
-        }
 
-        .pagination-info strong { color: #0f172a; }
 
         .pagination-wrapper nav { margin-left: auto; }
         .pagination-wrapper .pagination { margin: 0; gap: 3px; }
 
-        .pagination-wrapper .page-link {
-            border-radius: 6px !important;
-            font-size: 12px;
-            padding: 5px 10px;
-            color: #475569;
-            border: 1px solid #e2e8f0;
-            min-width: 32px;
-            text-align: center;
-            transition: all 0.2s;
-            line-height: 1.4;
-        }
 
-        .pagination-wrapper .page-link:hover {
-            background: var(--primary-light);
-            color: var(--primary-mid);
-            border-color: #c7d2fe;
-        }
 
-        .pagination-wrapper .page-item.active .page-link {
-            background: var(--primary-mid);
-            border-color: var(--primary-mid);
-            color: white;
-            font-weight: 600;
-        }
 
         /* ==================== MODAL ==================== */
         .task-modal .modal-content {
@@ -566,7 +488,7 @@
 
         .detail-media-card .media-icon {
             font-size: 26px;
-            color: var(--primary-mid);
+            color: var(--icon-color, #0D6EFD);
             margin-bottom: 4px;
         }
 
@@ -597,7 +519,7 @@
         }
 
         .detail-btn:hover {
-            background: #16295e;
+            background: #0B5ED7;
             color: white;
         }
 
@@ -608,45 +530,32 @@
         }
 
         @media (max-width: 768px) {
-            .filter-row  { flex-direction: column; width: 100%; }
-            .filter-item { width: 100%; }
+
+
             .btn-sm-custom-outline, .reset-button {
                 width: 100%;
                 justify-content: center;
             }
-            .pagination-wrapper { justify-content: center; }
+
             .pagination-wrapper nav { margin-left: 0; }
         }
 
         @media print {
-            .filter-wrapper { display: none; }
-            .pagination-wrapper { display: none; }
+
             .btn-view-detail { display: none; }
         }
     </style>
 @endsection
 
 @section('content-area')
-    <div class="page-header">
-        <div class="page-header-left d-flex align-items-center">
-            <div class="page-header-title">
-                <h5 class="m-b-10">Monthly Task Detail Report</h5>
-            </div>
-            <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('report.attendance.index') }}">Reports</a></li>
-                <li class="breadcrumb-item active">Task Detail</li>
-            </ul>
-        </div>
-        <div class="page-header-right ms-auto">
-            <div class="page-header-right-items">
-                <span class="badge badge-info-custom">
-                    <i class="feather-calendar me-1"></i>
-                    {{ $from->format('d M Y') }} — {{ $to->format('d M Y') }}
-                </span>
-            </div>
-        </div>
-    </div>
+    <x-ui.page-header title="Monthly Task Detail Report" current="Task Detail" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]">
+        <x-slot:actions>
+            <span class="badge badge-info-custom">
+                <i class="feather-calendar me-1"></i>
+                {{ $from->format('d M Y') }} — {{ $to->format('d M Y') }}
+            </span>
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content" style="padding: 16px !important;">
 
