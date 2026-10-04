@@ -33,8 +33,9 @@ use Illuminate\Support\Facades\Log;
 class ShiftReportController extends Controller
 {
     use SanitizesCsv;
+    use \App\Http\Controllers\Concerns\FiltersReportEmployees;
 
-    private const PER_PAGE = 20;
+    private const PER_PAGE = 50;
 
     public function monthly(Request $request)
     {
@@ -65,14 +66,14 @@ class ShiftReportController extends Controller
 
             $handle = fopen('php://temp', 'w+');
             fwrite($handle, "\xEF\xBB\xBF");
-            $this->writeCsvRow($handle, ['Date', 'Day', 'Employee ID', 'Employee', 'Department', 'Branch', 'Shift', 'Start', 'End', 'Status']);
+            $this->writeCsvRow($handle, ['Date', 'Day', 'Employee ID', 'Employee', 'Department', 'Designation', 'Branch', 'Attendance Location', 'Shift', 'Start', 'End', 'Status']);
 
             foreach ($data['rows'] as $row) {
                 foreach ($data['dates'] as $d) {
                     $ds = $d->format('Y-m-d');
                     $cell = $row['cells'][$ds];
                     $this->writeCsvRow($handle, [
-                        $ds, $d->format('D'), $row['employee_id'], $row['name'], $row['department'], $row['branch'],
+                        $ds, $d->format('D'), $row['employee_id'], $row['name'], $row['department'], $row['designation'], $row['branch'], $row['attendance_location'],
                         $cell['type'] === 'shift' ? $cell['name'] : '',
                         $cell['type'] === 'shift' ? $cell['start'] : '',
                         $cell['type'] === 'shift' ? $cell['end'] : '',
@@ -85,7 +86,7 @@ class ShiftReportController extends Controller
                     // Additional (2nd+) shifts that day get their own line.
                     foreach ($cell['extra'] ?? [] as $x) {
                         $this->writeCsvRow($handle, [
-                            $ds, $d->format('D'), $row['employee_id'], $row['name'], $row['department'], $row['branch'],
+                            $ds, $d->format('D'), $row['employee_id'], $row['name'], $row['department'], $row['designation'], $row['branch'], $row['attendance_location'],
                             $x['name'], $x['start'], $x['end'], 'Additional shift',
                         ]);
                     }
@@ -127,7 +128,7 @@ class ShiftReportController extends Controller
         $userQuery = User::where('tenant_id', $tenantId)
             ->where('status', 1)
             ->where('role', '!=', 'admin')
-            ->with(['jobDetails.department', 'jobDetails.branch']);
+            ->with(['jobDetails.departmentRel', 'jobDetails.designationRel', 'jobDetails.branch', 'jobDetails.attendanceLocation']);
 
         if ($auth->role === 'manager') {
             $userQuery->managedBy($auth->id);
@@ -136,14 +137,8 @@ class ShiftReportController extends Controller
             $s = (string) $request->query('search');
             $userQuery->where(fn ($q) => $q->where('name', 'LIKE', "%{$s}%")->orWhere('employee_id', 'LIKE', "%{$s}%"));
         }
-        if ($request->filled('department_id')) {
-            $deptId = (int) $request->query('department_id');
-            $userQuery->whereHas('jobDetails', fn ($q) => $q->where('department', $deptId));
-        }
-        if ($request->filled('branch_id')) {
-            $branchIdFilter = (int) $request->query('branch_id');
-            $userQuery->whereHas('jobDetails', fn ($q) => $q->where('branch_id', $branchIdFilter));
-        }
+        // Branch / Department / Designation / Attendance Location
+        $this->applyReportEmployeeFiltersToUsers($userQuery, $request);
 
         $users = $userQuery->orderBy('name')->get();
         $userIds = $users->pluck('id')->all();
@@ -210,8 +205,11 @@ class ShiftReportController extends Controller
                 'user_id' => $user->id,
                 'name' => $user->name,
                 'employee_id' => $user->employee_id,
-                'department' => $user->jobDetails?->department?->name ?? '',
+                'email' => $user->email,
+                'department' => $user->jobDetails?->departmentRel?->name ?? '',
+                'designation' => $user->jobDetails?->designationRel?->name ?? '',
                 'branch' => $user->jobDetails?->branch?->name ?? '',
+                'attendance_location' => \App\Models\AttendanceLocation::labelFor($user->jobDetails?->office_branch, $user->jobDetails?->attendanceLocation?->name),
                 'cells' => $cells,
                 'shift_days' => $counts['shift'],
                 'weekoffs' => $counts['weekoff'],

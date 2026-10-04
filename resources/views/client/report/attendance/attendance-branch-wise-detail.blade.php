@@ -21,51 +21,13 @@
         overflow-y: auto;
     }
 
-    /* ==================== EMPLOYEE INFO ==================== */
-    .employee-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-width: 140px;
-    }
-
-    .employee-avatar {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
-        background: linear-gradient(135deg, #EFF6FF, #EFF6FF);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #0D6EFD;
-        font-weight: 600;
-        font-size: 10px;
-        text-transform: uppercase;
-        flex-shrink: 0;
-        transition: all 0.3s;
-    }
-
-    .employee-info:hover .employee-avatar {
-        transform: scale(1.05);
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
-    }
-
-    .employee-name-text { 
-        font-weight: 600; 
-        color: #0f172a; 
-        font-size: 10.5px; 
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .employee-email-text { 
-        font-size: 9.5px; 
-        color: #64748b; 
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+    /* One-row filters: start – end date, search, status, reset (same look as the other reports) */
+    .loc-filter-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; overflow-x: auto; }
+    .loc-input { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; background-color: #fff; }
+    .loc-input:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); outline: none; }
+    .loc-reset { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; height: 32px; display: inline-flex; align-items: center; text-decoration: none; }
+    .loc-reset:hover { background: #EFF6FF; color: #0D6EFD; }
+    .date-sep { font-size: 11px; color: #6b7385; flex: none; }
 
     /* ==================== BADGES ==================== */
     .badge {
@@ -156,8 +118,6 @@
 
 
         .table-responsive { max-height: 500px; }
-
-        .employee-info { min-width: 120px; }
     }
 
     @media (max-width: 480px) {
@@ -178,75 +138,28 @@
 </x-ui.page-header>
 
 <div class="main-content" style="padding: 20px !important;">
-    <!-- Statistics Cards - All Statuses -->
-    <div class="stats-grid">
-        <div class="stats-card total-card">
-            <div class="stats-icon-wrapper"><i class="feather-users"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['total_employees'] ?? 0 }}</div>
-                <div class="stats-label">Total</div>
-            </div>
-        </div>
-        <div class="stats-card present-card">
-            <div class="stats-icon-wrapper"><i class="feather-check-circle"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['present'] ?? 0 }}</div>
-                <div class="stats-label">Present</div>
-            </div>
-        </div>
-        <div class="stats-card halfday-card">
-            <div class="stats-icon-wrapper"><i class="feather-sun"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['halfday'] ?? 0 }}</div>
-                <div class="stats-label">Half Day</div>
-            </div>
-        </div>
-        <!--<div class="stats-card checkedin-card">-->
-        <!--    <div class="stats-icon-wrapper"><i class="feather-clock"></i></div>-->
-        <!--    <div class="stats-content">-->
-        <!--        <div class="stats-amount-main">{{ $stats['checked_in_only'] ?? 0 }}</div>-->
-        <!--        <div class="stats-label">Checked In</div>-->
-        <!--    </div>-->
-        <!--</div>-->
-        <div class="stats-card weekoff-card">
-            <div class="stats-icon-wrapper"><i class="feather-calendar"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['week_off'] ?? 0 }}</div>
-                <div class="stats-label">Week Off</div>
-            </div>
-        </div>
-        <div class="stats-card absent-card">
-            <div class="stats-icon-wrapper"><i class="feather-x-circle"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['absent'] ?? 0 }}</div>
-                <div class="stats-label">Absent</div>
-            </div>
-        </div>
-        <div class="stats-card leave-card">
-            <div class="stats-icon-wrapper"><i class="feather-calendar"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['on_leave'] ?? 0 }}</div>
-                <div class="stats-label">Leave</div>
-            </div>
-        </div>
-        <div class="stats-card holiday-card">
-            <div class="stats-icon-wrapper"><i class="feather-home"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['holiday'] ?? 0 }}</div>
-                <div class="stats-label">Holiday</div>
-            </div>
-        </div>
-    </div>
+    @include('client.report.partials.report-subnav', ['group' => 'attendance'])
 
     <!-- Filter Section -->
     <x-ui.filter-card title="Filter Report">
-        <form action="{{ route('report.attendance.branch-wise.detail', $branch->id) }}" method="GET">
-            <div class="filter-row">
-                <div class="filter-item date-picker">
-                    <input type="date" name="date" value="{{ $selectedDate }}" max="{{ now()->format('Y-m-d') }}" onchange="this.form.submit()">
+        <form action="{{ route('report.attendance.branch-wise.detail', $branch->id) }}" method="GET" id="filterForm">
+            <div class="filter-row loc-filter-row">
+                <div class="filter-item">
+                    <input type="date" name="start_date" value="{{ $startDate }}" max="{{ now()->format('Y-m-d') }}"
+                        class="loc-input auto-submit" title="Start date" aria-label="Start date">
                 </div>
-                <div class="filter-item status-filter">
-                    <select name="status" onchange="this.form.submit()">
+                <span class="date-sep">to</span>
+                <div class="filter-item">
+                    <input type="date" name="end_date" value="{{ $endDate }}" max="{{ now()->format('Y-m-d') }}"
+                        class="loc-input auto-submit" title="End date" aria-label="End date">
+                </div>
+                <div class="filter-item">
+                    <input type="text" name="search" value="{{ $search }}" class="loc-input" style="min-width:200px"
+                        placeholder="Search name / ID / email" aria-label="Search employee" autocomplete="off">
+                </div>
+                @include('client.report.partials.employee-filters', ['selectClass' => 'loc-input', 'except' => ['location']])
+                <div class="filter-item">
+                    <select name="status" class="loc-input auto-submit" aria-label="Status">
                         <option value="">All Status</option>
                         <option value="present" {{ $statusFilter == 'present' ? 'selected' : '' }}>✅ Present</option>
                         <option value="halfday" {{ $statusFilter == 'halfday' ? 'selected' : '' }}>🌓 Half Day</option>
@@ -258,13 +171,17 @@
                     </select>
                 </div>
                 <div class="filter-item">
-                    <a href="{{ route('report.attendance.branch-wise.detail', $branch->id) }}" class="reset-btn" title="Reset filters" aria-label="Reset filters">
+                    <a href="{{ route('report.attendance.branch-wise.detail', $branch->id) }}" class="loc-reset" title="Reset filters" aria-label="Reset filters">
                         <i class="feather-refresh-cw"></i>
                     </a>
                 </div>
             </div>
         </form>
     </x-ui.filter-card>
+
+    @if ($rangeNote)
+        <div class="alert alert-info py-2" style="font-size:10.5px;border-radius:10px;"><i class="feather-info me-1"></i>{{ $rangeNote }}</div>
+    @endif
 
     <!-- Employee Table -->
     <div class="row">
@@ -279,6 +196,9 @@
                                     <th>Employee</th>
                                     <th>Department</th>
                                     <th>Designation</th>
+                                    @feature('branches')<th>Branch</th>@endfeature
+                                    <th>Attendance Location</th>
+                                    <th>Date</th>
                                     <th>Status</th>
                                     <th>Clock In</th>
                                     <th>Clock Out</th>
@@ -298,7 +218,7 @@
                                         }
                                         
                                         $status = strtolower($status);
-                                        $dailyRecord = reset($data['daily_records']);
+                                        $dailyRecord = $data;
                                         
                                         // Map status to display
                                         $statusClass = match($status) {
@@ -335,7 +255,7 @@
                                         };
                                     @endphp
                                     <tr>
-                                        <td>{{ $loop->iteration }}</td>
+                                        <td>{{ $reportData->firstItem() + $loop->index }}</td>
                                         <td>
                                             <div class="employee-info">
                                                 <div class="employee-avatar">
@@ -352,6 +272,9 @@
                                         </td>
                                         <td>{{ $employee->department_name ?? 'N/A' }}</td>
                                         <td>{{ $employee->designation_name ?? 'N/A' }}</td>
+                                        @feature('branches')<td>{{ $employee->branch_name ?? '—' }}</td>@endfeature
+                                        <td>{{ \App\Models\AttendanceLocation::labelFor($employee->office_branch, $employee->location_name) }}</td>
+                                        <td style="white-space:nowrap;">{{ \Carbon\Carbon::parse($data['date'])->format('d M Y') }}<div class="text-muted" style="font-size:9.5px;">{{ \Carbon\Carbon::parse($data['date'])->format('l') }}</div></td>
                                         <td>
                                             <span class="badge {{ $statusClass }}">
                                                 <span class="status-dot {{ $statusDot }}"></span>
@@ -386,7 +309,7 @@
                                             @endif
                                         </td>
                                         <td>
-                                            <a href="{{ route('report.attendance.detail.index', ['user_id' => $employee->id, 'date' => $selectedDate]) }}" 
+                                            <a href="{{ route('report.attendance.detail.index', ['user_id' => $employee->id, 'date' => $data['date']]) }}" 
                                                class="action-btn view-btn" title="View Details">
                                                 <i class="feather-eye"></i>
                                             </a>
@@ -394,11 +317,11 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center py-5">
+                                        <td colspan="12" class="text-center py-5">
                                             <div class="empty-state">
                                                 <i class="feather-users"></i>
                                                 <h4>No Employees Found</h4>
-                                                <p>No employees found for this branch with the selected filters.</p>
+                                                <p>No employees found for this attendance location with the selected filters.</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -407,27 +330,7 @@
                         </table>
                     </div>
                 </div>
-                @if(count($reportData) > 0)
-                    <div class="card-footer">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div class="text-muted small">
-                                Showing <strong>1</strong> to <strong>{{ count($reportData) }}</strong>
-                                of <strong>{{ count($reportData) }}</strong> employees
-                            </div>
-                            <div>
-                                <span class="badge badge-info-custom">
-                                    <i class="feather-calendar me-1"></i>
-                                    {{ $dateObj->format('d M Y') }}
-                                    @if($dateObj->format('Y-m-d') == now()->format('Y-m-d'))
-                                        <span class="badge badge-success-custom" style="font-size: 8.5px; padding: 2px 6px; margin-left: 3px;">
-                                            <i class="feather-clock me-1"></i> Today
-                                        </span>
-                                    @endif
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                <x-ui.pagination-footer :paginator="$reportData" label="records" />
             </div>
         </div>
     </div>
@@ -436,19 +339,29 @@
 
 @section('script-area')
 <script>
-    $(document).ready(function() {
-        // Auto-submit on filter changes
-        $('input[name="date"], select[name="status"]').on('change', function() {
-            $(this).closest('form').submit();
-        });
+    $(function() {
+        const form = $('#filterForm');
+        form.find('.auto-submit').on('change', () => form.submit());
 
-        // Search with enter key
-        $('input[name="search"]').on('keypress', function(e) {
-            if (e.which === 13) {
-                e.preventDefault();
-                $(this).closest('form').submit();
-            }
+        // search: submit shortly after typing stops, then put the cursor back after the reload
+        const key = 'locationDetailSearchFocus';
+        const box = form.find('input[name="search"]');
+        let last = box.val(), timer;
+        box.on('input', function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                if (box.val() === last) return;
+                try { sessionStorage.setItem(key, '1'); } catch (e) {}
+                form.submit();
+            }, 600);
         });
+        try {
+            if (sessionStorage.getItem(key)) {
+                sessionStorage.removeItem(key);
+                const el = box.get(0);
+                if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+            }
+        } catch (e) {}
     });
 </script>
 @endsection

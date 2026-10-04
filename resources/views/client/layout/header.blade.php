@@ -58,68 +58,53 @@
                  </div>
                  @include('client.layout.partials.notification-bell')
 
-                 <div class="nxl-h-item dark-light-theme">
-                     <a href="javascript:void(0);" class="nxl-head-link me-0 dark-button">
-                         <i class="feather-moon"></i>
-                     </a>
-                     <a href="javascript:void(0);" class="nxl-head-link me-0 light-button" style="display: none">
-                         <i class="feather-sun"></i>
-                     </a>
-                 </div>
+                 {{-- The dark/light theme switch was removed (2026-10-04): reset anyone who had picked
+                      dark so they aren't stuck in it. Runs before the theme script reads this key. --}}
+                 <script>
+                     try { localStorage.setItem('app-skin-dark', 'app-skin-light'); localStorage.removeItem('app-skin'); } catch (e) {}
+                     document.documentElement.classList.remove('app-skin-dark');
+                 </script>
 
-               
-                 <div class="dropdown nxl-h-item">
-                     <a href="javascript:void(0);" data-bs-toggle="dropdown" role="button"
-                         data-bs-auto-close="outside">
-                         <img src="{{asset('assets/images/logo/shurt_logo_black.png')}}" alt="user-image"
-                             class="img-fluid user-avtar me-0" />
+                 {{-- Profile: hover (or click/tap) shows name, email, employee ID, My Profile + Logout --}}
+                 @php
+                     $me = auth()->user();
+                     $meBasic = $me?->basicDetails;
+                     $mePhoto = $meBasic?->profile_image ? file_url($meBasic->profile_image, 'profile_photo') : null;
+                     $meInitials = strtoupper(collect(preg_split('/\s+/', trim($me->name ?? 'U')))->filter()->take(2)->map(fn ($w) => mb_substr($w, 0, 1))->implode(''));
+                 @endphp
+                 <div class="dropdown nxl-h-item profile-hover" id="profileMenu">
+                     <a href="javascript:void(0);" class="profile-trigger" data-bs-toggle="dropdown" role="button"
+                         aria-expanded="false" aria-label="Profile menu">
+                         @if ($mePhoto)
+                             <img src="{{ $mePhoto }}" alt="{{ $me->name }}" class="user-avtar me-0">
+                         @else
+                             <span class="user-avtar user-initials me-0">{{ $meInitials }}</span>
+                         @endif
                      </a>
-                     <!--<div class="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-user-dropdown">-->
-                     <!--    <div class="dropdown-header">-->
-                     <!--        <div class="d-flex align-items-center">-->
-                     <!--            <img src="../assets/images/avatar/1.png" alt="user-image"-->
-                     <!--                class="img-fluid user-avtar" />-->
-                     <!--            <div>-->
-                     <!--                <h6 class="text-dark mb-0">Alexandra Della <span-->
-                     <!--                        class="badge bg-soft-success text-success ms-1">HR</span></h6>-->
-                     <!--                <span class="fs-12 fw-medium text-muted">alex.della@outlook.com</span>-->
-                     <!--            </div>-->
-                     <!--        </div>-->
-                     <!--    </div>-->
-                     <!--    <div class="dropdown">-->
-                     <!--        <a href="javascript:void(0);" class="dropdown-item" data-bs-toggle="dropdown">-->
-                     <!--            <span class="hstack">-->
-                     <!--                <i-->
-                     <!--                    class="wd-10 ht-10 border border-2 border-gray-1 bg-success rounded-circle me-2"></i>-->
-                     <!--                <span>Active</span>-->
-                     <!--            </span>-->
-                                 <!-- <i class="feather-chevron-right ms-auto me-0"></i> -->
-                     <!--        </a>-->
-                     <!--    </div>-->
-
-                     <!--    <div class="dropdown-divider"></div>-->
-                     <!--    <a href="javascript:void(0);" class="dropdown-item">-->
-                     <!--        <i class="feather-user"></i>-->
-                     <!--        <span>Profile Details</span>-->
-                     <!--    </a>-->
-                     <!--    <a href="javascript:void(0);" class="dropdown-item">-->
-                     <!--        <i class="feather-activity"></i>-->
-                     <!--        <span>Activity Feed</span>-->
-                     <!--    </a>-->
-                     <!--    <a href="javascript:void(0);" class="dropdown-item">-->
-                     <!--        <i class="feather-dollar-sign"></i>-->
-                     <!--        <span>Billing Details</span>-->
-                     <!--    </a>-->
-                     <!--    <a href="javascript:void(0);" class="dropdown-item">-->
-                     <!--        <i class="feather-settings"></i>-->
-                     <!--        <span>Account Settings</span>-->
-                     <!--    </a>-->
-                     <!--    <div class="dropdown-divider"></div>-->
-                     <!--    <a href="./auth-login-minimal.html" class="dropdown-item">-->
-                     <!--        <i class="feather-log-out"></i>-->
-                     <!--        <span>Logout</span>-->
-                     <!--    </a>-->
-                     <!--</div>-->
+                     <div class="dropdown-menu dropdown-menu-end nxl-h-dropdown profile-card">
+                         <div class="profile-card-head">
+                             @if ($mePhoto)
+                                 <img src="{{ $mePhoto }}" alt="{{ $me->name }}" class="profile-card-avatar">
+                             @else
+                                 <span class="profile-card-avatar user-initials">{{ $meInitials }}</span>
+                             @endif
+                             <div class="min-w-0">
+                                 <div class="profile-card-name">{{ $me->name }}</div>
+                                 <div class="profile-card-sub" title="{{ $me->email }}">{{ $me->email }}</div>
+                                 <div class="profile-card-sub">Employee ID: <strong>{{ $me->employee_id ?: '—' }}</strong></div>
+                                 <span class="profile-card-role">{{ $me->role === 'hr' ? 'HR' : ucfirst($me->role) }}</span>
+                             </div>
+                         </div>
+                         <div class="dropdown-divider my-0"></div>
+                         @if (in_array($me->role, ['employee', 'manager', 'hr'], true))
+                             <a href="{{ route('my-profile.show') }}" class="dropdown-item">
+                                 <i class="feather-user me-2"></i> My Profile
+                             </a>
+                         @endif
+                         <a href="{{ route('logout') }}" class="dropdown-item text-danger">
+                             <i class="feather-log-out me-2"></i> Logout
+                         </a>
+                     </div>
                  </div>
              </div>
          </div>

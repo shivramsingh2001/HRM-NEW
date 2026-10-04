@@ -169,7 +169,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-top: 8px;
+            padding: 8px 0 0;
             border-top: 1px solid #f1f5f9;
             margin-top: auto;
         }
@@ -418,7 +418,10 @@
 
             // Each report category is only offered if its source module is enabled for this tenant's plan.
             $reportFeatures = app(\App\Services\FeatureService::class);
-            $canAttendanceReports = $reportFeatures->enabledForCurrentTenant('attendance');
+            // Any attendance method (manual / face / biometric) produces attendance data.
+            $canAttendanceReports = $reportFeatures->enabledForCurrentTenant('attendance')
+                || $reportFeatures->enabledForCurrentTenant('attendance_face')
+                || $reportFeatures->enabledForCurrentTenant('attendance_biometric');
             $canProjectReports = $reportFeatures->enabledForCurrentTenant('project_management');
             $canTaskReports = $reportFeatures->enabledForCurrentTenant('task_single') || $reportFeatures->enabledForCurrentTenant('task_group');
             $canAssetReports = $reportFeatures->enabledForCurrentTenant('asset_management');
@@ -575,7 +578,7 @@
                         <p class="card-description">Complete monthly attendance summary with status, shifts & overtime breakdown.</p>
                         <div class="card-footer">
                             <span class="badge badge-purple">Summary</span>
-                            <a href="{{ route('team.attendance-summary') }}" class="btn-generate">
+                            <a href="{{ route('report.attendance.summary.index') }}" class="btn-generate">
                                 <i class="feather-arrow-right"></i> Generate
                             </a>
                         </div>
@@ -603,10 +606,10 @@
                         <div class="card-icon primary">
                             <i class="feather-clock"></i>
                         </div>
-                        <h6 class="card-title">Branch Wise Attendance Report</h6>
-                        <p class="card-description">View attendance summary by branch with present, absent, leave, and holiday counts for any selected date.</p>
+                        <h6 class="card-title">Attendance Location Wise Report</h6>
+                        <p class="card-description">View attendance per attendance location with present, absent, leave, holiday and week-off counts for any date range.</p>
                         <div class="card-footer">
-                            <span class="badge badge-primary">Branch</span>
+                            <span class="badge badge-primary">Location</span>
                             <a href="{{route('report.attendance.branch-wise')}}" class="btn-generate" >
                                 <i class="feather-clock"></i> Generate
                             </a>
@@ -1078,6 +1081,8 @@
                 if (known(location.hash)) target = location.hash;
                 else if (known(localStorage.getItem(KEY))) target = localStorage.getItem(KEY);
             } catch (e) {}
+            // Nothing remembered: open the first tab this company has (Attendance may be off).
+            if (!target && tabs.length) target = tabs[0].getAttribute('href');
             if (target && window.bootstrap) {
                 const link = document.querySelector('#reportTab a[href="' + target + '"]');
                 if (link) bootstrap.Tab.getOrCreateInstance(link).show();

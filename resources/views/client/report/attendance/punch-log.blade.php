@@ -3,16 +3,6 @@
 @section('style')
 <style>
     /* ==================== ALL-BLUE THEME (same as the other Reports pages) ==================== */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .6rem; margin-bottom: .8rem; }
-    .stats-card {
-        background: white; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px;
-        display: flex; align-items: center; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
-    }
-    .stats-icon { width: 30px; height: 30px; background: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
-    .stats-icon i { font-size: 13px; color: var(--icon-color, #0D6EFD); }
-    .stats-info h3 { font-size: 15px; font-weight: 700; margin: 0 0 1px 0; color: #1a2236; line-height: 1.2; }
-    .stats-info p { font-size: 9.5px; color: #6b7385; margin: 0; }
-
     /* All filters on one line: items share the width; scrolls sideways only on narrow screens. */
     .filter-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; overflow-x: auto; }
 
@@ -63,32 +53,10 @@
     </x-ui.page-header>
 
     <div class="content-area-body" style="padding: 20px !important;">
+        @include('client.report.partials.report-subnav', ['group' => 'attendance'])
         @if (session('error'))
             <div class="alert alert-danger">{{ session('error') }}</div>
         @endif
-
-        <div class="stats-grid">
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-list"></i></div>
-                <div class="stats-info"><h3>{{ number_format((int) $stats->total) }}</h3><p>Total punches</p></div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-log-in"></i></div>
-                <div class="stats-info"><h3>{{ number_format((int) $stats->ins) }}</h3><p>Clock in</p></div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-log-out"></i></div>
-                <div class="stats-info"><h3>{{ number_format((int) $stats->outs) }}</h3><p>Clock out</p></div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-users"></i></div>
-                <div class="stats-info"><h3>{{ number_format((int) $stats->employees) }}</h3><p>Employees</p></div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-map-pin"></i></div>
-                <div class="stats-info"><h3>{{ number_format((int) $stats->out_of_bounds) }}</h3><p>Outside office radius</p></div>
-            </div>
-        </div>
 
         {{-- Filters --}}
         <x-ui.filter-card title="Filter Report">
@@ -105,16 +73,6 @@
                         <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control-sm-custom"
                             placeholder="Search name / ID" aria-label="Search employee" autocomplete="off">
                     </div>
-                    @feature('branches')
-                    <div class="filter-item">
-                        <select name="branch_id" class="form-control-sm-custom auto-submit" aria-label="Branch">
-                            <option value="">-- All Branches --</option>
-                            @foreach ($branches as $b)
-                                <option value="{{ $b->id }}" @selected($filters['branch_id'] === $b->id)>{{ $b->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endfeature
                     <div class="filter-item">
                         <select name="user_id" class="form-control-sm-custom auto-submit" aria-label="Employee">
                             <option value="">-- All Employees --</option>
@@ -123,22 +81,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="filter-item">
-                        <select name="department_id" class="form-control-sm-custom auto-submit" aria-label="Department">
-                            <option value="">-- All Departments --</option>
-                            @foreach ($departments as $d)
-                                <option value="{{ $d->id }}" @selected($filters['department_id'] === $d->id)>{{ $d->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="filter-item">
-                        <select name="designation_id" class="form-control-sm-custom auto-submit" aria-label="Designation">
-                            <option value="">-- All Designations --</option>
-                            @foreach ($designations as $d)
-                                <option value="{{ $d->id }}" @selected($filters['designation_id'] === $d->id)>{{ $d->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    @include('client.report.partials.employee-filters', ['selectClass' => 'form-control-sm-custom', 'deptParam' => 'department_id', 'desigParam' => 'designation_id'])
                     <div class="filter-item">
                         <select name="direction" class="form-control-sm-custom auto-submit" aria-label="Direction">
                             <option value="">-- In & Out --</option>
@@ -170,6 +113,7 @@
                                 <th>Department</th>
                                 <th>Designation</th>
                                 @feature('branches')<th>Branch</th>@endfeature
+                                <th>Attendance Location</th>
                                 <th>Date</th>
                                 <th>Time</th>
                                 <th>Dir</th>
@@ -216,6 +160,7 @@
                                     <td>{{ $r->department_name ?: '—' }}</td>
                                     <td>{{ $r->designation_name ?: '—' }}</td>
                                     @feature('branches')<td>{{ $r->branch_name ?: '—' }}</td>@endfeature
+                                    <td>{{ \App\Models\AttendanceLocation::labelFor($r->office_branch, $r->assigned_location_name) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($r->date)->format('d M Y') }}<div class="sub">{{ \Carbon\Carbon::parse($r->date)->format('l') }}</div></td>
                                     <td><strong>{{ $at->format('h:i:s A') }}</strong>
                                         @if ($at->toDateString() !== \Carbon\Carbon::parse($r->date)->toDateString())
@@ -261,7 +206,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="23" class="text-center py-5 text-muted" style="font-size:11px;">
+                                    <td colspan="24" class="text-center py-5 text-muted" style="font-size:11px;">
                                         No clock in/out found for these filters.
                                     </td>
                                 </tr>

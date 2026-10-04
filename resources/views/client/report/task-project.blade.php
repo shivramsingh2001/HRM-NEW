@@ -42,6 +42,7 @@
     <x-ui.page-header class="content-area-header sticky-top" title="Task & Project Report" current="Task & Project" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]" />
 
     <div class="content-area-body" style="padding: 20px !important;">
+        @include('client.report.partials.report-subnav', ['group' => 'task'])
         <div class="stats-grid">
             <div class="stats-card">
                 <div class="stats-icon"><i class="feather-list"></i></div>

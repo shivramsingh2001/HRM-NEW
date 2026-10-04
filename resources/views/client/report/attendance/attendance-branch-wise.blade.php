@@ -11,6 +11,14 @@
 
 
 
+    /* One-row filters: start – end date, location search, reset (same look as the other reports) */
+    .loc-filter-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; overflow-x: auto; }
+    .loc-input { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; background-color: #fff; }
+    .loc-input:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); outline: none; }
+    .loc-reset { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; height: 32px; display: inline-flex; align-items: center; text-decoration: none; }
+    .loc-reset:hover { background: #EFF6FF; color: #0D6EFD; }
+    .date-sep { font-size: 11px; color: #6b7385; flex: none; }
+
     .date-indicator {
         background: #f8fafc;
         padding: 2px 7px;
@@ -247,97 +255,69 @@
 @endsection
 
 @section('content-area')
-<x-ui.page-header title="Attendance Location Reports" current="Attendance Location Wise Attendance" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]" />
+<x-ui.page-header title="Attendance Location Wise Report" current="Attendance Location Wise Report" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]" />
 
 <div class="main-content" style="padding: 16px 20px !important;">
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
-        <div class="stats-card total-card">
-            <div class="stats-icon-wrapper"><i class="feather-home"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['total_branches'] ?? 0 }}</div>
-                <div class="stats-label">Branches</div>
-            </div>
-        </div>
-        <div class="stats-card branch-card">
-            <div class="stats-icon-wrapper"><i class="feather-users"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['total_employees'] ?? 0 }}</div>
-                <div class="stats-label">Employees</div>
-            </div>
-        </div>
-        <div class="stats-card present-card">
-            <div class="stats-icon-wrapper"><i class="feather-check-circle"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['total_present'] ?? 0 }}</div>
-                <div class="stats-label">Present</div>
-            </div>
-        </div>
-        <div class="stats-card absent-card">
-            <div class="stats-icon-wrapper"><i class="feather-x-circle"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['total_absent'] ?? 0 }}</div>
-                <div class="stats-label">Absent</div>
-            </div>
-        </div>
-        <div class="stats-card leave-card">
-            <div class="stats-icon-wrapper"><i class="feather-calendar"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['total_leave'] ?? 0 }}</div>
-                <div class="stats-label">Leave</div>
-            </div>
-        </div>
-        <div class="stats-card holiday-card">
-            <div class="stats-icon-wrapper"><i class="feather-home"></i></div>
-            <div class="stats-content">
-                <div class="stats-amount-main">{{ $stats['total_holiday'] ?? 0 }}</div>
-                <div class="stats-label">Holiday</div>
-            </div>
-        </div>
-    </div>
+    @include('client.report.partials.report-subnav', ['group' => 'attendance'])
 
     <!-- Filter Section - Date Picker -->
     <x-ui.filter-card title="Filter Report">
-        <form action="{{ route('report.attendance.branch-wise') }}" method="GET">
-            <div class="filter-row">
-                <div class="filter-item date-picker">
-                    <input type="date" 
-                           name="date" 
-                           value="{{ $selectedDate }}" 
-                           max="{{ now()->format('Y-m-d') }}"
-                           onchange="this.form.submit()">
+        <form action="{{ route('report.attendance.branch-wise') }}" method="GET" id="filterForm">
+            <div class="filter-row loc-filter-row">
+                <div class="filter-item">
+                    <input type="date" name="start_date" value="{{ $startDate }}" max="{{ now()->format('Y-m-d') }}"
+                        class="loc-input auto-submit" title="Start date" aria-label="Start date">
                 </div>
+                <span class="date-sep">to</span>
+                <div class="filter-item">
+                    <input type="date" name="end_date" value="{{ $endDate }}" max="{{ now()->format('Y-m-d') }}"
+                        class="loc-input auto-submit" title="End date" aria-label="End date">
+                </div>
+                <div class="filter-item">
+                    <input type="text" name="search" value="{{ $search }}" class="loc-input" style="min-width:200px"
+                        placeholder="Search location" aria-label="Search location" autocomplete="off">
+                </div>
+                @include('client.report.partials.employee-filters', ['selectClass' => 'loc-input'])
                 <span class="date-indicator">
                     <i class="feather-calendar"></i>
-                    {{ $dateObj->format('d M Y') }}
-                    @if($dateObj->format('Y-m-d') == now()->format('Y-m-d'))
-                        <span class="badge badge-success" style="font-size: 8.5px; padding: 2px 4px; margin-left: 3px;">Today</span>
+                    @if ($startDate === $endDate)
+                        {{ \Carbon\Carbon::parse($startDate)->format('d M Y') }}
+                        @if ($startDate == now()->format('Y-m-d'))
+                            <span class="badge badge-success" style="font-size: 8.5px; padding: 2px 4px; margin-left: 3px;">Today</span>
+                        @endif
+                    @else
+                        {{ \Carbon\Carbon::parse($startDate)->format('d M Y') }} – {{ \Carbon\Carbon::parse($endDate)->format('d M Y') }} ({{ $dayCount }} days)
                     @endif
                 </span>
-                <div class="ms-auto">
-                    <a href="{{ route('report.attendance.branch-wise') }}" class="reset-btn" title="Reset filters" aria-label="Reset filters">
+                <div class="filter-item">
+                    <a href="{{ route('report.attendance.branch-wise') }}" class="loc-reset" title="Reset filters" aria-label="Reset filters">
                         <i class="feather-refresh-cw"></i></a>
                 </div>
             </div>
         </form>
     </x-ui.filter-card>
 
-    <!-- Branch Cards -->
+    @if ($rangeNote)
+        <div class="alert alert-info py-2" style="font-size:10.5px;border-radius:10px;"><i class="feather-info me-1"></i>{{ $rangeNote }}</div>
+    @endif
+
+    <!-- Attendance Location Cards -->
     @if(empty($branchStats) || count($branchStats) == 0)
         <div class="alert alert-info text-center py-3" style="border-radius: 8px;">
             <i class="feather-building" style="font-size: 24px; display: block; margin-bottom: 6px; color: #94a3b8;"></i>
-            <h5>No Branches Found</h5>
-            <p class="text-muted">No active branches available for this tenant.</p>
+            <h5>No Attendance Locations Found</h5>
+            <p class="text-muted">{{ $search !== '' ? 'No attendance location matches "' . $search . '".' : 'No active attendance locations available for this company.' }}</p>
         </div>
     @else
         <div class="branch-grid">
             @foreach($branchStats as $branchId => $data)
                 @php
                     $branch = $data['branch'];
-                    $attendancePercent = $data['total_employees'] > 0 ? round(($data['present'] / $data['total_employees']) * 100, 2) : 0;
+                    // present employee-days ÷ (employees × days in range)
+                    $attendancePercent = $data['employee_days'] > 0 ? round(($data['present'] / $data['employee_days']) * 100, 2) : 0;
                     $percentColor = $attendancePercent >= 80 ? 'success' : ($attendancePercent >= 60 ? 'warning' : 'danger');
                 @endphp
-                <a href="{{ route('report.attendance.branch-wise.detail', $branchId) }}?date={{ $selectedDate }}" 
+                <a href="{{ route('report.attendance.branch-wise.detail', array_merge(request()->only(['branch_id', 'department', 'designation']), ['branchId' => $branchId, 'start_date' => $startDate, 'end_date' => $endDate])) }}" 
                    class="branch-card-item">
                     <div class="branch-header">
                         <div>
@@ -395,6 +375,7 @@
                 </a>
             @endforeach
         </div>
+        <x-ui.pagination-footer :paginator="$locationPage" label="locations" :always="false" class="mt-2" />
     @endif
 
     <!-- Summary Footer -->
@@ -433,11 +414,29 @@
 
 @section('script-area')
 <script>
-    $(document).ready(function() {
-        // Auto-submit on date change
-        $('input[name="date"]').on('change', function() {
-            $(this).closest('form').submit();
+    $(function() {
+        const form = $('#filterForm');
+        form.find('.auto-submit').on('change', () => form.submit());
+
+        // search: submit shortly after typing stops, then put the cursor back after the reload
+        const key = 'locationReportSearchFocus';
+        const box = form.find('input[name="search"]');
+        let last = box.val(), timer;
+        box.on('input', function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                if (box.val() === last) return;
+                try { sessionStorage.setItem(key, '1'); } catch (e) {}
+                form.submit();
+            }, 600);
         });
+        try {
+            if (sessionStorage.getItem(key)) {
+                sessionStorage.removeItem(key);
+                const el = box.get(0);
+                if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+            }
+        } catch (e) {}
     });
 </script>
 @endsection

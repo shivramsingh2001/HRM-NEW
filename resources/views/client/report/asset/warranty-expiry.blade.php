@@ -10,6 +10,7 @@
     <x-ui.page-header title="Warranty Expiry" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']" />
 
     <div class="main-content" style="padding: 20px !important;">
+        @include('client.report.partials.report-subnav', ['group' => 'asset'])
         <x-ui.filter-card title="Filter Report">
 <form method="GET" class="d-flex flex-wrap gap-2 align-items-center filter-row">
                 <label style="font-size:11.5px;" class="fw-semibold mb-0">Within</label>

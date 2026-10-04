@@ -36,6 +36,7 @@ class TeamController extends Controller
 {
     use \App\Http\Controllers\Concerns\SanitizesCsv;
     use AuthorizesByScope;
+    use \App\Http\Controllers\Concerns\FiltersReportEmployees;
 
     /**
      * Display team members based on user role
@@ -1325,7 +1326,15 @@ class TeamController extends Controller
             $attendanceEndDate = min($monthEndDate, $today);
 
             [$branchesEnabled, $branches, $branchId] = $this->summaryBranchContext($request, $authUser);
-            $users = $this->getUsersForSummary($authUser, $branchId);
+            $users = $this->getUsersForSummary($authUser, $branchId, $request->query('search'), $request);
+
+            // 50 employees per page — the per-employee summary is only built for the visible page
+            $page = max(1, (int) $request->get('page', 1));
+            $summaryPage = new \Illuminate\Pagination\LengthAwarePaginator(
+                $users->forPage($page, 50)->values(), $users->count(), 50, $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+            $users = $summaryPage->getCollection();
 
             $summaryData = [];
             $totalSummary = [
@@ -1349,6 +1358,7 @@ class TeamController extends Controller
 
                 if ($userSummary) {
                     $userSummary['branch'] = $branches->firstWhere('id', $user->jobDetails?->branch_id)?->name;
+                    $userSummary['attendance_location'] = \App\Models\AttendanceLocation::labelFor($user->jobDetails?->office_branch, $user->jobDetails?->attendanceLocation?->name);
                     $summaryData[] = $userSummary;
 
                     $totalSummary['total_users']++;
@@ -1364,8 +1374,9 @@ class TeamController extends Controller
 
             $months = $this->getMonthOptions();
 
-            return view('client.team.attendance-summary', compact(
+            return view('client.report.attendance.attendance-summary', compact(
                 'summaryData',
+                'summaryPage',
                 'totalSummary',
                 'months',
                 'selectedMonth',
@@ -1394,15 +1405,25 @@ class TeamController extends Controller
         return [$enabled, $branches, $enabled && $request->filled('branch_id') ? (int) $request->branch_id : null];
     }
 
-    private function getUsersForSummary($authUser, ?int $branchId = null)
+    private function getUsersForSummary($authUser, ?int $branchId = null, ?string $search = null, ?Request $request = null)
     {
-        $query = User::with(['jobDetails.Department', 'jobDetails.Designation'])
+        $search = trim((string) $search);
+
+        $query = User::with(['jobDetails.Department', 'jobDetails.Designation', 'jobDetails.attendanceLocation'])
             ->where('status', 1)
             ->where('role', "!=", 'admin')
-            ->when($branchId, fn ($q) => $q->whereHas('jobDetails', fn ($j) => $j->where('branch_id', $branchId)));
+            ->when($branchId, fn ($q) => $q->whereHas('jobDetails', fn ($j) => $j->where('branch_id', $branchId)))
+            ->when($search !== '', fn ($q) => $q->where(fn ($s) => $s->where('name', 'LIKE', "%{$search}%")
+                ->orWhere('employee_id', 'LIKE', "%{$search}%")
+                ->orWhere('email', 'LIKE', "%{$search}%")));
 
         if (app(RbacService::class)->scopeFor($authUser, 'team', 'view') === 'team') {
             $query->managedBy($authUser->id);
+        }
+
+        // Branch / Department / Designation / Attendance Location (Monthly Summary report)
+        if ($request) {
+            $this->applyReportEmployeeFiltersToUsers($query, $request);
         }
 
         return $query->orderBy('name')->get();
@@ -1689,7 +1710,7 @@ class TeamController extends Controller
             $attendanceEndDate = min($monthEndDate, $today);
 
             [$branchesEnabled, $branches, $branchId] = $this->summaryBranchContext($request, $authUser);
-            $users = $this->getUsersForSummary($authUser, $branchId);
+            $users = $this->getUsersForSummary($authUser, $branchId, $request->query('search'), $request);
 
             $summaryData = [];
             foreach ($users as $user) {
@@ -1701,6 +1722,7 @@ class TeamController extends Controller
                 );
                 if ($userSummary) {
                     $userSummary['branch'] = $branches->firstWhere('id', $user->jobDetails?->branch_id)?->name;
+                    $userSummary['attendance_location'] = \App\Models\AttendanceLocation::labelFor($user->jobDetails?->office_branch, $user->jobDetails?->attendanceLocation?->name);
                     $summaryData[] = $userSummary;
                 }
             }
@@ -1721,6 +1743,7 @@ class TeamController extends Controller
                     'Department',
                     'Designation',
                     ...($branchesEnabled ? ['Branch'] : []),
+                    'Attendance Location',
                     'Present Days',
                     'halfdays',
                     'Absent Days',
@@ -1739,6 +1762,7 @@ class TeamController extends Controller
                         $row['department'],
                         $row['designation'],
                         ...($branchesEnabled ? [$row['branch'] ?? ''] : []),
+                        $row['attendance_location'] ?? '',
                         $row['present'],
                         $row['halfday'] ?? 0,
                         $row['absent'],

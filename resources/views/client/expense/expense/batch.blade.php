@@ -146,7 +146,7 @@
         /* right-hand voucher panel */
         .batch-page .batch-panel {
             position: sticky;
-            top: 80px;
+            top: var(--header-h, 56px); /* just below the fixed top header */
         }
 
         .batch-page .bp-label {

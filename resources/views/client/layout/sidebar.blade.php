@@ -61,7 +61,7 @@
                         </li>
                     @endfeature
 
-                    @feature('attendance')
+                    @feature('daily_reports')
                         <li class="nxl-item">
                             <a href="{{ route('report.attendance.index') }}" class="nxl-link">
                                 <span class="nxl-micon"><i class="feather-bar-chart-2"></i></span>
@@ -634,7 +634,7 @@
                     </li>
                 @endif
 
-                @feature('attendance')
+                @feature('daily_reports')
                     @if ($role === 'hr')
                         <li class="nxl-item">
                             <a href="{{ route('report.attendance.index') }}" class="nxl-link">

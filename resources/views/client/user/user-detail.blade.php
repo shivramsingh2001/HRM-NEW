@@ -445,29 +445,48 @@
         .p360-page .p360-panel { background: #fff; border: 1px solid var(--p360-line); border-radius: var(--p360-radius); box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
 
         /* --- profile card --- */
-        .p360-profile { position: sticky; /* top: 12px; max-height: calc(100vh - 96px); */ overflow-y: auto; }
-        .p360-profile-top { position: relative; padding: 16px 14px 12px; text-align: center; border-bottom: 1px solid var(--p360-line);
-            background: linear-gradient(180deg, var(--primary-light, #EFF6FF) 0, #fff 64px); border-radius: var(--p360-radius) var(--p360-radius) 0 0; }
-        .p360-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(13, 110, 253, .18); background: #fff; }
-        .p360-profile-top .p360-name { font-size: 15px; font-weight: 700; color: var(--p360-ink); margin: 8px 0 2px; line-height: 1.25; }
-        .p360-profile-top .p360-email { font-size: 11.5px; color: var(--p360-mute); word-break: break-all; }
-        .p360-status { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .p360-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        /* Compact card: blue header strip, avatar + presence dot, name / designation / email,
+           status + type badges, then an icon · label · value fact list. Everything is scoped to
+           .p360-profile so the rest of the page (and app) is unaffected. */
+        .p360-profile { position: sticky; overflow-y: auto; box-shadow: 0 1px 3px rgba(15, 23, 42, .06), 0 4px 14px rgba(13, 110, 253, .05) !important; }
+        .p360-profile-top { position: relative; padding: 14px 12px 10px; text-align: center; border-bottom: 1px solid var(--p360-line);
+            background: linear-gradient(180deg, #0D6EFD 0, #0D6EFD 38px, #fff 38px); border-radius: var(--p360-radius) var(--p360-radius) 0 0; }
+        .p360-avatar-wrap { position: relative; display: inline-block; }
+        .p360-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(15, 23, 42, .15); background: #fff; display: block; }
+        .p360-avatar-initials { display: flex; align-items: center; justify-content: center; background: #EFF6FF; color: #0D6EFD; font-size: 18px; font-weight: 700; letter-spacing: .5px; }
+        .p360-presence { position: absolute; right: 2px; bottom: 3px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; }
+        .p360-presence.on { background: #16a34a; }
+        .p360-presence.off { background: #dc2626; }
+        .p360-id-block { margin-top: 6px; min-width: 0; }
+        .p360-profile-top .p360-name { font-size: 13.5px; font-weight: 700; color: var(--p360-ink); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .p360-profile-top .p360-role { font-size: 11px; font-weight: 600; color: #0D6EFD; margin-top: 1px; }
+        .p360-profile-top .p360-email { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; font-size: 10.5px; color: var(--p360-mute);
+            text-decoration: none; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .p360-profile-top .p360-email:hover { color: #0D6EFD; }
+        .p360-profile-top .p360-email i { font-size: 10.5px; flex: none; }
+        .p360-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 7px; }
+        .p360-status, .p360-badge { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; line-height: 1.6; }
+        .p360-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
         .p360-status.on { background: #e8f7ee; color: #15803d; }
         .p360-status.off { background: #fdecec; color: #b91c1c; }
-        .p360-facts { margin: 0; padding: 6px 14px 4px; }
-        .p360-fact { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--p360-line); }
+        .p360-badge { background: #EFF6FF; color: #0D6EFD; }
+        .p360-badge i { font-size: 10px; }
+        .p360-facts { margin: 0; padding: 4px 12px; }
+        .p360-fact { display: grid; grid-template-columns: 14px 78px minmax(0, 1fr); align-items: baseline; column-gap: 7px; padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
         .p360-fact:last-child { border-bottom: 0; }
-        .p360-fact i { color: var(--icon-color, #0D6EFD); font-size: 13px; margin-top: 2px; width: 14px; flex: none; }
-        .p360-fact dt { font-size: 10.5px; font-weight: 600; color: var(--p360-mute); text-transform: uppercase; letter-spacing: .3px; margin: 0; }
-        .p360-fact dd { font-size: 12.5px; font-weight: 600; color: var(--p360-ink); margin: 0; word-break: break-word; }
-        .p360-quick { padding: 10px 14px 14px; border-top: 1px solid var(--p360-line); }
-        .p360-quick-title { font-size: 10.5px; font-weight: 700; color: var(--p360-mute); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
-        .p360-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-        .p360-quick a { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--p360-line); border-radius: 7px; background: #fff;
-            font-size: 11.5px; font-weight: 600; color: var(--primary, #0D6EFD); text-decoration: none; transition: background .15s, border-color .15s; line-height: 1.2; }
+        .p360-fact i { color: #0D6EFD; font-size: 11.5px; }
+        .p360-fact dt { font-size: 10px; font-weight: 600; color: var(--p360-mute); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .p360-fact dd { font-size: 11.5px; font-weight: 600; color: var(--p360-ink); margin: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .p360-fact dd a { color: var(--p360-ink); text-decoration: none; }
+        .p360-fact dd a:hover { color: #0D6EFD; }
+        .p360-fact .p360-na { color: #cbd5e1; font-weight: 400; }
+        .p360-quick { padding: 8px 12px 12px; border-top: 1px solid var(--p360-line); }
+        .p360-quick-title { font-size: 9.5px; font-weight: 700; color: var(--p360-mute); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+        .p360-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .p360-quick a { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid var(--p360-line); border-radius: 7px; background: #fff;
+            font-size: 10.5px; font-weight: 600; color: var(--primary, #0D6EFD); text-decoration: none; transition: background .15s, border-color .15s; line-height: 1.2; }
         .p360-quick a:hover { background: var(--primary-light, #EFF6FF); border-color: #bcd0f7; }
-        .p360-quick a i { font-size: 12px; flex: none; }
+        .p360-quick a i { font-size: 11px; flex: none; }
         .p360-quick a.danger { color: #b91c1c; }
         .p360-quick a.danger:hover { background: #fdecec; border-color: #f5c2c2; }
 
@@ -529,8 +548,9 @@
             .p360-layout { grid-template-columns: 184px minmax(0, 1fr); }
             .p360-profile { grid-column: 1 / -1; position: static; max-height: none; display: grid; grid-template-columns: 220px 1fr; }
             .p360-profile-top { border-bottom: 0; border-right: 1px solid var(--p360-line); border-radius: var(--p360-radius) 0 0 var(--p360-radius); }
-            .p360-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 14px; align-content: start; padding-top: 8px; }
-            .p360-fact { border-bottom: 0; }
+            .p360-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 16px; align-content: start; padding-top: 8px; }
+            .p360-fact { grid-template-columns: 14px minmax(0, 1fr); row-gap: 1px; }
+            .p360-fact dd { grid-column: 2; text-align: left; }
             .p360-quick { grid-column: 1 / -1; }
             .p360-quick-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
         }
@@ -622,25 +642,76 @@
     <div class="main-content p360-page">
         <div class="p360-layout">
             {{-- Left: compact profile card + quick actions --}}
+            @php
+                // Profile card data — all from the already-loaded $user (no extra controller work).
+                $pcJob = $user->jobDetails;
+                $pcPhoto = $user->basicDetails?->profile_image ? file_url($user->basicDetails->profile_image, 'profile_photo') : null;
+                $pcInitials = strtoupper(collect(preg_split('/\s+/', trim($user->name)))->filter()->take(2)->map(fn ($w) => mb_substr($w, 0, 1))->implode(''));
+                $pcJoin = $pcJob?->joining_date ? \Carbon\Carbon::parse($pcJob->joining_date) : null;
+                $pcTenure = null; // "2y 3m" since joining
+                if ($pcJoin && $pcJoin->isPast()) {
+                    $pcY = (int) $pcJoin->diffInYears(now());
+                    $pcM = (int) $pcJoin->copy()->addYears($pcY)->diffInMonths(now());
+                    $pcTenure = trim(($pcY ? $pcY . 'y ' : '') . ($pcM ? $pcM . 'm' : '')) ?: '< 1m';
+                }
+                $pcEmployment = $pcJob?->employment_type ? ucwords(str_replace('_', ' ', $pcJob->employment_type)) : null;
+                $pcAttendance = match ($pcJob?->attendance_type) {
+                    'face_verification' => ['Face', 'smile'], 'biometric_only' => ['Biometric', 'cpu'], 'manual_attendance' => ['Manual', 'edit-3'], default => null,
+                };
+                $pcHeads = collect($pcJob?->reporting_heads ?? [])->pluck('name')->filter()->implode(', ');
+                $pcLocation = $pcJob ? \App\Models\AttendanceLocation::labelFor($pcJob->office_branch, $pcJob->attendanceLocation?->name) : null;
+                $pcFacts = array_filter([
+                    ['hash', 'Employee ID', $user->employee_id ?: null, null],
+                    ['award', 'Designation', $pcJob->designation_name ?? null, null],
+                    ['layers', 'Department', $pcJob->department_name ?? null, null],
+                    ['phone', 'Phone', $user->contact ?: null, $user->contact ? 'tel:' . preg_replace('/[^0-9+]/', '', $user->contact) : null],
+                    ['mail', 'Personal email', $user->basicDetails->personal_email ?? null, ($user->basicDetails->personal_email ?? null) ? 'mailto:' . $user->basicDetails->personal_email : null],
+                    ['calendar', 'Joined', $pcJoin ? $pcJoin->format('d M Y') . ($pcTenure ? ' · ' . $pcTenure : '') : null, null],
+                    ['users', 'Reports to', $pcHeads ?: null, null],
+                    app(\App\Services\FeatureService::class)->enabledForCurrentTenant('branches') ? ['git-branch', 'Branch', $pcJob?->branch?->name, null] : null,
+                    ['map-pin', 'Attendance location', $pcLocation && $pcLocation !== '—' ? $pcLocation : null, null],
+                ]);
+            @endphp
             <aside class="p360-panel p360-profile" aria-label="Employee summary">
                 <div class="p360-profile-top">
-                    @if ($user->basicDetails && $user->basicDetails->profile_image)
-                        <img src="{{ file_url($user->basicDetails->profile_image, 'profile_photo') }}" class="p360-avatar" alt="{{ $user->name }}">
-                    @else
-                        <img src="{{ asset('assets/images/avatar/1.png') }}" class="p360-avatar" alt="{{ $user->name }}">
-                    @endif
-                    <div class="p360-name">{{ $user->name }}</div>
-                    <div class="p360-email">{{ $user->email }}</div>
-                    <span class="p360-status {{ $active ? 'on' : 'off' }}">{{ $active ? 'Active' : 'Inactive' }}</span>
+                    <div class="p360-avatar-wrap">
+                        @if ($pcPhoto)
+                            <img src="{{ $pcPhoto }}" class="p360-avatar" alt="{{ $user->name }}">
+                        @else
+                            <span class="p360-avatar p360-avatar-initials" aria-hidden="true">{{ $pcInitials }}</span>
+                        @endif
+                        <span class="p360-presence {{ $active ? 'on' : 'off' }}" title="{{ $active ? 'Active' : 'Inactive' }}"></span>
+                    </div>
+                    <div class="p360-id-block">
+                        <div class="p360-name" title="{{ $user->name }}">{{ $user->name }}</div>
+                        @if (!empty($pcJob->designation_name))
+                            <div class="p360-role">{{ $pcJob->designation_name }}</div>
+                        @endif
+                        <a href="mailto:{{ $user->email }}" class="p360-email" title="{{ $user->email }}"><i class="feather-mail"></i>{{ $user->email }}</a>
+                    </div>
+                    <div class="p360-badges">
+                        <span class="p360-status {{ $active ? 'on' : 'off' }}">{{ $active ? 'Active' : 'Inactive' }}</span>
+                        @if ($pcEmployment)<span class="p360-badge"><i class="feather-briefcase"></i>{{ $pcEmployment }}</span>@endif
+                        @if ($pcAttendance)<span class="p360-badge"><i class="feather-{{ $pcAttendance[1] }}"></i>{{ $pcAttendance[0] }}</span>@endif
+                    </div>
                 </div>
 
                 <dl class="p360-facts">
-                    <div class="p360-fact"><i class="feather-hash"></i><div><dt>Employee ID</dt><dd>{{ $user->employee_id ?: 'N/A' }}</dd></div></div>
-                    <div class="p360-fact"><i class="feather-award"></i><div><dt>Designation</dt><dd>{{ $user->jobDetails->designation_name ?? 'N/A' }}</dd></div></div>
-                    <div class="p360-fact"><i class="feather-layers"></i><div><dt>Department</dt><dd>{{ $user->jobDetails->department_name ?? 'N/A' }}</dd></div></div>
-                    <div class="p360-fact"><i class="feather-phone"></i><div><dt>Phone</dt><dd>{{ $user->contact ?: 'N/A' }}</dd></div></div>
-                    <div class="p360-fact"><i class="feather-mail"></i><div><dt>Personal email</dt><dd>{{ $user->basicDetails->personal_email ?? 'N/A' }}</dd></div></div>
-                    <div class="p360-fact"><i class="feather-calendar"></i><div><dt>Joining date</dt><dd>{{ $joining }}</dd></div></div>
+                    @foreach ($pcFacts as [$icon, $label, $value, $href])
+                        <div class="p360-fact">
+                            <i class="feather-{{ $icon }}" aria-hidden="true"></i>
+                            <dt>{{ $label }}</dt>
+                            <dd title="{{ $value ?? '' }}">
+                                @if ($value === null || $value === '')
+                                    <span class="p360-na">—</span>
+                                @elseif ($href)
+                                    <a href="{{ $href }}">{{ $value }}</a>
+                                @else
+                                    {{ $value }}
+                                @endif
+                            </dd>
+                        </div>
+                    @endforeach
                 </dl>
 
                 <div class="p360-quick">

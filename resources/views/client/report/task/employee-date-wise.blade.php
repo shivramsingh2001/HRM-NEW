@@ -276,6 +276,7 @@
     </x-ui.page-header>
 
     <div class="main-content" style="padding: 16px !important;">
+        @include('client.report.partials.report-subnav', ['group' => 'task'])
 
         {{-- ==================== FILTERS ==================== --}}
         <div class="filter-wrapper">

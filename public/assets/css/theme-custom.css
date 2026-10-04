@@ -1861,3 +1861,63 @@ nav .small.text-muted, nav p.small { font-size: 11.5px; color: #64748b; margin: 
     .action-btn { width: 28px; height: 28px; }
     .card-header, .card-footer { padding: 10px 12px; }
 }
+
+/* ============================================
+   TOP HEADER — compact (2026-10-04)
+   The theme's .nxl-header is 80px tall and every offset below it
+   (content top, sidebar logo strip, fixed side panels, mega-menu) is
+   hard-coded to 80px. One variable drives them all now; change
+   --header-h to resize the header everywhere.
+   ============================================ */
+:root { --header-h: 56px; }
+
+.nxl-header { min-height: var(--header-h); }
+.nxl-header .header-wrapper { padding: 0 20px; }
+.nxl-header .header-wrapper .nxl-h-item { min-height: calc(var(--header-h) - 1px); }
+.nxl-header .header-wrapper .nxl-head-link { padding: 8px; }
+.nxl-header .header-wrapper .nxl-head-link > i { font-size: 17px; }
+.nxl-header .header-wrapper .nxl-head-link.nxl-language-link { padding: 8px; }
+.nxl-header .header-wrapper .nxl-head-link .nxl-h-badge.dots { top: 5px; right: 6px; }
+.nxl-header .header-wrapper .nxl-navigation-toggle i,
+.nxl-header .header-wrapper .nxl-lavel-mega-menu-toggle i { font-size: 19px; }
+.nxl-header .user-avtar { width: 32px; }
+.nxl-header .header-wrapper .header-left .nxl-lavel-mega-menu .nxl-lavel-mega-menu-toggle a#nxl-lavel-mega-menu-hide { height: var(--header-h); padding: 0 20px; }
+.nxl-header .header-wrapper .header-left .nxl-lavel-mega-menu .nxl-lavel-mega-menu-wrapper .nxl-mega-menu .nxl-h-dropdown { top: var(--header-h) !important; }
+.nxl-header.mob-header-active { top: var(--header-h); }
+
+/* Sidebar logo strip lines up with the header */
+.nxl-navigation .m-header { height: var(--header-h); padding: 8px 20px; }
+.nxl-navigation .m-header .logo { max-height: calc(var(--header-h) - 18px); width: auto; }
+.nxl-navigation .navbar-content { height: calc(100vh - var(--header-h)); }
+
+/* Everything positioned under the header */
+.nxl-container { top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
+.page-header { top: var(--header-h); }
+.nxl-container .nxl-content .page-header .page-header-right .page-header-right-items { top: calc(var(--header-h) - 1px); }
+.nxl-container .nxl-content .page-content-left-navigation-wrapper,
+.nxl-container .nxl-content .page-content-right-navigation-wrapper { top: var(--header-h); }
+.nxl-container.apps-container .nxl-content.without-header .main-content .content-area,
+.nxl-container.apps-container .nxl-content.without-header .main-content .content-sidebar { height: calc(100vh - var(--header-h)); }
+
+/* Header profile menu — opens on hover (desktop) or click/tap; name, email,
+   employee ID, My Profile, Logout. Markup: client/layout/header.blade.php */
+.nxl-header .profile-trigger { display: flex; align-items: center; padding: 4px; border-radius: 50%; }
+.nxl-header .user-avtar { height: 32px; object-fit: cover; }
+.nxl-header .user-initials,
+.profile-card .user-initials {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: #0D6EFD; color: #fff; font-weight: 600; font-size: 12px; letter-spacing: .3px;
+}
+.nxl-header .user-avtar.user-initials { width: 32px; height: 32px; }
+@media (hover: hover) {
+    .nxl-header .profile-hover:hover > .dropdown-menu { display: block; }
+}
+.nxl-header .header-wrapper .nxl-h-dropdown.profile-card { width: 270px; padding: 0; overflow: hidden; }
+.profile-card .profile-card-head { display: flex; gap: 10px; align-items: flex-start; padding: 14px; background: #EFF6FF; }
+.profile-card .profile-card-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex: none; font-size: 14px; }
+.profile-card .min-w-0 { min-width: 0; }
+.profile-card .profile-card-name { font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.3; }
+.profile-card .profile-card-sub { font-size: 11px; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile-card .profile-card-role { display: inline-block; margin-top: 4px; font-size: 9.5px; font-weight: 600; padding: 1px 8px; border-radius: 20px; background: #0D6EFD; color: #fff; }
+.profile-card .dropdown-item { font-size: 12px; padding: 9px 14px; display: flex; align-items: center; }
+.profile-card .dropdown-item:hover { background: #f8fafc; }

@@ -1285,25 +1285,30 @@
                                             <!-- Attendance Type Column -->
                                             <td>
                                                 @php
-                                                    $canManualAttendance = app(\App\Services\FeatureService::class)->enabledForCurrentTenant('attendance');
-                                                    $canFaceAttendance = app(\App\Services\FeatureService::class)->enabledForCurrentTenant('attendance_face');
+                                                    // Each method appears only if the tenant's plan includes it.
+                                                    $featureSvc = app(\App\Services\FeatureService::class);
+                                                    $attendanceTypeOptions = array_filter([
+                                                        'manual_attendance' => $featureSvc->enabledForCurrentTenant('attendance') ? '📝 Manual' : null,
+                                                        'face_verification' => $featureSvc->enabledForCurrentTenant('attendance_face') ? '👤 Face Verification' : null,
+                                                        'biometric_only' => $featureSvc->enabledForCurrentTenant('attendance_biometric') ? '🖐 Biometric' : null,
+                                                    ]);
+                                                    if (empty($attendanceTypeOptions)) {
+                                                        $attendanceTypeOptions = ['manual_attendance' => '📝 Manual'];
+                                                    }
                                                 @endphp
-                                                @if ($canManualAttendance && $canFaceAttendance)
+                                                @if (count($attendanceTypeOptions) > 1)
                                                     <select class="form-select form-select-sm attendance-type-select"
                                                             style="width: 100%; min-width: 140px; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc;"
                                                             data-user-id="{{ $user->id }}"
                                                             onchange="updateAttendanceType(this)">
-                                                        <option value="manual_attendance" {{ $user->attendance_type == 'manual_attendance' ? 'selected' : '' }}>
-                                                            📝 Manual
-                                                        </option>
-                                                        <option value="face_verification" {{ $user->attendance_type == 'face_verification' ? 'selected' : '' }}>
-                                                            👤 Face Verification
-                                                        </option>
+                                                        @foreach ($attendanceTypeOptions as $typeValue => $typeLabel)
+                                                            <option value="{{ $typeValue }}" {{ $user->attendance_type == $typeValue ? 'selected' : '' }}>
+                                                                {{ $typeLabel }}
+                                                            </option>
+                                                        @endforeach
                                                     </select>
-                                                @elseif ($canFaceAttendance)
-                                                    <span class="badge bg-light text-dark">👤 Face Verification</span>
                                                 @else
-                                                    <span class="badge bg-light text-dark">📝 Manual</span>
+                                                    <span class="badge bg-light text-dark">{{ reset($attendanceTypeOptions) }}</span>
                                                 @endif
                                             </td>
                                             @if (!empty($fieldTrackingEnabled))

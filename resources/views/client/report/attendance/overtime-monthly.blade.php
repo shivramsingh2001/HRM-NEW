@@ -3,23 +3,12 @@
 @section('style')
 <style>
     /* ==================== ALL-BLUE THEME ==================== */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .6rem; margin-bottom: .8rem; }
-    .stats-card {
-        background: white; border: 1px solid #eaeef5; border-radius: 10px; padding: 10px 12px;
-        display: flex; align-items: center; box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
-    }
-    .stats-icon { width: 30px; height: 30px; background: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 8px; flex: none; }
-    .stats-icon i { font-size: 13px; color: var(--icon-color, #0D6EFD); }
-    .stats-info h3 { font-size: 15px; font-weight: 700; margin: 0 0 1px 0; color: #1a2236; line-height: 1.2; }
-    .stats-info p { font-size: 9.5px; color: #6b7385; margin: 0; }
-
-    .ot-filter-bar { background: #fff; border: 1px solid #eef2f6; border-radius: 10px; padding: 10px 12px; margin-bottom: .8rem; }
-    .ot-filter-bar .form-control, .ot-filter-bar select {
-        font-size: 10.5px; padding: 4px 8px; height: auto; border-radius: 7px; border: 1px solid #dfe5f0;
-    }
-    .ot-filter-bar .form-control:focus, .ot-filter-bar select:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253,.12); }
-    .ot-filter-bar .btn-apply { background: #0D6EFD; border-color: #0D6EFD; color: #fff; font-size: 10.5px; padding: 4px 14px; border-radius: 7px; }
-    .ot-filter-bar .btn-apply:hover { background: #0B5ED7; border-color: #0B5ED7; }
+    /* All filters on one line, no captions — same as the other Reports pages. */
+    .filter-row { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; overflow-x: auto; }
+    .form-control-sm-custom { border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; height: 32px; background-color: #fff; }
+    .form-control-sm-custom:focus { border-color: #0D6EFD; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); outline: none; }
+    .btn-sm-custom-outline { background: #f4f6fb; color: #475569; border: 1px solid #dfe5f0; border-radius: 8px; padding: 6px 14px; font-size: 11px; font-weight: 600; text-decoration: none; height: 32px; display: inline-flex; align-items: center; }
+    .btn-sm-custom-outline:hover { background: #EFF6FF; color: #0D6EFD; }
 
     #overtimeTable { font-size: 10.5px; }
     #overtimeTable th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: #6b7385; background: #f7faff; padding: 6px 8px; border-bottom: 1px solid #EFF6FF; }
@@ -37,89 +26,34 @@
     <x-ui.page-header class="content-area-header sticky-top" title="Overtime Report (Monthly)" current="Overtime Monthly" :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')]]" />
 
     <div class="content-area-body" style="padding: 20px !important;">
+        @include('client.report.partials.report-subnav', ['group' => 'attendance'])
         @if (session('error'))
             <div class="alert alert-danger">{{ session('error') }}</div>
         @endif
 
-        <div class="stats-grid">
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-users"></i></div>
-                <div class="stats-info">
-                    <h3>{{ $stats['total_employees'] }}</h3>
-                    <p>Employees with OT</p>
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-list"></i></div>
-                <div class="stats-info">
-                    <h3>{{ $stats['total_requests'] }}</h3>
-                    <p>Total OT Requests</p>
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-check-circle"></i></div>
-                <div class="stats-info">
-                    <h3>{{ number_format($stats['total_approved_hours'], 1) }}</h3>
-                    <p>Approved Hours</p>
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon"><i class="feather-clock"></i></div>
-                <div class="stats-info">
-                    <h3>{{ number_format($stats['total_pending_hours'], 1) }}</h3>
-                    <p>Pending Hours</p>
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon"><i class="fa fa-inr"></i></div>
-                <div class="stats-info">
-                    <h3>₹{{ number_format($stats['total_estimated_cost'], 0) }}</h3>
-                    <p>Est. OT Payout ({{ rtrim(rtrim($stats['multiplier'], '0'), '.') }}x)</p>
-                </div>
-            </div>
-        </div>
-
         <x-ui.filter-card title="Filter Report">
-<form method="GET" class="ot-filter-bar row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="d-block text-muted mb-1" style="font-size:9.5px;">Month</label>
-                <input type="month" name="month" class="form-control" onchange="this.form.submit()" value="{{ $selectedMonth }}">
-            </div>
-            <div class="col-md-3">
-                <label class="d-block text-muted mb-1" style="font-size:9.5px;">Search Employee</label>
-                <input type="text" name="search" onchange="this.form.submit()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }" class="form-control" placeholder="Name or employee ID" value="{{ $search }}">
-            </div>
-            <div class="col-md-3">
-                <label class="d-block text-muted mb-1" style="font-size:9.5px;">Department</label>
-                <select name="department" class="form-control" onchange="this.form.submit()">
-                    <option value="">All Departments</option>
-                    @foreach ($departments as $dept)
-                        <option value="{{ $dept->id }}" {{ (string) $departmentFilter === (string) $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="d-block text-muted mb-1" style="font-size:9.5px;">Status</label>
-                <select name="status" class="form-control" onchange="this.form.submit()">
-                    <option value="">Any Status</option>
-                    <option value="approved" {{ $statusFilter === 'approved' ? 'selected' : '' }}>Has Approved</option>
-                    <option value="pending" {{ $statusFilter === 'pending' ? 'selected' : '' }}>Has Pending</option>
-                    <option value="rejected" {{ $statusFilter === 'rejected' ? 'selected' : '' }}>Has Rejected</option>
-                </select>
-            </div>
-            @feature('branches')
-            <div class="col-md-2">
-                <label class="d-block text-muted mb-1" style="font-size:9.5px;">Branch</label>
-                <select name="branch_id" class="form-control" onchange="this.form.submit()">
-                    <option value="">All Branches</option>
-                    @foreach ($branches ?? [] as $b)
-                        <option value="{{ $b->id }}" {{ (string) ($branchFilter ?? '') === (string) $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            @endfeature
-        </form>
-</x-ui.filter-card>
+            <form action="{{ route('report.overtime.monthly.index') }}" method="GET" id="filterForm">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <input type="month" name="month" value="{{ $selectedMonth }}" class="form-control-sm-custom auto-submit" title="Month" aria-label="Month">
+                    </div>
+                    <div class="filter-item">
+                        <input type="text" name="search" value="{{ $search }}" class="form-control-sm-custom"
+                            placeholder="Search name or employee ID" aria-label="Search employee" style="min-width:200px" autocomplete="off">
+                    </div>
+                    <div class="filter-item">
+                        <select name="status" class="form-control-sm-custom auto-submit" aria-label="Status">
+                            <option value="">-- Any Status --</option>
+                            <option value="approved" {{ $statusFilter === 'approved' ? 'selected' : '' }}>Has Approved</option>
+                            <option value="pending" {{ $statusFilter === 'pending' ? 'selected' : '' }}>Has Pending</option>
+                            <option value="rejected" {{ $statusFilter === 'rejected' ? 'selected' : '' }}>Has Rejected</option>
+                        </select>
+                    </div>
+                    @include('client.report.partials.employee-filters', ['selectClass' => 'form-control-sm-custom'])
+                    <div class="filter-item"><a href="{{ route('report.overtime.monthly.index') }}" class="btn-sm-custom-outline" title="Reset filters" aria-label="Reset filters"><i class="feather-refresh-cw"></i></a></div>
+                </div>
+            </form>
+        </x-ui.filter-card>
 
         <div class="card">
             <div class="card-body p-0">
@@ -130,7 +64,9 @@
                                 <th>Sr. No.</th>
                                 <th>Employee</th>
                                 <th>Department</th>
+                                <th>Designation</th>
                                 @feature('branches')<th>Branch</th>@endfeature
+                                <th>Attendance Location</th>
                                 <th class="text-center">Requests</th>
                                 <th class="text-center">Approved</th>
                                 <th class="text-center" title="Hours worked in additional (2nd+) shifts — paid as overtime automatically">Extra Shift</th>
@@ -143,7 +79,7 @@
                         <tbody>
                             @forelse ($reportData as $row)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $reportData->firstItem() + $loop->index }}</td>
                                     <td>
                                         <div class="employee-info">
                                             <div class="employee-avatar"
@@ -154,12 +90,13 @@
                                                     {{ $row['name'] }}
                                                     <small class="text-muted">({{ $row['employee_id'] ?? 'N/A' }})</small>
                                                 </div>
-                                                <div class="employee-email">{{ $row['designation'] ?? '' }}</div>
                                             </div>
                                         </div>
                                     </td>
                                     <td>{{ $row['department'] ?? '—' }}</td>
+                                    <td>{{ $row['designation'] ?? '—' }}</td>
                                     @feature('branches')<td>{{ $row['branch'] ?? '—' }}</td>@endfeature
+                                    <td>{{ $row['attendance_location'] ?? '—' }}</td>
                                     <td class="text-center">{{ $row['request_count'] }}</td>
                                     <td class="text-center">
                                         <span class="hours-pill hours-approved">{{ number_format($row['approved_hours'], 1) }}h ({{ $row['approved_count'] }})</span>
@@ -178,13 +115,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11" class="text-center text-muted py-4">No overtime requests found for this month.</td>
+                                    <td colspan="13" class="text-center text-muted py-4">No overtime requests found for this month.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
+            <x-ui.pagination-footer :paginator="$reportData" label="employees" />
         </div>
 
         <div class="alert-info-blue mt-3" style="background:#eef3fd;border:1px solid #bfd3f7;color:#0D6EFD;border-radius:10px;font-size:10.5px;padding:8px 12px;">
@@ -192,4 +130,33 @@
             each employee's current payroll assignment — this is an estimate for planning, not a payroll-authoritative figure.
         </div>
     </div>
+@endsection
+
+@section('script-area')
+    <script>
+        $(function() {
+            const form = $('#filterForm');
+            form.find('.auto-submit').on('change', () => form.submit());
+
+            // search: submit shortly after typing stops, then put the cursor back after the reload
+            const key = 'overtimeReportSearchFocus';
+            const box = form.find('input[name="search"]');
+            let last = box.val(), timer;
+            box.on('input', function() {
+                clearTimeout(timer);
+                timer = setTimeout(function() {
+                    if (box.val() === last) return;
+                    try { sessionStorage.setItem(key, '1'); } catch (e) {}
+                    form.submit();
+                }, 600);
+            });
+            try {
+                if (sessionStorage.getItem(key)) {
+                    sessionStorage.removeItem(key);
+                    const el = box.get(0);
+                    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+                }
+            } catch (e) {}
+        });
+    </script>
 @endsection

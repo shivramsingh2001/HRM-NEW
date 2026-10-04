@@ -20,9 +20,12 @@ class EnsureFeatureEnabled
     {
     }
 
-    public function handle(Request $request, Closure $next, string $key): Response
+    public function handle(Request $request, Closure $next, string ...$params): Response
     {
-        $keys = array_map('trim', explode(',', $key));
+        // Laravel already splits `feature:a,b` on the comma into separate params,
+        // so collect them all (taking only the first silently ignored the rest).
+        $keys = array_values(array_filter(array_map('trim', explode(',', implode(',', $params)))));
+        $key = implode(',', $keys);
         $allowed = collect($keys)->contains(fn ($k) => $this->features->enabledForCurrentTenant($k));
 
         if (! $allowed) {

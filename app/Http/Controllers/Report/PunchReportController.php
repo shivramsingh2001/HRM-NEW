@@ -77,7 +77,7 @@ class PunchReportController extends Controller
             fwrite($handle, "\xEF\xBB\xBF");
             $this->writeCsvRow($handle, [
                 'Date', 'Time', 'Direction', 'Session', 'Employee ID', 'Employee', 'Department', 'Designation', 'Branch',
-                'Source', 'Method', 'Terminal', 'Address', 'Latitude', 'Longitude', 'Office location', 'Radius (m)',
+                'Attendance Location', 'Source', 'Method', 'Terminal', 'Address', 'Latitude', 'Longitude', 'Office location', 'Radius (m)',
                 'Distance (m)', 'Location check', 'GPS accuracy (m)', 'Phone device', 'Network', 'Wi-Fi', 'IP', 'Battery %',
                 'Regularized', 'Recorded by', 'Note',
             ]);
@@ -86,7 +86,7 @@ class PunchReportController extends Controller
                 $this->writeCsvRow($handle, [
                     $r->date, Carbon::parse($r->punched_at)->format('H:i:s'), strtoupper($r->direction), $r->session_seq,
                     $r->employee_code, $r->employee_name, $r->department_name, $r->designation_name, $r->branch_name,
-                    self::sourceLabel($r->source), $r->method, $r->terminal_name, $r->address, $r->lat, $r->lng,
+                    \App\Models\AttendanceLocation::labelFor($r->office_branch, $r->assigned_location_name), self::sourceLabel($r->source), $r->method, $r->terminal_name, $r->address, $r->lat, $r->lng,
                     $r->location_name, $r->radius, $r->distance_meters, $r->location_verification, $r->accuracy_meters,
                     $r->device_id, $r->network_type, $r->wifi_ssid, $r->ip_address, $r->battery_percent,
                     $r->is_regularized ? 'Yes' : 'No', $r->actor_name, $r->reason,
@@ -147,6 +147,7 @@ class PunchReportController extends Controller
             'user_id' => $int('user_id'),
             'department_id' => $int('department_id'),
             'designation_id' => $int('designation_id'),
+            'location_id' => $int('location_id'), // assigned attendance location (user_job_details.office_branch)
             'direction' => in_array($request->query('direction'), ['in', 'out'], true) ? $request->query('direction') : null,
             'source' => in_array($request->query('source'), ['mobile_app', 'biometric', 'web', 'manual', 'kiosk', 'api', 'backfill'], true)
                 ? $request->query('source') : null,
@@ -207,12 +208,15 @@ class PunchReportController extends Controller
             ->leftJoin('designations as dg', 'dg.id', '=', 'j.designation')
             ->leftJoin('company_branches as cb', 'cb.id', '=', 'j.branch_id')
             ->leftJoin('attendance_locations as al', 'al.id', '=', 'r.attendance_location_id')
+            // The employee's assigned attendance location (vs. `al` = the one this punch was checked against).
+            ->leftJoin('attendance_locations as ual', 'ual.id', '=', 'j.office_branch')
             ->leftJoin('biometric_devices as bd', 'bd.id', '=', 'r.biometric_device_id')
             ->leftJoin('users as act', 'act.id', '=', 'r.actor_id')
             ->where('u.tenant_id', $tenantId)
             ->select([
                 'r.*', 'u.name as employee_name', 'u.employee_id as employee_code', 'u.email as employee_email',
                 'dp.name as department_name', 'dg.name as designation_name', 'cb.name as branch_name',
+                'j.office_branch', 'ual.name as assigned_location_name',
                 'al.name as location_name', 'al.radius', 'bd.name as terminal_name', 'act.name as actor_name',
             ]);
 
@@ -225,7 +229,7 @@ class PunchReportController extends Controller
             $q->where(fn ($w) => $w->where('u.name', 'LIKE', $s)->orWhere('u.employee_id', 'LIKE', $s));
         }
         foreach (['user_id' => 'r.user_id', 'department_id' => 'j.department', 'designation_id' => 'j.designation',
-            'branch_id' => 'j.branch_id', 'direction' => 'r.direction', 'source' => 'r.source'] as $key => $col) {
+            'branch_id' => 'j.branch_id', 'location_id' => 'j.office_branch', 'direction' => 'r.direction', 'source' => 'r.source'] as $key => $col) {
             if ($f[$key] !== null) {
                 $q->where($col, $f[$key]);
             }

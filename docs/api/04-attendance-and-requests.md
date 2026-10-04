@@ -61,6 +61,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-in \
 **Error responses:**
 | Status | Condition | Body |
 |---|---|---|
+| 200 | Employee's attendance type is **Biometric** (`biometric_only`) and the tenant has `attendance_biometric` — checked before validation | `{"status": false, "message": "Your attendance is recorded by the biometric machine. Punch in/out from the app is disabled."}` |
 | 200 | Validation failure | `{"success": false, "message": "<first validator error>"}` |
 | 200 | User record not found | `{"status": false, "message": "User not found."}` |
 | 200 | No configured/geofenced branch for "any branch" employees | `{"status": false, "message": "No branches configured in the system. Please contact admin."}` |
@@ -72,6 +73,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-in \
 | 500 | Punch-capture service threw, or unhandled exception | `{"status": false, "message": "Clock-in failed: ..."}` or generic 500 body |
 
 **Special behavior / notes:**
+- Attendance type **Biometric** (`user_job_details.attendance_type = biometric_only`, added 2026-10-04): punches come only from the biometric terminal, so app clock-in/out is refused (logged in `attendance_logs` with reason `biometric_only`). Enforced only while the tenant has the `attendance_biometric` feature — if the add-on is removed the employee can punch from the app again. Login, history, leave, regularization etc. are unaffected.
 - Geofencing: if the employee's `job_details.type == 'office'` and `office_branch == 0`, the nearest active + geofenced `AttendanceLocation` within its radius (default 50m) is auto-selected; if `office_branch` names a specific branch, that branch's geofence (if enabled) is enforced.
 - Geofencing/location check is **skipped entirely** if the user has an `APPROVED` travel/WFH `Request` covering the attendance date (`hasApprovedRequest`).
 - Night-shift aware: the actual "attendance date" used is resolved by `AttendanceCalculator::resolveAttendanceDate()`, which can roll back to the previous calendar day for overnight shifts (a shift's `is_overnight` flag decides).
@@ -128,6 +130,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-out \
 **Error responses:**
 | Status | Condition | Body |
 |---|---|---|
+| 200 | Biometric-only employee (same check as clock-in) | `{"status": false, "message": "Your attendance is recorded by the biometric machine. Punch in/out from the app is disabled."}` |
 | 200 | Validation failure | `{"success": false, "message": "<first validator error>"}` |
 | 200 | No open check-in found (today or yesterday, night-shift aware) | `{"status": false, "message": "You have not checked in for any active shift."}` |
 | 200 | Already checked out | `{"status": false, "message": "You have already checked out for this shift."}` |
@@ -310,10 +313,13 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track-batch \
     "shifts": [
       {"user_shift_id": 812, "shift_id": 3, "name": "General Shift", "start_time": "09:30 AM", "end_time": "06:30 PM", "is_overnight": false, "is_additional": false, "status": "ongoing", "clock_in": "2026-09-28 09:58:00", "clock_out": null, "worked_minutes": 0},
       {"user_shift_id": 913, "shift_id": 7, "name": "Night Shift", "start_time": "10:00 PM", "end_time": "06:00 AM", "is_overnight": true, "is_additional": true, "status": "upcoming", "clock_in": null, "clock_out": null, "worked_minutes": 0}
-    ]
+    ],
+    "can_mark_attendance": true,
+    "attendance_block_reason": null
   }
 }
 ```
+(`attendance_type` is `manual_attendance | face_verification | biometric_only`. `can_mark_attendance` / `attendance_block_reason` — added 2026-10-04 — are `false` / the block message for a biometric-only employee: the app should hide Punch In/Out.)
 (`shift` is `"Week Off"` on a weekoff day, or `"Shift not defined"` if no shift resolves — it always describes the day's main shift. `shifts` — added 2026-10-02 — lists every shift today, main first; `status` is `upcoming | ongoing | completed`. One item for a one-shift day.)
 
 **Error responses:** `200 {"status": false, "message": "User not found"}`; `500 {"status": false, "message": "An error occured. Please try again later."}`.

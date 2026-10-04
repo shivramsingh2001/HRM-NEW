@@ -129,11 +129,27 @@ A recurring pattern across list pages (leave, attendance, team, payroll, etc.): 
 
 `docs/architecture.md` / project memory note a prior "UI/UX Design Consistency" initiative (see the header comment in `theme-custom.css`) that centralized colors, the employee-info cell, and the KPI card, and introduced the `x-ui.*` component library — but migration is **partial**: only 60/141 pages use `table-responsive` consistently, badges/status colors are still split between the new component and legacy ad hoc classes, and the type/spacing scale (`--fs-*`/`--sp-*`) isn't applied everywhere yet. When editing an old page, prefer adopting the canonical component/token over copying that page's existing ad hoc pattern.
 
+## Top header height (`--header-h`)
+
+The fixed top bar (`.nxl-header`, `client/layout/header.blade.php`) is **56px** (theme default was 80px). `theme-custom.css` → "TOP HEADER — compact" sets `:root { --header-h: 56px; }` and re-points every theme rule that was hard-coded to the header height (content `top`, sidebar logo strip `.m-header`, `.navbar-content` height, fixed side panels, mega-menu, mobile header). To resize the header change only that variable; anything a page pins under the header should use `top: var(--header-h)` rather than a px value.
+
+## Report sub-tabs (`.rpt-subnav`)
+
+Every report page shows a row of pill tabs under the header listing the other reports in the same Reports-hub group, so users switch reports without going back to the hub. Leave and Payroll render it inline (`report/leave/reports.blade.php`, `report/payroll/reports.blade.php`); Attendance, Project, Task, Expense and Asset use the shared partial `@include('client.report.partials.report-subnav', ['group' => 'attendance|project|task|expense|asset'])` as the first child of the page body. The partial holds the tab list per group (same feature gates as the hub cards — e.g. Overtime/Shift tabs only when those features are on) and marks the current one active via `request()->routeIs()`. When adding a report, add it to both the hub card list and that partial.
+
+## Attendance report employee filters
+
+Every attendance report's filter row includes `@include('client.report.partials.employee-filters', ['selectClass' => '<page input class>', 'deptParam' => 'department|department_id', 'desigParam' => 'designation|designation_id', 'except' => [...]])` — Branch (only with the Branches plan module), Department, Designation and Attendance Location selects that submit on change. Applied server-side by the `FiltersReportEmployees` controller trait. Use it (not hand-written selects) when adding a new attendance report.
+
 ## Lazy tab panes (Employee 360 page)
 
 `client/user/user-detail.blade.php` shows the pattern for a page with many tabs: a pane carries `data-lazy="{url}"` and is fetched the first time its tab is shown (`shown.bs.tab`), then marked `data-loaded`; links inside a pane with `data-p360-reload` reload only that pane. Shared styles there: `.p360-kpis`/`.p360-kpi` (KPI tiles), `.p360-table`, `.p360-chip` (`.extra` amber, `.muted` grey), `.p360-sub`, `.p360-note`, `.p360-toolbar`.
 
 Layout (redesigned 2026-10-03): everything sits in `.main-content.p360-page` → `.p360-layout`, a 3-column grid — `.p360-profile` (compact profile card: photo, name, status, `.p360-facts` list, `.p360-quick` action grid), `.p360-nav-wrap` (vertical Bootstrap tab menu `ul#myTab.p360-vnav`, one flat list in the order of `$navGroups`, no group labels; each link carries `data-bs-target` + `data-icon`) and `.p360-main` (panel whose `.p360-pane-head` title/icon follow the chosen tab). The profile card and menu are sticky with their own scroll. Below 1200px the profile card moves to a full-width row on top; below 992px the menu becomes a horizontal, scrollable tab strip. All styles for it are scoped under `.p360-page` in the view's own `@section('style')` — nothing in `theme-custom.css` changed. Add a new tab by adding it to `$navGroups` (server-rendered pane) or `$lazyTabs` / `$lazyIcons` + `EmployeeProfileController::TABS` (lazy pane).
+
+### Profile card (Employee 360 left column)
+
+`.p360-profile` in `client/user/user-detail.blade.php` (CSS scoped to `.p360-*` in that file): blue header strip, 56px avatar (photo or initials) with an active/inactive presence dot, name + designation + email, badges (status, employment type, attendance type), then a compact icon · label · value list — Employee ID, Designation, Department, Phone (tel:), Personal email (mailto:), Joined + tenure, Reports to, Branch (plan-gated), Attendance location. Values come from the already-loaded `$user` (no extra controller queries beyond lazy `branch`/`attendanceLocation`); missing values show a muted "—". Quick actions below are unchanged.
 
 ### Action forms on the Employee 360 page
 

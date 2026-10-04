@@ -39,6 +39,30 @@ class AttendanceController extends Controller
         $this->notificationService = $notificationService;
     }
 
+    private const BIOMETRIC_ONLY_MESSAGE = 'Your attendance is recorded by the biometric machine. Punch in/out from the app is disabled.';
+
+    /**
+     * Employee set to attendance type "biometric_only": punches come only from
+     * the terminal, so app clock-in/out is refused. Only enforced while the
+     * tenant still has the biometric add-on — if it is removed, the employee
+     * falls back to app punching instead of having no way to mark attendance.
+     */
+    private function mobilePunchBlocked(int $userId): bool
+    {
+        $row = DB::table('users')
+            ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id')
+            ->where('users.id', $userId)
+            ->select('users.tenant_id', 'user_job_details.attendance_type')
+            ->first();
+
+        if (! $row || $row->attendance_type !== 'biometric_only') {
+            return false;
+        }
+
+        return app(\App\Services\FeatureService::class)
+            ->enabled((int) $row->tenant_id, 'attendance_biometric');
+    }
+
     /**
      * Present / Half Day / Absent from worked hours, using the tenant's
      * attendance policy (ratios + Day Classification switch) — same as the
@@ -379,6 +403,11 @@ class AttendanceController extends Controller
             // Additive (multi-shift): every shift today, with its own status.
             $data['shifts'] = $this->shiftsForDay((int) $userId, (int) ($user->tenant_id ?? 0), $today);
 
+            // Additive: lets the app hide Punch In/Out for biometric-only employees.
+            $punchBlocked = $this->mobilePunchBlocked((int) $userId);
+            $data['can_mark_attendance'] = ! $punchBlocked;
+            $data['attendance_block_reason'] = $punchBlocked ? self::BIOMETRIC_ONLY_MESSAGE : null;
+
             return response()->json([
                 'status' => true,
                 'message' => 'Data fetch successfully!!!',
@@ -491,6 +520,15 @@ class AttendanceController extends Controller
 
     public function clockIn(Request $request)
     {
+        if ($this->mobilePunchBlocked((int) Auth::id())) {
+            $this->createFailureLog(Auth::id(), 'check_in', 'biometric_only', [], $request);
+
+            return response()->json([
+                'status' => false,
+                'message' => self::BIOMETRIC_ONLY_MESSAGE,
+            ], 200);
+        }
+
         $validator = Validator::make($request->all(), [
             'lat' => 'required|numeric',
             'long' => 'required|numeric',
@@ -895,6 +933,15 @@ class AttendanceController extends Controller
 
     public function clockOut(Request $request)
     {
+        if ($this->mobilePunchBlocked((int) Auth::id())) {
+            $this->createFailureLog(Auth::id(), 'check_out', 'biometric_only', [], $request);
+
+            return response()->json([
+                'status' => false,
+                'message' => self::BIOMETRIC_ONLY_MESSAGE,
+            ], 200);
+        }
+
         $validator = Validator::make($request->all(), [
             'lat' => 'required|numeric',
             'long' => 'required|numeric',

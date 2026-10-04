@@ -349,6 +349,7 @@
     </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
+        @include('client.report.partials.report-subnav', ['group' => 'attendance'])
         <!-- Filter Section -->
         <x-ui.filter-card title="Filter Report">
             <form action="{{ route('report.attendance.overall.index') }}" method="GET" id="filterForm">
@@ -358,31 +359,7 @@
                             value="{{ request('month', now()->format('Y-m')) }}" onchange="this.form.submit()">
                     </div>
 
-                    <div class="filter-item">
-                        <select name="department" class="filter-select" onchange="this.form.submit()">
-                            <option value="">All Departments</option>
-                            @foreach ($departments as $dept)
-                                <option value="{{ $dept->id }}"
-                                    {{ request('department') == $dept->id ? 'selected' : '' }}>
-                                    {{ $dept->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    @feature('branches')
-                    <div class="filter-item">
-                        <select name="branch_id" class="filter-select" onchange="this.form.submit()">
-                            <option value="">All Branches</option>
-                            @foreach ($branches ?? [] as $b)
-                                <option value="{{ $b->id }}"
-                                    {{ request('branch_id') == $b->id ? 'selected' : '' }}>
-                                    {{ $b->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endfeature
+                    @include('client.report.partials.employee-filters', ['selectClass' => 'filter-select'])
 
                     <div class="filter-item search-filter">
                         <input type="text" name="search" class="filter-input"
@@ -473,6 +450,7 @@
                             <th>Designation</th>
                             <th>Department</th>
                             @feature('branches')<th>Branch</th>@endfeature
+                            <th>Attendance Location</th>
                             @foreach ($dateLabels as $day => $date)
                                 <th
                                     class="{{ in_array(Carbon::parse($date)->format('D'), ['Sat', 'Sun']) ? 'weekend-header' : '' }}">
@@ -511,6 +489,7 @@
                                 <td style="text-align: left;">{{ $row['designation'] }}</td>
                                 <td style="text-align: left;">{{ $row['department'] }}</td>
                                 @feature('branches')<td style="text-align: left;">{{ $row['branch'] ?? '—' }}</td>@endfeature
+                                <td style="text-align: left;">{{ $row['attendance_location'] ?? '—' }}</td>
 
                                 @foreach ($row['days'] as $day => $status)
                                     <td
@@ -535,7 +514,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ $daysInMonth + 12 }}" class="text-center py-5">
+                                <td colspan="{{ $daysInMonth + 13 }}" class="text-center py-5">
                                     <div class="empty-state">
                                         <i class="feather-calendar"></i>
                                         <h5 class="mt-3">No Data Found</h5>

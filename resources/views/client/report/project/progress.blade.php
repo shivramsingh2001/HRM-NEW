@@ -31,6 +31,7 @@
     </x-ui.page-header>
 
     <div class="content-area-body pb-3">
+        @include('client.report.partials.report-subnav', ['group' => 'project'])
         <x-ui.filter-card title="Filter Report">
             <form action="{{ route('report.project.progress.index') }}" method="GET">
                 <div class="filter-row">

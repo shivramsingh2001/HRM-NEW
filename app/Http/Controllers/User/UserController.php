@@ -1874,13 +1874,19 @@ class UserController extends Controller
         try {
             $request->validate([
                 'id' => 'required|exists:users,id',
-                'attendance_type' => 'required|in:manual_attendance,face_verification'
+                'attendance_type' => 'required|in:manual_attendance,face_verification,biometric_only'
             ]);
 
             // Re-check server-side: the dropdown already hides a method the
             // plan doesn't include, but the endpoint must not trust the client.
+            // biometric_only = punches come only from the terminal; the mobile
+            // app's clock-in/out is blocked (Api\Attendance\AttendanceController).
             $features = app(\App\Services\FeatureService::class);
-            $requiredFeature = $request->attendance_type === 'face_verification' ? 'attendance_face' : 'attendance';
+            $requiredFeature = match ($request->attendance_type) {
+                'face_verification' => 'attendance_face',
+                'biometric_only' => 'attendance_biometric',
+                default => 'attendance',
+            };
             if (! $features->enabledForCurrentTenant($requiredFeature)) {
                 return response()->json([
                     'success' => false,

@@ -48,6 +48,7 @@
     </x-ui.page-header>
 
     <div class="content-area-body" style="padding: 20px !important;">
+        @include('client.report.partials.report-subnav', ['group' => 'expense'])
         {{-- Summary tiles --}}
         <div class="stats-grid">
             @foreach ($summary as $label => $value)

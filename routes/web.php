@@ -147,6 +147,22 @@ Route::group(['middleware' => ['tenant']], function () {
         });
 
         Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+
+        // Header bell — all of the signed-in user's notifications (not feature-gated).
+        Route::prefix('notifications')->name('notifications.')->controller(\App\Http\Controllers\Notification\NotificationBellController::class)->group(function () {
+            Route::get('/', 'page')->name('page');
+            Route::get('/latest', 'latest')->name('latest');
+            Route::get('/unread-count', 'unreadCount')->name('unread-count');
+            Route::post('/read-all', 'markAllAsRead')->name('read-all');
+            Route::post('/{id}/read', 'markAsRead')->name('read');
+        });
+
+        // My Profile — own details (read-only) + change own password. Employee / manager / HR.
+        Route::middleware('role:employee,manager,hr')->controller(\App\Http\Controllers\User\MyProfileController::class)->group(function () {
+            Route::get('/my-profile', 'show')->name('my-profile.show');
+            Route::post('/my-profile/password', 'changePassword')->name('my-profile.password')->middleware('throttle:6,1');
+        });
+
         Route::post('/impersonate/end', [\App\Http\Controllers\Impersonation\ImpersonationController::class, 'end'])->name('impersonate.end');
         Route::middleware(['auth', 'role:admin'])->group(function () {
             Route::get('/admin/dashboard', [DashboardController::class, 'adminDashboard'])->name('dashboard.admin');
@@ -422,7 +438,7 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::delete('/{id}', [ExpenseBudgetController::class, 'destroy'])->name('destroy')->whereNumber('id');
         });
 
-        Route::prefix('expense/reports')->name('expense.reports.')->middleware(['feature:expense_management', 'permission:expenses,export'])->group(function () {
+        Route::prefix('expense/reports')->name('expense.reports.')->middleware(['feature:daily_reports', 'feature:expense_management', 'permission:expenses,export'])->group(function () {
             Route::get('/', [ExpenseReportController::class, 'hub'])->name('hub');
             Route::get('/{report}', [ExpenseReportController::class, 'show'])->name('show')->where('report', 'register|summary|ageing');
         });
@@ -487,8 +503,9 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::get('/user/{id}/attendance-stats', [TeamController::class, 'userAttendanceStats'])->name('user.attendance.stats');
             Route::post('/get-user-shift', [TeamController::class, 'getUserShift'])->name('get-user-shift');
 
-            Route::get('/attendance-summary', [TeamController::class, 'attendanceSummary'])->name('attendance-summary');
-            Route::get('/attendance-summary/export', [TeamController::class, 'exportAttendanceSummary'])->name('attendance-summary.export');
+            // Monthly Attendance Summary moved to Reports (report.attendance.summary.*); old URLs redirect.
+            Route::get('/attendance-summary', fn (\Illuminate\Http\Request $r) => redirect()->route('report.attendance.summary.index', $r->except('tenant_id')))->name('attendance-summary');
+            Route::get('/attendance-summary/export', fn (\Illuminate\Http\Request $r) => redirect()->route('report.attendance.summary.export', $r->except('tenant_id')))->name('attendance-summary.export');
             Route::get('/attendance-summary/quick', [TeamController::class, 'getQuickSummary'])->name('attendance-summary.quick');
              Route::post('/attendance-mark', [TeamController::class, 'markAttendance'])
                 ->middleware('role:admin,hr,manager')
@@ -1019,11 +1036,16 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::get('/export', [ManagerPerformanceReviewController::class, 'export'])->name('export')->middleware('permission:performance_reviews,view');
         });
         
-        Route::prefix('report')->name('report.')->middleware('role:admin,hr,manager')->group(function () {
-            // Attendance Reports — each report is gated by its own module's feature key
-            // so a tenant only ever sees reports for modules they actually have.
-            Route::middleware('feature:attendance')->group(function () {
-                Route::get('/attendance', [AttendanceReportController::class, 'index'])->name('attendance.index');
+        // The whole Reports section is the "Daily reports" plan feature; inside it each
+        // report is also gated by its own module's feature key, so a tenant only ever
+        // sees reports for modules they actually have.
+        Route::prefix('report')->name('report.')->middleware(['role:admin,hr,manager', 'feature:daily_reports'])->group(function () {
+            // Reports hub page (all tabs) — needs only the Reports feature.
+            Route::get('/attendance', [AttendanceReportController::class, 'index'])->name('attendance.index');
+
+            // Attendance Reports — any attendance method (manual / face / biometric) produces
+            // attendance data, so they don't depend on the manual clock-in feature alone.
+            Route::middleware('feature:attendance,attendance_face,attendance_biometric')->group(function () {
                 Route::get('/attendance/detail', [AttendanceReportController::class, 'detailAttendanceReport'])->name('attendance.detail.index');
                 Route::get('/attendance/detail/export', [AttendanceReportController::class, 'detailExportAttendance'])->name('attendance.detail.export');
                 Route::get('/attendance/day', [AttendanceReportController::class, 'dayAttendanceReport'])->name('attendance.day.index');
@@ -1036,6 +1058,10 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::get('/attendance/employee-wise/export', [AttendanceReportController::class, 'employeeWisExportReport'])->name('attendance.detailed.export');
                 Route::get('/attendance/monthly/summary', [AttendanceReportController::class, 'employeeWiseAttendance'])->name('attendance.monthly.summary.index');
                 Route::get('/attendance/monthly/summary/export', [AttendanceReportController::class, 'employeeWisExportReport'])->name('attendance.monthly.summary.export');
+
+                // Monthly Attendance Summary (present/absent/leave/... counts per employee) — formerly team.attendance-summary.
+                Route::get('/attendance/summary', [TeamController::class, 'attendanceSummary'])->name('attendance.summary.index');
+                Route::get('/attendance/summary/export', [TeamController::class, 'exportAttendanceSummary'])->name('attendance.summary.export');
 
                 Route::get('/attendance/branch-wise', [AttendanceReportController::class, 'branchWiseAttendanceReport'])->name('attendance.branch-wise');
                 Route::get('/attendance/branch-wise/{branchId}', [AttendanceReportController::class, 'branchWiseDetailReport'])->name('attendance.branch-wise.detail');

@@ -42,4 +42,20 @@ class AttendanceLocation extends Model
     {
         return $query->where('status', 1);
     }
+
+    /**
+     * Display label for an employee's assigned attendance location
+     * (user_job_details.office_branch): 0 means "any location".
+     */
+    public static function labelFor($officeBranch, ?string $name): string
+    {
+        if ($officeBranch === null || $officeBranch === '') {
+            return '—';
+        }
+        if ((int) $officeBranch === 0) {
+            return 'Any location';
+        }
+
+        return $name ?: '—';
+    }
 }

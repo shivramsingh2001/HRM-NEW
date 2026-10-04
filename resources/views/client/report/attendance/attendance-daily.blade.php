@@ -811,6 +811,7 @@
     </x-ui.page-header>
 
     <div class="main-content" style="padding: 20px !important;">
+        @include('client.report.partials.report-subnav', ['group' => 'attendance'])
         <!-- Stats Cards -->
         {{-- <div class="stats-grid">
         <div class="stats-card total-card">
@@ -861,7 +862,7 @@
                     <i class="feather-filter"></i>
                     Filter Report
                     @php
-                        $activeFilterCount = collect(request()->only(['date', 'user_id', 'status', 'search', 'branch_id']))
+                        $activeFilterCount = collect(request()->only(['date', 'user_id', 'status', 'search', 'branch_id', 'department', 'designation', 'location_id']))
                             ->filter()
                             ->count();
                     @endphp
@@ -869,7 +870,7 @@
                         <span>{{ $activeFilterCount }} active</span>
                     @endif
                 </div>
-                @if (request()->hasAny(['date', 'user_id', 'status', 'search', 'branch_id']))
+                @if (request()->hasAny(['date', 'user_id', 'status', 'search', 'branch_id', 'department', 'designation', 'location_id']))
                     <a href="{{ route('report.attendance.day.index') }}" class="clear-all-link">
                         <i class="feather-x"></i>
                         Clear All
@@ -953,17 +954,9 @@
                         </select>
                     </div>
 
-                    <!-- Branch Filter -->
-                    @feature('branches')
-                    <div class="filter-item">
-                        <select class="filter-select" name="branch_id" onchange="this.form.submit()">
-                            <option value="">All Branches</option>
-                            @foreach ($branches ?? [] as $b)
-                                <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endfeature
+                    <!-- Branch / Department / Designation / Attendance Location -->
+
+                    @include('client.report.partials.employee-filters', ['selectClass' => 'filter-select'])
 
                     <!-- Search Filter -->
                     <div class="filter-item search-filter">
@@ -984,7 +977,7 @@
             </form>
 
             <!-- Active Filter Tags -->
-            @if (request()->hasAny(['date', 'user_id', 'status', 'search', 'branch_id']))
+            @if (request()->hasAny(['date', 'user_id', 'status', 'search', 'branch_id', 'department', 'designation', 'location_id']))
                 <div class="active-filters">
                     <span class="active-filters-label">Active:</span>
 
@@ -1062,7 +1055,10 @@
                                     <tr>
                                         <th width="40">#</th>
                                         <th>Employee</th>
+                                        <th>Department</th>
+                                        <th>Designation</th>
                                         @feature('branches')<th>Branch</th>@endfeature
+                                        <th>Attendance Location</th>
                                         <th>Date</th>
                                         <th>Day</th>
                                         <th>Status</th>
@@ -1130,7 +1126,10 @@
                                                     </div>
                                                 </div>
                                             </td>
+                                            <td>{{ $record['department'] ?: '—' }}</td>
+                                            <td>{{ $record['designation'] ?: '—' }}</td>
                                             @feature('branches')<td>{{ $record['branch'] ?? '—' }}</td>@endfeature
+                                            <td>{{ $record['attendance_location'] ?? '—' }}</td>
                                             <td>{{ \Carbon\Carbon::parse($record['date'])->format('d M Y') }}</td>
                                             <td>{{ \Carbon\Carbon::parse($record['date'])->format('D') }}</td>
                                             <td>
@@ -1253,7 +1252,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="16" class="text-center py-5">
+                                            <td colspan="19" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="feather-calendar"></i>
                                                     <h4>No Attendance Records Found</h4>
