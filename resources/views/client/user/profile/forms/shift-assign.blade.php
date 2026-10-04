@@ -10,13 +10,13 @@
 
     <div class="row g-2">
         <div class="col-12">
-            <label class="form-label">Shift <span class="text-danger">*</span></label>
-            <select name="shift_id" class="form-control" required>
-                <option value="">Select shift</option>
+            <label class="form-label">Shift(s) <span class="text-danger">*</span></label>
+            <select name="shift_ids[]" class="form-control p360-select2" multiple data-placeholder="Select one or more shifts">
                 @foreach ($shifts as $shift)
                     <option value="{{ $shift->id }}">{{ $shift->name }} · {{ P::shiftLabel($shift) }}</option>
                 @endforeach
             </select>
+            <div class="p360-note mt-1">With two or more, the one that starts earliest is the main shift and the others are added as additional shifts on the same days.</div>
         </div>
         <div class="col-12">
             <label class="form-label d-block">How long?</label>

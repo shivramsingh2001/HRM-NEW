@@ -568,12 +568,21 @@ class ShiftController extends Controller
             ]);
         }
 
+        // Several shifts at once (the Assign Shift multi-select sends shift_ids[]).
+        // One selected shift behaves exactly like the old single shift_id.
+        $shiftIds = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('shift_ids', [])))));
+        if ($shiftIds) {
+            $request->merge(['shift_id' => $shiftIds[0]]);
+        }
+
         $rules = [
             'assign_type' => 'required|in:user,department,all',
             'user_ids' => 'required_if:assign_type,user|array',
             'user_ids.*' => 'exists:users,id',
             'department_id' => 'nullable|required_if:assign_type,department|exists:departments,id',
             'shift_id' => 'required|exists:shifts,id',
+            'shift_ids' => 'nullable|array',
+            'shift_ids.*' => 'integer|exists:shifts,id',
             'start_date' => 'required|date',
             'week_off_type' => 'nullable|in:day_based,date_based',
             'week_off_days' => 'required_if:week_off_type,day_based|array',
@@ -644,64 +653,27 @@ class ShiftController extends Controller
             }
 
             $tenantId = Auth::user()->tenant_id;
-            $assignedCount = 0;
-            $skippedCount = 0;
-            $alreadyAssignedCount = 0;
-            $duplicateSkippedCount = 0;
-            $weekOffCount = 0;
-            $supersededCount = 0;
             // The radio's "None" option submits week_off_type="" — the column is
             // a nullable enum(day_based,date_based), not "", so normalize here
             // rather than pushing an empty string all the way to the DB.
             $weekOffType = $request->week_off_type ?: null;
 
+            if (count($shiftIds) > 1) {
+                return $this->assignShiftSet($request, $userIds, $shiftIds, $type, $startDate, $endDate, (int) $tenantId, $weekOffType);
+            }
+
             if ($request->boolean('is_additional')) {
                 return $this->assignAdditionalShift($request, $userIds, $shift, $type, $startDate, $endDate, $tenantId);
             }
 
-            foreach ($userIds as $userId) {
-                if ($request->week_off_type) {
-                    $weekOffCount += $this->assignWeekOffs($userId, $request);
-                }
-
-                if ($type === 'permanent') {
-                    $result = $this->shiftAssignmentService->assignPermanent(
-                        $tenantId,
-                        $userId,
-                        $shift->id,
-                        $startDate,
-                        Auth::id(),
-                        $weekOffType,
-                        $request->week_off_days,
-                        $request->week_off_dates
-                    );
-
-                    $assignedCount += $result['materialized']['assigned'];
-                    if ($result['superseded']) {
-                        $supersededCount++;
-                    }
-                } else {
-                    $result = $this->shiftAssignmentService->assignFlexible(
-                        $tenantId,
-                        $userId,
-                        $shift->id,
-                        $startDate,
-                        $endDate,
-                        Auth::id(),
-                        (bool) $request->override_existing,
-                        (bool) $request->apply_to_future_only,
-                        $weekOffType,
-                        $request->week_off_days,
-                        $request->week_off_dates
-                    );
-
-                    $m = $result['materialized'];
-                    $assignedCount += $m['assigned'];
-                    $skippedCount += $m['skipped'];
-                    $alreadyAssignedCount += $m['already_assigned'];
-                    $duplicateSkippedCount += $m['duplicate_skipped'];
-                }
-            }
+            [
+                'assigned' => $assignedCount,
+                'skipped' => $skippedCount,
+                'already_assigned' => $alreadyAssignedCount,
+                'duplicate_skipped' => $duplicateSkippedCount,
+                'week_offs' => $weekOffCount,
+                'superseded' => $supersededCount,
+            ] = $this->assignMainShift($request, $userIds, $shift, $type, $startDate, $endDate, (int) $tenantId, $weekOffType);
 
             DB::commit();
 
@@ -762,6 +734,193 @@ class ShiftController extends Controller
                 ->with('error', 'Shift assignment failed: ' . $e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * Assign $shift as the employees' main (primary) shift — permanent or
+     * flexible — plus the week-offs from the form. Runs inside assignShift()'s
+     * transaction; returns the counts for the message.
+     *
+     * @return array{assigned:int, skipped:int, already_assigned:int, duplicate_skipped:int, week_offs:int, superseded:int}
+     */
+    private function assignMainShift(Request $request, array $userIds, Shift $shift, string $type, Carbon $startDate, Carbon $endDate, int $tenantId, ?string $weekOffType): array
+    {
+        $counts = ['assigned' => 0, 'skipped' => 0, 'already_assigned' => 0, 'duplicate_skipped' => 0, 'week_offs' => 0, 'superseded' => 0];
+
+        foreach ($userIds as $userId) {
+            if ($request->week_off_type) {
+                $counts['week_offs'] += $this->assignWeekOffs($userId, $request);
+            }
+
+            if ($type === 'permanent') {
+                $result = $this->shiftAssignmentService->assignPermanent(
+                    $tenantId,
+                    $userId,
+                    $shift->id,
+                    $startDate,
+                    Auth::id(),
+                    $weekOffType,
+                    $request->week_off_days,
+                    $request->week_off_dates
+                );
+
+                $counts['assigned'] += $result['materialized']['assigned'];
+                if ($result['superseded']) {
+                    $counts['superseded']++;
+                }
+            } else {
+                $result = $this->shiftAssignmentService->assignFlexible(
+                    $tenantId,
+                    $userId,
+                    $shift->id,
+                    $startDate,
+                    $endDate,
+                    Auth::id(),
+                    (bool) $request->override_existing,
+                    (bool) $request->apply_to_future_only,
+                    $weekOffType,
+                    $request->week_off_days,
+                    $request->week_off_dates
+                );
+
+                $m = $result['materialized'];
+                $counts['assigned'] += $m['assigned'];
+                $counts['skipped'] += $m['skipped'];
+                $counts['already_assigned'] += $m['already_assigned'];
+                $counts['duplicate_skipped'] += $m['duplicate_skipped'];
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Several shifts picked at once. The earliest-starting one becomes the main
+     * shift (the same rule attendance and payroll use for the day's primary
+     * shift) and the others are added as additional shifts on the same days —
+     * or, with "Add as additional shift" ticked, every picked shift is added
+     * next to the current main shift. All-or-nothing: the picked shifts must
+     * not overlap each other, and the additional ones must not overlap a shift
+     * the employees already work; otherwise nothing is saved.
+     * Runs inside assignShift()'s transaction.
+     */
+    private function assignShiftSet(Request $request, array $userIds, array $shiftIds, string $type, Carbon $startDate, Carbon $endDate, int $tenantId, ?string $weekOffType)
+    {
+        $refuse = function (string $message, array $data = []) use ($request) {
+            DB::rollBack();
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => false, 'message' => $message, 'data' => $data], 422);
+            }
+
+            return redirect()->back()->with('error', $message)->withInput();
+        };
+
+        $shifts = Shift::whereIn('id', $shiftIds)->get()
+            ->sortBy(fn ($s) => ShiftWindow::toMinutes($s->start_time))
+            ->values();
+        if ($shifts->count() !== count($shiftIds)) {
+            return $refuse('One of the selected shifts was not found.');
+        }
+
+        if ($clash = $this->selectedShiftsClash($shifts)) {
+            return $refuse($clash);
+        }
+
+        $additionalOnly = $request->boolean('is_additional');
+        $main = $additionalOnly ? null : $shifts->first();
+        $extras = $additionalOnly ? $shifts : $shifts->slice(1)->values();
+
+        $counts = ['assigned' => 0, 'superseded' => 0, 'week_offs' => 0];
+        if ($main) {
+            $mainCounts = $this->assignMainShift($request, $userIds, $main, $type, $startDate, $endDate, $tenantId, $weekOffType);
+            $counts = array_intersect_key($mainCounts, $counts);
+        }
+
+        // Each additional shift must fit around what the employees now work (their new main shift included).
+        $names = User::whereIn('id', $userIds)->pluck('name', 'id');
+        $clashes = [];
+        foreach ($extras as $extra) {
+            foreach ($userIds as $userId) {
+                $conflicts = $this->shiftAssignmentService->additionalConflicts($tenantId, $userId, $extra, $type, $startDate, $type === 'flexible' ? $endDate : null);
+                if ($conflicts) {
+                    $clashes[] = ($names[$userId] ?? "Employee #{$userId}") . ' — ' . $extra->name . ': ' . ShiftOverlapGuard::describe($conflicts, 2);
+                }
+            }
+        }
+        if ($clashes) {
+            return $refuse(
+                'A selected shift overlaps a shift already assigned — nothing was assigned. '
+                    . implode('; ', array_slice($clashes, 0, 3))
+                    . (count($clashes) > 3 ? '; and ' . (count($clashes) - 3) . ' more.' : '.'),
+                ['conflicts' => $clashes]
+            );
+        }
+
+        $added = 0;
+        foreach ($extras as $extra) {
+            foreach ($userIds as $userId) {
+                $result = $this->shiftAssignmentService->assignAdditional(
+                    $tenantId, $userId, $extra->id, $type, $startDate, $type === 'flexible' ? $endDate : null, Auth::id()
+                );
+                $added += $result['materialized']['assigned'];
+            }
+        }
+
+        DB::commit();
+
+        $parts = [];
+        if ($main) {
+            $parts[] = "{$main->name} (main)";
+        }
+        foreach ($extras as $extra) {
+            $parts[] = "{$extra->name} (additional)";
+        }
+        $message = implode(' + ', $parts) . ' assigned to ' . count($userIds) . ' employee(s) — '
+            . ($counts['assigned'] + $added) . ' shift day(s).'
+            . ($main ? '' : ' Their main shift is unchanged.')
+            . ($counts['superseded'] ? " {$counts['superseded']} previous permanent assignment(s) were ended and kept in history." : '')
+            . ($counts['week_offs'] ? " Week Offs: {$counts['week_offs']}." : '');
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => true,
+                'message' => $message,
+                'data' => [
+                    'type' => $type,
+                    'main_shift_id' => $main?->id,
+                    'additional_shift_ids' => $extras->pluck('id')->all(),
+                    'assigned' => $counts['assigned'] + $added,
+                    'superseded' => $counts['superseded'],
+                    'week_offs' => $counts['week_offs'],
+                ],
+            ], 200);
+        }
+
+        return redirect()->route('shift.roster')->with('success', $message);
+    }
+
+    /**
+     * "X and Y overlap …" when two of the picked shifts would run at the same
+     * time on a day (overnight shifts are compared across midnight too), else null.
+     * Back-to-back shifts (one ends 14:00, the next starts 14:00) are fine.
+     */
+    private function selectedShiftsClash($shifts): ?string
+    {
+        $day = '2030-01-02';
+        $list = $shifts->values();
+        for ($i = 0; $i < $list->count(); $i++) {
+            for ($j = $i + 1; $j < $list->count(); $j++) {
+                [$aStart, $aEnd] = ShiftWindow::window($day, $list[$i]);
+                foreach ([-1, 0, 1] as $offset) {
+                    [$bStart, $bEnd] = ShiftWindow::window(Carbon::parse($day)->addDays($offset)->toDateString(), $list[$j]);
+                    if ($aStart->lt($bEnd) && $bStart->lt($aEnd)) {
+                        return "{$list[$i]->name} and {$list[$j]->name} overlap — choose shifts that don't run at the same time.";
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

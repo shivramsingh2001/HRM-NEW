@@ -472,16 +472,17 @@
                         </div>
 
                         <div class="assign-section">
-                            <h6>3. Shift</h6>
-                            <select class="form-control" name="shift_id" id="shift_id" required>
-                                <option value="">Select shift</option>
+                            <h6>3. Shift(s)</h6>
+                            <select class="form-control" name="shift_ids[]" id="shift_id" multiple>
                                 @foreach ($shifts as $s)
-                                    <option value="{{ $s->id }}" data-color="{{ $s->color_code }}">
+                                    <option value="{{ $s->id }}" data-color="{{ $s->color_code }}" data-start="{{ \Carbon\Carbon::parse($s->start_time)->format('H:i') }}">
                                         {{ $s->name }} ({{ \Carbon\Carbon::parse($s->start_time)->format('h:i A') }}&ndash;{{ \Carbon\Carbon::parse($s->end_time)->format('h:i A') }})
                                     </option>
                                 @endforeach
                             </select>
                             <small class="text-danger error-text shift_id_error"></small>
+                            <small class="text-danger error-text shift_ids_error"></small>
+                            <div class="hint mt-1" id="shiftPickHint">Pick one or more shifts. With two or more, the one that starts earliest is the main shift and the others are added as additional shifts on the same days.</div>
                         </div>
 
                         <div class="assign-section">
@@ -648,6 +649,7 @@
             const csrf = $('meta[name="csrf-token"]').attr('content');
 
             $('#user_ids').select2({ placeholder: 'Select employees', allowClear: true, width: '100%', dropdownParent: $('#assignShiftModal') });
+            $('#shift_id').select2({ placeholder: 'Select one or more shifts', allowClear: true, width: '100%', closeOnSelect: false, dropdownParent: $('#assignShiftModal') });
 
             // Roster tab search box — no button; auto-submits the (real, page-navigating) filter form shortly after typing stops.
             let rosterSearchTimer = null;
@@ -725,7 +727,13 @@
             });
             $(document).on('click', '.remove-date', function () { $(this).closest('.wk-date-row').remove(); updatePreview(); });
             function updatePreview() {
-                const shiftTxt = $('#shift_id option:selected').text().trim() || '(no shift)';
+                // Several shifts: the earliest start is the main one (same order the server uses).
+                const picked = $('#shift_id option:selected').map((i, el) => ({ name: $(el).text().trim(), start: $(el).data('start') || '' })).get()
+                    .sort((a, b) => a.start.localeCompare(b.start));
+                const extraAll = $('#is_additional').is(':checked');
+                const shiftTxt = !picked.length ? '(no shift)'
+                    : picked.length === 1 ? picked[0].name
+                    : picked.map((p, i) => p.name + (extraAll || i > 0 ? ' [additional]' : ' [main]')).join(' + ');
                 const t = $('input[name="assign_type"]:checked').val();
                 let who = t === 'user' ? ($('#user_ids').val() || []).length + ' employee(s)'
                         : t === 'department' ? ($('#department_id option:selected').text() || 'department') + ' dept' : 'everyone';
@@ -755,7 +763,7 @@
                     success: r => { toastr.success(r.message || 'Assigned'); setTimeout(() => location.reload(), 900); },
                     error: xhr => {
                         $btn.prop('disabled', false).text('Assign Shift');
-                        if (xhr.status === 422) $.each(xhr.responseJSON.errors, (k, v) => $('.' + k.replace('.', '_') + '_error').text(v[0]));
+                        if (xhr.status === 422 && xhr.responseJSON?.errors) $.each(xhr.responseJSON.errors, (k, v) => $('.' + k.split('.')[0] + '_error').text(v[0]));
                         else $('#assignFormError').removeClass('d-none').text(xhr.responseJSON?.message || 'Assignment failed.');
                     }
                 });
