@@ -20,17 +20,28 @@ use Tests\TestCase;
 /**
  * Permanent / Flexible shift assignment types. Runs against the shared dev DB
  * (no RefreshDatabase) — mirrors BranchManagementTest's tenant-selection and
- * direct-controller-call pattern. Every test cleans up the rows it creates
- * and restores tenants.custom_shifts_enabled.
+ * direct-controller-call pattern.
+ *
+ * Isolation (same pattern as MultiShiftAssignTest): each test works on a
+ * throwaway employee created in setUp, every shift it creates is tagged, and
+ * tearDown() — which runs even when an assertion fails — deletes all of it and
+ * restores the tenant's custom_shifts_enabled + default_shift_id. Previously
+ * the cleanup sat at the end of each test, so one failed assertion left rows
+ * behind on a real employee and the next run failed on that leftover state.
  */
 class ShiftAssignmentTest extends TestCase
 {
     private ?bool $originalCustomShiftsEnabled = null;
+    private $originalDefaultShiftId = null;
     private int $tenantId;
+    private string $tag;
+    private User $employee;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->tag = 'PHPUnit SA ' . uniqid();
 
         $this->tenantId = (int) DB::table('users')
             ->whereNotNull('tenant_id')
@@ -40,17 +51,37 @@ class ShiftAssignmentTest extends TestCase
             ->orderByRaw('count(*) desc')
             ->value('tenant_id');
 
-        $this->originalCustomShiftsEnabled = (bool) DB::table('tenants')
-            ->where('id', $this->tenantId)
-            ->value('custom_shifts_enabled');
+        $tenant = DB::table('tenants')->where('id', $this->tenantId)->first(['custom_shifts_enabled', 'default_shift_id']);
+        $this->originalCustomShiftsEnabled = (bool) $tenant->custom_shifts_enabled;
+        $this->originalDefaultShiftId = $tenant->default_shift_id;
 
         DB::table('tenants')->where('id', $this->tenantId)->update(['custom_shifts_enabled' => 1]);
+
+        // A fresh employee with no shift history, so earlier data can't affect the assertions.
+        $this->employee = User::withoutGlobalScopes()->forceCreate([
+            'name' => $this->tag . ' Employee',
+            'email' => 'sa.' . uniqid() . '@phpunit.test',
+            'employee_id' => 'SA' . random_int(100000, 999999),
+            'password' => bcrypt('secret'),
+            'role' => 'employee',
+            'status' => 1,
+            'tenant_id' => $this->tenantId,
+        ]);
     }
 
     protected function tearDown(): void
     {
-        DB::table('tenants')->where('id', $this->tenantId)
-            ->update(['custom_shifts_enabled' => (int) $this->originalCustomShiftsEnabled]);
+        $assignmentIds = ShiftAssignment::withoutGlobalScopes()->where('user_id', $this->employee->id)->pluck('id');
+        UserShift::withoutGlobalScopes()->where('user_id', $this->employee->id)->delete();
+        ShiftAssignment::withoutGlobalScopes()->whereIn('id', $assignmentIds)->delete();
+        DB::table('user_weekoffs')->where('user_id', $this->employee->id)->delete();
+        Shift::withoutGlobalScopes()->where('tenant_id', $this->tenantId)->where('name', 'like', $this->tag . '%')->delete();
+        User::withoutGlobalScopes()->where('id', $this->employee->id)->forceDelete();
+
+        DB::table('tenants')->where('id', $this->tenantId)->update([
+            'custom_shifts_enabled' => (int) $this->originalCustomShiftsEnabled,
+            'default_shift_id' => $this->originalDefaultShiftId,
+        ]);
 
         Auth::logout();
         parent::tearDown();
@@ -70,7 +101,7 @@ class ShiftAssignmentTest extends TestCase
     {
         return Shift::create([
             'tenant_id' => $this->tenantId,
-            'name' => $name,
+            'name' => $this->tag . ' ' . $name, // tagged so tearDown() can always remove it
             'start_time' => $start,
             'end_time' => $end,
             'total_hours' => abs(Carbon::parse($end)->diffInHours(Carbon::parse($start))),
@@ -81,7 +112,7 @@ class ShiftAssignmentTest extends TestCase
 
     private function pickTestUser(): User
     {
-        return User::where('tenant_id', $this->tenantId)->where('status', 1)->where('role', '!=', 'admin')->first();
+        return $this->employee;
     }
 
     /** Request::create() sends no Accept header, so the controller's ajax()/wantsJson() check would otherwise pick the redirect branch. */
