@@ -28,9 +28,13 @@ class ShiftController extends Controller
                 return $this->errorResponse('User not authenticated', 401);
             }
 
-            // Get date parameters
-            $startDate = $request->start_date ? Carbon::parse($request->start_date) : now()->startOfMonth();
-            $endDate = $request->end_date ? Carbon::parse($request->end_date) : now()->endOfMonth();
+            // Get date parameters — an unparseable date is a client error (422), not a 500.
+            try {
+                $startDate = $request->filled('start_date') ? Carbon::parse((string) $request->start_date)->startOfDay() : now()->startOfMonth();
+                $endDate = $request->filled('end_date') ? Carbon::parse((string) $request->end_date)->startOfDay() : now()->endOfMonth()->startOfDay();
+            } catch (\Throwable $e) {
+                return $this->errorResponse('Invalid date. Use the format YYYY-MM-DD for start_date and end_date.', 422);
+            }
 
             // Validate date range
             if ($endDate->lt($startDate)) {
@@ -81,11 +85,8 @@ class ShiftController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return $this->errorResponse(
-                'Failed to fetch shift plan',
-                500,
-                config('app.debug') ? $e->getMessage() : null
-            );
+            // Details are in the log above; the client gets a plain message.
+            return $this->errorResponse('Failed to fetch shift plan', 500);
         }
     }
 

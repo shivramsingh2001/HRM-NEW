@@ -16,6 +16,8 @@ use App\Traits\AuthorizesByScope;
 
 class OvertimeController extends Controller
 {
+    use \App\Http\Controllers\Concerns\RaisesOnBehalf;
+
     use AuthorizesByScope;
 
     /**
@@ -85,7 +87,11 @@ class OvertimeController extends Controller
             ->where('status', 'rejected')
             ->sum('overtime_hours');
 
+        $otPolicy = app(\App\Services\Attendance\OvertimePolicyService::class);
+        $overtimeMode = ! $otPolicy->enabled((int) $tenantId) ? 'off' : ($otPolicy->isAuto((int) $tenantId) ? 'auto' : 'request');
+
         return view('client.overtime.request', compact(
+            'overtimeMode',
             'requests',
             'totalRequests',
             'totalHours',
@@ -113,59 +119,38 @@ class OvertimeController extends Controller
             ], 422);
         }
 
-        $tenantId = auth()->user()->tenant_id ?? null;
-        $userId = auth()->user()->id;
+        $tenantId = (int) auth()->user()->tenant_id;
+        $userId = (int) auth()->user()->id;
+        $date = \Carbon\Carbon::parse($request->date)->toDateString();
+        $hours = (float) $request->overtime_hours;
+        $otPolicy = app(\App\Services\Attendance\OvertimePolicyService::class);
 
-        // Check if request already exists for this date
-        $existingRequest = OvertimeRequest::where('user_id', $userId)
-            ->where('date', $request->date)
-            ->first();
+        $existing = $otPolicy->existing($userId, $date);
+        if ($existing && $existing->status !== 'rejected' && $otPolicy->enabled($tenantId) && ! $otPolicy->isAuto($tenantId)) {
+            return response()->json(['success' => false, 'message' => 'You have already submitted an overtime request for this date'], 422);
+        }
 
-        if ($existingRequest) {
+        // Company Policies → Overtime (switch, mode, min / per-day / monthly limits) + Employee 360 overrides.
+        if ($refusal = $otPolicy->refusal($tenantId, $userId, $date, $hours)) {
+            return response()->json(['success' => false, 'message' => $refusal], 422);
+        }
+
+        $status = $otPolicy->initialStatus($tenantId, $userId, $hours);
+
+        // One request per date; a rejected date can be raised again.
+        $overtimeRequest = $otPolicy->saveRequest($tenantId, $userId, $date, [
+            'overtime_hours' => $hours,
+            'reason' => $request->reason,
+            'status' => $status,
+            'approved_hours' => $status === 'approved' ? $hours : null,
+            'approved_at' => $status == 'approved' ? now() : null,
+        ]);
+        if (! $overtimeRequest) {
             return response()->json([
                 'success' => false,
                 'message' => 'You have already submitted an overtime request for this date'
             ], 422);
         }
-
-        // Get settings
-        $settings = OvertimeSetting::where('tenant_id', $tenantId)
-            ->orWhereNull('tenant_id')
-            ->first();
-        // This employee's custom overtime rules (Employee 360 → Policies) win over the company's.
-        $settings = app(\App\Services\EmployeePolicyService::class)->overtime((int) $tenantId, (int) $userId, $settings);
-        if ($refusal = app(\App\Services\EmployeePolicyService::class)->overtimeRefusal((int) $tenantId, (int) $userId, (string) $request->date, (float) $request->overtime_hours)) {
-            return response()->json(['success' => false, 'message' => $refusal], 422);
-        }
-
-        // Validate against max hours per day
-        if ($settings && $settings->max_hours_per_day) {
-            if ($request->overtime_hours > $settings->max_hours_per_day) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Overtime hours cannot exceed {$settings->max_hours_per_day} hours per day"
-                ], 422);
-            }
-        }
-
-        // Determine status
-        $status = 'pending';
-        if ($settings && !$settings->require_approval) {
-            $status = 'approved';
-        } elseif ($settings && $settings->auto_approve_limit && $request->overtime_hours <= $settings->auto_approve_limit) {
-            $status = 'approved';
-        }
-
-        // Create request
-        $overtimeRequest = OvertimeRequest::create([
-            'tenant_id' => $tenantId,
-            'user_id' => $userId,
-            'date' => $request->date,
-            'overtime_hours' => $request->overtime_hours,
-            'reason' => $request->reason,
-            'status' => $status,
-            'approved_at' => $status == 'approved' ? now() : null,
-        ]);
 
         $message = $status == 'approved'
             ? 'Overtime request auto-approved successfully'
@@ -175,6 +160,67 @@ class OvertimeController extends Controller
             'success' => true,
             'message' => $message,
             'data' => $overtimeRequest
+        ]);
+    }
+
+    /**
+     * Admin / HR records overtime for an employee (Overtime → "Add overtime").
+     * Any date (past included). The employee's overtime eligibility, monthly cap
+     * and the per-day maximum still apply; saved APPROVED by the caller, no
+     * approval workflow.
+     */
+    public function storeOnBehalf(Request $request)
+    {
+        $employee = $this->onBehalfEmployee($request);
+
+        $validator = Validator::make($request->all(), [
+            'date' => 'required|date',
+            'overtime_hours' => 'required|numeric|min:0.5|max:24',
+            'reason' => 'required|string|min:3|max:500',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $tenantId = (int) $employee->tenant_id;
+        $date = \Carbon\Carbon::parse($request->date)->toDateString();
+        $hours = (float) $request->overtime_hours;
+
+        $otPolicy = app(\App\Services\Attendance\OvertimePolicyService::class);
+        $existing = $otPolicy->existing((int) $employee->id, $date);
+        if ($existing && $existing->status !== 'rejected') {
+            return response()->json(['success' => false, 'message' => "{$employee->name} already has an overtime request for this date."], 422);
+        }
+
+        // HR entry: allowed in automatic mode too (corrections), every limit still applies.
+        if ($refusal = $otPolicy->refusal($tenantId, (int) $employee->id, $date, $hours, null, false)) {
+            return response()->json(['success' => false, 'message' => $refusal], 422);
+        }
+
+        $overtimeRequest = $otPolicy->saveRequest($tenantId, (int) $employee->id, $date, [
+            'created_by' => auth()->id(),
+            'overtime_hours' => $hours,
+            'reason' => $request->reason,
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
+            'approved_hours' => $hours,
+            'approved_at' => now(),
+        ]);
+
+        $this->logOnBehalf('overtime.created_on_behalf', 'OvertimeRequest', (int) $overtimeRequest->id, $employee, [
+            'date' => $date, 'hours' => $hours, 'status' => 'approved',
+        ]);
+
+        try {
+            app(\App\Services\OvertimeNotificationService::class)->notifyOvertimeApproved($overtimeRequest->fresh('user'), 'Recorded by ' . auth()->user()->name);
+        } catch (\Throwable $e) {
+            // never block on notification
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$hours} hour(s) of overtime recorded and approved for {$employee->name}.",
+            'data' => $overtimeRequest,
         ]);
     }
 
@@ -230,23 +276,9 @@ class OvertimeController extends Controller
             ], 422);
         }
 
-        // Get settings for validation
-        $settings = OvertimeSetting::where('tenant_id', $tenantId)
-            ->orWhereNull('tenant_id')
-            ->first();
-        // This employee's custom overtime rules (Employee 360 → Policies) win over the company's.
-        $settings = app(\App\Services\EmployeePolicyService::class)->overtime((int) $tenantId, (int) $userId, $settings);
-        if ($refusal = app(\App\Services\EmployeePolicyService::class)->overtimeRefusal((int) $tenantId, (int) $userId, (string) $request->date, (float) $request->overtime_hours, (int) $overtimeRequest->id)) {
+        // Company Policies → Overtime + Employee 360 overrides.
+        if ($refusal = app(\App\Services\Attendance\OvertimePolicyService::class)->refusal((int) $tenantId, (int) $userId, (string) $request->date, (float) $request->overtime_hours, (int) $overtimeRequest->id)) {
             return response()->json(['success' => false, 'message' => $refusal], 422);
-        }
-
-        if ($settings && $settings->max_hours_per_day) {
-            if ($request->overtime_hours > $settings->max_hours_per_day) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Overtime hours cannot exceed {$settings->max_hours_per_day} hours per day"
-                ], 422);
-            }
         }
 
         // Update the request
@@ -501,6 +533,17 @@ class OvertimeController extends Controller
                 $request->approver_name = $approver ? $approver->name : null;
             }
 
+            // What attendance shows for that day (information only for the approver).
+            try {
+                $m = app(\App\Services\Attendance\AutoOvertimeService::class)->measure(
+                    (int) $request->tenant_id, (int) $request->user_id, (string) \Carbon\Carbon::parse($request->date)->toDateString());
+                $request->attendance_overtime = $m['minutes'] > 0
+                    ? 'Attendance shows ' . round($m['minutes'] / 60, 2) . ' h after ' . $m['starts_at']->format('H:i') . ' (clock-out ' . $m['clock_out']->format('H:i') . ')'
+                    : 'Attendance shows no overtime (' . ($m['reason'] ?? 'none') . ')';
+            } catch (\Throwable $e) {
+                $request->attendance_overtime = null;
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => $request
@@ -597,27 +640,36 @@ class OvertimeController extends Controller
             ], 403);
         }
 
-        if ($overtimeRequest->status != 'pending') {
+        $isAutoEntry = $overtimeRequest->source === OvertimeRequest::SOURCE_AUTO && $overtimeRequest->status === 'approved';
+        if ($overtimeRequest->status != 'pending' && ! $isAutoEntry) {
             return response()->json([
                 'success' => false,
                 'message' => "Request is already {$overtimeRequest->status}"
             ], 422);
         }
 
-        $approvedHours = $request->approved_hours ?? $overtimeRequest->overtime_hours;
+        $approvedHours = (float) ($request->approved_hours ?? $overtimeRequest->approved_hours ?? $overtimeRequest->overtime_hours);
 
-        // Validate against settings
-        $settings = OvertimeSetting::where('tenant_id', $tenantId)
-            ->orWhereNull('tenant_id')
-            ->first();
-        // This employee's custom overtime rules (Employee 360 → Policies) win over the company's.
-        $settings = app(\App\Services\EmployeePolicyService::class)->overtime((int) $tenantId, (int) $overtimeRequest->user_id, $settings);
+        // Company Policies → Overtime limits (min / per day / per month) + Employee 360 overrides.
+        if ($refusal = app(\App\Services\Attendance\OvertimePolicyService::class)->refusal(
+            (int) $tenantId, (int) $overtimeRequest->user_id, (string) \Carbon\Carbon::parse($overtimeRequest->date)->toDateString(),
+            $approvedHours, (int) $overtimeRequest->id, false)) {
+            return response()->json(['success' => false, 'message' => $refusal], 422);
+        }
 
-        if ($settings && $settings->max_hours_per_day && $approvedHours > $settings->max_hours_per_day) {
-            return response()->json([
-                'success' => false,
-                'message' => "Approved hours cannot exceed {$settings->max_hours_per_day} hours per day"
-            ], 422);
+        // Automatic entry (already approved): HR adjusts the hours; recalculation then leaves it alone.
+        if ($isAutoEntry) {
+            $old = $overtimeRequest->only(['approved_hours', 'status']);
+            $overtimeRequest->update([
+                'approved_hours' => $approvedHours,
+                'approved_by' => $authUser->id,
+                'approved_at' => now(),
+                'manually_adjusted_at' => now(),
+            ]);
+            app(\App\Services\AuditLogger::class)->record('user', $authUser->id, (int) $tenantId, 'overtime.auto_adjusted',
+                'OvertimeRequest', (int) $overtimeRequest->id, $old, $overtimeRequest->only(['approved_hours', 'status']));
+
+            return response()->json(['success' => true, 'message' => 'Overtime hours updated', 'data' => $overtimeRequest->fresh()]);
         }
 
         // Tier 2 / T2-A — route through the approval workflow when configured.
@@ -696,6 +748,22 @@ class OvertimeController extends Controller
                 'success' => false,
                 'message' => 'You can only reject overtime for your own team members.'
             ], 403);
+        }
+
+        // Automatic entry (already approved): HR can still reject it; recalculation then leaves it alone.
+        if ($overtimeRequest->source === OvertimeRequest::SOURCE_AUTO && $overtimeRequest->status === 'approved') {
+            $old = $overtimeRequest->only(['approved_hours', 'status']);
+            $overtimeRequest->update([
+                'status' => 'rejected',
+                'approved_by' => $authUser->id,
+                'rejection_reason' => $request->rejection_reason,
+                'approved_at' => now(),
+                'manually_adjusted_at' => now(),
+            ]);
+            app(\App\Services\AuditLogger::class)->record('user', $authUser->id, (int) $tenantId, 'overtime.auto_rejected',
+                'OvertimeRequest', (int) $overtimeRequest->id, $old, $overtimeRequest->only(['approved_hours', 'status']));
+
+            return response()->json(['success' => true, 'message' => 'Overtime rejected', 'data' => $overtimeRequest->fresh()]);
         }
 
         if ($overtimeRequest->status != 'pending') {

@@ -114,6 +114,29 @@
                                     </div>
                                 </div>
 
+                                @if (!$leaveType->is_unpaid && $leaveType->credit_type !== 'no')
+                                    @php
+                                        $cfText = $leaveType->carryForwardText();
+                                        if ($leaveType->credit_type === 'yearly' && $leaveType->carry_forward_expiry_months) {
+                                            $cfText .= ' · carried days expire after ' . $leaveType->carry_forward_expiry_months . ' month(s)';
+                                        }
+                                        if (! $carryForwardEnabled) {
+                                            $cfText .= ' (company carry forward is off)';
+                                        }
+                                    @endphp
+                                    <div class="row mb-4 align-items-center">
+                                        <div class="col-lg-3">
+                                            <label for="carry_forward" class="fw-semibold">Carry Forward: </label>
+                                        </div>
+                                        <div class="col-lg-9">
+                                            <div class="input-group">
+                                                <div class="input-group-text"><i class="feather-corner-down-right"></i></div>
+                                                <input type="text" id="carry_forward" value="{{ $cfText }}" class="form-control" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
                                 <div class="row mb-4 align-items-center">
                                     <div class="col-lg-3">
                                         <label for="description" class="fw-semibold">Description: </label>

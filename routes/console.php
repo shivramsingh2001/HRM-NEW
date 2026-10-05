@@ -45,9 +45,19 @@ Schedule::command('leaves:credit-monthly')
     ->withoutOverlapping()
     ->runInBackground();
 
-// Yearly credits - 1st April at 00:30 AM
+// Carry forward — daily, before the credits: at the
+// start of each credit period (1st of month, Monday, or leave-year start), leave
+// above a type's carry-forward limit lapses; carried leave of yearly types not
+// used by its expiry date lapses (Company Policies → Leave carry forward).
+Schedule::command('leaves:carry-forward')
+    ->dailyAt('00:10')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Yearly credits — daily check; each company is credited once per leave year,
+// on/after its own leave-year start (Company Policies, default 1 April).
 Schedule::command('leaves:credit-yearly')
-    ->cron('30 0 1 4 *')
+    ->dailyAt('00:30')
     ->withoutOverlapping()
     ->runInBackground();
     
@@ -56,6 +66,14 @@ Schedule::command('attendance:auto-clockout --hours=15')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/auto-clockout.log'));
+
+// Automatic overtime (Company Policies → Overtime, mode "automatic"): yesterday
+// + today recalculated from attendance — catches writes that skip the live
+// hook (legacy auto clock-out). After auto clock-out has closed the night.
+Schedule::command('overtime:auto-calculate')
+    ->dailyAt('01:00')
+    ->withoutOverlapping()
+    ->runInBackground();
 
 // Fire meeting reminders once a meeting enters its reminder_minutes_before
 // window. Runs every five minutes (like the missed-checkin sweep above)

@@ -43,6 +43,29 @@
             padding: 18px;
         }
 
+        /* Cards in the same row share one height; the Update button sits at the bottom. */
+        .wf-row > [class*="col-"] {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wf-row .wf-card {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wf-row .wf-card__body {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wf-row .wf-card__body > .btn-update {
+            align-self: flex-start;
+            margin-top: auto;
+        }
+
         .field-label {
             font-size: 11.5px;
             font-weight: 500;
@@ -190,31 +213,6 @@
             text-align: right;
         }
 
-        .info-bar {
-            display: flex;
-            align-items: flex-start;
-            gap: 9px;
-            padding: 11px 14px;
-            background: #f8fafc;
-            border: 1px solid #edf2f7;
-            border-radius: 10px;
-            font-size: 11px;
-            color: #64748b;
-            line-height: 1.6;
-        }
-
-        .info-bar i {
-            color: var(--icon-color, #0D6EFD);
-            font-size: 12px;
-            margin-top: 2px;
-            flex-shrink: 0;
-        }
-
-        .info-bar strong {
-            color: #334155;
-            font-weight: 600;
-        }
-
         .alert-box {
             padding: 10px 14px;
             border-radius: 8px;
@@ -259,7 +257,7 @@
             </div>
         @endif
 
-        <div class="row">
+        <div class="row wf-row">
             <div class="col-md-4">
                 <div class="wf-card">
                     <div class="wf-card__head">
@@ -290,14 +288,6 @@
                     </div>
                 </div>
 
-                <div class="info-bar">
-                    <i class="feather-info"></i>
-                    <span>
-                        <strong>Note:</strong>
-                        Only applies to employee IDs generated after this change —
-                        existing employee IDs stay the same everywhere.
-                    </span>
-                </div>
             </div>
 
             <div class="col-md-4">
@@ -326,14 +316,6 @@
                     </div>
                 </div>
 
-                <div class="info-bar">
-                    <i class="feather-info"></i>
-                    <span>
-                        <strong>How overrides work:</strong>
-                        This is only the company default — HR/Admin can still waive or adjust
-                        it per employee on their offboarding request, with a recorded reason.
-                    </span>
-                </div>
             </div>
 
             <div class="col-md-4">
@@ -361,14 +343,6 @@
                     </div>
                 </div>
 
-                <div class="info-bar">
-                    <i class="feather-info"></i>
-                    <span>
-                        <strong>Applies everywhere:</strong>
-                        Mobile app and biometric terminal punches both follow this setting —
-                        it applies from the next punch after saving.
-                    </span>
-                </div>
             </div>
 
             <div class="col-md-4">
@@ -390,9 +364,6 @@
                                 <span class="info-row__value">{{ $policy->dayClassificationEnabled ? 'Enabled' : 'Disabled' }}</span>
                             </div>
                         </div>
-                        @unless ($policy->dayClassificationEnabled)
-                            <div class="field-hint mb-2">Not applied — any day with work counts as Present.</div>
-                        @endunless
                         <div class="info-list" @unless ($policy->dayClassificationEnabled) style="opacity:.5" @endunless>
                             <div class="info-row">
                                 <span class="info-row__label">Present ratio</span>
@@ -418,14 +389,6 @@
                     </div>
                 </div>
 
-                <div class="info-bar">
-                    <i class="feather-info"></i>
-                    <span>
-                        <strong>Note:</strong>
-                        Saving only changes this switch and these 4 values — every other Attendance Policy
-                        setting (overtime, grace period, etc.) is carried forward unchanged.
-                    </span>
-                </div>
             </div>
 
             <div class="col-md-4">
@@ -621,6 +584,151 @@
                     </div>
                 </div>
             </div>
+
+            @feature('leave_management')
+            @php
+                $lyMonth = (int) ($tenant->leave_year_start_month ?: 4);
+                $lyDay = (int) ($tenant->leave_year_start_day ?: 1);
+                $lyStart = \Carbon\Carbon::create(2000, $lyMonth, $lyDay);
+                $lyEnd = $lyStart->copy()->subDay();
+            @endphp
+            <div class="col-md-4">
+                <div class="wf-card">
+                    <div class="wf-card__head">
+                        <h5 class="wf-card__title">
+                            <i class="feather-corner-down-right"></i>
+                            Leave carry forward
+                        </h5>
+                        <p class="wf-card__desc">
+                            What happens to unused leave when a new leave year starts.
+                        </p>
+                    </div>
+                    <div class="wf-card__body">
+                        <div class="info-list">
+                            <div class="info-row">
+                                <span class="info-row__label">Carry forward rules</span>
+                                <span class="info-row__value">{{ $tenant->leave_carry_forward_enabled ? 'Active' : 'Inactive' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Leave year</span>
+                                <span class="info-row__value">{{ $lyStart->format('j M') }} – {{ $lyEnd->format('j M') }}</span>
+                            </div>
+                            @if ($tenant->leave_carry_forward_enabled && $tenant->leave_carry_forward_enabled_at)
+                                <div class="info-row">
+                                    <span class="info-row__label">Active since</span>
+                                    <span class="info-row__value">{{ $tenant->leave_carry_forward_enabled_at->format('d M Y') }}</span>
+                                </div>
+                            @endif
+                        </div>
+
+                        <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#leaveCarryForwardModal">
+                            <i class="feather-edit-2"></i> Update
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            @endfeature
+
+            @feature('overtime')
+            @if ($canManageOvertime)
+            @php
+                $otNum = fn ($v) => $v !== null && (float) $v > 0 ? rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.') : null;
+                $otAuto = $overtime->mode === 'auto';
+            @endphp
+            <div class="col-md-4" id="overtime">
+                <div class="wf-card">
+                    <div class="wf-card__head">
+                        <h5 class="wf-card__title">
+                            <i class="feather-clock"></i>
+                            Overtime
+                        </h5>
+                        <p class="wf-card__desc">
+                            Whether overtime is counted, and whether it is calculated from attendance or raised by employees.
+                        </p>
+                    </div>
+                    <div class="wf-card__body">
+                        <div class="info-list">
+                            <div class="info-row">
+                                <span class="info-row__label">Overtime</span>
+                                <span class="info-row__value">{{ $overtime->enabled ? 'Active' : 'Inactive' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Mode</span>
+                                <span class="info-row__value">{{ $otAuto ? 'Automatic calculation' : 'Request & approval' }}</span>
+                            </div>
+                            @if ($otAuto)
+                                <div class="info-row">
+                                    <span class="info-row__label">Counting starts</span>
+                                    <span class="info-row__value">
+                                        {{ $overtime->auto_start_basis === 'fixed'
+                                            ? ((int) $overtime->auto_start_after_minutes) . ' min after shift end'
+                                            : 'After the shift\'s grace time' }}
+                                    </span>
+                                </div>
+                            @endif
+                        </div>
+
+                        <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#overtimeModeModal">
+                            <i class="feather-edit-2"></i> Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="wf-card">
+                    <div class="wf-card__head">
+                        <h5 class="wf-card__title">
+                            <i class="feather-dollar-sign"></i>
+                            Overtime limits &amp; rate
+                        </h5>
+                        <p class="wf-card__desc">
+                            Daily and monthly limits and how overtime is paid — used in both modes.
+                        </p>
+                    </div>
+                    <div class="wf-card__body">
+                        <div class="info-list">
+                            <div class="info-row">
+                                <span class="info-row__label">Minimum per day</span>
+                                <span class="info-row__value">{{ $otNum($overtime->min_hours) ? $otNum($overtime->min_hours) . ' h' : 'None' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Maximum per day</span>
+                                <span class="info-row__value">{{ $otNum($overtime->max_hours_per_day) ? $otNum($overtime->max_hours_per_day) . ' h' : 'No limit' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Maximum per month</span>
+                                <span class="info-row__value">{{ $otNum($overtime->max_hours_per_month) ? $otNum($overtime->max_hours_per_month) . ' h' : 'No limit' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Rate</span>
+                                <span class="info-row__value">
+                                    {{ $overtime->rate_type === 'fixed'
+                                        ? '₹' . number_format((float) $overtime->fixed_rate_per_hour, 2) . ' per hour'
+                                        : '× ' . ($otNum($overtime->rate_multiplier) ?? '1.5') . ' hourly rate' }}
+                                </span>
+                            </div>
+                            @unless ($otAuto)
+                                <div class="info-row">
+                                    <span class="info-row__label">Approval</span>
+                                    <span class="info-row__value">
+                                        {{ $overtime->require_approval
+                                            ? ($otNum($overtime->auto_approve_limit) ? 'Needed above ' . $otNum($overtime->auto_approve_limit) . ' h' : 'Always needed')
+                                            : 'Not needed' }}
+                                    </span>
+                                </div>
+                            @endunless
+                        </div>
+
+                        <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#overtimeLimitsModal">
+                            <i class="feather-edit-2"></i> Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @endif
+            @endfeature
         </div>
 
     </div>
@@ -689,6 +797,203 @@
                 </div>
             </form>
         </x-ui.modal>
+
+        {{-- Leave carry forward --}}
+        @feature('leave_management')
+        <x-ui.modal id="leaveCarryForwardModal" title="Leave carry forward" size="md">
+            <form action="{{ route('leave-carry-forward-settings.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="leave_carry_forward_enabled" name="leave_carry_forward_enabled" value="1"
+                           {{ old('leave_carry_forward_enabled', $tenant->leave_carry_forward_enabled) ? 'checked' : '' }}>
+                    <label class="form-check-label field-label mb-0" for="leave_carry_forward_enabled">
+                        Apply carry forward rules at the start of each leave year
+                    </label>
+                </div>
+                <div class="field-hint">
+                    Active — when a new leave year starts, unused leave above each leave type's carry-forward
+                    limit lapses, and carried days not used before the type's expiry lapse too.
+                    Inactive (default) — all unused leave carries over, nothing lapses.
+                    Turning it on applies from the next leave year start, never to the year already running.
+                </div>
+
+                <div class="row g-2 mt-2">
+                    <div class="col-7">
+                        <label class="field-label">Leave year starts — month</label>
+                        <select class="field-input" name="leave_year_start_month">
+                            @foreach (range(1, 12) as $m)
+                                <option value="{{ $m }}" @selected((int) old('leave_year_start_month', $tenant->leave_year_start_month ?: 4) === $m)>
+                                    {{ \Carbon\Carbon::create(2000, $m, 1)->format('F') }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-5">
+                        <label class="field-label">Day</label>
+                        <input type="number" min="1" max="28" step="1" class="field-input" name="leave_year_start_day"
+                               value="{{ old('leave_year_start_day', (int) ($tenant->leave_year_start_day ?: 1)) }}">
+                    </div>
+                </div>
+                @error('leave_year_start_day')
+                    <div class="text-danger small mt-1">{{ $message }}</div>
+                @enderror
+                <div class="field-hint mt-2">
+                    Also the day yearly leave credits are added (default 1 April).
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn-save">
+                        <i class="feather-check"></i> Save
+                    </button>
+                </div>
+            </form>
+        </x-ui.modal>
+        @endfeature
+
+        {{-- Overtime: switch + mode --}}
+        @feature('overtime')
+        @if ($canManageOvertime)
+        <x-ui.modal id="overtimeModeModal" title="Overtime" size="md">
+            <form action="{{ route('overtime-policy-settings.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="section" value="mode">
+
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="ot_enabled" name="enabled" value="1"
+                           {{ old('enabled', $overtime->enabled) ? 'checked' : '' }}>
+                    <label class="form-check-label field-label mb-0" for="ot_enabled">Overtime is active</label>
+                </div>
+                <div class="field-hint">
+                    Inactive — no new overtime is recorded (no requests, no automatic calculation).
+                    Overtime already approved is still paid.
+                </div>
+
+                <div id="ot_mode_fields">
+                    <label class="field-label mt-3">How overtime is recorded</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="mode" id="ot_mode_request" value="request"
+                               @checked(old('mode', $overtime->mode) !== 'auto')>
+                        <label class="form-check-label" for="ot_mode_request">
+                            <strong>Overtime request &amp; approval</strong> — employees raise a request and it follows the approval workflow.
+                        </label>
+                    </div>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="radio" name="mode" id="ot_mode_auto" value="auto"
+                               @checked(old('mode', $overtime->mode) === 'auto')>
+                        <label class="form-check-label" for="ot_mode_auto">
+                            <strong>Automatic overtime calculation</strong> — calculated from attendance and shift timing; no request needed.
+                        </label>
+                    </div>
+
+                    <div id="ot_auto_fields" class="mt-3">
+                        <label class="field-label">Overtime starts counting</label>
+                        <select class="field-input" name="auto_start_basis" id="ot_start_basis">
+                            <option value="grace" @selected(old('auto_start_basis', $overtime->auto_start_basis) !== 'fixed')>After the shift's grace time</option>
+                            <option value="fixed" @selected(old('auto_start_basis', $overtime->auto_start_basis) === 'fixed')>A fixed number of minutes after shift end</option>
+                        </select>
+                        <div id="ot_fixed_minutes_wrap" class="mt-2">
+                            <label class="field-label">Minutes after shift end</label>
+                            <input type="number" min="0" max="600" step="1" class="field-input" name="auto_start_after_minutes"
+                                   value="{{ old('auto_start_after_minutes', (int) $overtime->auto_start_after_minutes) }}">
+                        </div>
+                        <div class="field-hint mt-2">
+                            Example: shift ends 6:00 PM, 30 minutes → overtime counts from 6:30 PM.
+                            Counted after the last shift of the day; overnight shifts use their real end time.
+                            No clock-out, an automatic (system) clock-out or leaving before the start time = no overtime.
+                        </div>
+                    </div>
+                </div>
+                @foreach (['mode', 'auto_start_basis', 'auto_start_after_minutes'] as $f)
+                    @error($f)
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
+                @endforeach
+
+                <div class="mt-3">
+                    <button type="submit" class="btn-save">
+                        <i class="feather-check"></i> Save
+                    </button>
+                </div>
+            </form>
+        </x-ui.modal>
+
+        {{-- Overtime: limits + rate --}}
+        <x-ui.modal id="overtimeLimitsModal" title="Overtime limits &amp; rate" size="md">
+            <form action="{{ route('overtime-policy-settings.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="section" value="limits">
+
+                <div class="row g-2">
+                    <div class="col-4">
+                        <label class="field-label">Minimum hours / day</label>
+                        <input type="number" min="0" max="24" step="0.25" class="field-input" name="min_hours"
+                               value="{{ old('min_hours', $overtime->min_hours) }}" placeholder="None">
+                    </div>
+                    <div class="col-4">
+                        <label class="field-label">Maximum hours / day</label>
+                        <input type="number" min="0" max="24" step="0.25" class="field-input" name="max_hours_per_day"
+                               value="{{ old('max_hours_per_day', $overtime->max_hours_per_day) }}" placeholder="No limit">
+                    </div>
+                    <div class="col-4">
+                        <label class="field-label">Maximum hours / month</label>
+                        <input type="number" min="0" max="744" step="0.5" class="field-input" name="max_hours_per_month"
+                               value="{{ old('max_hours_per_month', $overtime->max_hours_per_month) }}" placeholder="No limit">
+                    </div>
+                </div>
+                <div class="field-hint">Empty or 0 = no limit. Automatic overtime below the minimum is not counted; above the maximum it is capped.</div>
+
+                <label class="field-label mt-3">Overtime pay</label>
+                <select class="field-input" name="rate_type" id="ot_rate_type">
+                    <option value="multiplier" @selected(old('rate_type', $overtime->rate_type) !== 'fixed')>Overtime rate multiplier (× hourly rate)</option>
+                    <option value="fixed" @selected(old('rate_type', $overtime->rate_type) === 'fixed')>Fixed amount per hour</option>
+                </select>
+                <div class="row g-2 mt-1">
+                    <div class="col-6" id="ot_multiplier_wrap">
+                        <label class="field-label">Multiplier</label>
+                        <input type="number" min="1" max="5" step="0.05" class="field-input" name="rate_multiplier"
+                               value="{{ old('rate_multiplier', $overtime->rate_multiplier ?? 1.5) }}">
+                    </div>
+                    <div class="col-6" id="ot_fixed_rate_wrap">
+                        <label class="field-label">Amount per hour (₹)</label>
+                        <input type="number" min="1" max="100000" step="1" class="field-input" name="fixed_rate_per_hour"
+                               value="{{ old('fixed_rate_per_hour', $overtime->fixed_rate_per_hour) }}">
+                    </div>
+                </div>
+                <div class="field-hint">Hourly rate = basic salary ÷ days (payroll setting) ÷ working hours per day.</div>
+
+                <div id="ot_approval_fields" class="{{ $overtime->mode === 'auto' ? 'd-none' : '' }}">
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="ot_require_approval" name="require_approval" value="1"
+                               {{ old('require_approval', $overtime->require_approval) ? 'checked' : '' }}>
+                        <label class="form-check-label field-label mb-0" for="ot_require_approval">Requests need approval</label>
+                    </div>
+                    <label class="field-label mt-2">Approve automatically up to (hours)</label>
+                    <input type="number" min="0" max="24" step="0.25" class="field-input" name="auto_approve_limit"
+                           value="{{ old('auto_approve_limit', $overtime->auto_approve_limit) }}" placeholder="Never">
+                    <div class="field-hint">Request &amp; approval mode only.</div>
+                </div>
+                @foreach (['min_hours', 'max_hours_per_day', 'max_hours_per_month', 'rate_type', 'rate_multiplier', 'fixed_rate_per_hour', 'auto_approve_limit'] as $f)
+                    @error($f)
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
+                @endforeach
+
+                <div class="mt-3">
+                    <button type="submit" class="btn-save">
+                        <i class="feather-check"></i> Save
+                    </button>
+                </div>
+            </form>
+        </x-ui.modal>
+        @endif
+        @endfeature
 
         {{-- Multiple Punches --}}
         <x-ui.modal id="multiplePunchesModal" title="Multiple Punches">
@@ -1065,6 +1370,32 @@
 
             wireDeductionCard('late');
             wireDeductionCard('early');
+
+            // Overtime cards: show only the fields that apply.
+            const otEnabled = document.getElementById('ot_enabled');
+            if (otEnabled) {
+                const otModeFields = document.getElementById('ot_mode_fields');
+                const otAutoFields = document.getElementById('ot_auto_fields');
+                const otBasis = document.getElementById('ot_start_basis');
+                const otFixedWrap = document.getElementById('ot_fixed_minutes_wrap');
+                const syncOt = () => {
+                    const auto = document.getElementById('ot_mode_auto').checked;
+                    otModeFields.classList.toggle('d-none', !otEnabled.checked);
+                    otAutoFields.classList.toggle('d-none', !auto);
+                    otFixedWrap.classList.toggle('d-none', otBasis.value !== 'fixed');
+                };
+                [otEnabled, otBasis, document.getElementById('ot_mode_auto'), document.getElementById('ot_mode_request')]
+                    .forEach(el => el.addEventListener('change', syncOt));
+                syncOt();
+
+                const otRateType = document.getElementById('ot_rate_type');
+                const syncRate = () => {
+                    document.getElementById('ot_multiplier_wrap').classList.toggle('d-none', otRateType.value !== 'multiplier');
+                    document.getElementById('ot_fixed_rate_wrap').classList.toggle('d-none', otRateType.value !== 'fixed');
+                };
+                otRateType.addEventListener('change', syncRate);
+                syncRate();
+            }
 
             // Day Classification: hide the thresholds while the switch is off.
             const dcToggle = document.getElementById('day_classification_enabled');

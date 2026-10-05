@@ -38,6 +38,7 @@ class Expense extends Model
     protected $fillable = [
         'tenant_id',
         'user_id',
+        'created_by', // admin / HR who raised it for the employee (NULL = the employee)
         'expense_number',
         'requirement_type',
         'expense_type',

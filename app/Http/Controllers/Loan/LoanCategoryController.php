@@ -35,6 +35,10 @@ class LoanCategoryController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100',
             'code' => 'nullable|string|max:20|unique:loan_categories,code',
+            // Loans & Advances: a Salary Advance category has no interest / tenure, and an
+            // optional cap as % of the employee's monthly gross.
+            'kind' => 'nullable|in:loan,salary_advance',
+            'max_percent_of_gross' => 'nullable|numeric|min:1|max:100',
             'max_amount' => 'nullable|numeric|min:0',
             'default_interest_rate' => 'nullable|numeric|min:0|max:100',
             'max_tenure_months' => 'nullable|integer|min:1|max:60',
@@ -54,7 +58,7 @@ class LoanCategoryController extends Controller
             // validated(), not all() — LoanCategory uses $guarded = [], so
             // the raw request let any extra client-supplied field through
             // untouched (e.g. tenant_id, id), bypassing tenant auto-stamping.
-            $category = LoanCategory::create($validator->validated());
+            $category = LoanCategory::create($this->normaliseKind($validator->validated()));
 
             return response()->json([
                 'success' => true,
@@ -68,6 +72,20 @@ class LoanCategoryController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /** Salary Advance categories: no interest, single month; loans: no % cap. */
+    private function normaliseKind(array $data): array
+    {
+        $data['kind'] = ($data['kind'] ?? 'loan') === 'salary_advance' ? 'salary_advance' : 'loan';
+        if ($data['kind'] === 'salary_advance') {
+            $data['default_interest_rate'] = 0;
+            $data['max_tenure_months'] = 1;
+        } else {
+            $data['max_percent_of_gross'] = null;
+        }
+
+        return $data;
     }
 
     /**
@@ -104,6 +122,10 @@ class LoanCategoryController extends Controller
                 'max:20',
                 Rule::unique('loan_categories', 'code')->ignore($category->id)
             ],
+            // Loans & Advances: a Salary Advance category has no interest / tenure, and an
+            // optional cap as % of the employee's monthly gross.
+            'kind' => 'nullable|in:loan,salary_advance',
+            'max_percent_of_gross' => 'nullable|numeric|min:1|max:100',
             'max_amount' => 'nullable|numeric|min:0',
             'default_interest_rate' => 'nullable|numeric|min:0|max:100',
             'max_tenure_months' => 'nullable|integer|min:1|max:60',
@@ -120,7 +142,12 @@ class LoanCategoryController extends Controller
         }
 
         try {
-            $category->update($validator->validated());
+            $data = $validator->validated();
+            // The type of a category already used by loans/advances cannot change.
+            if (isset($data['kind']) && $data['kind'] !== ($category->kind ?? 'loan') && $category->loans()->exists()) {
+                return response()->json(['success' => false, 'message' => 'This category already has requests — its type cannot be changed.'], 422);
+            }
+            $category->update($this->normaliseKind($data + ['kind' => $category->kind ?? 'loan']));
 
             return response()->json([
                 'success' => true,

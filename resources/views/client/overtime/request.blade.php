@@ -238,10 +238,16 @@
 @section('content-area')
     <x-ui.page-header title="Overtime Requests">
         <x-slot:actions>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addOvertimeModal">
-                <i class="feather-plus me-2"></i>
-                <span>Request Overtime</span>
-            </button>
+            @if ($overtimeMode === 'request')
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addOvertimeModal">
+                    <i class="feather-plus me-2"></i>
+                    <span>Request Overtime</span>
+                </button>
+            @elseif ($overtimeMode === 'auto')
+                <span class="text-muted small"><i class="feather-zap me-1"></i>Overtime is calculated automatically from your attendance</span>
+            @else
+                <span class="text-muted small">Overtime is turned off</span>
+            @endif
         </x-slot:actions>
     </x-ui.page-header>
 
@@ -407,9 +413,14 @@
                             @forelse($requests as $index => $request)
                             <tr>
                                 <td>{{ $requests->firstItem() + $index }}</td>
-                                <td>{{ \Carbon\Carbon::parse($request->date)->format('d M Y') }}</td>
                                 <td>
-                                    <strong>{{ number_format($request->overtime_hours, 1) }}</strong> hrs
+                                    {{ \Carbon\Carbon::parse($request->date)->format('d M Y') }}
+                                    @if ($request->source === 'auto')
+                                        <span class="badge bg-soft-primary text-primary ms-1" title="Calculated from attendance">Auto</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <strong>{{ number_format($request->overtime_hours, 2) }}</strong> hrs
                                 </td>
                                 <td>
                                     @if($request->approved_hours)

@@ -13,6 +13,7 @@ class OvertimeRequest extends Model
     protected $fillable = [
         'tenant_id',
         'user_id',
+        'created_by', // admin / HR who raised it for the employee (NULL = the employee)
         'date',
         'overtime_hours',
         'reason',
@@ -21,7 +22,14 @@ class OvertimeRequest extends Model
         'approved_hours',
         'rejection_reason',
         'approved_at',
+        'source', // request | auto (calculated from attendance, Company Policies → Overtime)
+        'attendance_id',
+        'auto_minutes',
+        'manually_adjusted_at',
     ];
+
+    public const SOURCE_REQUEST = 'request';
+    public const SOURCE_AUTO = 'auto';
 
     protected $casts = [
         // 'date' => 'date',

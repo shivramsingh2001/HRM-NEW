@@ -80,9 +80,12 @@ class   AttendanceLocationController extends Controller
                 'data' => $result
             ], 200);
         } catch (Exception $e) {
+            // Log the detail; never send raw exception / SQL text to the client.
+            \Illuminate\Support\Facades\Log::error('AI attendance-locations failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Unable to fetch location data. Please try again later.'
             ], 500);
         }
     }
@@ -126,9 +129,9 @@ class   AttendanceLocationController extends Controller
             $query->where('u.id', $specificUserId);
         }
 
-        // Apply department filter
+        // Apply department filter (user_job_details.department holds the department id)
         if ($departmentId) {
-            $query->where('jd.department_id', $departmentId);
+            $query->where('jd.department', $departmentId);
         }
 
         $query->orderBy('u.name');
@@ -144,17 +147,17 @@ class   AttendanceLocationController extends Controller
         $result = [];
         $userIds = $users->pluck('user_id')->toArray();
 
-        // Build attendance query
+        // Build attendance query. Date selection: a start_date + end_date range
+        // wins; otherwise the single `date` (which defaults to today). The date
+        // filter used to be commented out, so every tracked day ever was returned.
         $attendanceQuery = Attendance::whereIn('user_id', $userIds);
 
-        if ($date) {
-           
-            // $attendanceQuery->where('date', $date);
-        } elseif ($startDate && $endDate) {
-           
-            $attendanceQuery->whereBetween('date', [$startDate, $endDate]);
+        if ($startDate && $endDate) {
+            $attendanceQuery->whereBetween('date', [min($startDate, $endDate), max($startDate, $endDate)]);
+        } elseif ($date) {
+            $attendanceQuery->where('date', $date);
         } else {
-            // $attendanceQuery->where('date', date('Y-m-d'));
+            $attendanceQuery->where('date', date('Y-m-d'));
         }
 
         $attendances = $attendanceQuery->orderBy('date', 'desc')

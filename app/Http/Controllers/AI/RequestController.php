@@ -230,11 +230,11 @@ class RequestController extends Controller
 
             return response()->json($responseData, 200);
         } catch (Exception $e) {
+            \Illuminate\Support\Facades\Log::error('AI request view_ai_all failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred. Please try again later.'.$e->getMessage(),
-
+                'message' => 'An error occurred. Please try again later.',
             ], 500);
         }
     }

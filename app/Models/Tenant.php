@@ -48,6 +48,10 @@ class Tenant extends Model
         'field_tracking_seats',
         'field_tracking_ping_seconds',
         'field_tracking_retention_days',
+        'leave_carry_forward_enabled',
+        'leave_carry_forward_enabled_at',
+        'leave_year_start_month',
+        'leave_year_start_day',
         'created_by'
     ];
 
@@ -59,6 +63,8 @@ class Tenant extends Model
         'allow_multiple_punches' => 'boolean',
         'default_weekoff_days' => 'array',
         'field_tracking_enabled' => 'boolean',
+        'leave_carry_forward_enabled' => 'boolean',
+        'leave_carry_forward_enabled_at' => 'datetime',
     ];
 
     protected static function boot()

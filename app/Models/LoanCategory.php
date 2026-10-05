@@ -17,7 +17,9 @@ class LoanCategory extends Model
         'tenant_id',
         'name',
         'code',
+        'kind',                  // loan | salary_advance
         'max_amount',
+        'max_percent_of_gross',  // salary advance: cap as % of the employee's monthly gross
         'default_interest_rate',
         'max_tenure_months',
         'requires_approval',
@@ -27,6 +29,7 @@ class LoanCategory extends Model
 
     protected $casts = [
         'max_amount' => 'decimal:2',
+        'max_percent_of_gross' => 'decimal:2',
         'default_interest_rate' => 'decimal:2',
         'max_tenure_months' => 'integer',
         'requires_approval' => 'boolean',

@@ -32,6 +32,9 @@ class WorkforceSettingsController extends Controller
             'defaultPrefix' => strtoupper((string) config('employee_id.default_prefix', 'SH')),
             'paddingLength' => $paddingLength,
             'exampleId' => $currentPrefix . str_pad('123', $paddingLength, '0', STR_PAD_LEFT),
+            // Overtime cards (shown when the overtime feature is on and the user may manage overtime).
+            'overtime' => app(\App\Services\Attendance\OvertimePolicyService::class)->company($tenant->id),
+            'canManageOvertime' => app(\App\Services\RbacService::class)->can(Auth::user(), 'overtime', 'manage'),
         ]);
     }
 }

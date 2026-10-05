@@ -142,6 +142,29 @@ class PayrollCalculationEngine
             ];
         }
 
+        // Overtime (Company Policies → Overtime): approved hours — requests, automatic entries and
+        // 2nd-shift hours — priced like the legacy engine (hourly rate from the raw basic, × multiplier
+        // or a fixed amount per hour). Added after the statutory pass, like arrears, so it is not a
+        // PF/ESI/PT base. Ineligible employees already arrive with 0 hours from the context.
+        $overtimeHours = (float) ($context['approved_overtime_hours'] ?? 0);
+        $overtimeRate = 0.0;
+        $overtimeAmount = 0.0;
+        if ($overtimeHours > 0) {
+            $overtimeRate = app(OvertimePayService::class)->ratePerHour($tenantId, (int) $employee->id,
+                $this->overtimeHourlyRate($employee, $tenantId, $yearMonth));
+            $overtimeAmount = round($overtimeHours * $overtimeRate, 2);
+            if ($overtimeAmount > 0) {
+                $lineItems[] = [
+                    'code' => 'overtime',
+                    'name' => 'Overtime',
+                    'component_type' => 'earning',
+                    'calculation_method' => 'system_computed',
+                    'amount' => $overtimeAmount,
+                    'is_taxable' => true,
+                ];
+            }
+        }
+
         // Loan deduction is folded in as a real deduction line item (rather
         // than subtracted separately at the end) so total_deductions and
         // net_payable stay consistent with each other -- previously
@@ -152,6 +175,22 @@ class PayrollCalculationEngine
         // reflects what's actually owed, for display regardless of the flag.
         $loanDeductionDue = (float) $context['loan_deduction_amount'];
         $appliedLoanDeduction = $includeLoanDeductions ? $loanDeductionDue : 0.0;
+
+        // Salary advance against this month (Loans & Advances) — its own line, ahead of the loan EMIs
+        // (the caller caps both at net pay, advance first). Same include toggle as loans.
+        $advanceDue = (float) ($context['salary_advance_deduction_amount'] ?? 0);
+        $appliedAdvance = $includeLoanDeductions ? $advanceDue : 0.0;
+
+        if ($appliedAdvance > 0) {
+            $lineItems[] = [
+                'code' => 'salary_advance_deduction',
+                'name' => 'Salary Advance Deduction',
+                'component_type' => 'deduction',
+                'calculation_method' => 'fixed_amount',
+                'amount' => round($appliedAdvance, 2),
+                'is_taxable' => false,
+            ];
+        }
 
         if ($appliedLoanDeduction > 0) {
             $lineItems[] = [
@@ -211,6 +250,11 @@ class PayrollCalculationEngine
             'total_deductions' => round($totalDeductions, 2),
             'loan_deduction_due' => round($loanDeductionDue, 2),
             'loan_deduction' => round($appliedLoanDeduction, 2),
+            'salary_advance_deduction_due' => round($advanceDue, 2),
+            'salary_advance_deduction' => round($appliedAdvance, 2),
+            'overtime_hours' => round($overtimeHours, 2),
+            'overtime_rate' => $overtimeRate,
+            'overtime_amount' => $overtimeAmount,
             'late_deduction' => round($lateEarly['late_deduction_amount'], 2),
             'early_deduction' => round($lateEarly['early_deduction_amount'], 2),
             'employer_contributions_total' => round($employerContributions, 2),
@@ -400,6 +444,32 @@ class PayrollCalculationEngine
      * component, so this is a flagged theoretical edge case, not a silently
      * risked one.
      */
+    /**
+     * Base hourly rate for overtime on the dynamic engine — same inputs as
+     * LateEarlyDeductionCalculator: the legacy UserPayroll + master when one
+     * exists (basic, divisor mode, hours per day), else the raw 'basic'
+     * component with calendar days and 8 hours a day.
+     */
+    private function overtimeHourlyRate(User $employee, int $tenantId, string $yearMonth): float
+    {
+        $month = Carbon::createFromFormat('Y-m', $yearMonth);
+        $userPayroll = \App\Models\UserPayroll::withoutGlobalScope('tenant')
+            ->where('tenant_id', $tenantId)
+            ->forUser($employee->id)
+            ->effective($month->copy()->endOfMonth()->toDateString())
+            ->orderByDesc('effective_from')
+            ->first();
+        $master = $userPayroll?->payrollMaster;
+        $basic = $userPayroll && $master
+            ? (float) $userPayroll->basic_salary
+            : $this->rawComponentAmount($employee, $tenantId, $yearMonth, 'basic');
+
+        return app(OvertimePayService::class)->hourlyRate(
+            $basic, 'day_based', (float) ($master->working_hours_per_day ?? 8), $month->daysInMonth, $month->daysInMonth,
+            $master->ot_rate_divisor_mode ?? 'calendar_days', (int) ($master->ot_fixed_working_days ?? 26)
+        );
+    }
+
     public function rawComponentAmount(User $employee, int $tenantId, string $yearMonth, string $code): float
     {
         $monthEnd = Carbon::createFromFormat('Y-m', $yearMonth)->endOfMonth()->toDateString();

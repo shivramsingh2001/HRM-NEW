@@ -102,13 +102,14 @@
                                     <input type="number" step="0.25" min="1" max="24" class="form-control"
                                            name="overtime_after_hours"
                                            value="{{ old('overtime_after_hours', $policy->overtimeAfterHours) }}">
+                                    <div class="form-text">For attendance reports only — paid overtime follows Company Policies → Overtime</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Overtime multiplier</label>
                                     <input type="number" step="0.05" min="0" max="5" class="form-control"
                                            name="overtime_multiplier"
                                            value="{{ old('overtime_multiplier', $policy->overtimeMultiplier) }}">
-                                    <div class="form-text">payroll rate factor (1.00 = same as normal)</div>
+                                    <div class="form-text">For overtime cost estimates in reports only — payroll uses Company Policies → Overtime</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Grace period (minutes)</label>

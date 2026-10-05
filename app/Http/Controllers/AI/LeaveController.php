@@ -80,25 +80,26 @@ class LeaveController extends Controller
                     ], 403);
             }
 
-            // Apply filters
-            if ($request->has('from_date') && $request->has('to_date')) {
+            // Apply filters — filled(), not has(): an empty value (e.g. ?status=) used to be
+            // applied as a filter and returned nothing.
+            if ($request->filled('from_date') && $request->filled('to_date')) {
                 $query->whereBetween('leaves.start_date', [$request->from_date, $request->to_date]);
             }
 
-            if ($request->has('status')) {
+            if ($request->filled('status')) {
                 $query->where('leaves.status', $request->status);
             }
 
-            if ($request->has('user_id')) {
+            if ($request->filled('user_id')) {
                 $query->where('leaves.user_id', $request->user_id);
             }
 
-            if ($request->has('leave_type')) {
+            if ($request->filled('leave_type')) {
                 $query->where('leaves.leave_type', $request->leave_type);
             }
 
             // Optional: Filter by year
-            if ($request->has('year')) {
+            if ($request->filled('year')) {
                 $year = $request->year;
                 $query->whereYear('leaves.start_date', $year);
             } else {
@@ -133,7 +134,7 @@ class LeaveController extends Controller
                 ->keyBy('user_id');
 
             // Fetch leave transactions summary for current year
-            $year = $request->year ?? $currentYear;
+            $year = $request->filled('year') ? $request->year : $currentYear;
             $leaveTransactions = LeaveTransaction::whereIn('user_id', $userIds)
                 ->whereYear('transaction_date', $year)
                 ->select(

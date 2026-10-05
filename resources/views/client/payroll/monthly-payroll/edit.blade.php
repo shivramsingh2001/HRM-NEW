@@ -1209,7 +1209,7 @@
                             <div class="component-card">
                                 <div class="component-header">
                                     <span class="component-title"><i class="feather-check-circle"></i> Approved this month</span>
-                                    <span style="font-size: 9px; color: var(--gray-500);">{{ $overtimeRateMultiplier }}x rate</span>
+                                    <span style="font-size: 9px; color: var(--gray-500);">{{ $overtimeRateInfo['label'] ?? ($overtimeRateMultiplier . 'x') }} rate</span>
                                 </div>
                                 <div class="component-body">
                                     @foreach($approvedOvertimeRequests as $otRow)
@@ -1273,6 +1273,43 @@
                     <!-- ============================================================ -->
                     <!-- LOAN DEDUCTIONS SECTION                                      -->
                     <!-- ============================================================ -->
+                    {{-- Salary advances against this month (Loans & Advances) — recovered before loan EMIs. --}}
+                    @php
+                        $advanceDueItems = $advanceDueItems ?? collect();
+                        $advanceAmountDefault = old('salary_advance_deduction', ($monthlyPayroll->salary_advance_deduction ?? 0) > 0 ? $monthlyPayroll->salary_advance_deduction : ($advanceDueTotal ?? 0));
+                    @endphp
+                    <input type="hidden" name="salary_advance_deduction_enabled" value="1">
+                    @if($advanceDueItems->isNotEmpty())
+                        <div class="form-section">
+                            <div class="section-title">
+                                <span><i class="feather-fast-forward me-1" style="color: var(--gray-600);"></i>Salary Advance</span>
+                                <span style="font-size: 10px; color: var(--gray-500);">Deducted before loan EMIs</span>
+                            </div>
+                            <div class="component-card">
+                                <div class="component-body">
+                                    @foreach($advanceDueItems as $item)
+                                        <div class="component-row" style="justify-content: space-between; flex-wrap: wrap;">
+                                            <span class="text-muted-small">
+                                                Advance #{{ $item['loan_number'] }}
+                                                @if(!empty($item['advance_month']))
+                                                    &mdash; for {{ \Carbon\Carbon::parse($item['advance_month'] . '-01')->format('M Y') }} salary
+                                                @endif
+                                                @if(!empty($item['is_overdue']))
+                                                    <span class="badge bg-soft-danger text-danger" style="margin-left:4px;font-size:9px;">Carried from {{ \Carbon\Carbon::parse($item['month'] . '-01')->format('M Y') }}</span>
+                                                @endif
+                                            </span>
+                                            <span class="text-muted-small">₹{{ number_format($item['balance_due'], 2) }}</span>
+                                        </div>
+                                    @endforeach
+                                    <div class="component-row" style="justify-content: space-between; font-weight: 600; border-top: 1px solid var(--gray-200); margin-top: 4px; padding-top: 4px;">
+                                        <span class="text-muted-small">Salary advance due</span>
+                                        <span class="text-muted-small">₹{{ number_format($advanceDueTotal ?? 0, 2) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     @if($loanDueItems->isNotEmpty())
                         @php
                             $loanEnabledDefault = old('loan_deduction_enabled', ($monthlyPayroll->loan_deduction_enabled ?? true) ? 1 : 0);
@@ -1292,7 +1329,7 @@
                             <input type="hidden" name="loan_deduction_enabled" id="loan_deduction_enabled" value="{{ $loanEnabledDefault ? 1 : 0 }}">
                             <div class="component-card">
                                 <div class="component-header">
-                                    <span class="component-title"><i class="feather-list"></i> Due this month (EMI + Lump Sum)</span>
+                                    <span class="component-title"><i class="feather-list"></i> Due this month (EMI + Lump Sum, incl. overdue)</span>
                                     <span style="font-size: 9px; color: var(--gray-500);">₹</span>
                                 </div>
                                 <div class="component-body">
@@ -1301,6 +1338,12 @@
                                             <span class="text-muted-small">
                                                 Loan #{{ $item['loan_number'] }}
                                                 <span class="badge-hour-based" style="margin-left:4px;">{{ strtoupper($item['type']) }}</span>
+                                                @if(!empty($item['is_overdue']))
+                                                    <span class="badge bg-soft-danger text-danger" style="margin-left:4px;font-size:9px;"
+                                                        title="Not collected in its own month — recovered in this payslip">
+                                                        Overdue from {{ \Carbon\Carbon::parse($item['month'] . '-01')->format('M Y') }}
+                                                    </span>
+                                                @endif
                                                 @if($item['already_paid'] > 0)
                                                     <span class="text-muted-small">&mdash; partial: ₹{{ number_format($item['already_paid'], 2) }} already paid</span>
                                                 @endif
@@ -1376,6 +1419,11 @@
                                             class="form-control"
                                             value="{{ $loanAmountDefault ?? old('loan_deduction', $monthlyPayroll->loan_deduction ?? 0) }}"
                                             {{ ($loanEnabledDefault ?? 1) ? '' : 'disabled' }}>
+                                    </div>
+                                    <div class="input-group">
+                                        <span class="input-group-text" title="Salary Advance Deduction">Advance</span>
+                                        <input type="number" step="0.01" min="0" name="salary_advance_deduction" id="salary_advance_deduction"
+                                            class="form-control" value="{{ $advanceAmountDefault }}">
                                     </div>
                                     <div class="input-group">
                                         <span class="input-group-text">Other</span>
@@ -1518,6 +1566,8 @@
         // used instead of a hardcoded 1.5 so this preview matches what the backend
         // actually persists (see MonthlyPayrollController::overtimeAmountForHours()).
         const overtimeRateMultiplier = {{ $overtimeRateMultiplier ?? 1.5 }};
+        // Company Policies → Overtime "fixed per hour": a flat amount replaces hourly × multiplier.
+        const overtimeFixedRate = {{ (float) ($overtimeFixedRate ?? 0) }};
         // Server-computed preview for the non-approved overtime block -- the
         // authoritative amount is always recomputed server-side on save; this is
         // only used to keep the live gross/net totals accurate before submit.
@@ -1834,7 +1884,7 @@
                     // backend's formula exactly instead of a hardcoded "/ 8".
                     hourlyRate = basicSalary / originalPayroll.total_working_days / workingHoursPerDay;
                 }
-                let overtimeAmount = overtimeHours * hourlyRate * overtimeRateMultiplier;
+                let overtimeAmount = overtimeHours * (overtimeFixedRate > 0 ? overtimeFixedRate : hourlyRate * overtimeRateMultiplier);
                 $('#overtime_amount').val(overtimeAmount.toFixed(2));
                 return overtimeAmount;
             }
@@ -1858,12 +1908,13 @@
             let pt = parseFloat($('#pt').val()) || 0;
             let tds = parseFloat($('#tds').val()) || 0;
             let loan = parseFloat($('#loan_deduction').val()) || 0;
+            let advance = parseFloat($('#salary_advance_deduction').val()) || 0;
             let other = parseFloat($('#other_deductions').val()) || 0;
             let employerPf = parseFloat($('#employer_pf').val()) || 0;
             let employerEsi = parseFloat($('#employer_esi').val()) || 0;
             
             let gross = basic + hra + conveyence + medical + children + post + lta + incentive + special + overtime;
-            let deductions = pf + esi + pt + tds + loan + other;
+            let deductions = pf + esi + pt + tds + loan + advance + other;
             let net = gross - deductions;
             let employerTotal = employerPf + employerEsi;
             let monthlyCTC = gross + employerTotal;
@@ -2023,7 +2074,7 @@
         });
 
         // Any earning/deduction change
-        $('#basic_salary, #hra, #conveyence, #medical_allowance, #children_allowance, #post_allowance, #lta, #monthly_incentive, #special_allowance, #overtime_amount, #pf, #esi, #pt, #tds, #loan_deduction, #other_deductions')
+        $('#basic_salary, #hra, #conveyence, #medical_allowance, #children_allowance, #post_allowance, #lta, #monthly_incentive, #special_allowance, #overtime_amount, #pf, #esi, #pt, #tds, #loan_deduction, #salary_advance_deduction, #other_deductions')
             .on('input change', function() {
                 calculateTotals();
             });

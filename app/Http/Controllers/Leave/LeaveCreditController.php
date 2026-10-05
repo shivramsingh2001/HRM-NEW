@@ -504,7 +504,8 @@ class LeaveCreditController extends Controller
             case 'monthly':
                 return $date->copy()->startOfMonth();
             case 'yearly':
-                return Carbon::create($date->year, config('leave.fiscal_year_start_month'), config('leave.fiscal_year_start_day'));
+                // Company leave-year start (Company Policies; default config 1 April).
+                return app(\App\Services\LeaveYearService::class)->startInYear($this->leaveYearTenantId(), $date->year);
             default:
                 return $date;
         }
@@ -577,6 +578,12 @@ class LeaveCreditController extends Controller
         }
     }
 
+    /** Tenant whose leave year applies to this request. */
+    private function leaveYearTenantId(): int
+    {
+        return (int) (Auth::user()->tenant_id ?? session('tenant_id'));
+    }
+
     /**
      * Get next credit date based on joining date
      */
@@ -594,8 +601,8 @@ class LeaveCreditController extends Controller
                 return $joiningDate->copy()->addMonth()->startOfMonth();
 
             case 'yearly':
-                // Next fiscal-year-start date (config('leave.fiscal_year_start_*'))
-                $nextFiscalStart = Carbon::create($joiningDate->year, config('leave.fiscal_year_start_month'), config('leave.fiscal_year_start_day'));
+                // Next leave-year start (Company Policies; default config 1 April)
+                $nextFiscalStart = app(\App\Services\LeaveYearService::class)->startInYear($this->leaveYearTenantId(), $joiningDate->year);
                 if ($joiningDate->gt($nextFiscalStart)) {
                     $nextFiscalStart->addYear();
                 }

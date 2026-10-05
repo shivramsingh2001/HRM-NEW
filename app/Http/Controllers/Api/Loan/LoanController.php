@@ -20,7 +20,10 @@ class LoanController extends Controller
     public function fetch_category(Request $request)
     {
         try {
-            $data = LoanCategory::where('status', '1')->get();
+            // ?kind=loan | salary_advance (Loans & Advances); no kind = all categories, as before.
+            $data = LoanCategory::where('status', '1')
+                ->when(in_array($request->kind, [Loan::KIND_LOAN, Loan::KIND_SALARY_ADVANCE], true), fn ($q) => $q->where('kind', $request->kind))
+                ->get();
 
             return response()->json([
                 'success' => true,
@@ -53,6 +56,9 @@ class LoanController extends Controller
             // Filter by status
             if ($request->has('status') && $request->status) {
                 $query->where('status', $request->status);
+            }
+            if (in_array($request->kind, [Loan::KIND_LOAN, Loan::KIND_SALARY_ADVANCE], true)) {
+                $query->where('loan_kind', $request->kind);
             }
 
             // Filter by scope
@@ -168,7 +174,11 @@ class LoanController extends Controller
             'interest_rate' => $loan->interest_rate . '%',
             'repayment_type' => $loan->repayment_type,
             'status' => $loan->status,
-            'status_label' => ucfirst($loan->status),
+            'status_label' => $loan->statusLabel(),
+            // Loans & Advances: salary advances are recovered from one salary month.
+            'loan_kind' => $loan->loan_kind ?? Loan::KIND_LOAN,
+            'advance_month' => $loan->advance_month,
+            'deduction_status' => $loan->isSalaryAdvance() ? $this->advanceDeductionStatus($loan) : null,
             'purpose' => $loan->purpose,
             'loan_date' => $loan->loan_date,
             'first_emi_date' => $loan->first_emi_date,
@@ -207,11 +217,81 @@ class LoanController extends Controller
             ], 500);
         }
     }
+    /** "To be deducted from Mar 2026 salary" / "Deducted" / "₹x left" for a salary advance. */
+    private function advanceDeductionStatus(Loan $loan): string
+    {
+        $month = \Carbon\Carbon::parse($loan->advance_month . '-01')->format('M Y');
+
+        return match (true) {
+            $loan->status === Loan::STATUS_CLOSED => "Deducted from {$month} salary",
+            $loan->status === Loan::STATUS_ACTIVE && (float) $loan->remaining_amount < (float) $loan->amount
+                => '₹' . number_format((float) $loan->remaining_amount, 2) . ' still to be deducted',
+            in_array($loan->status, [Loan::STATUS_PENDING, Loan::STATUS_APPROVED, Loan::STATUS_ACTIVE], true) => "To be deducted from {$month} salary",
+            default => '-',
+        };
+    }
+
+    /** GET /api/loan/advance-limit?category=&month= — open salary months + how much is still available. */
+    public function advanceLimit(Request $request)
+    {
+        $user = auth()->user();
+        $service = app(\App\Services\Loan\SalaryAdvanceService::class);
+        $months = $service->openMonths($user);
+        $month = $request->filled('month') ? (string) $request->month : ($months[0] ?? null);
+        $category = $request->filled('category')
+            ? LoanCategory::where('kind', Loan::KIND_SALARY_ADVANCE)->find((int) $request->category)
+            : null;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'open_months' => array_map(fn ($m) => ['value' => $m, 'label' => \Carbon\Carbon::parse($m . '-01')->format('F Y')], $months),
+                'month' => $month,
+                'monthly_gross' => $service->monthlyGross($user),
+                'limit' => $category && $month ? $service->limit($user, $category, $month) : null,
+            ],
+        ], 200);
+    }
+
     public function store(Request $request)
     {
+        // Salary advance (Loans & Advances): one salary month, no EMI / interest.
+        if ($request->input('loan_kind') === Loan::KIND_SALARY_ADVANCE) {
+            $validator = Validator::make($request->all(), [
+                'loan_type_id' => ['required', \Illuminate\Validation\Rule::exists('loan_categories', 'id')->where('kind', Loan::KIND_SALARY_ADVANCE)],
+                'advance_month' => 'required|date_format:Y-m',
+                'amount' => 'required|numeric|min:1',
+                'purpose' => 'required|string|max:255',
+                'description' => 'nullable|string|max:2000',
+            ], ['loan_type_id.exists' => 'Choose a Salary Advance category.']);
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first()], 200);
+            }
+
+            $service = app(\App\Services\Loan\SalaryAdvanceService::class);
+            $category = LoanCategory::findOrFail($request->loan_type_id);
+            if ($error = $service->validate(auth()->user(), $category, (float) $request->amount, (string) $request->advance_month)) {
+                return response()->json(['success' => false, 'message' => $error], 200);
+            }
+            try {
+                $loan = DB::transaction(fn () => $service->create(auth()->user(), $category, (float) $request->amount,
+                    (string) $request->advance_month, (string) $request->purpose, $request->description));
+            } catch (Exception $e) {
+                Log::error('API salary advance failed: ' . $e->getMessage());
+
+                return response()->json(['success' => false, 'message' => 'Could not save the salary advance. Please try again later.'], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $loan->status === Loan::STATUS_PENDING ? 'Salary advance submitted and pending approval' : 'Salary advance approved',
+                'data' => $this->formatLoanData($loan->load('loanCategory')),
+            ], 200);
+        }
+
         // Validation rules
         $validator = Validator::make($request->all(), [
-            'loan_type_id' => 'required|exists:loan_categories,id',
+            'loan_type_id' => ['required', \Illuminate\Validation\Rule::exists('loan_categories', 'id')->where('kind', Loan::KIND_LOAN)],
             'repayment_type' => 'required|in:emi,lumpsum',
             'amount' => 'required|numeric|min:1000',
             'tenure_months' => 'required_if:repayment_type,emi|nullable|integer|min:1|max:60',
@@ -306,6 +386,8 @@ class LoanController extends Controller
 
             // If auto-approved, generate schedule based on type
             if ($status == Loan::STATUS_APPROVED) {
+                // loan_number is set by a DB trigger — reload it before building repayment numbers.
+                $loan->refresh();
                 if ($repaymentType == 'emi') {
                     $this->generateRepaymentSchedule($loan);
                 } else {
@@ -505,7 +587,11 @@ class LoanController extends Controller
             'remaining_amount' => number_format($loan->remaining_amount, 2),
             'repayment_type' => $loan->repayment_type,
             'status' => $loan->status,
-            'status_label' => ucfirst($loan->status),
+            'status_label' => $loan->statusLabel(),
+            // Loans & Advances: salary advances are recovered from one salary month.
+            'loan_kind' => $loan->loan_kind ?? Loan::KIND_LOAN,
+            'advance_month' => $loan->advance_month,
+            'deduction_status' => $loan->isSalaryAdvance() ? $this->advanceDeductionStatus($loan) : null,
             'purpose' => $loan->purpose,
             'description' => $loan->description,
             'document_path' => $loan->document_path,

@@ -851,6 +851,7 @@
                             'esi' => 'ESI',
                             'professional_tax' => 'Professional Tax',
                             'tds' => 'TDS',
+                            'salary_advance_deduction' => 'Salary Advance Deduction',
                             'loan_deduction' => 'Loan Deduction',
                             'other_deductions' => 'Other Deductions',
                         ] as $field => $label)
@@ -872,6 +873,7 @@
                                         'ESI',
                                         'Professional Tax',
                                         'TDS',
+                                        'Salary Advance Deduction',
                                         'Loan Deduction',
                                         'Other Deductions',
                                     ]))

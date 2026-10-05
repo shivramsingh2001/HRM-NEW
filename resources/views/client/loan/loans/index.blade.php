@@ -238,6 +238,14 @@
             color: #ffffff;
         }
 
+        .repayment-partial {
+            background: #ffffff;
+            color: #0B5ED7;
+            border: 1px dashed #0D6EFD;
+        }
+
+        .schedule-table .amt-remaining { color: #0B5ED7; font-weight: 600; }
+
         /* ==================== ADD/EDIT LOAN MODALS - small font,
            small margin/padding, same treatment as the Overtime modals ==================== */
         #addLoanModal .modal-header,
@@ -300,11 +308,17 @@
 @endsection
 
 @section('content-area')
-    <x-ui.page-header title="Loan Management" current="Loan Requests">
+    <x-ui.page-header title="Loans & Advances" current="My Requests">
         <x-slot:actions>
+            @if (($advanceCategories ?? collect())->isNotEmpty())
+                <button type="button" class="btn btn-sm btn-light-brand" data-bs-toggle="modal" data-bs-target="#addAdvanceModal">
+                    <i class="feather-fast-forward me-2"></i>
+                    <span>Salary advance</span>
+                </button>
+            @endif
             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addLoanModal">
                 <i class="feather-plus me-2"></i>
-                <span>New Request</span>
+                <span>New Loan Request</span>
             </button>
         </x-slot:actions>
     </x-ui.page-header>
@@ -458,10 +472,24 @@
                                         <tr>
                                             <td>{{ $loans->firstItem() + $index }}</td>
                                             <td>{{ $loan->loan_number }}</td>
-                                            <td>{{ $loan->loanCategory->name ?? 'N/A' }}</td>
+                                            <td>
+                                                {{ $loan->loanCategory->name ?? 'N/A' }}
+                                                @if ($loan->isSalaryAdvance())
+                                                    <span class="badge bg-soft-warning text-warning d-block mt-1" style="width:max-content">Salary advance</span>
+                                                @endif
+                                            </td>
                                             <td>₹ {{ number_format($loan->amount, 2) }}</td>
                                             <td>
-                                                @if ($loan->repayment_type == 'lumpsum')
+                                                @if ($loan->isSalaryAdvance())
+                                                    @php $advMonth = \Carbon\Carbon::parse($loan->advance_month . '-01')->format('M Y'); @endphp
+                                                    @if ($loan->status === 'closed')
+                                                        <span class="text-success">Deducted from {{ $advMonth }} salary</span>
+                                                    @elseif ((float) $loan->remaining_amount < (float) $loan->amount && $loan->status === 'active')
+                                                        <span>Part deducted — ₹ {{ number_format($loan->remaining_amount, 2) }} left</span>
+                                                    @else
+                                                        <span>From {{ $advMonth }} salary</span>
+                                                    @endif
+                                                @elseif ($loan->repayment_type == 'lumpsum')
                                                     <span class="badge bg-info">Lump Sum</span>
                                                     <small class="d-block text-muted">Due:
                                                         {{ $loan->lumpsum_due_date ? \Carbon\Carbon::parse($loan->lumpsum_due_date)->format('d M Y') : 'N/A' }}</small>
@@ -470,14 +498,16 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @if ($loan->repayment_type == 'lumpsum')
+                                                @if ($loan->isSalaryAdvance())
+                                                    <span class="text-muted">One month</span>
+                                                @elseif ($loan->repayment_type == 'lumpsum')
                                                     {{ $loan->tenure_months }} months (Lump Sum)
                                                 @else
                                                     {{ $loan->tenure_months }} months
                                                 @endif
                                             </td>
                                             <td>
-                                                <x-ui.status-badge :status="$loan->status" />
+                                                <x-ui.status-badge :status="$loan->status" :label="$loan->statusLabel()" />
                                             </td>
                                             <td>{{ $loan->created_at->format('d M Y') }}</td>
                                             <td class="text-center">
@@ -486,7 +516,7 @@
                                                         title="View Details" data-bs-toggle="tooltip">
                                                         <i class="feather-eye"></i>
                                                     </button>
-                                                    @if ($loan->isPending())
+                                                    @if ($loan->isPending() && ! $loan->isSalaryAdvance())
                                                         <button class="action-btn edit edit-loan"
                                                             data-id="{{ $loan->id }}"
                                                             data-category="{{ $loan->loan_type_id }}"
@@ -541,6 +571,52 @@
 @endsection
 
 @section('create-modal')
+    {{-- Salary advance: a one-time advance against one salary month, deducted in full from that month's payroll. --}}
+    @if (($advanceCategories ?? collect())->isNotEmpty())
+    <x-ui.modal id="addAdvanceModal" title="Request salary advance" size="md">
+        <form id="addAdvanceForm" novalidate>
+            <div class="alert alert-danger d-none py-2 px-3 small" id="advanceError"></div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="fw-semibold small">Advance type *</label>
+                    <select class="form-control" name="loan_type_id" id="advance_category" required>
+                        @foreach ($advanceCategories as $c)
+                            <option value="{{ $c->id }}">{{ $c->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="fw-semibold small">Against salary of *</label>
+                    <select class="form-control" name="advance_month" id="advance_month" required>
+                        <option value="">Loading…</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="fw-semibold small">Amount (₹) *</label>
+                    <input type="number" class="form-control" name="amount" id="advance_amount" min="1" step="0.01" required>
+                    <small class="text-muted d-block" id="advanceLimitHint"></small>
+                </div>
+                <div class="col-12">
+                    <label class="fw-semibold small">Purpose *</label>
+                    <input type="text" class="form-control" name="purpose" maxlength="255" required>
+                </div>
+                <div class="col-12">
+                    <label class="fw-semibold small">Details</label>
+                    <textarea class="form-control" name="description" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="small text-muted mt-2">
+                <i class="feather-info me-1"></i>The full amount is deducted from that month's salary as "Salary Advance Deduction" — no EMI, no interest.
+                If the salary is not enough, the rest is deducted the next month.
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary btn-sm" id="advanceSubmit"><i class="feather-send me-1"></i>Submit request</button>
+                <button type="button" class="btn btn-modal-cancel btn-sm" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </form>
+    </x-ui.modal>
+    @endif
+
     <!-- ==================== ADD LOAN MODAL ==================== -->
     <div class="modal fade-scale" id="addLoanModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm compact-modal" role="document">
@@ -1052,13 +1128,15 @@
                                                     <th>#</th>
                                                     <th>Due Date</th>
                                                     <th>Amount</th>
+                                                    <th>Paid</th>
+                                                    <th>Remaining</th>
                                                     <th>Status</th>
                                                     <th>Paid Date</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="show_schedule_body">
                                                 <tr>
-                                                    <td colspan="5" class="text-center">Loading schedule...</td>
+                                                    <td colspan="7" class="text-center">Loading schedule...</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -1172,6 +1250,72 @@
 @endsection
 
 @section('script-area')
+    <script>
+        // Salary advance request — months + live limit from loan.requests.advance-limit.
+        $(function () {
+            const $modal = $('#addAdvanceModal');
+            if (!$modal.length) return;
+            const $form = $('#addAdvanceForm');
+            const inr = v => '₹ ' + parseFloat(v || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            function loadLimit(keepMonth) {
+                $.get("{{ route('loan.requests.advance-limit') }}", {
+                    category: $('#advance_category').val(),
+                    month: keepMonth ? $('#advance_month').val() : ''
+                }).done(function (res) {
+                    const d = res.data || {};
+                    if (!keepMonth) {
+                        const $m = $('#advance_month').empty();
+                        (d.open_months || []).forEach(o => $m.append(new Option(o.label, o.value)));
+                        if (!(d.open_months || []).length) $m.append(new Option('No open salary month', ''));
+                        $m.val(d.month || '');
+                    }
+                    const l = d.limit;
+                    let hint = '';
+                    if (l && l.available !== null) {
+                        hint = 'You can take up to ' + inr(l.available) + ' for this month';
+                        if (l.percent) hint += ' (' + l.percent + '% of your monthly gross ' + inr(l.gross) + (l.category_max ? ', max ' + inr(l.category_max) : '') + ')';
+                        if (l.already_taken > 0) hint += ' — ' + inr(l.already_taken) + ' already taken';
+                        $('#advance_amount').attr('max', l.available);
+                    } else {
+                        hint = 'No limit set for this advance type.';
+                        $('#advance_amount').removeAttr('max');
+                    }
+                    $('#advanceLimitHint').text(hint);
+                });
+            }
+
+            $modal.on('shown.bs.modal', () => loadLimit(false));
+            $('#advance_category').on('change', () => loadLimit(true));
+            $('#advance_month').on('change', () => loadLimit(true));
+
+            $form.on('submit', function (e) {
+                e.preventDefault();
+                const $err = $('#advanceError').addClass('d-none').empty();
+                const $btn = $('#advanceSubmit').prop('disabled', true);
+                $.ajax({
+                    url: "{{ route('loan.requests.store') }}",
+                    type: 'POST',
+                    data: $form.serialize() + '&loan_kind=salary_advance',
+                    headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'), 'Accept': 'application/json'},
+                }).done(function (res) {
+                    $modal.modal('hide');
+                    if (typeof toastr !== 'undefined') toastr.success(res.message);
+                    setTimeout(() => location.reload(), 900);
+                }).fail(function (xhr) {
+                    const j = xhr.responseJSON || {};
+                    const msg = j.message || (j.errors ? Object.values(j.errors).map(v => v[0]).join('<br>') : 'Something went wrong.');
+                    $err.html(msg).removeClass('d-none');
+                }).always(() => $btn.prop('disabled', false));
+            });
+
+            $modal.on('hidden.bs.modal', function () {
+                $form[0].reset();
+                $('#advanceError').addClass('d-none').empty();
+            });
+        });
+    </script>
+
     <script>
         $(document).ready(function() {
             let cancelId = null;
@@ -1665,26 +1809,35 @@
                                 let paidAmount = 0;
                                 let totalAmount = 0;
 
+                                const inr = v => '₹ ' + parseFloat(v || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                const today = new Date().toISOString().slice(0, 10);
                                 loan.repayments.forEach(function(repayment) {
-                                    let statusClass = repayment.status === 'paid' ?
-                                        'repayment-paid' : (repayment.status ===
-                                            'overdue' ? 'repayment-overdue' :
-                                            'repayment-pending');
-                                    let statusText = repayment.status.charAt(0)
-                                        .toUpperCase() + repayment.status.slice(1);
-                                    let amount = repayment.total_amount || repayment
-                                        .emi_amount;
-
-                                    totalAmount += parseFloat(amount);
-                                    if (repayment.status === 'paid') {
-                                        paidAmount += parseFloat(amount);
+                                    let amount = parseFloat(repayment.total_amount || repayment.emi_amount || 0);
+                                    let paid = parseFloat(repayment.paid_amount || 0);
+                                    let remaining = Math.max(0, Math.round((amount - paid) * 100) / 100);
+                                    let pastDue = remaining > 0 && String(repayment.due_date).slice(0, 10) < today;
+                                    // Partly paid (salary could not cover the whole EMI) shows what is still owed.
+                                    let statusClass, statusText;
+                                    if (repayment.status === 'paid' || remaining <= 0) {
+                                        statusClass = 'repayment-paid'; statusText = 'Paid';
+                                    } else if (paid > 0) {
+                                        statusClass = 'repayment-partial'; statusText = 'Partially paid' + (pastDue ? ' · overdue' : '');
+                                    } else if (pastDue || repayment.status === 'overdue') {
+                                        statusClass = 'repayment-overdue'; statusText = 'Overdue';
+                                    } else {
+                                        statusClass = 'repayment-pending'; statusText = 'Pending';
                                     }
+
+                                    totalAmount += amount;
+                                    paidAmount += Math.min(paid, amount); // part-payments count toward progress
 
                                     scheduleHtml += `
                             <tr>
                                 <td>${repayment.installment_number}</td>
                                 <td>${new Date(repayment.due_date).toLocaleDateString('en-IN')}</td>
-                                <td>₹ ${parseFloat(amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td>${inr(amount)}</td>
+                                <td>${paid > 0 ? inr(paid) : '-'}</td>
+                                <td class="${remaining > 0 ? 'amt-remaining' : ''}">${remaining > 0 ? inr(remaining) : '-'}</td>
                                 <td><span class="repayment-status ${statusClass}">${statusText}</span></td>
                                 <td>${repayment.paid_date ? new Date(repayment.paid_date).toLocaleDateString('en-IN') : '-'}</td>
                             </tr>
@@ -1708,7 +1861,7 @@
                             } else {
                                 $('#show_progress_card').hide();
                                 $('#show_schedule_body').html(
-                                    '<tr><td colspan="5" class="text-center">No repayment schedule available</td></tr>'
+                                    '<tr><td colspan="7" class="text-center">No repayment schedule available</td></tr>'
                                 );
                             }
 
@@ -1719,7 +1872,7 @@
                         $('#loanDetailLoading').hide();
                         $('#loanDetailContent').show();
                         $('#show_schedule_body').html(
-                            '<tr><td colspan="5" class="text-center text-danger">Error loading loan details</td></tr>'
+                            '<tr><td colspan="7" class="text-center text-danger">Error loading loan details</td></tr>'
                         );
                     }
                 });

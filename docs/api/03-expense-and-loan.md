@@ -191,6 +191,12 @@ curl -X POST https://vpshrms.shurttech.com/api/create-expense \
 
 Controller: `app/Http/Controllers/Api/Loan/LoanController.php`
 
+**Loans & Advances (2026-10-06):** a **salary advance** is a loan row with `loan_kind = "salary_advance"` and `advance_month` (`YYYY-MM`), recovered in full from that month's payroll as its own payslip line "Salary Advance Deduction" (before loan EMIs, capped at net pay, remainder carried to the next payroll). No EMI / tenure / interest.
+- `GET /api/loan/categories?kind=loan|salary_advance` — filter categories by type (no `kind` = all; each row now has `kind` and `max_percent_of_gross`).
+- `GET /api/loan/view?kind=…` — filter; every loan item now also has `loan_kind`, `advance_month`, `deduction_status` (advances: "To be deducted from Mar 2026 salary" / "₹x still to be deducted" / "Deducted from Mar 2026 salary"), and `status_label` reads "Rejected" for a rejected request and "Paid — to be deducted" for a paid advance.
+- `GET /api/loan/advance-limit?category=&month=` → `{"success": true, "data": {"open_months": [{"value": "2026-10", "label": "October 2026"}], "month": "2026-10", "monthly_gross": 25000, "limit": {"gross": 25000, "category_max": 100000, "percent": 50, "percent_cap": 12500, "already_taken": 0, "available": 12500}}}`. `open_months` = current month … +2 whose payroll is not processed / locked.
+- `POST /api/loan/store` with `loan_kind=salary_advance`: fields `loan_type_id` (a Salary Advance category), `advance_month` (`YYYY-MM`), `amount`, `purpose`, `description?`. Refusals use the legacy envelope (`200 {"success": false, "message": "..."}`): category of the wrong type, month outside the window or already processed/locked, amount above the limit (category max and % of monthly gross, minus advances already taken for that month), no salary structure, last working day before the month. Success: `200 {"success": true, "message": "Salary advance submitted and pending approval", "data": {loan item}}` (approved straight away when the category needs no approval).
+
 ### GET /api/loan/categories
 **Purpose:** List active loan categories (with their limits) for a picker.
 **Auth:** JWT + Device-Token. **Permission:** none.

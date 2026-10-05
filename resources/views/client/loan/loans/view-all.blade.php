@@ -105,46 +105,7 @@
             color: #0369a1;
         }
 
-        /* ==================== EMPLOYEE INFO ==================== */
-        .employee-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .employee-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--primary-light);
-            color: var(--primary-mid);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .employee-name {
-            font-weight: 600;
-            color: #1e293b;
-            font-size: 13px;
-        }
-
-        .employee-id {
-            font-size: 10px;
-            color: #64748b;
-        }
-
-
-
-
-
-
-
-
-
-
+       
         /* ==================== DETAIL CARD ==================== */
         .detail-card {
             background: #f8fafc;
@@ -224,6 +185,14 @@
             color: #991b1b;
         }
 
+        .repayment-partial {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+
+        .schedule-table .amt-remaining { color: #b91c1c; font-weight: 600; }
+        .schedule-table .amt-paid { color: #065f46; }
+
         /* ==================== MODAL STYLES ==================== */
         .modal-comments {
             width: 100%;
@@ -293,9 +262,10 @@
 @endsection
 
 @section('content-area')
-    <x-ui.page-header title="Loan Management" current="Loan Approvals">
+    <x-ui.page-header title="Loans & Advances" current="Approvals">
         <x-slot:actions>
             <div class="d-flex align-items-center gap-2">
+                <x-on-behalf.button module="loan" />
                 <div class="dropdown">
                     <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown">
                         <i class="feather-download"></i>
@@ -425,6 +395,13 @@
                         </select>
                     </div>
                     <div class="filter-item">
+                        <select class="filter-select" name="kind" onchange="this.form.submit()">
+                            <option value="">Loans & advances</option>
+                            <option value="loan" {{ request('kind') == 'loan' ? 'selected' : '' }}>Loans only</option>
+                            <option value="salary_advance" {{ request('kind') == 'salary_advance' ? 'selected' : '' }}>Salary advances only</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
                         <select class="filter-select" name="payment_type" onchange="this.form.submit()">
                             <option value="">All Payment Type</option>
 
@@ -481,6 +458,7 @@
                                                     <div>
                                                         <div class="employee-name">{{ $loan->user->name ?? 'N/A' }}
                                                             <small>( {{ $loan->user->employee_id ?? 'N/A' }} )</small>
+                                                            <x-on-behalf.badge :by="$loan->created_by" :owner="$loan->user_id" />
                                                         </div>
                                                         <div class="employee-id">{{ $loan->user->email ?? 'N/A' }}</div>
                                                     </div>
@@ -504,11 +482,21 @@
                                                     {{-- <i
                                                         class="feather-tag"></i> --}}
                                                     {{ $loan->loanCategory->name ?? 'N/A' }}</span>
+                                                @if ($loan->isSalaryAdvance())
+                                                    <span class="badge bg-soft-warning text-warning d-block mt-1" style="width:max-content">
+                                                        Salary advance · {{ \Carbon\Carbon::parse($loan->advance_month . '-01')->format('M Y') }}
+                                                    </span>
+                                                @endif
                                             </td>
                                             <td><span class="amount-text">₹ {{ number_format($loan->amount, 2) }}</span>
+                                                @if ($loan->isSalaryAdvance() && $loan->status === 'active' && (float) $loan->remaining_amount < (float) $loan->amount)
+                                                    <small class="d-block text-muted">₹ {{ number_format($loan->remaining_amount, 2) }} left</small>
+                                                @endif
                                             </td>
                                             <td>
-                                                @if ($loan->repayment_type == 'lumpsum')
+                                                @if ($loan->isSalaryAdvance())
+                                                    <span class="badge repayment-type-badge type-lumpsum">From {{ \Carbon\Carbon::parse($loan->advance_month . '-01')->format('M Y') }} salary</span>
+                                                @elseif ($loan->repayment_type == 'lumpsum')
                                                     <span class="badge repayment-type-badge type-lumpsum">Lump Sum</span>
                                                 @else
                                                     <span class="badge repayment-type-badge type-emi">EMI (₹
@@ -516,8 +504,8 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @if ($loan->repayment_type == 'lumpsum')
-                                                    {{ $loan->tenure_months }} months
+                                                @if ($loan->isSalaryAdvance())
+                                                    <span class="text-muted">One month</span>
                                                 @else
                                                     {{ $loan->tenure_months }} months
                                                 @endif
@@ -528,7 +516,7 @@
                                             </td>
                                             <td>{{ $loan->created_at->format('d M Y') }}</td>
                                             <td>
-                                                <x-ui.status-badge :status="$loan->status" :label="$loan->status === 'default' ? 'Rejected' : null" />
+                                                <x-ui.status-badge :status="$loan->status" :label="$loan->statusLabel()" />
                                             </td>
                                             <td class="text-center">
                                                 <div class="d-flex justify-content-center gap-1">
@@ -595,6 +583,8 @@
 @endsection
 
 @section('create-modal')
+    <x-on-behalf.modal module="loan" />
+
     <!-- ==================== VIEW LOAN DETAIL MODAL ==================== -->
     <div class="modal fade" id="viewLoanModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md">
@@ -738,13 +728,15 @@
                                                     <th>#</th>
                                                     <th>Due Date</th>
                                                     <th>Amount</th>
+                                                    <th>Paid</th>
+                                                    <th>Remaining</th>
                                                     <th>Status</th>
                                                     <th>Paid Date</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="view_schedule_body">
                                                 <tr>
-                                                    <td colspan="5" class="text-center">No schedule available</td>
+                                                    <td colspan="7" class="text-center">No schedule available</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -952,19 +944,30 @@
                             if (loan.repayments && loan.repayments.length > 0) {
                                 $('#viewScheduleTable').show();
                                 let scheduleHtml = '';
+                                const inr = v => '₹ ' + parseFloat(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                const today = new Date().toISOString().slice(0, 10);
                                 loan.repayments.forEach(function(repayment) {
-                                    let statusClass = repayment.status === 'paid' ?
-                                        'repayment-paid' :
-                                        (repayment.status === 'overdue' ?
-                                            'repayment-overdue' : 'repayment-pending');
-                                    let statusText = repayment.status.charAt(0)
-                                        .toUpperCase() + repayment.status.slice(1);
-                                    let amount = repayment.total_amount || repayment
-                                        .emi_amount;
+                                    let amount = parseFloat(repayment.total_amount || repayment.emi_amount || 0);
+                                    let paid = parseFloat(repayment.paid_amount || 0);
+                                    let remaining = Math.max(0, Math.round((amount - paid) * 100) / 100);
+                                    let pastDue = remaining > 0 && String(repayment.due_date).slice(0, 10) < today;
+                                    // Partly paid (e.g. a salary that could not cover the whole EMI) shows what is still owed.
+                                    let statusClass, statusText;
+                                    if (repayment.status === 'paid' || remaining <= 0) {
+                                        statusClass = 'repayment-paid'; statusText = 'Paid';
+                                    } else if (paid > 0) {
+                                        statusClass = 'repayment-partial'; statusText = 'Partially paid' + (pastDue ? ' · overdue' : '');
+                                    } else if (pastDue || repayment.status === 'overdue') {
+                                        statusClass = 'repayment-overdue'; statusText = 'Overdue';
+                                    } else {
+                                        statusClass = 'repayment-pending'; statusText = 'Pending';
+                                    }
                                     scheduleHtml += `<tr>
                                         <td>${repayment.installment_number}</td>
                                         <td>${new Date(repayment.due_date).toLocaleDateString('en-IN')}</td>
-                                        <td>₹ ${parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                        <td>${inr(amount)}</td>
+                                        <td class="amt-paid">${paid > 0 ? inr(paid) : '-'}</td>
+                                        <td class="${remaining > 0 ? 'amt-remaining' : ''}">${remaining > 0 ? inr(remaining) : '-'}</td>
                                         <td><span class="repayment-status ${statusClass}">${statusText}</span></td>
                                         <td>${repayment.paid_date ? new Date(repayment.paid_date).toLocaleDateString('en-IN') : '-'}</td>
                                     </tr>`;

@@ -13,10 +13,59 @@ use Illuminate\Validation\Rule;
 
 class LeaveTypeController extends Controller
 {
+    /**
+     * Carry forward (applied by `leaves:carry-forward` when Company Policies → Leave carry forward is on):
+     * the days that move into the next credit period — required for credited paid types, up to the
+     * credit value. Expiry applies to yearly types only.
+     */
+    private function carryForwardRules(Request $request): array
+    {
+        $applies = ! $request->boolean('is_unpaid') && $request->credit_type !== 'no';
+
+        return [
+            'max_carry_forward' => [
+                $applies ? 'required' : 'nullable',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request, $applies) {
+                    if ($applies && is_numeric($request->credit_value) && (float) $value > (float) $request->credit_value) {
+                        $fail('Carry forward cannot be more than the credit value (' . (float) $request->credit_value . ').');
+                    }
+                },
+            ],
+            'carry_forward_expiry_months' => 'nullable|integer|min:1|max:12',
+        ];
+    }
+
+    private const CARRY_FORWARD_MESSAGES = [
+        'max_carry_forward.required' => 'Enter how many days carry forward (0 = none).',
+        'max_carry_forward.min' => 'Carry forward cannot be negative.',
+        'carry_forward_expiry_months.min' => 'Expiry must be 1 to 12 months (leave blank for never).',
+        'carry_forward_expiry_months.max' => 'Expiry must be 1 to 12 months (leave blank for never).',
+    ];
+
+    /**
+     * Blank expiry = never. Unpaid types and types that are never credited keep
+     * no balance, so both are cleared; expiry is kept for yearly types only.
+     */
+    private function carryForwardValues(Request $request): array
+    {
+        if ($request->boolean('is_unpaid') || $request->credit_type === 'no') {
+            return ['max_carry_forward' => null, 'carry_forward_expiry_months' => null];
+        }
+
+        return [
+            'max_carry_forward' => $request->filled('max_carry_forward') ? round((float) $request->max_carry_forward, 2) : null,
+            'carry_forward_expiry_months' => $request->credit_type === 'yearly' && $request->filled('carry_forward_expiry_months')
+                ? (int) $request->carry_forward_expiry_months : null,
+        ];
+    }
+
     public function index(Request $request)
     {
         // Using Eloquent instead of DB::table()
         $data['leaveTypes'] = LeaveType::orderBy('name')->get();
+        $data['carryForwardEnabled'] = (bool) DB::table('tenants')->where('id', Auth::user()->tenant_id)->value('leave_carry_forward_enabled');
         return view('client.leave.leave-type', $data);
     }
 
@@ -26,6 +75,7 @@ class LeaveTypeController extends Controller
             $id = decrypt($id);
             // Using Eloquent with findOrFail for better error handling
             $data['leaveType'] = LeaveType::findOrFail($id);
+            $data['carryForwardEnabled'] = (bool) DB::table('tenants')->where('id', Auth::user()->tenant_id)->value('leave_carry_forward_enabled');
             return view('client.leave.leave-type-detail', $data);
         } catch (Exception $e) {
             return redirect()
@@ -62,11 +112,11 @@ class LeaveTypeController extends Controller
             ],
             'description' => 'nullable|string|max:1000',
             'is_unpaid' => 'nullable|boolean',
-        ]);
+        ] + $this->carryForwardRules($request), self::CARRY_FORWARD_MESSAGES);
 
         try {
             // Using Eloquent create method
-            $type = LeaveType::create([
+            $type = LeaveType::create($this->carryForwardValues($request) + [
                 'name' => $request->name,
                 'description' => $request->description,
                 'credit_type' => $request->credit_type,
@@ -124,7 +174,7 @@ class LeaveTypeController extends Controller
             'description' => 'nullable|string|max:1000',
             'status' => 'nullable|in:0,1',
             'is_unpaid' => 'nullable|boolean',
-        ]);
+        ] + $this->carryForwardRules($request), self::CARRY_FORWARD_MESSAGES);
 
         try {
             // Using Eloquent findOrFail
@@ -138,7 +188,7 @@ class LeaveTypeController extends Controller
             }
 
             // Using Eloquent update method
-            $type->update([
+            $type->update($this->carryForwardValues($request) + [
                 'name' => $request->name,
                 'description' => $request->description,
                 'credit_type' => $request->credit_type,

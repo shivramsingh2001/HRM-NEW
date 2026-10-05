@@ -130,7 +130,9 @@ class OffboardingSettlementService
         foreach ($loans as $loan) {
             $this->upsertLine(
                 $request, OffboardingSettlementItem::TYPE_LOAN_DEDUCTION, false,
-                "Outstanding loan — {$loan->loan_number}", (float) $loan->remaining_amount,
+                ($loan->loan_kind === \App\Models\Loan::KIND_SALARY_ADVANCE
+                    ? 'Outstanding salary advance (' . \Carbon\Carbon::parse($loan->advance_month . '-01')->format('M Y') . ") — {$loan->loan_number}"
+                    : "Outstanding loan — {$loan->loan_number}"), (float) $loan->remaining_amount,
                 'Loan', $loan->id
             );
         }

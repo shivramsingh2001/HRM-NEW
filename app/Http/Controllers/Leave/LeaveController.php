@@ -21,6 +21,46 @@ use Illuminate\Support\Facades\Validator;
 class LeaveController extends Controller
 {
     use AuthorizesByScope;
+    use \App\Http\Controllers\Concerns\RaisesOnBehalf;
+
+    /**
+     * Admin / HR applies a leave for an employee (All Leaves → "Apply leave for
+     * employee"). Created APPROVED with the balance deducted — LeaveService::applyOnBehalf,
+     * shared with Employee 360.
+     */
+    public function storeOnBehalf(Request $request, LeaveService $leaves)
+    {
+        $employee = $this->onBehalfEmployee($request);
+        $tenantId = (int) $employee->tenant_id;
+
+        $data = Validator::make($request->all(), [
+            'leave_type' => ['required', \Illuminate\Validation\Rule::exists('leave_types', 'id')->where('tenant_id', $tenantId)],
+            'start_date' => 'required|date',
+            'start_session' => 'required|in:session1,session2,fullday',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'end_session' => 'required|in:session1,session2,fullday',
+            'reason' => 'required|string|max:500',
+        ]);
+        if ($data->fails()) {
+            return response()->json(['success' => false, 'errors' => $data->errors()], 422);
+        }
+
+        try {
+            $result = $leaves->applyOnBehalf(Auth::user(), $employee, (int) $request->leave_type, $request->start_date,
+                $request->start_session, $request->end_date, $request->end_session, $request->reason);
+        } catch (\DomainException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Leave on behalf failed: ' . $e->getMessage());
+
+            return response()->json(['success' => false, 'message' => 'Could not apply the leave. Please try again.'], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$result['type']->name} applied for {$employee->name} — {$result['days']} day(s), approved.",
+        ]);
+    }
 
     public function index(Request $request)
     {

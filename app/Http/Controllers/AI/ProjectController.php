@@ -12,6 +12,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use App\Services\RbacService;
 
@@ -50,8 +51,8 @@ class ProjectController extends Controller
                 case 'company':
                 case 'team':
                     // See all projects, with assignment flags for this user.
-                    $query->selectRaw('EXISTS(SELECT 1 FROM project_assigns WHERE project_id = projects.id AND user_id = ' . $authUser->id . ') as is_assigned');
-                    $query->selectRaw('EXISTS(SELECT 1 FROM project_assigns WHERE project_id = projects.id AND user_id = ' . $authUser->id . ' AND is_head = "1") as is_project_head');
+                    $query->selectRaw('EXISTS(SELECT 1 FROM project_assigns WHERE project_id = projects.id AND user_id = ?) as is_assigned', [$authUser->id]);
+                    $query->selectRaw('EXISTS(SELECT 1 FROM project_assigns WHERE project_id = projects.id AND user_id = ? AND is_head = "1") as is_project_head', [$authUser->id]);
                     break;
 
                 case 'own':
@@ -88,28 +89,22 @@ class ProjectController extends Controller
 
             $projects = $query->get();
 
+            // Members of every listed project, loaded in bulk (was 3 queries per member).
+            $assignsByProject = ProjectAssign::whereIn('project_id', $projects->pluck('id'))
+                ->where('status', '1')->get()->groupBy('project_id');
+            $memberIds = $assignsByProject->flatten()->pluck('user_id')->unique()->values();
+            $memberUsers = User::whereIn('id', $memberIds)->get(['id', 'employee_id', 'name', 'email', 'role'])->keyBy('id');
+            $memberJobs = UserJobDetail::whereIn('user_id', $memberIds)->get(['user_id', 'designation'])->keyBy('user_id');
+            $designationNames = Designation::whereIn('id', $memberJobs->pluck('designation')->filter()->unique())->pluck('name', 'id');
+
             // Enhance the response with additional details
-            $enhancedProjects = $projects->map(function ($project) use ($authUser, $projectScope) {
+            $enhancedProjects = $projects->map(function ($project) use ($authUser, $projectScope, $assignsByProject, $memberUsers, $memberJobs, $designationNames) {
 
-                // Get project members using ProjectAssign model
-                $members = ProjectAssign::where('project_id', $project->id)
-                    ->where('status', '1')
-                    ->get()
-                    ->map(function ($assign) {
-                        // Get user details from User model
-                        $user = User::where('id', $assign->user_id)
-                            ->select(['id', 'employee_id', 'name', 'email', 'role'])
-                            ->first();
-
-                        // Get user job details from UserJobDetail model
-                        $jobDetail = UserJobDetail::where('user_id', $assign->user_id)->first();
-
-                        // Get designation from Designation model
-                        $designation = null;
-                        if ($jobDetail && $jobDetail->designation) {
-                            $designationObj = Designation::where('id', $jobDetail->designation)->first();
-                            $designation = $designationObj ? $designationObj->name : null;
-                        }
+                $members = $assignsByProject->get($project->id, collect())
+                    ->map(function ($assign) use ($memberUsers, $memberJobs, $designationNames) {
+                        $user = $memberUsers->get($assign->user_id);
+                        $jobDetail = $memberJobs->get($assign->user_id);
+                        $designation = $jobDetail && $jobDetail->designation ? ($designationNames[$jobDetail->designation] ?? null) : null;
 
                         return [
                             'id' => $user ? $user->id : null,

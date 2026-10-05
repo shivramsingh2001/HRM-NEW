@@ -586,7 +586,11 @@
 
     @section('content-area')
         <!-- [ page-header ] start -->
-        <x-ui.page-header title="Team Leave Applications" :parent="['label' => 'Leave', 'route' => 'leave.view-all']" />
+        <x-ui.page-header title="Team Leave Applications" :parent="['label' => 'Leave', 'route' => 'leave.view-all']">
+            <x-slot:actions>
+                <x-on-behalf.button module="leave" />
+            </x-slot:actions>
+        </x-ui.page-header>
         <!-- [ page-header ] end -->
 
         <!-- [ Main Content ] start -->
@@ -832,6 +836,9 @@
                                                             <div class="employee-name">{{ $leave->user_name ?? 'N/A' }}
                                                                 <small
                                                                     class="text-muted employee-email">({{ $leave->employee_id ?? 'N/A' }})</small>
+                                                                @if (($leave->source ?? null) === 'on_behalf')
+                                                                    <x-on-behalf.badge :by="$leave->applied_by" :owner="$leave->user_id" />
+                                                                @endif
                                                             </div>
                                                             <div class="employee-email">{{ $leave->user_email ?? '' }}
                                                             </div>
@@ -942,6 +949,8 @@
     @endsection
 
     @section('create-modal')
+        <x-on-behalf.modal module="leave" />
+
         <!-- Status Update Modal -->
         <div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">

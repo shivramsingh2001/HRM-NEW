@@ -219,6 +219,19 @@
                             </div>
                         </div>
 
+                        @if (!$leaveType->is_unpaid && $leaveType->credit_type !== 'no')
+                            <p class="lt-date mb-1" title="{{ $carryForwardEnabled ? 'Applied at the start of each credit period' : 'Company carry forward is off (Company Policies) — nothing lapses yet' }}">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>
+                                Carry forward: <strong>{{ $leaveType->carryForwardText() }}</strong>
+                                @if ($leaveType->credit_type === 'yearly' && $leaveType->carry_forward_expiry_months)
+                                    · expires after {{ $leaveType->carry_forward_expiry_months }} mo
+                                @endif
+                                @unless ($carryForwardEnabled)
+                                    <span class="text-muted">(off)</span>
+                                @endunless
+                            </p>
+                        @endif
+
                         <!-- Description -->
                         <div class="note-content flex-grow-1">
                             <p class="lt-description text-truncate-3-line mb-0">
@@ -242,7 +255,9 @@
                                     data-credit-value="{{ $leaveType->credit_value }}"
                                     data-description="{{ $leaveType->description }}"
                                     data-status="{{ $leaveType->status }}"
-                                    data-is-unpaid="{{ $leaveType->is_unpaid ? 1 : 0 }}">
+                                    data-is-unpaid="{{ $leaveType->is_unpaid ? 1 : 0 }}"
+                                    data-max-carry-forward="{{ $leaveType->max_carry_forward !== null ? rtrim(rtrim(number_format((float) $leaveType->max_carry_forward, 2, '.', ''), '0'), '.') : '' }}"
+                                    data-carry-forward-expiry="{{ $leaveType->carry_forward_expiry_months }}">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
                             @endif
@@ -304,6 +319,29 @@
                         <label class="form-check-label" for="is_unpaid">
                             Unpaid leave type
                         </label>
+                    </div>
+                </div>
+
+                <div class="col-12 cf-fields" data-scope="add">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-group">
+                                <label class="fw-semibold" for="max_carry_forward">Carry forward to next period (days) *</label>
+                                <input type="number" step="any" min="0" class="form-control" name="max_carry_forward" required
+                                    id="max_carry_forward" placeholder="Same as credit value">
+                                <small class="text-muted d-block">Up to the credit value · 0 = nothing carries</small>
+                                <small class="text-danger error-text max_carry_forward_error"></small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3 cf-expiry">
+                            <div class="form-group">
+                                <label class="fw-semibold" for="carry_forward_expiry_months">Carried days expire after (months)</label>
+                                <input type="number" step="1" min="1" max="12" class="form-control" name="carry_forward_expiry_months"
+                                    id="carry_forward_expiry_months" placeholder="Never">
+                                <small class="text-muted d-block">1–12 months · blank = never</small>
+                                <small class="text-danger error-text carry_forward_expiry_months_error"></small>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -385,6 +423,29 @@
                     </div>
                 </div>
 
+                <div class="col-12 cf-fields" data-scope="edit">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-group">
+                                <label class="fw-semibold" for="edit_max_carry_forward">Carry forward to next period (days) *</label>
+                                <input type="number" step="any" min="0" class="form-control" name="max_carry_forward" required
+                                    id="edit_max_carry_forward" placeholder="Same as credit value">
+                                <small class="text-muted d-block">Up to the credit value · 0 = nothing carries</small>
+                                <small class="text-danger error-text max_carry_forward_error"></small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3 cf-expiry">
+                            <div class="form-group">
+                                <label class="fw-semibold" for="edit_carry_forward_expiry_months">Carried days expire after (months)</label>
+                                <input type="number" step="1" min="1" max="12" class="form-control" name="carry_forward_expiry_months"
+                                    id="edit_carry_forward_expiry_months" placeholder="Never">
+                                <small class="text-muted d-block">1–12 months · blank = never</small>
+                                <small class="text-danger error-text carry_forward_expiry_months_error"></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="col-12 mb-3">
                     <div class="form-group">
                         <label class="fw-semibold" for="edit_description">Description</label>
@@ -414,7 +475,50 @@
 
 @section('script-area')
     <script>
+        // Carry forward only applies to paid types that are credited; expiry to yearly types only.
+        function toggleCarryForward(scope) {
+            const p = scope === 'edit' ? '#edit_' : '#';
+            const type = $(p + 'credit_type').val();
+            const show = !$(p + 'is_unpaid').is(':checked') && type !== 'no';
+            const $box = $('.cf-fields[data-scope="' + scope + '"]');
+            $box.toggleClass('d-none', !show);
+            $box.find('.cf-expiry').toggleClass('d-none', type !== 'yearly');
+            $(p + 'max_carry_forward').prop('required', show);
+        }
+
+        // Carry forward is at most the credit value: follow the credit value until
+        // edited by hand, and come down with it when it is lowered.
+        function syncCarryForward(scope, fromCredit) {
+            const p = scope === 'edit' ? '#edit_' : '#';
+            const credit = parseFloat($(p + 'credit_value').val());
+            const $cf = $(p + 'max_carry_forward');
+            if (isNaN(credit) || credit < 0) {
+                $cf.removeAttr('max');
+                return;
+            }
+            $cf.attr('max', credit);
+            const cf = parseFloat($cf.val());
+            if (fromCredit && (!$cf.data('touched') || $cf.val() === '')) {
+                $cf.val(credit);
+            } else if (!isNaN(cf) && cf > credit) {
+                $cf.val(credit);
+            }
+        }
+
         $(document).ready(function() {
+
+            $('#credit_type, #is_unpaid').on('change', () => toggleCarryForward('add'));
+            $('#edit_credit_type, #edit_is_unpaid').on('change', () => toggleCarryForward('edit'));
+            $('#addLeaveType').on('shown.bs.modal', () => {
+                $('#max_carry_forward').data('touched', false);
+                toggleCarryForward('add');
+                syncCarryForward('add', true);
+            });
+            $('#credit_value').on('input change', () => syncCarryForward('add', true));
+            $('#edit_credit_value').on('input change', () => syncCarryForward('edit', false));
+            $('#max_carry_forward, #edit_max_carry_forward').on('input', function() {
+                $(this).data('touched', true);
+            });
 
             $('#addLeaveTypeForm').on('submit', function(e) {
 
@@ -479,6 +583,12 @@
                 $('#edit_description').val(description);
                 $('#edit_status').val(status).trigger('change');
                 $('#edit_is_unpaid').prop('checked', String(isUnpaid) === '1');
+                // Older types saved without a carry forward start from the credit value.
+                const storedCf = $(this).attr('data-max-carry-forward');
+                $('#edit_max_carry_forward').val(storedCf !== '' ? storedCf : creditValue);
+                $('#edit_carry_forward_expiry_months').val($(this).attr('data-carry-forward-expiry'));
+                toggleCarryForward('edit');
+                syncCarryForward('edit', false);
 
                 $('.error-text').text('');
                 $('#editFormError').addClass('d-none').text('');

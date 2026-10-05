@@ -731,7 +731,11 @@
 @endsection
 
 @section('content-area')
-    <x-ui.page-header title="Team Expense" current="Expense Applications" :crumbs="[['label' => 'Expenses', 'url' => route('expense.view-all')]]" />
+    <x-ui.page-header title="Team Expense" current="Expense Applications" :crumbs="[['label' => 'Expenses', 'url' => route('expense.view-all')]]">
+        <x-slot:actions>
+            <x-on-behalf.button module="expense" />
+        </x-slot:actions>
+    </x-ui.page-header>
 
     <div class="main-content exp-team" style="padding: 20px !important;">
         <!-- Expense Overview (same tiles as the admin dashboard) -->
@@ -1092,6 +1096,7 @@
                                             <td>{{ $loop->iteration }}</td>
                                             <td class="text-bold">
                                                 {{ $expense->expense_number ?? 'NA' }}
+                                                <x-on-behalf.badge :by="$expense->created_by" :owner="$expense->user_id" />
                                                 @if ($expense->possible_duplicate_of)
                                                     {{-- Flag for the approver, never a block: same person, category, amount and date. --}}
                                                     <div><span class="badge bg-warning text-dark" style="font-size:10px"
@@ -1237,6 +1242,8 @@
 @endsection
 
 @section('create-modal')
+    <x-on-behalf.modal module="expense" />
+
     <!-- Status Update Modal -->
     <div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">

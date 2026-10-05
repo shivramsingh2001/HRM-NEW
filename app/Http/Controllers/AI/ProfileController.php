@@ -162,10 +162,11 @@ class ProfileController extends Controller
                 'data' => $teamData,
             ], 200);
         } catch (Exception $e) {
+            \Illuminate\Support\Facades\Log::error('AI my-profile failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.',
-                'error' => $e->getMessage() // Optional: for debugging
             ], 500);
         }
     }

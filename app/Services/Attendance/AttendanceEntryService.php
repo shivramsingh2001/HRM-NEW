@@ -126,6 +126,14 @@ class AttendanceEntryService
                 $this->refreshMonth($userId, $tenantId, $ym);
             }
 
+            // Company Policies → Overtime → automatic mode: (re)calculate this day's overtime.
+            // Never blocks the attendance write; the nightly overtime:auto-calculate catches up.
+            try {
+                app(AutoOvertimeService::class)->syncDay($userId, $tenantId, $date);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             $fresh = $row->fresh();
             $this->emitDomainEvent($fresh, $ctx);
 

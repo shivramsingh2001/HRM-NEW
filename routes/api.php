@@ -34,6 +34,19 @@ use App\Http\Controllers\AI\TeamController as AITeamController;
 use App\Http\Controllers\AI\ProfileController as AIProfileController;
 use App\Http\Controllers\AI\AttendanceLocationController as AIAttendanceLocationController;
 use App\Http\Controllers\AI\RequestController as AIRequestController;
+use App\Http\Controllers\AI\AssetController as AIAssetController;
+use App\Http\Controllers\AI\LoanController as AILoanController;
+use App\Http\Controllers\AI\OvertimeController as AIOvertimeController;
+use App\Http\Controllers\AI\PayrollController as AIPayrollController;
+use App\Http\Controllers\AI\ApprovalController as AIApprovalController;
+use App\Http\Controllers\AI\LeaveHistoryController as AILeaveHistoryController;
+use App\Http\Controllers\AI\PerformanceController as AIPerformanceController;
+use App\Http\Controllers\AI\PolicyController as AIPolicyController;
+use App\Http\Controllers\AI\OffboardingController as AIOffboardingController;
+use App\Http\Controllers\AI\MeetingController as AIMeetingController;
+use App\Http\Controllers\AI\DailyReportController as AIDailyReportController;
+use App\Http\Controllers\AI\OnboardingController as AIOnboardingController;
+use App\Http\Controllers\AI\RecruitmentController as AIRecruitmentController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -268,10 +281,27 @@ Route::middleware('tenant')->group(function () {
             Route::get('/attendance-regularization', [AIAttendanceRegularizationController::class, 'view_ai_all'])->middleware('feature:regularization');
             Route::get('/team', [AITeamController::class, 'view_ai_all']);
             Route::get('/leave', [AILeaveController::class, 'view_ai_all'])->middleware('feature:leave_management');
+            Route::get('/asset', [AIAssetController::class, 'view_ai_all'])->middleware('feature:asset_management');
+            Route::get('/loan', [AILoanController::class, 'view_ai_all'])->middleware('feature:loan_management');
+            Route::get('/performance', [AIPerformanceController::class, 'view_ai_all'])->middleware('feature:kpi_performance');
+            Route::get('/policy', [AIPolicyController::class, 'view_ai_all']);
+            Route::get('/offboarding', [AIOffboardingController::class, 'view_ai_all'])->middleware('feature:offboarding');
+            Route::get('/meeting', [AIMeetingController::class, 'view_ai_all'])->middleware('feature:meetings');
+            // daily_reports rows are the per-day work reports of a WFH / travel request (the
+            // `daily_reports` plan feature is the Reports section, not these).
+            Route::get('/daily-report', [AIDailyReportController::class, 'view_ai_all'])->middleware('feature:wfh_travel');
+            Route::get('/onboarding', [AIOnboardingController::class, 'view_ai_all'])->middleware('feature:onboarding');
+            Route::get('/recruitment', [AIRecruitmentController::class, 'view_ai_all'])->middleware('feature:recruitment');
+            Route::get('/overtime', [AIOvertimeController::class, 'view_ai_all'])->middleware('feature:overtime');
+            Route::get('/payroll', [AIPayrollController::class, 'view_ai_all'])->middleware('feature:payroll');
+            Route::get('/leave-history', [AILeaveHistoryController::class, 'view_ai_all'])->middleware('feature:leave_management');
+            // Each module inside is checked against its own feature + approve permission.
+            Route::get('/approvals', [AIApprovalController::class, 'view_ai_all']);
         });
         
         Route::prefix('loan')->middleware('feature:loan_management')->group(function () {
             Route::get('/categories', [LoanController::class, 'fetch_category']);
+            Route::get('/advance-limit', [LoanController::class, 'advanceLimit']);
             Route::post('/store', [LoanController::class, 'store']);
             Route::get('/show/{id}', [LoanController::class, 'show']);
             Route::get('/view', [LoanController::class, 'index']);

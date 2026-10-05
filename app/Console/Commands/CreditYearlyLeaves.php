@@ -20,19 +20,25 @@ class CreditYearlyLeaves extends Command
     public function handle()
     {
         $tenantIds = $this->argument('tenant_id');
-        
-        // If no tenant IDs provided, fetch from database
+
+        // If no tenant IDs provided, fetch from database. Scheduled daily: a company is
+        // only credited on its own leave-year start (Company Policies, default 1 April).
+        // Naming tenants explicitly runs them on any day (still once per leave year).
         if (empty($tenantIds)) {
+            $leaveYear = app(\App\Services\LeaveYearService::class);
+            $today = Carbon::today();
             $tenantIds = Tenant::where('leaves', 1)
                 ->where('status', 'active')
                 ->pluck('id')
+                ->filter(fn ($id) => $leaveYear->startFor((int) $id, $today)->isSameDay($today))
+                ->values()
                 ->toArray();
-            $this->info("Auto-fetched " . count($tenantIds) . " active tenants");
+            $this->info("Auto-fetched " . count($tenantIds) . " active tenants whose leave year starts today");
         }
         
         if (empty($tenantIds)) {
-            $this->error("No active tenants found");
-            return 1;
+            $this->info("No tenants to credit today");
+            return 0;
         }
 
         if ($this->option('dry-run')) {
@@ -68,7 +74,8 @@ class CreditYearlyLeaves extends Command
 
             $creditedCount = 0;
             $skippedCount = 0;
-            $currentYear = Carbon::now()->year;
+            // Once per leave year (was: once per calendar year).
+            $leaveYearStart = app(\App\Services\LeaveYearService::class)->startFor((int) $tenantId);
             $transactionDate = Carbon::now();
 
             foreach ($users as $user) {
@@ -102,11 +109,11 @@ class CreditYearlyLeaves extends Command
                         ->where('leave_type', $leaveType->id)
                         ->where('transaction_type', 'add')
                         ->where('remarks', 'LIKE', '%Yearly credit added%')
-                        ->whereYear('created_at', $currentYear)
+                        ->where('created_at', '>=', $leaveYearStart)
                         ->exists();
 
                     if ($alreadyCredited) {
-                        $this->info("Leaves already credited for user ID: {$user->id}, leave type: {$leaveType->name} this year");
+                        $this->info("Leaves already credited for user ID: {$user->id}, leave type: {$leaveType->name} this leave year");
                         continue;
                     }
 

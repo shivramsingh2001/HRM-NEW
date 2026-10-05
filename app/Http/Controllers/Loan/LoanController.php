@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Loan;
 
+use App\Http\Controllers\Concerns\RaisesOnBehalf;
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
 use App\Models\LoanCategory;
@@ -14,6 +15,84 @@ use Illuminate\Validation\Rule;
 
 class LoanController extends Controller
 {
+    use RaisesOnBehalf;
+
+    private function advances(): \App\Services\Loan\SalaryAdvanceService
+    {
+        return app(\App\Services\Loan\SalaryAdvanceService::class);
+    }
+
+    /**
+     * Salary advance request (loan_kind = salary_advance): category, salary
+     * month, amount, purpose. Validated + created by SalaryAdvanceService.
+     * $raisedBy = admin / HR raising it for the employee (saved approved).
+     */
+    private function storeSalaryAdvance(Request $request, User $employee, ?User $raisedBy = null)
+    {
+        $validator = Validator::make($request->all(), [
+            'loan_type_id' => ['required', Rule::exists('loan_categories', 'id')->where('tenant_id', $employee->tenant_id)->where('kind', Loan::KIND_SALARY_ADVANCE)],
+            'advance_month' => ['required', 'date_format:Y-m'],
+            'amount' => 'required|numeric|min:1',
+            'purpose' => 'required|string|max:255',
+            'description' => 'nullable|string|max:2000',
+        ], ['loan_type_id.exists' => 'Choose a Salary Advance category.']);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $category = LoanCategory::withoutGlobalScopes()->findOrFail($request->loan_type_id);
+        if ($error = $this->advances()->validate($employee, $category, (float) $request->amount, (string) $request->advance_month)) {
+            return response()->json(['success' => false, 'message' => $error, 'errors' => ['amount' => [$error]]], 422);
+        }
+
+        try {
+            $loan = DB::transaction(fn () => $this->advances()->create($employee, $category, (float) $request->amount,
+                (string) $request->advance_month, (string) $request->purpose, $request->description, $raisedBy, (bool) $raisedBy));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Salary advance create failed: ' . $e->getMessage());
+
+            return response()->json(['success' => false, 'message' => 'Could not save the salary advance. Please try again.'], 500);
+        }
+
+        $month = \Carbon\Carbon::parse($loan->advance_month . '-01')->format('M Y');
+        $message = $loan->status === Loan::STATUS_PENDING
+            ? "Salary advance for {$month} submitted and pending approval."
+            : "Salary advance for {$month} approved" . ($raisedBy ? " for {$employee->name}" : '') . '. Mark it paid when the money is given; it is deducted from the ' . $month . ' salary.';
+
+        return response()->json(['success' => true, 'message' => $message, 'data' => $loan], 201);
+    }
+
+    /**
+     * GET loan/advance-limit?category=&month=[&user_id=] — the months an advance
+     * can be taken for and how much is still available (My Loans form; admin /
+     * HR may pass user_id).
+     */
+    public function advanceLimit(Request $request)
+    {
+        $actor = auth()->user();
+        $employee = $actor;
+        if ($request->filled('user_id') && (int) $request->user_id !== (int) $actor->id) {
+            abort_unless(in_array($actor->role, ['admin', 'hr'], true), 403);
+            $employee = User::withoutGlobalScopes()->where('tenant_id', $actor->tenant_id)->where('status', 1)->findOrFail((int) $request->user_id);
+        }
+
+        $months = $this->advances()->openMonths($employee);
+        $month = $request->filled('month') ? (string) $request->month : ($months[0] ?? null);
+        $category = $request->filled('category')
+            ? LoanCategory::where('kind', Loan::KIND_SALARY_ADVANCE)->find((int) $request->category)
+            : null;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'open_months' => array_map(fn ($m) => ['value' => $m, 'label' => \Carbon\Carbon::parse($m . '-01')->format('F Y')], $months),
+                'month' => $month,
+                'monthly_gross' => $this->advances()->monthlyGross($employee),
+                'limit' => $category && $month ? $this->advances()->limit($employee, $category, $month) : null,
+            ],
+        ]);
+    }
+
     /**
      * Display a listing of loans (with filters)
      */
@@ -74,17 +153,24 @@ class LoanController extends Controller
         if ($request->has('search') && $request->search) {
             $query->where('loan_number', 'like', '%' . $request->search . '%');
         }
+        if (in_array($request->kind, [Loan::KIND_LOAN, Loan::KIND_SALARY_ADVANCE], true)) {
+            $query->where('loan_kind', $request->kind);
+        }
 
         $loans = $query->orderBy('created_at', 'desc')->paginate(15);
 
         // Calculate statistics for the logged-in user only
         $statistics = $this->getLoanStatistics();
 
-        $categories = LoanCategory::where('status', 1)
+        // Regular loan categories for the loan form; Salary Advance categories for the advance form.
+        $categories = LoanCategory::where('status', 1)->where('kind', Loan::KIND_LOAN)
+            ->orderBy('name', 'asc')
+            ->get();
+        $advanceCategories = LoanCategory::where('status', 1)->where('kind', Loan::KIND_SALARY_ADVANCE)
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('client.loan.loans.index', compact('loans', 'categories', 'statistics'));
+        return view('client.loan.loans.index', compact('loans', 'categories', 'advanceCategories', 'statistics'));
         
     } catch (\Exception $e) {
         return back()->withErrors('An error occurred. Please try again later.');
@@ -160,8 +246,12 @@ class LoanController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->input('loan_kind') === Loan::KIND_SALARY_ADVANCE) {
+            return $this->storeSalaryAdvance($request, auth()->user());
+        }
+
         $validator = Validator::make($request->all(), [
-            'loan_type_id' => 'required|exists:loan_categories,id',
+            'loan_type_id' => ['required', Rule::exists('loan_categories', 'id')->where('kind', Loan::KIND_LOAN)],
             'repayment_type' => 'required|in:emi,lumpsum',
             'amount' => 'required|numeric|min:1000',
             'tenure_months' => 'required_if:repayment_type,emi|nullable|integer|min:1|max:60',
@@ -187,41 +277,13 @@ class LoanController extends Controller
             $category = LoanCategory::findOrFail($request->loan_type_id);
             $repaymentType = $request->repayment_type;
 
-            if ($category->max_amount && $request->amount > $category->max_amount) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Amount exceeds maximum limit of ₹" . number_format($category->max_amount, 2)
-                ], 400);
+            $terms = $this->loanTerms($request, $category);
+            if (isset($terms['error'])) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => $terms['error']], 400);
             }
-
-            // ========== LUMP SUM LOAN ==========
-            // ========== LUMP SUM LOAN ==========
-            if ($repaymentType == 'lumpsum') {
-                $tenureMonths = (int) $request->lumpsum_tenure_months;  // ← cast here
-                $emiAmount = 0;
-                $firstEmiDate = null;
-
-                $interestAmount = ($request->amount * $category->default_interest_rate * $tenureMonths) / 1200;
-                $totalPayable = $request->amount + $interestAmount;
-                $lumpsumDueDate = now()->addMonths($tenureMonths)->format('Y-m-d');
-                $remainingAmount = $totalPayable;
-
-                // ========== EMI LOAN ==========
-            } else {
-                $tenureMonths = (int) $request->tenure_months;  // ← cast here
-                $lumpsumDueDate = null;
-                if ($category->max_tenure_months && $tenureMonths > $category->max_tenure_months) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Tenure exceeds maximum limit of {$category->max_tenure_months} months"
-                    ], 400);
-                }
-
-                $emiAmount = $this->calculateEmi($request->amount, $category->default_interest_rate, $tenureMonths);
-                $firstEmiDate = $this->calculateFirstEmiDate();
-                $totalPayable = $emiAmount * $tenureMonths;
-                $remainingAmount = $request->amount;
-            }
+            ['tenureMonths' => $tenureMonths, 'emiAmount' => $emiAmount, 'firstEmiDate' => $firstEmiDate,
+                'lumpsumDueDate' => $lumpsumDueDate, 'totalPayable' => $totalPayable, 'remainingAmount' => $remainingAmount] = $terms;
             // Determine status based on category approval requirement
             $status = $category->requires_approval ? Loan::STATUS_PENDING : Loan::STATUS_APPROVED;
 
@@ -247,6 +309,8 @@ class LoanController extends Controller
 
             // If auto-approved, generate schedule based on type
             if ($status == Loan::STATUS_APPROVED) {
+                // loan_number comes from a DB trigger; without this every repayment number was "-E001"…
+                $loan->refresh();
                 if ($repaymentType == 'emi') {
                     $this->generateRepaymentSchedule($loan);
                 } else {
@@ -286,6 +350,160 @@ class LoanController extends Controller
 
             return back()->withErrors('An error occurred. Please try again later.')->withInput();
         }
+    }
+
+    /**
+     * Amount / tenure checks against the category and the EMI or lump-sum terms.
+     * Returns ['error' => message] when the category's limits are exceeded.
+     */
+    private function loanTerms(Request $request, LoanCategory $category): array
+    {
+        if ($category->max_amount && $request->amount > $category->max_amount) {
+            return ['error' => "Amount exceeds maximum limit of ₹" . number_format($category->max_amount, 2)];
+        }
+
+        // ========== LUMP SUM LOAN ==========
+        if ($request->repayment_type == 'lumpsum') {
+            $tenureMonths = (int) $request->lumpsum_tenure_months;
+            $interestAmount = ($request->amount * $category->default_interest_rate * $tenureMonths) / 1200;
+            $totalPayable = $request->amount + $interestAmount;
+
+            return [
+                'tenureMonths' => $tenureMonths,
+                'emiAmount' => 0,
+                'firstEmiDate' => null,
+                'lumpsumDueDate' => now()->addMonths($tenureMonths)->format('Y-m-d'),
+                'totalPayable' => $totalPayable,
+                'remainingAmount' => $totalPayable,
+            ];
+        }
+
+        // ========== EMI LOAN ==========
+        $tenureMonths = (int) $request->tenure_months;
+        if ($category->max_tenure_months && $tenureMonths > $category->max_tenure_months) {
+            return ['error' => "Tenure exceeds maximum limit of {$category->max_tenure_months} months"];
+        }
+        $emiAmount = $this->calculateEmi($request->amount, $category->default_interest_rate, $tenureMonths);
+
+        return [
+            'tenureMonths' => $tenureMonths,
+            'emiAmount' => $emiAmount,
+            'firstEmiDate' => $this->calculateFirstEmiDate(),
+            'lumpsumDueDate' => null,
+            'totalPayable' => $emiAmount * $tenureMonths,
+            'remainingAmount' => $request->amount,
+        ];
+    }
+
+    /**
+     * Move a schedule start that is already in the past (request approved /
+     * disbursed late) to the next salary date — EMI: first_emi_date; lump sum:
+     * due date = now + tenure. Does not save.
+     */
+    private function alignScheduleStart(Loan $loan): void
+    {
+        $today = now()->toDateString();
+
+        if ($loan->repayment_type == 'lumpsum') {
+            if (! $loan->lumpsum_due_date || \Carbon\Carbon::parse($loan->lumpsum_due_date)->toDateString() < $today) {
+                $loan->lumpsum_due_date = now()->addMonths(max(1, (int) $loan->tenure_months))->format('Y-m-d');
+            }
+
+            return;
+        }
+
+        if (! $loan->first_emi_date || \Carbon\Carbon::parse($loan->first_emi_date)->toDateString() < $today) {
+            $loan->first_emi_date = $this->calculateFirstEmiDate();
+        }
+    }
+
+    /**
+     * Admin / HR raises a loan for an employee (Loan Management → "Create loan
+     * request"). Saved APPROVED by the caller with its repayment schedule — the
+     * same writes approve() makes; disbursal stays a separate step.
+     */
+    public function storeOnBehalf(Request $request)
+    {
+        $employee = $this->onBehalfEmployee($request);
+
+        if ($request->input('loan_kind') === Loan::KIND_SALARY_ADVANCE) {
+            return $this->storeSalaryAdvance($request, $employee, auth()->user());
+        }
+
+        $validator = Validator::make($request->all(), [
+            'loan_type_id' => ['required', Rule::exists('loan_categories', 'id')->where('tenant_id', auth()->user()->tenant_id)->where('kind', Loan::KIND_LOAN)],
+            'repayment_type' => 'required|in:emi,lumpsum',
+            'amount' => 'required|numeric|min:1000',
+            'tenure_months' => 'required_if:repayment_type,emi|nullable|integer|min:1|max:60',
+            'lumpsum_tenure_months' => 'required_if:repayment_type,lumpsum|nullable|integer|min:1|max:24',
+            'purpose' => 'required|string|max:255',
+            'description' => 'nullable|string|max:2000',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $category = LoanCategory::findOrFail($request->loan_type_id);
+        $terms = $this->loanTerms($request, $category);
+        if (isset($terms['error'])) {
+            return response()->json(['success' => false, 'message' => $terms['error']], 400);
+        }
+
+        try {
+            $loan = DB::transaction(function () use ($request, $employee, $category, $terms) {
+                $loan = Loan::create([
+                    'tenant_id' => $employee->tenant_id,
+                    'user_id' => $employee->id,
+                    'created_by' => auth()->id(),
+                    'loan_type_id' => $category->id,
+                    'repayment_type' => $request->repayment_type,
+                    'amount' => $request->amount,
+                    'interest_rate' => $category->default_interest_rate,
+                    'tenure_months' => $terms['tenureMonths'],
+                    'emi_amount' => $terms['emiAmount'],
+                    'remaining_amount' => $terms['remainingAmount'],
+                    'loan_date' => now()->format('Y-m-d'),
+                    'first_emi_date' => $terms['firstEmiDate'],
+                    'lumpsum_due_date' => $terms['lumpsumDueDate'],
+                    'lumpsum_amount' => $request->repayment_type == 'lumpsum' ? $terms['totalPayable'] : null,
+                    'purpose' => $request->purpose,
+                    'description' => $request->description,
+                    'status' => Loan::STATUS_APPROVED,
+                    'approved_by' => auth()->id(),
+                    'approved_at' => now(),
+                ]);
+                // loan_number is set by the DB trigger generate_loan_number_before_insert — reload it
+                // before the schedule, whose repayment numbers are built from it.
+                $loan->refresh();
+
+                $request->repayment_type == 'emi' ? $this->generateRepaymentSchedule($loan) : $this->generateLumpsumRepayment($loan);
+
+                return $loan;
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Loan on behalf failed: ' . $e->getMessage());
+
+            return response()->json(['success' => false, 'message' => 'Could not create the loan. Please try again.'], 500);
+        }
+
+        $this->logOnBehalf('loan.created_on_behalf', 'Loan', (int) $loan->id, $employee, [
+            'loan_number' => $loan->loan_number, 'amount' => (string) $loan->amount, 'category' => $category->name,
+            'repayment_type' => $loan->repayment_type, 'tenure_months' => $loan->tenure_months, 'status' => 'approved',
+        ]);
+
+        try {
+            app(\App\Services\NotificationService::class)->sendToUser($employee, 'Loan approved',
+                'A ' . $category->name . ' loan of ₹' . number_format((float) $loan->amount, 2) . ' was created and approved for you by ' . auth()->user()->name . '.',
+                ['type' => 'loan_approved', 'loan_id' => (string) $loan->id]);
+        } catch (\Throwable $e) {
+            // never block on notification
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Loan created and approved for {$employee->name}. Disburse it when the amount is paid.",
+            'data' => $loan,
+        ], 201);
     }
 
     /**
@@ -329,6 +547,13 @@ class LoanController extends Controller
     public function update(Request $request, $id)
     {
         $loan = Loan::findOrFail($id);
+
+        if ($loan->isSalaryAdvance()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A salary advance cannot be edited — cancel it and request a new one.'
+            ], 400);
+        }
 
         if (!$loan->isPending()) {
             if ($request->ajax()) {
@@ -489,19 +714,37 @@ class LoanController extends Controller
                     "Approval comments: " . $request->comments;
             }
 
-            $loan->save();
-
-            if ($loan->repayment_type == 'lumpsum') {
-                $this->generateLumpsumRepayment($loan);
+            $notice = null;
+            if ($loan->isSalaryAdvance()) {
+                // Salary advance: one row for its month; a month already processed moves to the next open one.
+                $loan->save();
+                $notice = $this->advances()->ensureRecoverableMonth($loan, auth()->user());
+                $this->advances()->scheduleRow($loan);
             } else {
-                $this->generateRepaymentSchedule($loan);
+                // A request approved late must not start with instalments in the past.
+                $this->alignScheduleStart($loan);
+
+                $loan->save();
+
+                if ($loan->repayment_type == 'lumpsum') {
+                    $this->generateLumpsumRepayment($loan);
+                } else {
+                    $this->generateRepaymentSchedule($loan);
+                }
             }
+
+            $this->advances()->log(($loan->isSalaryAdvance() ? 'salary_advance' : 'loan') . '.approved', $loan, auth()->user(),
+                ['comments' => $request->comments]);
 
             DB::commit();
 
+            $this->advances()->notify($loan, $loan->kindLabel() . ' approved',
+                'Your ' . strtolower($loan->kindLabel()) . ' of ₹' . number_format((float) $loan->amount, 2) . ' was approved by ' . auth()->user()->name . '.');
+
             return response()->json([
                 'success' => true,
-                'message' => 'Loan approved successfully',
+                'message' => $loan->kindLabel() . ' approved successfully' . ($notice ? '. ' . $notice : ''),
+                'notice' => $notice,
                 'data' => $loan
             ]);
         } catch (\Exception $e) {
@@ -546,9 +789,14 @@ class LoanController extends Controller
             $loan->rejection_reason = $request->rejection_reason;
             $loan->save();
 
+            $this->advances()->log(($loan->isSalaryAdvance() ? 'salary_advance' : 'loan') . '.rejected', $loan, auth()->user(),
+                ['reason' => $request->rejection_reason]);
+            $this->advances()->notify($loan, $loan->kindLabel() . ' rejected',
+                'Your ' . strtolower($loan->kindLabel()) . ' request was rejected: ' . $request->rejection_reason);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Loan rejected successfully',
+                'message' => $loan->kindLabel() . ' rejected successfully',
                 'data' => $loan
             ]);
         } catch (\Exception $e) {
@@ -574,14 +822,49 @@ class LoanController extends Controller
                 ], 400);
             }
 
-            $loan->status = Loan::STATUS_ACTIVE;
-            $loan->disbursed_by = auth()->id();
-            $loan->disbursed_at = now();
-            $loan->save();
+            $notice = null;
+            DB::transaction(function () use ($loan, &$notice) {
+                if ($loan->isSalaryAdvance()) {
+                    // Paid after its month's payroll was processed → recovered from the next open month.
+                    $notice = $this->advances()->ensureRecoverableMonth($loan, auth()->user());
+                    $loan->status = Loan::STATUS_ACTIVE;
+                    $loan->disbursed_by = auth()->id();
+                    $loan->disbursed_at = now();
+                    $loan->save();
+                    $this->advances()->log('salary_advance.disbursed', $loan, auth()->user());
+
+                    return;
+                }
+
+                // Disbursed after its first due date and nothing collected yet: restart the
+                // schedule from the next salary date instead of starting already overdue.
+                $repayments = LoanRepayment::where('loan_id', $loan->id)->get();
+                $nothingPaid = $repayments->sum(fn ($r) => (float) $r->paid_amount) <= 0;
+                $firstDue = $repayments->min('due_date');
+                if ($repayments->isNotEmpty() && $nothingPaid && $firstDue && $firstDue < now()->toDateString()) {
+                    LoanRepayment::where('loan_id', $loan->id)->delete();
+                    $loan->first_emi_date = null;
+                    $loan->lumpsum_due_date = null;
+                    $this->alignScheduleStart($loan);
+                    $loan->save();
+                    $loan->repayment_type == 'lumpsum' ? $this->generateLumpsumRepayment($loan) : $this->generateRepaymentSchedule($loan);
+                }
+
+                $loan->status = Loan::STATUS_ACTIVE;
+                $loan->disbursed_by = auth()->id();
+                $loan->disbursed_at = now();
+                $loan->save();
+                $this->advances()->log('loan.disbursed', $loan, auth()->user());
+            });
+
+            $this->advances()->notify($loan, $loan->kindLabel() . ' paid',
+                '₹' . number_format((float) $loan->amount, 2) . ' has been paid to you'
+                . ($loan->isSalaryAdvance() ? ' and will be deducted from your ' . \Carbon\Carbon::parse($loan->advance_month . '-01')->format('M Y') . ' salary.' : '.'));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Loan disbursed successfully',
+                'message' => ($loan->isSalaryAdvance() ? 'Salary advance paid' : 'Loan disbursed successfully') . ($notice ? '. ' . $notice : ''),
+                'notice' => $notice,
                 'data' => $loan
             ]);
         } catch (\Exception $e) {
@@ -623,6 +906,11 @@ class LoanController extends Controller
             $loan->cancelled_at = now();
             $loan->cancellation_reason = $request->cancellation_reason;
             $loan->save();
+            // Nothing was paid out (pending/approved only) — drop the unpaid schedule so nothing is ever deducted.
+            LoanRepayment::where('loan_id', $loan->id)->where('paid_amount', '<=', 0)->delete();
+
+            $this->advances()->log(($loan->isSalaryAdvance() ? 'salary_advance' : 'loan') . '.cancelled', $loan, auth()->user(),
+                ['reason' => $request->cancellation_reason]);
 
             return response()->json([
                 'success' => true,
@@ -701,6 +989,10 @@ class LoanController extends Controller
                 'status' => Loan::STATUS_CLOSED,
                 'closed_date' => now(),
                 'remaining_amount' => 0
+            ]);
+
+            $this->advances()->log(($loan->isSalaryAdvance() ? 'salary_advance' : 'loan') . '.repaid_manually', $loan, auth()->user(), [
+                'payment_mode' => $request->payment_mode, 'transaction_reference' => $request->transaction_reference,
             ]);
 
             DB::commit();
@@ -790,6 +1082,11 @@ class LoanController extends Controller
             }
 
             // Apply payment type filter (EMI/Lumpsum)
+            // Loans & Advances: loan | salary_advance
+            if (in_array($request->kind, [Loan::KIND_LOAN, Loan::KIND_SALARY_ADVANCE], true)) {
+                $query->where('loan_kind', $request->kind);
+            }
+
             if ($request->has('payment_type') && $request->payment_type) {
                 $query->where('repayment_type', $request->payment_type);
             }

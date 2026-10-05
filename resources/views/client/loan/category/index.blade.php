@@ -263,6 +263,7 @@
                                     <tr>
                                         <th width="50">#</th>
                                         <th>Name</th>
+                                        <th>Type</th>
                                         <th>Code</th>
                                         <th>Max Amount</th>
                                         <th>Interest Rate</th>
@@ -282,6 +283,12 @@
                                                     <i class="feather-shield text-info ms-1" title="Requires Approval" data-bs-toggle="tooltip"></i>
                                                 @endif
                                             </td>
+                                            @php $isAdvance = ($category->kind ?? 'loan') === 'salary_advance'; @endphp
+                                            <td>
+                                                <span class="badge {{ $isAdvance ? 'bg-soft-warning text-warning' : 'bg-soft-primary text-primary' }}">
+                                                    {{ $isAdvance ? 'Salary Advance' : 'Loan' }}
+                                                </span>
+                                            </td>
                                             <td><span class="code-badge">{{ $category->code }}</span></td>
                                             <td>
                                                 @if ($category->max_amount)
@@ -290,16 +297,23 @@
                                                 @else
                                                     <span class="text-muted">No Limit</span>
                                                 @endif
+                                                @if ($isAdvance && $category->max_percent_of_gross)
+                                                    <div class="text-muted small">and ≤ {{ rtrim(rtrim(number_format((float) $category->max_percent_of_gross, 2), '0'), '.') }}% of monthly gross</div>
+                                                @endif
                                             </td>
                                             <td>
-                                                @if ($category->default_interest_rate > 0)
+                                                @if ($isAdvance)
+                                                    <span class="text-muted">—</span>
+                                                @elseif ($category->default_interest_rate > 0)
                                                     <span class="rate-text">{{ $category->default_interest_rate }}%</span>
                                                 @else
                                                     <span class="text-muted">0% (Interest Free)</span>
                                                 @endif
                                             </td>
                                             <td>
-                                                @if ($category->max_tenure_months)
+                                                @if ($isAdvance)
+                                                    <span class="text-muted">One salary month</span>
+                                                @elseif ($category->max_tenure_months)
                                                     <span class="sort-badge">
                                                         <i class="feather-calendar"></i>
                                                         {{ $category->max_tenure_months }} months
@@ -322,6 +336,8 @@
                                                     <a href="#" class="action-btn edit edit-category"
                                                         data-id="{{ $category->id }}" data-name="{{ $category->name }}"
                                                         data-code="{{ $category->code }}"
+                                                        data-kind="{{ $category->kind ?? 'loan' }}"
+                                                        data-max_percent_of_gross="{{ $category->max_percent_of_gross }}"
                                                         data-max_amount="{{ $category->max_amount }}"
                                                         data-default_interest_rate="{{ $category->default_interest_rate }}"
                                                         data-max_tenure_months="{{ $category->max_tenure_months }}"
@@ -330,11 +346,13 @@
                                                         data-status="{{ $category->status }}" title="Edit Category" data-bs-toggle="tooltip">
                                                         <i class="feather-edit-3"></i>
                                                     </a>
+                                                    @unless ($isAdvance)
                                                     <a href="#" class="action-btn"
                                                         onclick="openEmiCalculator({{ $category->id }}, '{{ $category->name }}')"
                                                         title="Calculate EMI" data-bs-toggle="tooltip">
                                                         <i class="feather-percent"></i>
                                                     </a>
+                                                    @endunless
                                                     <a href="#" class="action-btn delete delete-category"
                                                         data-id="{{ $category->id }}" data-name="{{ $category->name }}"
                                                         title="Delete Category" data-bs-toggle="tooltip">
@@ -406,6 +424,17 @@
                                         </div>
                                     </div>
 
+                                    <div class="col-md-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="kind">Type *</label>
+                                            <select class="form-control cat-kind" name="kind" id="kind" data-scope="add">
+                                                <option value="loan">Loan (EMI / lump sum)</option>
+                                                <option value="salary_advance">Salary Advance (one salary month)</option>
+                                            </select>
+                                            <small class="text-muted">A salary advance is deducted in full from the salary month it is taken for — no interest, no EMI.</small>
+                                        </div>
+                                    </div>
+
                                     <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="max_amount">Maximum Amount</label>
@@ -415,7 +444,16 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-6 mb-3 cat-advance-only" data-scope="add">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="max_percent_of_gross">Max % of monthly gross</label>
+                                            <input type="number" class="form-control" name="max_percent_of_gross" id="max_percent_of_gross"
+                                                step="0.5" min="1" max="100" placeholder="e.g. 50">
+                                            <small class="text-danger error-text max_percent_of_gross_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3 cat-loan-only" data-scope="add">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="default_interest_rate">Interest Rate
                                                 (%)</label>
@@ -425,7 +463,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-6 mb-3 cat-loan-only" data-scope="add">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="max_tenure_months">Maximum Tenure
                                                 (Months)</label>
@@ -527,6 +565,17 @@
                                         </div>
                                     </div>
 
+                                    <div class="col-md-12 mb-3">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_kind">Type</label>
+                                            <select class="form-control cat-kind" name="kind" id="edit_kind" data-scope="edit">
+                                                <option value="loan">Loan (EMI / lump sum)</option>
+                                                <option value="salary_advance">Salary Advance (one salary month)</option>
+                                            </select>
+                                            <small class="text-danger error-text edit_kind_error"></small>
+                                        </div>
+                                    </div>
+
                                     <div class="col-md-6 mb-3">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_max_amount">Maximum Amount</label>
@@ -536,7 +585,16 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-6 mb-3 cat-advance-only" data-scope="edit">
+                                        <div class="form-group">
+                                            <label class="fw-semibold" for="edit_max_percent_of_gross">Max % of monthly gross</label>
+                                            <input type="number" class="form-control" name="max_percent_of_gross"
+                                                id="edit_max_percent_of_gross" step="0.5" min="1" max="100">
+                                            <small class="text-danger error-text edit_max_percent_of_gross_error"></small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3 cat-loan-only" data-scope="edit">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_default_interest_rate">Interest Rate
                                                 (%)</label>
@@ -546,7 +604,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-6 mb-3 cat-loan-only" data-scope="edit">
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_max_tenure_months">Maximum Tenure
                                                 (Months)</label>
@@ -697,7 +755,17 @@
 
         let deleteCategoryId = null;
 
+        // Loan vs Salary Advance category: an advance has no interest / tenure, only an optional % cap.
+        function toggleCategoryKind(scope) {
+            const kind = $('.cat-kind[data-scope="' + scope + '"]').val();
+            $('.cat-loan-only[data-scope="' + scope + '"]').toggleClass('d-none', kind === 'salary_advance');
+            $('.cat-advance-only[data-scope="' + scope + '"]').toggleClass('d-none', kind !== 'salary_advance');
+        }
+
         $(document).ready(function() {
+            $('.cat-kind').on('change', function() { toggleCategoryKind($(this).data('scope')); });
+            toggleCategoryKind('add');
+
             // Add Category Form Submission
             $('#addCategoryForm').on('submit', function(e) {
                 e.preventDefault();
@@ -707,6 +775,8 @@
                 let formData = {
                     name: $('#name').val(),
                     code: $('#code').val(),
+                    kind: $('#kind').val(),
+                    max_percent_of_gross: $('#max_percent_of_gross').val(),
                     max_amount: $('#max_amount').val(),
                     default_interest_rate: $('#default_interest_rate').val(),
                     max_tenure_months: $('#max_tenure_months').val(),
@@ -751,6 +821,9 @@
                 $('#edit_name').val($(this).data('name'));
                 $('#edit_code').val($(this).data('code'));
                 $('#edit_max_amount').val($(this).data('max_amount'));
+                $('#edit_kind').val($(this).data('kind') || 'loan');
+                $('#edit_max_percent_of_gross').val($(this).data('max_percent_of_gross'));
+                toggleCategoryKind('edit');
                 $('#edit_default_interest_rate').val($(this).data('default_interest_rate'));
                 $('#edit_max_tenure_months').val($(this).data('max_tenure_months'));
                 $('#edit_sort_order').val($(this).data('sort_order'));
@@ -773,6 +846,8 @@
                 let formData = {
                     name: $('#edit_name').val(),
                     code: $('#edit_code').val(),
+                    kind: $('#edit_kind').val(),
+                    max_percent_of_gross: $('#edit_max_percent_of_gross').val(),
                     max_amount: $('#edit_max_amount').val(),
                     default_interest_rate: $('#edit_default_interest_rate').val(),
                     max_tenure_months: $('#edit_max_tenure_months').val(),

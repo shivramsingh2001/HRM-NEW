@@ -54,13 +54,13 @@ class ExpenseService
      * @param  array{expense_type:int|string, amount:mixed, date:string, project_id?:mixed, requirement_type:string, description?:?string}  $data
      * @param  UploadedFile|array<int, UploadedFile>|null  $receipts  the first becomes the primary receipt
      */
-    public function submit(User $actor, array $data, UploadedFile|array|null $receipts = null, string $source = 'web'): Expense
+    public function submit(User $actor, array $data, UploadedFile|array|null $receipts = null, string $source = 'web', ?User $raisedBy = null): Expense
     {
         $files = $this->files($receipts);
         $stored = [];
 
         try {
-            return DB::transaction(function () use ($actor, $data, $files, $source, &$stored) {
+            return DB::transaction(function () use ($actor, $data, $files, $source, $raisedBy, &$stored) {
                 $this->policy->check($actor, $data, count($files));
 
                 // This employee's monthly expense limit (Employee 360 → Policies).
@@ -87,32 +87,70 @@ class ExpenseService
                     'file' => $stored[0] ?? null,
                     'possible_duplicate_of' => $duplicate,
                     'status' => Expense::STATUS_PENDING,
+                    'created_by' => $raisedBy?->id,
                 ]);
 
                 foreach (array_slice($files, 1, null, true) as $i => $file) {
-                    $this->attachments->recordAttachment($expense, $stored[$i], $file, $actor->id);
+                    $this->attachments->recordAttachment($expense, $stored[$i], $file, ($raisedBy ?? $actor)->id);
                 }
 
                 ExpenseStatusHistory::create([
                     'expense_id' => $expense->id,
                     'status' => Expense::STATUS_PENDING,
-                    'changed_by' => $actor->id,
-                    'remarks' => 'Expense submitted' . ($duplicate ? ' (possible duplicate of an earlier claim)' : ''),
+                    'changed_by' => ($raisedBy ?? $actor)->id,
+                    'remarks' => ($raisedBy ? "Expense raised by {$raisedBy->name} on behalf of {$actor->name}" : 'Expense submitted')
+                        . ($duplicate ? ' (possible duplicate of an earlier claim)' : ''),
                 ]);
 
-                $this->audit->record('tenant_user', $actor->id, (int) $actor->tenant_id, 'expenses.submitted', 'Expense', (int) $expense->id, [], [
+                $this->audit->record('tenant_user', ($raisedBy ?? $actor)->id, (int) $actor->tenant_id,
+                    $raisedBy ? 'expenses.created_on_behalf' : 'expenses.submitted', 'Expense', (int) $expense->id, [], [
                     'amount' => (string) $expense->amount,
                     'requirement_type' => $expense->requirement_type,
                     'receipts' => count($files),
                     'possible_duplicate_of' => $duplicate,
                     'source' => $source,
-                ]);
+                ] + ($raisedBy ? ['on_behalf_of' => $actor->id, 'employee_name' => $actor->name, 'raised_by' => $raisedBy->name, 'raised_by_role' => $raisedBy->role] : []));
 
                 return $expense;
             });
         } catch (\Throwable $e) {
             foreach ($stored as $path) {
                 $this->attachments->delete($path); // the row never committed — don't orphan the files
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Admin / HR raises an expense for an employee (Expenses → "Add expense") and
+     * approves it in the same step: submit() with the employee as owner (their
+     * category rules, receipts and monthly limit apply) and $actor as the raiser,
+     * then decide() as $actor — the same ledger / budget / history writes as a
+     * normal approval. All or nothing: if the approval fails (e.g. a settlement
+     * larger than the advance balance without $coverShortfall) nothing is saved.
+     *
+     * @param  UploadedFile|array<int, UploadedFile>|null  $receipts
+     * @return array{expense: Expense, message: string, warnings: string[], child: ?Expense}
+     */
+    public function submitOnBehalf(User $actor, User $employee, array $data, UploadedFile|array|null $receipts = null, bool $coverShortfall = false): array
+    {
+        $paths = [];
+
+        try {
+            return DB::transaction(function () use ($actor, $employee, $data, $receipts, $coverShortfall, &$paths) {
+                $expense = $this->submit($employee, $data, $receipts, 'on_behalf', $actor);
+                $paths = array_values(array_filter(array_merge(
+                    [$expense->file],
+                    ExpenseAttachment::where('expense_id', $expense->id)->pluck('file_path')->all()
+                )));
+
+                return $this->decide((int) $expense->id, $actor, Expense::STATUS_APPROVED,
+                    $data['approval_remarks'] ?? "Raised and approved by {$actor->name}", $coverShortfall);
+            }, 1);
+        } catch (\Throwable $e) {
+            foreach ($paths as $path) {
+                $this->attachments->delete($path); // rolled back — don't orphan the receipts
             }
 
             throw $e;

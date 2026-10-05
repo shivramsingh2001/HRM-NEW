@@ -74,9 +74,17 @@ class TeamController extends Controller
 
             $teamMembers = $query->get();
 
+            // Identity numbers, bank details and salary are private: shown in full only for the
+            // caller's own record or to someone with company-wide payroll access (admin / HR).
+            // A manager listing their team used to receive every reportee's Aadhaar, PAN,
+            // bank account and full payroll history.
+            $seesPrivateOfOthers = app(\App\Services\RbacService::class)->scopeFor($authUser, 'payroll', 'view') === 'company';
+            $mask = fn ($v) => ($v === null || $v === '') ? $v : '••••' . substr((string) $v, -4);
+
             $teamData = [];
 
             foreach ($teamMembers as $member) {
+                $private = $seesPrivateOfOthers || $member->id == $authUser->id;
 
                 // Handle languages
                 $languageNames = [];
@@ -92,13 +100,17 @@ class TeamController extends Controller
                     }
                 }
 
-                $currentStructure = $member->currentDynamicPayrollStructure;
-                $currentPayrollData = $currentStructure ? $assignmentService->toLegacyShapedArray($currentStructure) : null;
+                $currentPayrollData = null;
+                $payrollHistory = [];
+                if ($private) {
+                    $currentStructure = $member->currentDynamicPayrollStructure;
+                    $currentPayrollData = $currentStructure ? $assignmentService->toLegacyShapedArray($currentStructure) : null;
 
-                $payrollHistory = $member->dynamicPayrollStructures()
-                    ->orderByDesc('effective_from')
-                    ->get()
-                    ->map(fn ($s) => array_merge(['id' => $s->id], $assignmentService->toLegacyShapedArray($s)));
+                    $payrollHistory = $member->dynamicPayrollStructures()
+                        ->orderByDesc('effective_from')
+                        ->get()
+                        ->map(fn ($s) => array_merge(['id' => $s->id], $assignmentService->toLegacyShapedArray($s)));
+                }
 
                
                 $teamData[] = [
@@ -129,20 +141,20 @@ class TeamController extends Controller
                         'nationality' => $member->basicDetails?->nationality,
                         'alternate_phone' => $member->basicDetails?->alternate_phone,
                         'personal_email' => $member->basicDetails?->personal_email,
-                        'aadhaar_no' => $member->basicDetails?->aadhaar_no,
-                        'pan_no' => $member->basicDetails?->pan_no,
+                        'aadhaar_no' => $private ? $member->basicDetails?->aadhaar_no : $mask($member->basicDetails?->aadhaar_no),
+                        'pan_no' => $private ? $member->basicDetails?->pan_no : $mask($member->basicDetails?->pan_no),
                         'languages' => $languageNames,
                     ],
 
-                    // Bank Details
+                    // Bank Details (masked to the last 4 characters unless $private)
                     'bank_details' => [
-                        'account_number' => $member->bankDetails?->account_number,
+                        'account_number' => $private ? $member->bankDetails?->account_number : $mask($member->bankDetails?->account_number),
                         'ifsc' => $member->bankDetails?->ifsc,
                         'bank_name' => $member->bankDetails?->bank_name,
                         'branch_name' => $member->bankDetails?->branch_name,
-                        'uan_no' => $member->bankDetails?->uan_no,
-                        'pf_no' => $member->bankDetails?->pf_no,
-                        'esi_no' => $member->bankDetails?->esi_no,
+                        'uan_no' => $private ? $member->bankDetails?->uan_no : $mask($member->bankDetails?->uan_no),
+                        'pf_no' => $private ? $member->bankDetails?->pf_no : $mask($member->bankDetails?->pf_no),
+                        'esi_no' => $private ? $member->bankDetails?->esi_no : $mask($member->bankDetails?->esi_no),
                     ],
 
                     // Job Details
@@ -209,7 +221,9 @@ class TeamController extends Controller
                 'user_role' => $authUser->role
             ], 200);
         } catch (Exception $e) {
-            dd($e->getMessage());
+            // Was dd($e->getMessage()) — a debug dump instead of a JSON error.
+            \Illuminate\Support\Facades\Log::error('AI team failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'

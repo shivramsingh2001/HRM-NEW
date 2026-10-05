@@ -248,13 +248,26 @@
 
                     $slipEarnings = collect($slipResolved['earnings'])
                         ->merge($slipResolved['reimbursements'])
+                        ->reject(fn ($c) => ($c['code'] ?? null) === 'overtime')
                         ->filter(fn ($c) => $c['amount'] > 0)
                         ->map(fn ($c) => ['name' => $c['name'], 'amount' => $c['amount']])
                         ->values();
+                    // Overtime as stored on this payslip (hours × rate at generation).
+                    if ((float) ($monthlyPayroll->overtime_amount ?? 0) > 0) {
+                        $slipEarnings->push(['name' => 'Overtime (' . rtrim(rtrim(number_format((float) $monthlyPayroll->overtime_hours, 2), '0'), '.') . ' h)', 'amount' => (float) $monthlyPayroll->overtime_amount]);
+                    }
+                    // Loan / salary-advance lines come from what THIS payslip stored: a live recalculation
+                    // sees the instalments it already collected as paid and would show nothing.
                     $slipDeductions = collect($slipResolved['deductions'])
+                        ->reject(fn ($c) => in_array($c['code'] ?? null, ['loan_deduction', 'salary_advance_deduction'], true))
                         ->filter(fn ($c) => $c['amount'] > 0)
                         ->map(fn ($c) => ['name' => $c['name'], 'amount' => $c['amount']])
                         ->values();
+                    foreach (['salary_advance_deduction' => 'Salary Advance Deduction', 'loan_deduction' => 'Loan Deduction'] as $col => $label) {
+                        if ((float) ($monthlyPayroll->{$col} ?? 0) > 0) {
+                            $slipDeductions->push(['name' => $label, 'amount' => (float) $monthlyPayroll->{$col}]);
+                        }
+                    }
                 } else {
                     $legacyEarningFields = [
                         'basic_salary' => 'Basic', 'hra' => 'HRA', 'conveyence' => 'Conveyence',
@@ -265,7 +278,7 @@
                     ];
                     $legacyDeductionFields = [
                         'provident_fund' => 'Provident Fund', 'esi' => 'ESI', 'professional_tax' => 'PT',
-                        'tds' => 'TDS', 'loan_deduction' => 'Loan Deduction', 'other_deductions' => 'Other Deductions',
+                        'tds' => 'TDS', 'salary_advance_deduction' => 'Salary Advance Deduction', 'loan_deduction' => 'Loan Deduction', 'other_deductions' => 'Other Deductions',
                     ];
 
                     $slipEarnings = collect($legacyEarningFields)

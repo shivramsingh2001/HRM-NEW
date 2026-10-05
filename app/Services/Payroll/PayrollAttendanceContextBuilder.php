@@ -65,6 +65,8 @@ class PayrollAttendanceContextBuilder
         $overtimeRateMultiplier = (float) ($employeePolicy->section($tenantId, $userId, 'overtime')['rate_multiplier']
             ?? $this->overtimeRateMultiplier($tenantId));
         $loanDeduction = $this->loanDeduction($userId, $tenantId, $yearMonth);
+        // Salary advances against this month (Loans & Advances) — their own payslip line, deducted before loan EMIs.
+        $salaryAdvanceDeduction = $this->loanDeductionService->totalDue($userId, $tenantId, $yearMonth, \App\Models\Loan::KIND_SALARY_ADVANCE);
 
         // start/end are always the first/last day of the same calendar
         // month (startOfMonth()/endOfMonth()), so this is just the month's
@@ -97,6 +99,7 @@ class PayrollAttendanceContextBuilder
             'overtime_rate_multiplier' => $overtimeRateMultiplier,
 
             'loan_deduction_amount' => $loanDeduction,
+            'salary_advance_deduction_amount' => $salaryAdvanceDeduction,
 
             // Ready-made proration factors, clamped to [0, 1]. Individual
             // components still choose which one applies via their own
@@ -159,6 +162,6 @@ class PayrollAttendanceContextBuilder
      */
     private function loanDeduction(int $userId, int $tenantId, string $yearMonth): float
     {
-        return $this->loanDeductionService->totalDue($userId, $tenantId, $yearMonth);
+        return $this->loanDeductionService->totalDue($userId, $tenantId, $yearMonth, \App\Models\Loan::KIND_LOAN);
     }
 }

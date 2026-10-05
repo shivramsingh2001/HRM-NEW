@@ -30,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(\App\Services\EmployeePolicyService::class);
         // Plan features are checked dozens of times per page (sidebar, @feature, controllers) — one instance per request so its memo applies.
         $this->app->scoped(FeatureService::class);
+        // Leave-year anchor per tenant — read once per request / command run.
+        $this->app->scoped(\App\Services\LeaveYearService::class);
     }
 
     /**

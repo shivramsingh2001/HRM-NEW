@@ -388,8 +388,9 @@
     <x-ui.page-header title="Overtime Management" current="All Overtime Requests">
         <x-slot:actions>
             <div class="d-flex align-items-center gap-2">
+                <x-on-behalf.button module="overtime" />
                 @if (in_array($userRole, ['admin', 'hr']))
-                    <a href="{{ route('overtime.settings') }}" class="btn btn-sm btn-light-brand">
+                    <a href="{{ route('workforce-settings.index') }}#overtime" class="btn btn-sm btn-light-brand">
                         <i class="feather-settings me-2"></i>
                         <span>Settings</span>
                     </a>
@@ -640,14 +641,20 @@
                                                 {{ strtoupper(substr($request->user_name, 0, 2)) }}
                                             </div>
                                             <div class="employee-details">
-                                                <div class="employee-name">{{ $request->user_name }} <small>({{ $request->employee_id ?? 'N/A' }})</small></div>
+                                                <div class="employee-name">{{ $request->user_name }} <small>({{ $request->employee_id ?? 'N/A' }})</small>
+                                                    <x-on-behalf.badge :by="$request->created_by" :owner="$request->user_id" /></div>
                                                 <div class="employee-id">{{ $request->user_email }}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td>{{ \Carbon\Carbon::parse($request->date)->format('d M Y') }}</td>
                                     <td>
-                                        <span class="fw-semibold">{{ number_format($request->overtime_hours, 1) }}</span>
+                                        {{ \Carbon\Carbon::parse($request->date)->format('d M Y') }}
+                                        @if ($request->source === 'auto')
+                                            <span class="badge bg-soft-primary text-primary ms-1" title="Calculated from attendance">Auto</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold">{{ number_format($request->overtime_hours, 2) }}</span>
                                         <span class="text-muted">hrs</span>
                                     </td>
                                     <td>
@@ -679,8 +686,8 @@
                                                 <i class="feather-eye"></i>
                                             </button>
 
-                                            @if ($request->status == 'pending' && in_array($userRole, ['admin', 'manager']))
-                                                <button class="action-btn btn-approve" onclick="approveRequest({{ $request->id }}, {{ $request->overtime_hours }}, '{{ addslashes($request->user_name) }}')" title="Approve" data-bs-toggle="tooltip">
+                                            @if (($request->status == 'pending' || ($request->source === 'auto' && $request->status == 'approved')) && in_array($userRole, ['admin', 'hr', 'manager']))
+                                                <button class="action-btn btn-approve" onclick="approveRequest({{ $request->id }}, {{ $request->approved_hours ?? $request->overtime_hours }}, '{{ addslashes($request->user_name) }}')" title="{{ $request->source === 'auto' ? 'Adjust hours' : 'Approve' }}" data-bs-toggle="tooltip">
                                                     <i class="feather-check"></i>
                                                 </button>
                                                 <button class="action-btn btn-reject" onclick="rejectRequest({{ $request->id }}, '{{ addslashes($request->user_name) }}')" title="Reject" data-bs-toggle="tooltip">
@@ -713,6 +720,8 @@
 @endsection
 
 @section('create-modal')
+    <x-on-behalf.modal module="overtime" />
+
     <!-- View Request Modal -->
     <div class="modal fade" id="viewRequestModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-md">
@@ -930,6 +939,12 @@
                                 <div class="info-label">Reason:</div>
                                 <div class="info-value">${data.reason || 'N/A'}</div>
                             </div>
+                            ${data.attendance_overtime ? `
+                            <div class="info-row">
+                                <div class="info-label">Attendance:</div>
+                                <div class="info-value text-muted">${data.attendance_overtime}</div>
+                            </div>
+                            ` : ''}
                             <div class="info-row">
                                 <div class="info-label">Status:</div>
                                 <div class="info-value">

@@ -237,6 +237,13 @@ class MonthlyPayrollController extends Controller
                     ->withInput();
             }
 
+            // Company Policies → Overtime, automatic mode: bring this month's calculated overtime
+            // up to date before it is paid (no-op in request mode).
+            if ($tenantId) {
+                app(\App\Services\Attendance\AutoOvertimeService::class)
+                    ->syncMonth((int) $tenantId, $request->payroll_month, $employees->pluck('id')->all());
+            }
+
             $processedCount    = 0;
             $errors            = [];
             $existingEmployees = [];
@@ -529,7 +536,8 @@ class MonthlyPayrollController extends Controller
             if ($includeOvertime && $approvedOvertimeHours > 0) {
                 $overtimeSettings = $this->getOvertimeSettings($tenantId, (int) $employee->id);
                 $rateMultiplier = $overtimeSettings->rate_multiplier ?? 1.5;
-                $overtimeRateApplied = $hourlyRate * $rateMultiplier;
+                // Company Policies → Overtime rate: hourly × multiplier, or a fixed amount per hour.
+                $overtimeRateApplied = app(\App\Services\Payroll\OvertimePayService::class)->ratePerHour((int) $tenantId, (int) $employee->id, $hourlyRate);
                 $overtimeAmount = $approvedOvertimeHours * $overtimeRateApplied;
 
                 Log::channel('daily')->info('Overtime Calculation (Hour-Based - Fixed)', [
@@ -597,7 +605,7 @@ class MonthlyPayrollController extends Controller
                     $userPayroll->basic_salary, 'day_based', $workingHoursPerDay, $calendarDays, $workingDays,
                     $payrollMaster->ot_rate_divisor_mode ?? 'calendar_days', $payrollMaster->ot_fixed_working_days ?? 26
                 );
-                $overtimeRateApplied = $hourlyRate * $rateMultiplier;
+                $overtimeRateApplied = app(\App\Services\Payroll\OvertimePayService::class)->ratePerHour((int) $tenantId, (int) $employee->id, $hourlyRate);
                 $overtimeAmount = $approvedOvertimeHours * $overtimeRateApplied;
 
                 Log::channel('daily')->info('Overtime Calculation (Day-Based)', [
@@ -622,20 +630,29 @@ class MonthlyPayrollController extends Controller
         // =====================================================================
         $loanDeductionDue = $this->calculateLoanDeductions($employee->id, $yearMonth, $tenantId);
         $loanDeductions = $includeLoanDeductions ? $loanDeductionDue : 0.0;
+        // Salary advance against this month (Loans & Advances) — its own line, recovered before loan EMIs.
+        $advanceDue = $this->calculateLoanDeductions($employee->id, $yearMonth, $tenantId, \App\Models\Loan::KIND_SALARY_ADVANCE);
+        $advanceDeduction = $includeLoanDeductions ? $advanceDue : 0.0;
 
         // Bulk generation has no per-employee UI to interactively resolve a
         // shortfall the way Edit Payroll does -- so instead of allowing a
-        // negative net pay, cap the deduction at what's actually available
-        // and let this get flagged for the admin to review individually.
+        // negative net pay, cap the deductions at what's actually available
+        // (advance first, then EMIs) and let this get flagged for review.
         $availableForLoan = max(0, array_sum($earnings) - array_sum($employeeDeductions));
-        if ($loanDeductions > $availableForLoan) {
-            Log::channel('daily')->warning('Loan Deduction Capped During Bulk Generation', [
+        [$cappedAdvance, $cappedLoan] = $this->capLoanAndAdvance($availableForLoan, $advanceDeduction, $loanDeductions);
+        if ($cappedLoan < $loanDeductions || $cappedAdvance < $advanceDeduction) {
+            Log::channel('daily')->warning('Loan / advance deduction capped during bulk generation', [
                 'employee_id' => $employee->id,
                 'month' => $yearMonth,
-                'due' => $loanDeductions,
-                'capped_to' => $availableForLoan,
+                'advance_due' => $advanceDeduction, 'advance_capped_to' => $cappedAdvance,
+                'loan_due' => $loanDeductions, 'loan_capped_to' => $cappedLoan,
             ]);
-            $loanDeductions = round($availableForLoan, 2);
+        }
+        $loanDeductions = $cappedLoan;
+        $advanceDeduction = $cappedAdvance;
+
+        if ($advanceDeduction > 0) {
+            $employeeDeductions['advance'] = $advanceDeduction;
         }
 
         if ($loanDeductions > 0) {
@@ -739,6 +756,8 @@ class MonthlyPayrollController extends Controller
             'loan_deduction'            => $employeeDeductions['loan'] ?? 0,
             'loan_deduction_enabled'    => $includeLoanDeductions,
             'loan_deduction_computed'   => $loanDeductionDue,
+            'salary_advance_deduction'  => $employeeDeductions['advance'] ?? 0,
+            'salary_advance_deduction_computed' => $advanceDue,
             'late_deduction'            => $employeeDeductions['late'] ?? 0,
             'early_deduction'           => $employeeDeductions['early'] ?? 0,
             'other_deductions'          => $employeeDeductions['other'] ?? 0,
@@ -764,6 +783,9 @@ class MonthlyPayrollController extends Controller
         $this->savePayrollComponents($monthlyPayroll->id, $earnings, $employeeDeductions, $employerContributions);
 
         // Mark loan repayments paid -- NO inner transaction; we are already inside one
+        if ($includeLoanDeductions && $advanceDeduction > 0) {
+            $this->updateLoanRepayments($employee->id, $yearMonth, $advanceDeduction, $tenantId, $monthlyPayroll->id, \App\Models\Loan::KIND_SALARY_ADVANCE);
+        }
         if ($includeLoanDeductions && $loanDeductions > 0) {
             $this->updateLoanRepayments($employee->id, $yearMonth, $loanDeductions, $tenantId, $monthlyPayroll->id);
         }
@@ -796,33 +818,10 @@ class MonthlyPayrollController extends Controller
 
         // Same auto-cap policy as the legacy path: bulk generation has no
         // per-employee UI to interactively resolve a shortfall, so cap the
-        // applied loan deduction at what's actually available rather than
-        // allowing a negative net pay.
-        if ($result['loan_deduction'] > 0) {
-            $nonLoanDeductions = $result['total_deductions'] - $result['loan_deduction'];
-            $availableForLoan = max(0, $result['gross_earnings'] - $nonLoanDeductions);
-
-            if ($result['loan_deduction'] > $availableForLoan) {
-                Log::channel('daily')->warning('Loan Deduction Capped During Bulk Generation (dynamic engine)', [
-                    'employee_id' => $employee->id,
-                    'month' => $yearMonth,
-                    'due' => $result['loan_deduction'],
-                    'capped_to' => $availableForLoan,
-                ]);
-
-                $cappedLoan = round($availableForLoan, 2);
-                $result['total_deductions'] = round($nonLoanDeductions + $cappedLoan, 2);
-                $result['net_payable'] = round($result['gross_earnings'] - $result['total_deductions'], 2);
-                $result['loan_deduction'] = $cappedLoan;
-
-                foreach ($result['line_items'] as &$li) {
-                    if ($li['code'] === 'loan_deduction') {
-                        $li['amount'] = $cappedLoan;
-                    }
-                }
-                unset($li);
-            }
-        }
+        // applied deductions at what's actually available rather than
+        // allowing a negative net pay — the SALARY ADVANCE first, then the
+        // loan EMIs out of what's left (the rest stays due for next month).
+        $this->capDynamicLoanAndAdvance($result, $employee->id, $yearMonth);
 
         $context = $result['context'];
         $earnings = collect($result['line_items'])->where('component_type', 'earning')->keyBy('code');
@@ -860,10 +859,14 @@ class MonthlyPayrollController extends Controller
             'holidays' => (int) round($context['holidays']),
             'week_offs' => (int) round($context['week_offs']),
             'overtime_hours' => $context['approved_overtime_hours'],
+            'overtime_rate' => $result['overtime_rate'] ?? 0,
+            'overtime_amount' => $result['overtime_amount'] ?? 0,
             'actual_worked_hours' => $context['actual_worked_hours'],
             'loan_deduction' => $result['loan_deduction'],
             'loan_deduction_enabled' => $includeLoanDeductions,
             'loan_deduction_computed' => $result['loan_deduction_due'],
+            'salary_advance_deduction' => $result['salary_advance_deduction'] ?? 0,
+            'salary_advance_deduction_computed' => $result['salary_advance_deduction_due'] ?? 0,
             'late_deduction' => $result['late_deduction'] ?? 0,
             'early_deduction' => $result['early_deduction'] ?? 0,
             'gross_earnings' => $result['gross_earnings'],
@@ -907,8 +910,11 @@ class MonthlyPayrollController extends Controller
             ]);
         }
 
+        if ($includeLoanDeductions && ($result['salary_advance_deduction'] ?? 0) > 0) {
+            $this->updateLoanRepayments($employee->id, $yearMonth, $result['salary_advance_deduction'], $tenantId, $monthlyPayroll->id, \App\Models\Loan::KIND_SALARY_ADVANCE);
+        }
         if ($includeLoanDeductions && $result['loan_deduction'] > 0) {
-            $this->updateLoanRepayments($employee->id, $yearMonth, $result['loan_deduction'], $tenantId, $monthlyPayroll->id);
+            $this->updateLoanRepayments($employee->id, $yearMonth, $result['loan_deduction'], $tenantId, $monthlyPayroll->id, \App\Models\Loan::KIND_LOAN);
         }
 
         // Expense reimbursements the engine put on this payslip: link them to it (so a recalculation re-reads exactly these).
@@ -1342,13 +1348,72 @@ class MonthlyPayrollController extends Controller
     // LOAN DEDUCTIONS -- delegates to LoanDeductionService (EMI + lumpsum)
     // =========================================================================
 
-    private function calculateLoanDeductions(int $userId, string $yearMonth, ?int $tenantId = null): float
+    private function calculateLoanDeductions(int $userId, string $yearMonth, ?int $tenantId = null, ?string $kind = \App\Models\Loan::KIND_LOAN): float
     {
         if (! $tenantId) {
             return 0.0;
         }
 
-        return $this->loanDeductionService->totalDue($userId, $tenantId, $yearMonth);
+        return $this->loanDeductionService->totalDue($userId, $tenantId, $yearMonth, $kind);
+    }
+
+    /**
+     * capLoanAndAdvance() applied to a PayrollCalculationEngine result:
+     * rewrites the two line items, the result's loan / advance amounts and
+     * the totals; a line capped to 0 is dropped from the payslip.
+     */
+    private function capDynamicLoanAndAdvance(array &$result, int $userId, string $yearMonth): void
+    {
+        $advance = (float) ($result['salary_advance_deduction'] ?? 0);
+        $loan = (float) ($result['loan_deduction'] ?? 0);
+        if ($loan <= 0 && $advance <= 0) {
+            return;
+        }
+
+        $nonLoanDeductions = $result['total_deductions'] - $loan - $advance;
+        [$cappedAdvance, $cappedLoan] = $this->capLoanAndAdvance($result['gross_earnings'] - $nonLoanDeductions, $advance, $loan);
+        if ($cappedAdvance >= $advance && $cappedLoan >= $loan) {
+            return;
+        }
+
+        Log::channel('daily')->warning('Loan / advance deduction capped at net pay (dynamic engine)', [
+            'employee_id' => $userId, 'month' => $yearMonth,
+            'advance_due' => $advance, 'advance_capped_to' => $cappedAdvance,
+            'loan_due' => $loan, 'loan_capped_to' => $cappedLoan,
+        ]);
+
+        $result['total_deductions'] = round($nonLoanDeductions + $cappedAdvance + $cappedLoan, 2);
+        $result['net_payable'] = round($result['gross_earnings'] - $result['total_deductions'], 2);
+        $result['loan_deduction'] = $cappedLoan;
+        $result['salary_advance_deduction'] = $cappedAdvance;
+
+        foreach ($result['line_items'] as &$li) {
+            if ($li['code'] === 'loan_deduction') {
+                $li['amount'] = $cappedLoan;
+            } elseif ($li['code'] === 'salary_advance_deduction') {
+                $li['amount'] = $cappedAdvance;
+            }
+        }
+        unset($li);
+        $result['line_items'] = array_values(array_filter($result['line_items'],
+            fn ($li) => ! in_array($li['code'], ['loan_deduction', 'salary_advance_deduction'], true) || $li['amount'] > 0));
+    }
+
+    /**
+     * Fit the salary advance and the loan EMIs into what's left of the
+     * payslip ($available = gross − every other deduction): the ADVANCE first
+     * (it is that month's salary already paid out), then the loan EMIs. What
+     * doesn't fit stays due and is recovered in the next payroll.
+     *
+     * @return array{0: float, 1: float} [advance applied, loan applied]
+     */
+    private function capLoanAndAdvance(float $available, float $advanceDue, float $loanDue): array
+    {
+        $available = max(0.0, round($available, 2));
+        $advance = round(min(max(0.0, $advanceDue), $available), 2);
+        $loan = round(min(max(0.0, $loanDue), max(0.0, $available - $advance)), 2);
+
+        return [$advance, $loan];
     }
 
     /**
@@ -1357,9 +1422,17 @@ class MonthlyPayrollController extends Controller
      * full/partial per item. Does NOT open its own DB transaction -- the
      * caller already has one open.
      */
-    private function updateLoanRepayments(int $userId, string $yearMonth, float $deductedAmount, ?int $tenantId = null, ?int $monthlyPayrollId = null): void
+    private function updateLoanRepayments(int $userId, string $yearMonth, float $deductedAmount, ?int $tenantId = null, ?int $monthlyPayrollId = null, ?string $kind = \App\Models\Loan::KIND_LOAN): void
     {
-        if ($deductedAmount <= 0 || ! $tenantId) {
+        if (! $tenantId) {
+            return;
+        }
+        if ($deductedAmount <= 0) {
+            // Nothing to collect now — still undo what this payslip collected for this kind before.
+            if ($monthlyPayrollId) {
+                $this->loanDeductionService->revokeForPayroll($monthlyPayrollId, $tenantId, $kind);
+            }
+
             return;
         }
 
@@ -1369,7 +1442,9 @@ class MonthlyPayrollController extends Controller
             $yearMonth,
             $deductedAmount,
             $monthlyPayrollId,
-            Auth::id()
+            Auth::id(),
+            \App\Models\LoanRepayment::PAYMENT_MODE_SALARY_DEDUCTION,
+            $kind
         );
 
         if ($result['applied_total'] > 0) {
@@ -1568,19 +1643,9 @@ class MonthlyPayrollController extends Controller
         string $divisorMode = 'calendar_days',
         int $fixedWorkingDays = 26
     ): float {
-        if ($calculationType === 'hour_based') {
-            $expectedTotalHours = $workingDays * $workingHoursPerDay;
-
-            return $basicSalary / max(1, $expectedTotalHours);
-        }
-
-        $daysDivisor = $divisorMode === 'fixed_working_days'
-            ? max(1, $fixedWorkingDays)
-            : max(1, $calendarDays);
-
-        $dailyRate = $basicSalary / $daysDivisor;
-
-        return $dailyRate / max(1, $workingHoursPerDay);
+        return app(\App\Services\Payroll\OvertimePayService::class)->hourlyRate(
+            $basicSalary, $calculationType, $workingHoursPerDay, $calendarDays, $workingDays, $divisorMode, $fixedWorkingDays
+        );
     }
 
     /**
@@ -1613,9 +1678,7 @@ class MonthlyPayrollController extends Controller
             $userPayroll->payrollMaster->ot_rate_divisor_mode ?? 'calendar_days',
             $userPayroll->payrollMaster->ot_fixed_working_days ?? 26
         );
-        $overtimeSettings = $this->getOvertimeSettings($tenantId, (int) $userPayroll->user_id);
-        $rateMultiplier = (float) ($overtimeSettings->rate_multiplier ?? 1.5);
-        $rate = round($hourlyRate * $rateMultiplier, 2);
+        $rate = app(\App\Services\Payroll\OvertimePayService::class)->ratePerHour((int) $tenantId, (int) $userPayroll->user_id, $hourlyRate);
 
         return ['amount' => round($hours * $rate, 2), 'rate' => $rate];
     }
@@ -1799,6 +1862,7 @@ class MonthlyPayrollController extends Controller
             'pt'    => 'Professional Tax',
             'tds'   => 'TDS',
             'loan'  => 'Loan Deduction',
+            'advance' => 'Salary Advance Deduction',
             'late'  => 'Late Arrival Deduction',
             'early' => 'Early Leaving Deduction',
             'other' => 'Other Deductions',
@@ -1871,12 +1935,29 @@ class MonthlyPayrollController extends Controller
                 ->where('status', 1)
                 ->first();
 
-            $loanDueItems = $this->loanDeductionService->dueItems(
-                $monthlyPayroll->user_id,
-                $monthlyPayroll->tenant_id,
-                $monthlyPayroll->payroll_month
-            );
+            // What this payslip has to collect, INCLUDING what it already collected (its own share is
+            // undone inside a transaction that is always rolled back — read-only).
+            DB::beginTransaction();
+            try {
+                $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $monthlyPayroll->tenant_id);
+                $loanDueItems = $this->loanDeductionService->dueItems(
+                    $monthlyPayroll->user_id,
+                    $monthlyPayroll->tenant_id,
+                    $monthlyPayroll->payroll_month,
+                    \App\Models\Loan::KIND_LOAN
+                );
+                // Salary advances against this month — their own block on the edit screen.
+                $advanceDueItems = $this->loanDeductionService->dueItems(
+                    $monthlyPayroll->user_id,
+                    $monthlyPayroll->tenant_id,
+                    $monthlyPayroll->payroll_month,
+                    \App\Models\Loan::KIND_SALARY_ADVANCE
+                );
+            } finally {
+                DB::rollBack();
+            }
             $loanDueTotal = round($loanDueItems->sum('balance_due'), 2);
+            $advanceDueTotal = round($advanceDueItems->sum('balance_due'), 2);
 
             // ---- Overtime: approved breakdown + non-approved (pending) preview ----
             [$otYear, $otMonth] = explode('-', $monthlyPayroll->payroll_month);
@@ -1895,8 +1976,9 @@ class MonthlyPayrollController extends Controller
 
             $canApproveOvertime = $this->rbacService->can(auth()->user(), 'overtime', 'approve');
 
-            $overtimeSettings = $this->getOvertimeSettings($monthlyPayroll->tenant_id, (int) $monthlyPayroll->user_id);
-            $overtimeRateMultiplier = (float) ($overtimeSettings->rate_multiplier ?? 1.5);
+            $overtimeRateInfo = app(\App\Services\Payroll\OvertimePayService::class)->describe((int) $monthlyPayroll->tenant_id, (int) $monthlyPayroll->user_id);
+            $overtimeRateMultiplier = $overtimeRateInfo['multiplier'];
+            $overtimeFixedRate = $overtimeRateInfo['fixed'];
 
             $pendingOvertimeHours = round(
                 (float) $pendingOvertimeRequests->sum(fn ($r) => (float) $r->final_overtime_hours), 2
@@ -1934,9 +2016,9 @@ class MonthlyPayrollController extends Controller
             }
 
             return view('client.payroll.monthly-payroll.edit', compact(
-                'monthlyPayroll', 'months', 'userPayroll', 'loanDueItems', 'loanDueTotal',
+                'monthlyPayroll', 'months', 'userPayroll', 'loanDueItems', 'loanDueTotal', 'advanceDueItems', 'advanceDueTotal',
                 'approvedOvertimeRequests', 'pendingOvertimeRequests', 'canApproveOvertime',
-                'overtimeRateMultiplier', 'pendingOvertimeRate', 'pendingOvertimeHours', 'pendingOvertimeAmount',
+                'overtimeRateMultiplier', 'overtimeFixedRate', 'overtimeRateInfo', 'pendingOvertimeRate', 'pendingOvertimeHours', 'pendingOvertimeAmount',
                 'isDynamic', 'dynamicComponents'
             ));
         } catch (\Exception $e) {
@@ -1982,6 +2064,8 @@ class MonthlyPayrollController extends Controller
             'remarks'            => 'nullable|string',
             'loan_deduction'              => 'nullable|numeric|min:0',
             'loan_deduction_enabled'      => 'nullable|boolean',
+            'salary_advance_deduction'         => 'nullable|numeric|min:0',
+            'salary_advance_deduction_enabled' => 'nullable|boolean',
             'confirm_negative_net_payable' => 'nullable|boolean',
             'include_pending_overtime'    => 'nullable|boolean',
             'pending_overtime_request_ids'   => 'nullable|array',
@@ -2031,12 +2115,16 @@ class MonthlyPayrollController extends Controller
 
         $loanDeductionEnabled = $request->boolean('loan_deduction_enabled', true);
         $requestedLoanDeduction = $loanDeductionEnabled ? (float) ($request->loan_deduction ?? 0) : 0.0;
+        // Salary advance against this month — edited and applied separately from loan EMIs.
+        $advanceEnabled = $request->boolean('salary_advance_deduction_enabled', true);
+        $requestedAdvance = $advanceEnabled ? (float) ($request->salary_advance_deduction ?? 0) : 0.0;
 
         $totalDeductionsPreview = (float) $request->provident_fund
             + (float) $request->esi
             + (float) $request->professional_tax
             + (float) ($request->tds ?? 0)
             + $requestedLoanDeduction
+            + $requestedAdvance
             + (float) ($request->other_deductions ?? 0);
 
         $netPayablePreview = round($grossEarningsPreview - $totalDeductionsPreview, 2);
@@ -2151,6 +2239,7 @@ class MonthlyPayrollController extends Controller
                 + $request->professional_tax
                 + ($request->tds ?? 0)
                 + $requestedLoanDeduction
+                + $requestedAdvance
                 + ($request->other_deductions ?? 0);
 
             $netPayable = $grossEarnings - $totalDeductions;
@@ -2158,7 +2247,14 @@ class MonthlyPayrollController extends Controller
             $loanDueTotal = $this->loanDeductionService->totalDue(
                 $monthlyPayroll->user_id,
                 $monthlyPayroll->tenant_id,
-                $monthlyPayroll->payroll_month
+                $monthlyPayroll->payroll_month,
+                \App\Models\Loan::KIND_LOAN
+            );
+            $advanceDueTotal = $this->loanDeductionService->totalDue(
+                $monthlyPayroll->user_id,
+                $monthlyPayroll->tenant_id,
+                $monthlyPayroll->payroll_month,
+                \App\Models\Loan::KIND_SALARY_ADVANCE
             );
 
             $updateData = [
@@ -2183,6 +2279,8 @@ class MonthlyPayrollController extends Controller
                 'loan_deduction'         => $requestedLoanDeduction,
                 'loan_deduction_enabled' => $loanDeductionEnabled,
                 'loan_deduction_computed' => $loanDueTotal,
+                'salary_advance_deduction' => $requestedAdvance,
+                'salary_advance_deduction_computed' => $advanceDueTotal,
                 'other_deductions'       => $request->other_deductions      ?? 0,
                 'gross_earnings'         => $grossEarnings,
                 'total_deductions'       => $totalDeductions,
@@ -2220,6 +2318,7 @@ class MonthlyPayrollController extends Controller
                 'pt'    => $request->professional_tax,
                 'tds'   => $request->tds ?? 0,
                 'loan'  => $requestedLoanDeduction,
+                'advance' => $requestedAdvance,
                 'other' => $request->other_deductions ?? 0,
             ];
 
@@ -2234,18 +2333,11 @@ class MonthlyPayrollController extends Controller
             // payslip -- idempotent (applyDeduction()/revokeForPayroll()
             // both first reverse whatever this monthly_payroll_id previously
             // applied), so re-editing and resaving never double-deducts.
-            if ($loanDeductionEnabled && $requestedLoanDeduction > 0) {
-                $this->loanDeductionService->applyDeduction(
-                    $monthlyPayroll->user_id,
-                    $monthlyPayroll->tenant_id,
-                    $monthlyPayroll->payroll_month,
-                    $requestedLoanDeduction,
-                    $monthlyPayroll->id,
-                    Auth::id()
-                );
-            } else {
-                $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $monthlyPayroll->tenant_id);
-            }
+            // Advance and loan EMIs are synced separately (each undoes only its own earlier share).
+            $this->updateLoanRepayments($monthlyPayroll->user_id, $monthlyPayroll->payroll_month, $requestedAdvance,
+                $monthlyPayroll->tenant_id, $monthlyPayroll->id, \App\Models\Loan::KIND_SALARY_ADVANCE);
+            $this->updateLoanRepayments($monthlyPayroll->user_id, $monthlyPayroll->payroll_month, $requestedLoanDeduction,
+                $monthlyPayroll->tenant_id, $monthlyPayroll->id, \App\Models\Loan::KIND_LOAN);
 
             DB::commit();
 
@@ -2301,6 +2393,10 @@ class MonthlyPayrollController extends Controller
         try {
             DB::beginTransaction();
 
+            // Undo what this payslip already collected first: the engine only counts instalments
+            // still unpaid, so without this a re-save found nothing due and dropped the deduction.
+            $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $monthlyPayroll->tenant_id);
+
             $result = app(\App\Services\Payroll\PayrollCalculationEngine::class)->calculate(
                 $monthlyPayroll->user,
                 $monthlyPayroll->tenant_id,
@@ -2308,6 +2404,7 @@ class MonthlyPayrollController extends Controller
                 $includeLoanDeductions,
                 $this->dayOverridesFromRequest($data, $monthlyPayroll)
             );
+            $this->capDynamicLoanAndAdvance($result, (int) $monthlyPayroll->user_id, $monthlyPayroll->payroll_month);
 
             $this->applyComponentOverrides($result, $data['components'] ?? []);
 
@@ -2356,13 +2453,22 @@ class MonthlyPayrollController extends Controller
         ]);
 
         try {
-            $result = app(\App\Services\Payroll\PayrollCalculationEngine::class)->calculate(
-                $monthlyPayroll->user,
-                $monthlyPayroll->tenant_id,
-                $monthlyPayroll->payroll_month,
-                $request->boolean('loan_deduction_enabled', true),
-                $this->dayOverridesFromRequest($data, $monthlyPayroll)
-            );
+            // Read-only: undo this payslip's own loan / advance share inside a transaction that is
+            // always rolled back, so the preview counts them as due (same as the real save).
+            DB::beginTransaction();
+            try {
+                $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $monthlyPayroll->tenant_id);
+                $result = app(\App\Services\Payroll\PayrollCalculationEngine::class)->calculate(
+                    $monthlyPayroll->user,
+                    $monthlyPayroll->tenant_id,
+                    $monthlyPayroll->payroll_month,
+                    $request->boolean('loan_deduction_enabled', true),
+                    $this->dayOverridesFromRequest($data, $monthlyPayroll)
+                );
+                $this->capDynamicLoanAndAdvance($result, (int) $monthlyPayroll->user_id, $monthlyPayroll->payroll_month);
+            } finally {
+                DB::rollBack();
+            }
 
             $grouped = collect($result['line_items'])->groupBy('component_type');
 
@@ -2427,6 +2533,15 @@ class MonthlyPayrollController extends Controller
         $result['gross_earnings'] = round(collect($result['line_items'])->where('component_type', 'earning')->sum('amount'), 2);
         $result['total_deductions'] = round(collect($result['line_items'])->where('component_type', 'deduction')->sum('amount'), 2);
         $result['net_payable'] = round($result['gross_earnings'] - $result['total_deductions'], 2);
+
+        // A manually edited loan / advance line is what the ledger must collect.
+        $lines = collect($result['line_items'])->keyBy('code');
+        if ($lines->has('loan_deduction')) {
+            $result['loan_deduction'] = round((float) $lines['loan_deduction']['amount'], 2);
+        }
+        if ($lines->has('salary_advance_deduction')) {
+            $result['salary_advance_deduction'] = round((float) $lines['salary_advance_deduction']['amount'], 2);
+        }
     }
 
     /**
@@ -2469,10 +2584,14 @@ class MonthlyPayrollController extends Controller
             'holidays' => (int) round($context['holidays']),
             'week_offs' => (int) round($context['week_offs']),
             'overtime_hours' => $context['approved_overtime_hours'],
+            'overtime_rate' => $result['overtime_rate'] ?? 0,
+            'overtime_amount' => $result['overtime_amount'] ?? 0,
             'actual_worked_hours' => $context['actual_worked_hours'],
             'loan_deduction' => $result['loan_deduction'],
             'loan_deduction_enabled' => $includeLoanDeductions,
             'loan_deduction_computed' => $result['loan_deduction_due'],
+            'salary_advance_deduction' => $result['salary_advance_deduction'] ?? 0,
+            'salary_advance_deduction_computed' => $result['salary_advance_deduction_due'] ?? 0,
             'late_deduction' => $result['late_deduction'] ?? 0,
             'early_deduction' => $result['early_deduction'] ?? 0,
             'gross_earnings' => $result['gross_earnings'],
@@ -2511,11 +2630,13 @@ class MonthlyPayrollController extends Controller
             ]);
         }
 
-        if ($includeLoanDeductions && $result['loan_deduction'] > 0) {
-            $this->updateLoanRepayments($monthlyPayroll->user_id, $monthlyPayroll->payroll_month, $result['loan_deduction'], $monthlyPayroll->tenant_id, $monthlyPayroll->id);
-        } else {
-            $this->loanDeductionService->revokeForPayroll($monthlyPayroll->id, $monthlyPayroll->tenant_id);
-        }
+        // Advance and loan EMIs synced separately (each undoes only its own earlier share; 0 = just undo).
+        $this->updateLoanRepayments($monthlyPayroll->user_id, $monthlyPayroll->payroll_month,
+            $includeLoanDeductions ? (float) ($result['salary_advance_deduction'] ?? 0) : 0.0,
+            $monthlyPayroll->tenant_id, $monthlyPayroll->id, \App\Models\Loan::KIND_SALARY_ADVANCE);
+        $this->updateLoanRepayments($monthlyPayroll->user_id, $monthlyPayroll->payroll_month,
+            $includeLoanDeductions ? (float) $result['loan_deduction'] : 0.0,
+            $monthlyPayroll->tenant_id, $monthlyPayroll->id, \App\Models\Loan::KIND_LOAN);
 
         $this->linkExpenseReimbursements($monthlyPayroll, $result);
     }
@@ -3121,6 +3242,7 @@ class MonthlyPayrollController extends Controller
                 'PF Deduction',
                 'ESI Deduction',
                 'Professional Tax',
+                'Salary Advance Deduction',
                 'Loan Deduction',
                 'Total Deductions',
                 'Net Payable',
@@ -3146,6 +3268,7 @@ class MonthlyPayrollController extends Controller
                     $p->provident_fund,
                     $p->esi,
                     $p->professional_tax,
+                    $p->salary_advance_deduction ?? 0,
                     $p->loan_deduction,
                     $p->total_deductions,
                     $p->net_payable,

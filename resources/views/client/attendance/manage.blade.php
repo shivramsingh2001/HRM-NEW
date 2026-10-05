@@ -619,6 +619,7 @@
 @section('content-area')
 <x-ui.page-header title="Team Regularization Management" current="Manage Regularizations">
     <x-slot:actions>
+        <x-on-behalf.button module="regularization" />
         <div class="dropdown">
             <a class="btn btn-icon btn-light-brand" data-bs-toggle="dropdown" data-bs-offset="0, 10">
                 <i class="feather-download"></i>
@@ -912,6 +913,7 @@
                                                 <div class="employee-details">
                                                     <div class="employee-name">
                                                         {{ $regularization->user->name }} <small class="text-secondary fs-10">( {{ $regularization->user->employee_id }} )</small>
+                                                        <x-on-behalf.badge :by="$regularization->created_by" :owner="$regularization->user_id" />
                                                        
                                                     </div>
                                                     <div class="employee-email">{{ $regularization->user->email }}</div>
@@ -1052,6 +1054,8 @@
 @endsection
 
 @section('create-modal')
+<x-on-behalf.modal module="regularization" />
+
 <!-- Single Approval Modal with Status Select -->
 <x-ui.modal id="approvalModal" title="Process Regularization Request" bodyOnly>
     <x-slot:footer>

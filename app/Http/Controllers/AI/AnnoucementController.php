@@ -56,7 +56,7 @@ class AnnoucementController extends Controller
                     return response()->json([
                         'success' => false,
                         'message' => 'Unauthorized access. Invalid role.'
-                    ], 200);
+                    ], 403);
             }
 
             // Apply status filter if needed (only show active announcements)
@@ -67,14 +67,18 @@ class AnnoucementController extends Controller
 
             $announcements = file_storage()->mapUrls($query->get(), ['file_url' => 'announcement_file', 'image_url' => 'announcement_image']);
 
-            // Enhance announcements with additional data
-            $enhancedAnnouncements = $announcements->map(function ($announcement) use ($authUser) {
+            // Which of these the caller has acknowledged (one query, from announcement_acknowledgments)
+            $acknowledgedIds = DB::table('announcement_acknowledgments')
+                ->where('tenant_id', $authUser->tenant_id)
+                ->where('user_id', $authUser->id)
+                ->whereIn('announcement_id', $announcements->pluck('id'))
+                ->pluck('announcement_id')
+                ->flip();
 
-                // Check if current user has acknowledged this announcement
-                $hasAcknowledged = false;
-                // if ($announcement->acknowledge) {
-                //     You can implement acknowledgment tracking if you have a pivot table
-                // }
+            // Enhance announcements with additional data
+            $enhancedAnnouncements = $announcements->map(function ($announcement) use ($authUser, $acknowledgedIds) {
+
+                $hasAcknowledged = $acknowledgedIds->has($announcement->id);
 
                 return [
                     'id' => $announcement->id,
@@ -112,9 +116,11 @@ class AnnoucementController extends Controller
             ], 200);
             
         } catch (Exception $e) {
+            \Illuminate\Support\Facades\Log::error('AI announcements failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred. Please try again later. ' . $e->getMessage()
+                'message' => 'An error occurred. Please try again later.'
             ], 500);
         }
     }

@@ -81,30 +81,35 @@ class AttendanceRegularizationController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Invalid role.'
-                ], 200);
+                ], 403);
         }
 
         // IMPORTANT: Add tenant filter using the table alias
         $query->where('ar.tenant_id', $authUser->tenant_id); // or Session::get('tenant_id')
 
-        // Apply filters
-        if ($request->has('status') && $request->status != 'all') {
+        // Apply filters (an empty value means "no filter", same as "all")
+        if ($request->filled('status') && $request->status != 'all') {
             $query->where('ar.status', $request->status);
         }
 
-        if ($request->has('request_type') && $request->request_type != 'all') {
+        if ($request->filled('request_type') && $request->request_type != 'all') {
             $query->where('ar.request_type', $request->request_type);
         }
 
-        if ($request->has('start_date') && !empty($request->start_date)) {
+        if ($request->filled('start_date')) {
             $query->where('ar.date', '>=', $request->start_date);
         }
 
-        if ($request->has('end_date') && !empty($request->end_date)) {
+        if ($request->filled('end_date')) {
             $query->where('ar.date', '<=', $request->end_date);
         }
 
-        $regularizations = $query->orderBy('ar.created_at', 'desc')->get();
+        // `file` was the raw stored path — return a usable URL (same as the other regularization APIs).
+        $regularizations = $query->orderBy('ar.created_at', 'desc')->get()->each(function ($r) {
+            $r->file_url = $r->file ? file_url($r->file, 'regularization') : null;
+            $r->file = $r->file_url;
+            $r->profile_image = $r->profile_image ? file_url($r->profile_image, 'profile_photo') : null;
+        });
 
         return response()->json([
             'success' => true,
@@ -113,9 +118,11 @@ class AttendanceRegularizationController extends Controller
         ], 200);
         
     } catch (Exception $e) {
+        \Illuminate\Support\Facades\Log::error('AI regularization failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+
         return response()->json([
             'success' => false,
-            'message' => 'An error occurred: ' . $e->getMessage()
+            'message' => 'An error occurred. Please try again later.'
         ], 500);
     }
 }

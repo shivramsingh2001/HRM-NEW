@@ -296,6 +296,81 @@ class LeaveService
     }
 
     /**
+     * Admin / HR applies a leave for an employee (Employee 360 → Leave, and
+     * Leave → All Leaves → "Apply leave for employee"). The caller is the
+     * approver, so it is created APPROVED and the balance deducted right away
+     * (createApproved). Same checks as the employee's own form — the type's rules
+     * or the employee's custom ones, working days, overlap, balance — except the
+     * notice period. Logged as `leave.applied_on_behalf`; the employee is notified.
+     *
+     * @throws \DomainException with a message for the user when a check fails
+     */
+    public function applyOnBehalf(\App\Models\User $actor, \App\Models\User $employee, int $leaveTypeId, string $startDate, string $startSession, string $endDate, string $endSession, string $reason): array
+    {
+        $tenantId = (int) $employee->tenant_id;
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+        $leaveType = LeaveType::withoutGlobalScopes()->where('tenant_id', $tenantId)->findOrFail($leaveTypeId);
+
+        if ($refusal = app(EmployeePolicyService::class)->leaveRefusal($tenantId, (int) $employee->id, $leaveType, $start, $end, notice: false)) {
+            throw new \DomainException($refusal);
+        }
+
+        $days = $this->computeLeaveDays($start->copy(), $end->copy(), $startSession, $endSession, $tenantId);
+        if ($days <= 0) {
+            throw new \DomainException('The selected date range has no working days to apply leave for.');
+        }
+
+        $overlap = Leave::withoutGlobalScopes()->where('user_id', $employee->id)->whereIn('status', ['pending', 'approved'])
+            ->where('start_date', '<=', $end->toDateString())->where('end_date', '>=', $start->toDateString())
+            ->exists();
+        if ($overlap) {
+            throw new \DomainException("{$employee->name} already has a pending or approved leave on these dates.");
+        }
+
+        if (! $this->isLwpId((int) $leaveType->id)) {
+            $available = (float) LeaveBalance::withoutGlobalScopes()->where('user_id', $employee->id)->where('leave_type_id', $leaveType->id)->value('balance');
+            if ($available < $days) {
+                throw new \DomainException("Insufficient leave balance. {$available} day(s) available but {$days} day(s) requested. Credit the balance first, or use an unpaid leave type.");
+            }
+        }
+
+        $leave = \Illuminate\Support\Facades\DB::transaction(function () use ($actor, $employee, $tenantId, $leaveType, $start, $end, $startSession, $endSession, $reason, $days) {
+            $leave = $this->createApproved([
+                'tenant_id' => $tenantId,
+                'user_id' => $employee->id,
+                'leave_type_id' => (int) $leaveType->id,
+                'start_date' => $start->toDateString(),
+                'start_session' => $startSession,
+                'end_date' => $end->toDateString(),
+                'end_session' => $endSession,
+                'leave_count' => $days,
+                'reason' => $reason,
+                'applied_by' => $actor->id,
+            ]);
+            // createApproved stamps its attendance-marking origin; this one was raised for the employee.
+            $leave->update(['source' => 'on_behalf', 'total_days' => $days]);
+
+            return $leave;
+        });
+
+        $this->audit->record('tenant_user', $actor->id, $tenantId, 'leave.applied_on_behalf', 'Leave', $leave->id, [], [
+            'target_user_id' => $employee->id, 'on_behalf_of' => $employee->id, 'employee_name' => $employee->name,
+            'raised_by' => $actor->name, 'raised_by_role' => $actor->role,
+            'leave_type_id' => (int) $leaveType->id, 'leave_type' => $leaveType->name, 'days' => $days,
+            'start_date' => $start->toDateString(), 'end_date' => $end->toDateString(),
+        ]);
+
+        try {
+            app(LeaveNotificationService::class)->notifyLeaveApproved($leave->fresh('user'), $reason);
+        } catch (\Throwable $e) {
+            // never block on notification
+        }
+
+        return ['leave' => $leave, 'days' => $days, 'type' => $leaveType];
+    }
+
+    /**
      * Create a pre-approved leave and apply the balance / ledger side effects,
      * with a loss-of-pay fallback when the balance is short.
      *

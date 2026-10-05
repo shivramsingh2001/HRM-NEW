@@ -497,71 +497,19 @@ class EmployeeProfileActionController extends EmployeeProfileController
             'reason' => 'required|string|max:500',
         ]);
 
-        $start = Carbon::parse($data['start_date']);
-        $end = Carbon::parse($data['end_date']);
-        $leaveType = LeaveType::find($data['leave_type']);
-
-        // The type's rules, or this employee's custom ones (Policies tab). No notice period for admin / HR.
-        if ($refusal = app(EmployeePolicyService::class)->leaveRefusal($tenantId, $user->id, $leaveType, $start, $end, notice: false)) {
-            return $this->fail($refusal);
-        }
-
-        $days = $leaves->computeLeaveDays($start->copy(), $end->copy(), $data['start_session'], $data['end_session'], $tenantId);
-        if ($days <= 0) {
-            return $this->fail('The selected date range has no working days to apply leave for.');
-        }
-
-        $overlap = Leave::where('user_id', $user->id)->whereIn('status', ['pending', 'approved'])
-            ->where('start_date', '<=', $end->toDateString())->where('end_date', '>=', $start->toDateString())
-            ->exists();
-        if ($overlap) {
-            return $this->fail('This employee already has a pending or approved leave on these dates.');
-        }
-
-        if (!$leaves->isLwpId((int) $leaveType->id)) {
-            $available = (float) LeaveBalance::where('user_id', $user->id)->where('leave_type_id', $leaveType->id)->value('balance');
-            if ($available < $days) {
-                return $this->fail("Insufficient leave balance. {$available} day(s) available but {$days} day(s) requested. Credit the balance first, or use an unpaid leave type.");
-            }
-        }
-
+        // Shared with Leave → All Leaves → "Apply leave for employee" (checks, approval, log, notification).
         try {
-            $leave = DB::transaction(function () use ($leaves, $user, $tenantId, $leaveType, $start, $end, $data, $days) {
-                $leave = $leaves->createApproved([
-                    'tenant_id' => $tenantId,
-                    'user_id' => $user->id,
-                    'leave_type_id' => (int) $leaveType->id,
-                    'start_date' => $start->toDateString(),
-                    'start_session' => $data['start_session'],
-                    'end_date' => $end->toDateString(),
-                    'end_session' => $data['end_session'],
-                    'leave_count' => $days,
-                    'reason' => $data['reason'],
-                    'applied_by' => Auth::id(),
-                ]);
-                // createApproved stamps its attendance-marking origin; this one came from the profile page.
-                $leave->update(['source' => 'on_behalf', 'total_days' => $days]);
-
-                return $leave;
-            });
+            $result = $leaves->applyOnBehalf(Auth::user(), $user, (int) $data['leave_type'], $data['start_date'],
+                $data['start_session'], $data['end_date'], $data['end_session'], $data['reason']);
+        } catch (\DomainException $e) {
+            return $this->fail($e->getMessage());
         } catch (\Throwable $e) {
             Log::error('Employee 360 apply leave failed: ' . $e->getMessage());
 
             return $this->fail('Could not apply the leave. Please try again.', 500);
         }
 
-        app(AuditLogger::class)->record('tenant_user', Auth::id(), $tenantId, 'leave.applied_on_behalf', 'Leave', $leave->id, [], [
-            'target_user_id' => $user->id, 'leave_type_id' => (int) $leaveType->id, 'days' => $days,
-            'start_date' => $start->toDateString(), 'end_date' => $end->toDateString(),
-        ]);
-
-        try {
-            app(LeaveNotificationService::class)->notifyLeaveApproved($leave->fresh('user'), $data['reason']);
-        } catch (\Throwable $e) {
-            // never block on notification
-        }
-
-        return response()->json(['success' => true, 'message' => "{$leaveType->name} applied for {$days} day(s) and approved."]);
+        return response()->json(['success' => true, 'message' => "{$result['type']->name} applied for {$result['days']} day(s) and approved."]);
     }
 
     /**

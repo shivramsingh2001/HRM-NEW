@@ -33,6 +33,7 @@ use App\Traits\AuthorizesByScope;
 class ExpenseController extends Controller
 {
     use AuthorizesByScope;
+    use \App\Http\Controllers\Concerns\RaisesOnBehalf;
 
     protected $notificationService;
 
@@ -201,6 +202,38 @@ class ExpenseController extends Controller
             'success' => true,
             'message' => 'Expense Created Successfully!!!'
         ], 200);
+    }
+
+    /**
+     * Admin / HR raises an expense for an employee (Expenses → "Add expense").
+     * Same field rules as the employee's form; saved and approved in one step by
+     * the caller (ExpenseService::submitOnBehalf). Payment stays a separate step.
+     */
+    public function storeOnBehalf(StoreExpenseRequest $request)
+    {
+        $employee = $this->onBehalfEmployee($request);
+
+        try {
+            $result = $this->expenseService->submitOnBehalf(Auth::user(), $employee, $request->only(self::FORM_FIELDS),
+                $request->receipts(), $request->boolean('cover_shortfall'));
+        } catch (InsufficientBalanceException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()] + $e->toPayload(), $e->httpStatus());
+        } catch (ExpenseException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->httpStatus());
+        } catch (Exception $e) {
+            return response()->json($this->genericFailure($e, 'storeOnBehalf'), 500);
+        }
+
+        try {
+            $this->notificationService->notifyExpenseApproved($result['expense'], 'Raised by ' . Auth::user()->name);
+        } catch (Exception $e) {
+            Log::error('Failed to send expense notifications: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Expense recorded and approved for {$employee->name}. " . $result['message'],
+        ]);
     }
 
     /**

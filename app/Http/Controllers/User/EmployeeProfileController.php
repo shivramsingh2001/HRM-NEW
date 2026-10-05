@@ -356,13 +356,15 @@ class EmployeeProfileController extends Controller
             return ['monthly_limit' => 0]; // no company-wide limit — department budgets are separate
         }
 
-        // Overtime: the tenant's row, else the global one, else the code's fallbacks.
-        $row = DB::table('overtime_settings')->where('tenant_id', $tenantId)->first()
-            ?? DB::table('overtime_settings')->whereNull('tenant_id')->first();
+        // Overtime: Company Policies → Overtime (or the code's defaults).
+        $row = app(\App\Services\Attendance\OvertimePolicyService::class)->company($tenantId);
 
         return [
             'eligible' => true,
+            'rate_type' => $row->rate_type ?? 'multiplier',
             'rate_multiplier' => $row->rate_multiplier ?? 1.5,
+            'fixed_rate_per_hour' => $row->fixed_rate_per_hour ?? 0,
+            'min_hours' => $row->min_hours ?? 0,
             'max_hours_per_day' => $row->max_hours_per_day ?? 0,
             'max_hours_per_month' => $row->max_hours_per_month ?? 0,
             'require_approval' => $row ? (bool) $row->require_approval : true,
@@ -390,8 +392,35 @@ class EmployeeProfileController extends Controller
                 'kind' => 'attendance',
             ]);
 
+        // Requests admin / HR raised for this employee (loan, overtime, expense, leave, regularization).
+        $onBehalf = DB::table('audit_logs as l')->leftJoin('users as a', 'a.id', '=', 'l.actor_id')
+            ->where('l.tenant_id', $tenantId)
+            ->where('l.action', 'like', '%on_behalf')
+            ->where(fn ($q) => $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(l.new_values, '$.on_behalf_of')) = ?", [(string) $user->id])
+                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(l.new_values, '$.target_user_id')) = ?", [(string) $user->id]))
+            ->orderByDesc('l.id')->limit(25)
+            ->get(['l.created_at', 'l.action', 'l.entity_type', 'l.new_values', 'a.name as actor_name'])
+            ->map(function ($r) {
+                $v = json_decode((string) $r->new_values, true) ?: [];
+                $detail = collect([
+                    $v['loan_number'] ?? null,
+                    isset($v['amount']) ? '₹' . $v['amount'] : null,
+                    $v['leave_type'] ?? null,
+                    isset($v['days']) ? $v['days'] . ' day(s)' : null,
+                    isset($v['hours']) ? $v['hours'] . ' h' : null,
+                    $v['date'] ?? ($v['start_date'] ?? null),
+                ])->filter()->implode(' · ');
+
+                return [
+                    'at' => $r->created_at,
+                    'what' => str_replace(['_', '.'], [' ', ' · '], (string) $r->action) . ($detail ? ' — ' . $detail : '') . ' (approved)',
+                    'by' => $r->actor_name,
+                    'kind' => 'request',
+                ];
+            });
+
         return [
-            'events' => $audit->concat($attendance)->sortByDesc('at')->take(40)->values(),
+            'events' => $audit->concat($attendance)->concat($onBehalf)->sortByDesc('at')->take(40)->values(),
         ];
     }
 

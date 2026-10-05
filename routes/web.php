@@ -52,7 +52,6 @@ use App\Http\Controllers\Leave\LeaveCreditController;
 use App\Http\Controllers\Mom\MeetingController;
 use App\Http\Controllers\Mom\MeetingMinuteController;
 use App\Http\Controllers\Attendance\OvertimeController;
-use App\Http\Controllers\Attendance\OvertimeSettingController;
 use App\Http\Controllers\Performance\ManagerPerformanceReviewController;
 use App\Http\Controllers\Performance\PerformanceController;
 use App\Http\Controllers\offboarding\OffboardingController;
@@ -222,6 +221,8 @@ Route::group(['middleware' => ['tenant']], function () {
 
             Route::get('/view-all', [LeaveController::class, 'view_all'])->name('view-all')->middleware('permission:leave,view');
             Route::post('/update-status/{id}', [LeaveController::class, 'updateStatus'])->name('update-status')->middleware('permission:leave,approve');
+            // Admin / HR applies a leave for an employee — created approved (see RaisesOnBehalf).
+            Route::post('/on-behalf', [LeaveController::class, 'storeOnBehalf'])->name('on-behalf')->middleware('role:admin,hr');
         });
 
         //Designation Route
@@ -421,6 +422,8 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::post('/create', [ExpenseController::class, 'store'])->name('create');
             Route::post('/update/{id}', [ExpenseController::class, 'update'])->name('update')->whereNumber('id');
             Route::post('/update-status/{id}', [ExpenseController::class, 'updateStatus'])->name('update-status')->whereNumber('id')->middleware('permission:expenses,approve');
+            // Admin / HR records an expense for an employee — saved approved (see RaisesOnBehalf).
+            Route::post('/on-behalf', [ExpenseController::class, 'storeOnBehalf'])->name('on-behalf')->middleware('role:admin,hr');
 
             Route::get('/payment/{expenseId}', [ExpenseController::class, 'getPayments'])->name('payments')->whereNumber('expenseId');
 
@@ -652,6 +655,9 @@ Route::group(['middleware' => ['tenant']], function () {
                 ->name('manage')->middleware('permission:attendance,approve');
             Route::post('/team-approval', [AttendanceRegularizationController::class, 'regularizationApproval'])
                 ->name('approval')->middleware('permission:attendance,approve');
+            // Admin / HR regularizes a day for an employee — saved approved (see RaisesOnBehalf).
+            Route::post('/on-behalf', [AttendanceRegularizationController::class, 'storeOnBehalf'])
+                ->name('on-behalf')->middleware('role:admin,hr');
             Route::get('/team-details/{id}', [AttendanceRegularizationController::class, 'getDetails'])
                 ->name('details');
         });
@@ -757,13 +763,17 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::post('/approve/{id}', [OvertimeController::class, 'approve'])->name('overtime.approve');
                 Route::post('/reject/{id}', [OvertimeController::class, 'reject'])->name('overtime.reject');
             });
+            // Admin / HR records overtime for an employee — saved approved (see RaisesOnBehalf).
+            Route::post('/on-behalf', [OvertimeController::class, 'storeOnBehalf'])->name('overtime.on-behalf')->middleware('role:admin,hr');
 
-            // Tenant overtime policy
-            Route::middleware('permission:overtime,manage')->group(function () {
-                Route::get('/settings', [OvertimeSettingController::class, 'index'])->name('overtime.settings');
-                Route::put('/settings/update', [OvertimeSettingController::class, 'update'])->name('overtime.settings.update');
-                Route::post('/settings/reset', [OvertimeSettingController::class, 'reset'])->name('overtime.settings.reset');
-            });
+            // Overtime settings moved to Company Policies → Overtime cards; old address kept as a redirect.
+            Route::middleware('permission:overtime,manage')->get('/settings', fn () => redirect()->to(route('workforce-settings.index') . '#overtime'))
+                ->name('overtime.settings');
+        });
+
+        // Company Policies → Overtime + Overtime limits & rate cards — overtime_settings (one row per company).
+        Route::middleware(['role:admin,hr', 'feature:overtime', 'permission:overtime,manage'])->prefix('overtime-policy-settings')->name('overtime-policy-settings.')->group(function () {
+            Route::put('/', [\App\Http\Controllers\Settings\OvertimePolicySettingsController::class, 'update'])->name('update');
         });
 
         // Tenant attendance policy (per-tenant monthly late allowance)
@@ -807,6 +817,12 @@ Route::group(['middleware' => ['tenant']], function () {
         // WFH + regularization request limits (Company Policies) — tenants.wfh_* / regularization_*.
         Route::middleware('role:admin,hr')->prefix('request-limits-settings')->name('request-limits-settings.')->group(function () {
             Route::put('/', [\App\Http\Controllers\Settings\RequestLimitsSettingsController::class, 'update'])->name('update');
+        });
+
+        // Leave carry forward + leave-year start (Company Policies) — tenants.leave_carry_forward_* /
+        // leave_year_start_*; applied by `leaves:carry-forward`.
+        Route::middleware(['role:admin,hr', 'feature:leave_management'])->prefix('leave-carry-forward-settings')->name('leave-carry-forward-settings.')->group(function () {
+            Route::put('/', [\App\Http\Controllers\Settings\LeaveCarryForwardSettingsController::class, 'update'])->name('update');
         });
 
         // Day classification (present/half-day ratios) standalone card on the
@@ -915,6 +931,8 @@ Route::group(['middleware' => ['tenant']], function () {
                 // Additional routes
                 Route::get('/my-loans/summary', [LoanController::class, 'myLoans'])->name('my-loans');
                 Route::get('/schedule/{id}', [LoanController::class, 'getRepaymentSchedule'])->name('schedule');
+                // Salary advance: open months + how much is still available for a month/category.
+                Route::get('/advance/limit', [LoanController::class, 'advanceLimit'])->name('advance-limit');
             });
     
             // Admin/Manager Loan Approval Routes
@@ -923,6 +941,8 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::post('/{id}/approve', [LoanController::class, 'approve'])->name('approve');
                 Route::post('/{id}/reject', [LoanController::class, 'reject'])->name('reject');
                 Route::post('/{id}/disburse', [LoanController::class, 'disburse'])->name('disburse');
+                // Admin / HR creates a loan for an employee — saved approved (see RaisesOnBehalf).
+                Route::post('/on-behalf', [LoanController::class, 'storeOnBehalf'])->name('on-behalf');
             });
     
             // Reports Routes

@@ -145,27 +145,34 @@ class AttendanceController extends Controller
             a.clock_in_address,
             a.clock_out_address,
             a.id as attendance_id,
-            wo.id as weekoff_id,
+            -- Scalar subqueries (not JOINs) so several matching week-off / leave /
+            -- holiday rows can never duplicate a user-day.
+            (SELECT wo.id FROM user_weekoffs wo
+                WHERE wo.user_id = u.id AND wo.tenant_id = ? AND wo.status = 1
+                  AND ((wo.off_type = 'date_based' AND d.date BETWEEN wo.start_date AND wo.end_date)
+                    OR (wo.off_type = 'day_based' AND wo.day_name = DAYNAME(d.date)))
+                LIMIT 1) as weekoff_id,
+            (SELECT l.id FROM leaves l
+                WHERE l.user_id = u.id AND l.tenant_id = ? AND l.status = 'approved'
+                  AND d.date BETWEEN DATE(l.start_date) AND DATE(l.end_date)
+                LIMIT 1) as leave_id,
+            (SELECT h.name FROM holidays h
+                WHERE h.tenant_id = ? AND h.status = 1
+                  AND d.date BETWEEN DATE(h.start_date) AND DATE(h.end_date)
+                LIMIT 1) as holiday_name,
             (SELECT COUNT(*) FROM attendance_tracking_points atp
                 INNER JOIN attendance_tracking_sessions ats ON ats.id = atp.session_id
                 WHERE ats.attendance_id = a.id) as track_count
         FROM dates d
         CROSS JOIN users u
         LEFT JOIN attendances a ON u.id = a.user_id AND a.date = d.date AND a.tenant_id = ?
-        LEFT JOIN user_weekoffs wo ON u.id = wo.user_id
-            AND wo.tenant_id = ?
-            AND wo.status = 1
-            AND (
-                (wo.off_type = 'date_based' AND d.date BETWEEN wo.start_date AND wo.end_date)
-                OR (wo.off_type = 'day_based' AND wo.day_name = DAYNAME(d.date))
-            )
-        LEFT JOIN user_job_details jd ON u.id = jd.user_id AND jd.tenant_id = ?
         WHERE u.status = 1 AND u.tenant_id = ?
         {$userFilterSql}
         ORDER BY d.date DESC, u.id
     ";
 
-        $bindings = array_merge([$tenantId, $tenantId, $tenantId, $tenantId], $userFilterBindings);
+        // Placeholder order: weekoff, leave, holiday subqueries, then the attendances join, then WHERE.
+        $bindings = array_merge([$tenantId, $tenantId, $tenantId, $tenantId, $tenantId], $userFilterBindings);
 
         return DB::select($query, $bindings);
     }
@@ -190,13 +197,20 @@ class AttendanceController extends Controller
     foreach ($attendances as $record) {
         $record = (array) $record;
         
-        // Determine status (same as before)
+        // Determine status — a punch wins, then approved leave, holiday, week-off.
+        // (Leave and holidays used to fall through to "Absent".)
         if ($record['clock_in'] && $record['clock_out']) {
             $status = 'Present';
             $statusCategory = 'present';
         } elseif ($record['clock_in']) {
             $status = 'Checked In Only';
             $statusCategory = 'present';
+        } elseif (!empty($record['leave_id'])) {
+            $status = 'On Leave';
+            $statusCategory = 'leave';
+        } elseif (!empty($record['holiday_name'])) {
+            $status = 'Holiday';
+            $statusCategory = 'holiday';
         } elseif ($record['weekoff_id']) {
             $status = 'Week Off';
             $statusCategory = 'weekoff';
@@ -219,7 +233,8 @@ class AttendanceController extends Controller
             'clock_in_address' => $record['clock_in_address'],
             'clock_out_address' => $record['clock_out_address'],
             'status' => $status,
-            'status_category' => $statusCategory
+            'status_category' => $statusCategory,
+            'holiday_name' => $record['holiday_name'] ?? null,
         ];
 
         $formatted[] = $formattedRecord;
@@ -248,7 +263,9 @@ class AttendanceController extends Controller
                 'present' => 0,
                 'absent' => 0,
                 'weekoff' => 0,
-                'checked_in_only' => 0
+                'checked_in_only' => 0,
+                'leave' => 0,
+                'holiday' => 0,
             ],
             'by_user' => [],
             'date_range' => [
@@ -283,7 +300,9 @@ class AttendanceController extends Controller
                     'present' => 0,
                     'absent' => 0,
                     'weekoff' => 0,
-                    'checked_in_only' => 0
+                    'checked_in_only' => 0,
+                    'leave' => 0,
+                    'holiday' => 0,
                 ];
             }
             

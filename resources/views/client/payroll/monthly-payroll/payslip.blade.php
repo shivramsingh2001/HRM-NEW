@@ -490,7 +490,7 @@
                         <td style="width: 50%;">
                             <table style="width: 100%; border-spacing: 0; border-collapse: collapse;">
                                 <tbody>
-                                    <td style="width: 60%; border: 1px solid #000000; padding: 8px; text-align: left; font-size: 14px;">Overtime</td>
+                                    <td style="width: 60%; border: 1px solid #000000; padding: 8px; text-align: left; font-size: 14px;">Overtime @if((float) $monthlyPayroll->overtime_hours > 0)({{ rtrim(rtrim(number_format((float) $monthlyPayroll->overtime_hours, 2), "0"), ".") }} h)@endif</td>
                                     <td style="width: 40%; border: 1px solid #000000; padding: 8px; text-align: right; font-size: 14px;">{{ number_format($monthlyPayroll->overtime_amount, 2) }}</td>
                                 </tbody>
                             </table>

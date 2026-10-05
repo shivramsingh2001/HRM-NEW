@@ -15,8 +15,11 @@ class Loan extends Model
     protected $table = 'loans';
 
     protected $fillable = [
+        'created_by', // admin / HR who raised it for the employee (NULL = the employee)
         'loan_application_id',
         'loan_type_id',
+        'loan_kind',      // loan | salary_advance
+        'advance_month',  // Y-m — salary advance only: the payroll month it is recovered from
         'tenant_id',
         'user_id',
         'loan_number',
@@ -81,6 +84,36 @@ class Loan extends Model
     const STATUS_CANCELLED = 'cancelled';
     const REPAYMENT_TYPE_EMI = 'emi';
     const REPAYMENT_TYPE_LUMPSUM = 'lumpsum';
+
+    // Loans & Advances: a salary advance is a one-time advance recovered from one payroll month.
+    const KIND_LOAN = 'loan';
+    const KIND_SALARY_ADVANCE = 'salary_advance';
+
+    public function isSalaryAdvance(): bool
+    {
+        return $this->loan_kind === self::KIND_SALARY_ADVANCE;
+    }
+
+    /** "Salary advance · Mar 2026" / "Loan" — for lists and notifications. */
+    public function kindLabel(): string
+    {
+        return $this->isSalaryAdvance()
+            ? 'Salary advance' . ($this->advance_month ? ' · ' . \Carbon\Carbon::parse($this->advance_month . '-01')->format('M Y') : '')
+            : 'Loan';
+    }
+
+    /** Status as shown to people — reject() stores 'default'. */
+    public function statusLabel(): string
+    {
+        if ($this->status === self::STATUS_DEFAULT && $this->rejected_at) {
+            return 'Rejected';
+        }
+        if ($this->isSalaryAdvance() && $this->status === self::STATUS_ACTIVE) {
+            return 'Paid — to be deducted';
+        }
+
+        return ucfirst((string) $this->status);
+    }
 
     /**
      * Get all statuses

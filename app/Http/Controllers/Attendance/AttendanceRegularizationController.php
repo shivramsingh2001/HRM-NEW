@@ -21,6 +21,8 @@ use Exception;
 
 class AttendanceRegularizationController extends Controller
 {
+    use \App\Http\Controllers\Concerns\RaisesOnBehalf;
+
     use AuthorizesByScope;
 
      /**
@@ -201,6 +203,112 @@ class AttendanceRegularizationController extends Controller
                 'message' => 'Failed to submit request: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Admin / HR regularizes a day for an employee (Regularization → Team →
+     * "Add regularization"). Any past date; the company's request limits do not
+     * apply. Shift / time checks are the same as the employee's form. Saved
+     * APPROVED by the caller and written to attendance through
+     * AttendanceEntryService::applyRegularization — the same path as approving.
+     */
+    public function storeOnBehalf(Request $request)
+    {
+        $employee = $this->onBehalfEmployee($request);
+
+        $validator = Validator::make($request->all(), [
+            'request_type' => 'required|in:in_time,out_time,both,full_day,wfh_not_marked,technical_issue',
+            'date' => 'required|date|before_or_equal:today',
+            'in_time' => 'required_if:request_type,in_time,both|nullable|date_format:H:i',
+            'out_time' => 'required_if:request_type,out_time,both|nullable|date_format:H:i',
+            'reason' => 'required|string|min:10|max:1000',
+            'file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+        ], [
+            'in_time.required_if' => 'In time is required for this request type',
+            'out_time.required_if' => 'Out time is required for this request type',
+            'reason.min' => 'Reason must be at least 10 characters',
+            'date.before_or_equal' => 'A future date cannot be regularized.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $tenantId = (int) $employee->tenant_id;
+        $date = Carbon::parse($request->date)->toDateString();
+
+        $shiftCheck = app(\App\Services\Attendance\RegularizationShiftCheck::class)->check(
+            (int) $employee->id, $tenantId, $date, $request->input('user_shift_id'),
+            $request->request_type == 'both' ? $request->in_time : null,
+            $request->request_type == 'both' ? $request->out_time : null,
+        );
+        if ($shiftCheck['error']) {
+            return response()->json(['success' => false, 'errors' => [$shiftCheck['field'] => [$shiftCheck['error']]]], 422);
+        }
+
+        $existing = AttendanceRegularization::where('user_id', $employee->id)->where('tenant_id', $tenantId)
+            ->where('date', $date)->where('user_shift_id', $shiftCheck['user_shift_id'])
+            ->whereIn('status', ['pending', 'approved'])->first();
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => "{$employee->name} already has a {$existing->status} regularization for this date"
+                    . ($existing->status === 'pending' ? ' — approve that one instead.' : '.'),
+            ], 422);
+        }
+
+        $filePath = null;
+        try {
+            $filePath = $request->hasFile('file')
+                ? file_storage()->upload($request->file('file'), 'regularization', ['tenant' => $tenantId])->path
+                : null;
+
+            $regularization = DB::transaction(function () use ($request, $employee, $tenantId, $date, $shiftCheck, $filePath) {
+                $regularization = AttendanceRegularization::create([
+                    'tenant_id' => $tenantId,
+                    'user_id' => $employee->id,
+                    'created_by' => Auth::id(),
+                    'date' => $date,
+                    'user_shift_id' => $shiftCheck['user_shift_id'],
+                    'request_type' => $request->request_type,
+                    'in_time' => $request->in_time,
+                    'out_time' => $request->out_time,
+                    'reason' => $request->reason,
+                    'file' => $filePath,
+                    'status' => 'approved',
+                    'approved_by' => Auth::id(),
+                    'approved_date' => now(),
+                    'approval_remarks' => 'Raised and approved by ' . Auth::user()->name,
+                ]);
+
+                app(\App\Services\Attendance\AttendanceEntryService::class)->applyRegularization($regularization, Auth::user());
+
+                return $regularization;
+            });
+        } catch (\Throwable $e) {
+            if ($filePath) {
+                file_storage()->delete($filePath); // the row never committed — don't orphan the file
+            }
+            Log::error('Regularization on behalf failed: ' . $e->getMessage());
+
+            return response()->json(['success' => false, 'message' => 'Could not save the regularization: ' . $e->getMessage()], 500);
+        }
+
+        $this->logOnBehalf('regularization.created_on_behalf', 'AttendanceRegularization', (int) $regularization->id, $employee, [
+            'date' => $date, 'request_type' => $regularization->request_type,
+            'in_time' => $regularization->in_time, 'out_time' => $regularization->out_time, 'status' => 'approved',
+        ]);
+
+        try {
+            $this->notificationService->notifyRegularizationApproved($regularization, 'Regularized by ' . Auth::user()->name);
+        } catch (\Throwable $e) {
+            Log::error('Regularization notification failed: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Attendance on " . Carbon::parse($date)->format('d M Y') . " regularized for {$employee->name}.",
+            'data' => $regularization,
+        ]);
     }
 
     /**

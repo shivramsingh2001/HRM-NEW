@@ -28,7 +28,7 @@ class TaskController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Invalid role.'
-                ], 200);
+                ], 403);
             }
 
             // Base query for tasks with essential relationships
@@ -126,10 +126,11 @@ class TaskController extends Controller
                 
             ], 200);
         } catch (Exception $e) {
+            \Illuminate\Support\Facades\Log::error('AI tasks failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred. Please try again later.'.$e->getMessage()
+                'message' => 'An error occurred. Please try again later.'
             ], 500);
         }
     }
@@ -348,6 +349,23 @@ class TaskController extends Controller
                 $query->whereHas('assignments', function ($q) use ($authUser) {
                     $q->where('assigned_to', $authUser->id);
                 });
+                break;
+
+            default:
+                // Custom role: count what its tasks:view scope lets it see (same rule as
+                // the task list above) — it used to fall through and count every task.
+                $customScope = app(RbacService::class)->scopeFor($authUser, 'tasks', 'view');
+                if ($customScope === 'team') {
+                    $query->whereHas('assignments', function ($q) use ($authUser) {
+                        $q->whereIn('assigned_to', function ($innerQ) use ($authUser) {
+                            $innerQ->select('user_id')->from('user_reporting_heads')->where('reporting_head_id', $authUser->id);
+                        })->orWhere('assigned_to', $authUser->id);
+                    });
+                } elseif ($customScope !== 'company') {
+                    $query->whereHas('assignments', function ($q) use ($authUser) {
+                        $q->where('assigned_to', $authUser->id);
+                    });
+                }
                 break;
         }
 

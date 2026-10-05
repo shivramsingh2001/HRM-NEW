@@ -244,7 +244,7 @@
                             @endfeature
                             @feature('loan_management')
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('loan.approvals.pending') }}">
-                                        Loan Requests</a>
+                                        Loans & Advances</a>
                                 </li>
                             @endfeature
                             @feature('overtime')
@@ -296,12 +296,7 @@
                                 @endfeature
                                 @feature('loan_management')
                                     <li class="nxl-item"><a class="nxl-link" href="{{ route('loan.categories.index') }}">
-                                            Loan Categories</a>
-                                    </li>
-                                @endfeature
-                                @feature('overtime')
-                                    <li class="nxl-item"><a class="nxl-link" href="{{ route('overtime.settings') }}">
-                                            Overtime Settings</a>
+                                            Loan & Advance Types</a>
                                     </li>
                                 @endfeature
                                 @feature('asset_management')
@@ -584,7 +579,7 @@
                         <li class="nxl-item">
                             <a href="{{ route('loan.requests.index') }}" class="nxl-link">
                                 <span class="nxl-micon"><i class="feather-repeat"></i></span>
-                                <span class="nxl-mtext">Loan</span><span class="nxl-arrow"></span>
+                                <span class="nxl-mtext">Loans & Advances</span><span class="nxl-arrow"></span>
                             </a>
                         </li>
                     @endif
@@ -827,11 +822,6 @@
                             @feature('loan_management')
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('loan.categories.index') }}">
                                         Loan Categories</a>
-                                </li>
-                            @endfeature
-                            @feature('overtime')
-                                <li class="nxl-item"><a class="nxl-link" href="{{ route('overtime.settings') }}">
-                                        Overtime Settings</a>
                                 </li>
                             @endfeature
                             @feature('asset_management')

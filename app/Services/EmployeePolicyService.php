@@ -53,7 +53,10 @@ class EmployeePolicyService
         ],
         'overtime' => [
             'eligible' => ['label' => 'Eligible for overtime', 'type' => 'bool', 'help' => 'No = cannot request overtime and is not paid for it'],
+            'rate_type' => ['label' => 'Overtime pay', 'type' => 'select', 'options' => ['multiplier' => 'Hourly rate × multiplier', 'fixed' => 'Fixed amount per hour']],
             'rate_multiplier' => ['label' => 'Overtime rate (× hourly rate)', 'type' => 'decimal', 'min' => 0, 'max' => 9.99, 'step' => 0.05],
+            'fixed_rate_per_hour' => ['label' => 'Fixed overtime pay per hour (₹)', 'type' => 'decimal', 'min' => 0, 'max' => 100000, 'step' => 1],
+            'min_hours' => ['label' => 'Minimum overtime hours', 'type' => 'decimal', 'min' => 0, 'max' => 24, 'step' => 0.25, 'help' => '0 = no minimum'],
             'max_hours_per_day' => ['label' => 'Maximum overtime hours per day', 'type' => 'decimal', 'min' => 0, 'max' => 24, 'step' => 0.25, 'help' => '0 = no limit'],
             'max_hours_per_month' => ['label' => 'Maximum overtime hours per month', 'type' => 'decimal', 'min' => 0, 'max' => 744, 'step' => 0.5, 'help' => '0 = no limit'],
             'require_approval' => ['label' => 'Overtime needs approval', 'type' => 'bool'],
@@ -264,7 +267,7 @@ class EmployeePolicyService
         }
 
         $settings = $company ? clone $company : new \stdClass();
-        foreach (['rate_multiplier', 'max_hours_per_day', 'max_hours_per_month', 'require_approval', 'auto_approve_limit'] as $column) {
+        foreach (['rate_type', 'rate_multiplier', 'fixed_rate_per_hour', 'min_hours', 'max_hours_per_day', 'max_hours_per_month', 'require_approval', 'auto_approve_limit'] as $column) {
             if (array_key_exists($column, $custom)) {
                 $settings->{$column} = $custom[$column];
             } elseif (! isset($settings->{$column})) {

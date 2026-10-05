@@ -72,7 +72,7 @@ class ExpenseController extends Controller
                     return response()->json([
                         'success' => false,
                         'message' => 'Unauthorized access. Invalid role.'
-                    ], 200);
+                    ], 403);
             }
             // Order by
             $query->orderBy('expenses.created_at', 'desc');
@@ -130,7 +130,8 @@ class ExpenseController extends Controller
                 
             ], 200);
         } catch (Exception $e) {
-           
+            \Illuminate\Support\Facades\Log::error('AI expenses failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.',

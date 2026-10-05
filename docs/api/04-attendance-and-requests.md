@@ -773,6 +773,18 @@ curl -X POST https://vpshrms.shurttech.com/api/request/store \
 
 > **Per-employee overtime rules (2026-10-02).** Admin/HR can give one employee custom overtime rules (Employee 360 → Policies). On `POST /api/overtime/requests/store` and `POST /api/overtime/requests/update/{id}` the employee's own daily cap / approval / auto-approve values replace the company's, and two extra refusals are possible (HTTP 200, `success: false`): `"This employee is not eligible for overtime."` and `"Overtime cannot exceed {cap} hours in a month for this employee ({booked} already booked)."`. Response shapes are unchanged.
 
+> **Company Policies → Overtime (2026-10-06).**
+> - **List responses.** `GET /api/overtime/requests` and `GET /api/overtime/pending-approvals` add `data.overtime_enabled` (bool) and `data.overtime_mode` (`request` | `auto`). Each request item adds `source` (`request` | `auto`; `auto` = calculated from attendance and already approved).
+> - **When to show "Request overtime".** Only when `overtime_enabled && overtime_mode == "request"`.
+> - **New refusals.** `POST /api/overtime/requests/store`, `update/{id}` and `approve/{id}` can also refuse (HTTP 200, `success: false`) with:
+>   - `"Overtime is turned off for your company."`
+>   - `"Overtime is calculated automatically from your attendance — no request is needed."` (employee requests in auto mode)
+>   - `"Overtime must be at least N hours per day."`
+>   - `"Overtime hours cannot exceed N hours per day."`
+>   - `"Overtime cannot exceed N hours in a month (M hours already booked)."` The company monthly cap is now enforced, not only the per-employee one.
+> - **Rejected dates.** A date whose request was rejected can be requested again; the old row is reopened as pending.
+> - **Approve.** `approve/{id}` with hours above the per-day maximum now returns a JSON message (it used to return a bare `200` body).
+
 > **Request limits (2026-10-03).** `POST /api/user/attendance/regularization` and `POST /api/request/store` (+ request update) can also refuse with HTTP 200, `success: false` when a company or per-employee limit is hit: `"Regularization can only be requested for the last N day(s)."`, `"At most N regularization request(s) can be raised for {Month YYYY} — that many are already pending or approved."`, `"Work from home must be requested at least N day(s) in advance."`, `"Work from home is limited to N day(s) a month — this would make M day(s) in {Month YYYY}."`. Travel requests are not limited. Response shapes are unchanged.
 
 Controller: `app/Http/Controllers/Api/Attendance/OvertimeController.php` (route prefix `overtime`)

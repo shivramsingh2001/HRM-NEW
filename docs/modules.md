@@ -131,7 +131,70 @@ Functional/business-logic reference for the Laravel HRMS app at `D:\HRMNEW\hrm (
 
 ## Overtime
 
-- Web: `App\Http\Controllers\Attendance\OvertimeController` (self-service `overtime.*` routes) + `App\Http\Controllers\Attendance\OvertimeSettingController` (tenant policy, `permission:overtime,manage`).
+- Company Policies → Overtime (added 2026-10-06, replaces the Overtime → Settings page and `OvertimeSettingController`):
+  - Two cards on the Company Policies page (`workforce.blade.php`), shown with `feature:overtime` + `RbacService::can(...,'overtime','manage')`.
+  - Saved by `Settings\OvertimePolicySettingsController` (`PUT overtime-policy-settings`, route `overtime-policy-settings.update`).
+    - Middleware: `role:admin,hr` + `feature:overtime` + `permission:overtime,manage`.
+    - Request class `UpdateOvertimePolicySettingsRequest`; `section` = `mode` | `limits`.
+    - Audit `overtime_settings.updated`.
+  - The old `GET overtime/settings` (`overtime.settings`) now redirects to `workforce-settings#overtime`; sidebar links removed.
+  - **Card "Overtime"**:
+    - `enabled` switch. Off = no new overtime: requests and on-behalf entries refused, no automatic calculation. Already-approved overtime is still paid.
+    - `mode`: `request` (Overtime request & approval, the existing flow) or `auto` (Automatic overtime calculation).
+    - Auto start rule `auto_start_basis`: `grace` (shift end + the shift's `grace_minutes`) or `fixed` (shift end + `auto_start_after_minutes`; e.g. 18:00 + 30 → counts from 18:30).
+  - **Card "Overtime limits & rate"** (both modes):
+    - `min_hours`, `max_hours_per_day`, `max_hours_per_month` (empty/0 = none). The company monthly cap is now enforced.
+    - `rate_type`: `multiplier` (hourly × `rate_multiplier`) or `fixed` (`fixed_rate_per_hour`).
+    - Request mode only: `require_approval`, `auto_approve_limit`.
+  - **One reader**: `App\Services\Attendance\OvertimePolicyService`.
+    - `company()`.
+    - `forEmployee()`: company row + Employee 360 overrides via `EmployeePolicyService::overtime()`. Now also overridable: `rate_type`, `fixed_rate_per_hour`, `min_hours`.
+    - `enabled()`, `isAuto()`, `monthlyCap()`, `bookedHours()` (pending + approved).
+    - `refusal($t,$u,$date,$hours,$ignoreId,$byEmployee)` checks in order: switch, auto mode blocks employee requests, eligibility, minimum, per day, month.
+    - `initialStatus()`, `existing()`.
+    - `saveRequest()`: one row per date (DB unique). A **rejected** date can be raised again: the row is reopened as pending, audit `overtime.resubmitted`.
+    - Used by web + mobile store/update/approve and by `storeOnBehalf` (HR entries allowed in auto mode; limits still apply).
+  - **Automatic mode**: `App\Services\Attendance\AutoOvertimeService::syncDay($userId,$tenantId,$date)`.
+    - Minutes = clock-out − (end of the **last** shift of the day + start offset). The shift end comes from `TenantShiftResolver::instancesForUserDate`; overnight shifts use the real next-day end.
+    - No overtime when:
+      - there is no attendance
+      - there is no clock-out
+      - the clock-out was the system's auto clock-out (`remarks` "Auto clock-out", or last out punch `method = auto_clockout`)
+      - there is no scheduled shift
+      - the clock-out is before the start
+    - Limits applied in order: eligibility, minimum (below → 0), per-day cap, monthly cap (remaining).
+    - Stored as ONE `overtime_requests` row: `source = auto`, `status = approved`, `approved_hours`, `attendance_id`, `auto_minutes`, reason "Calculated from attendance: …".
+    - Recalculated:
+      - on every attendance write (`AttendanceEntryService::record()` → `syncDay`; failures are reported and never block the write)
+      - daily by `overtime:auto-calculate {tenant_id?*} {--date=} {--month=}` (01:00, yesterday + today)
+      - for the month at payroll generation (`MonthlyPayrollController::store`)
+      - for the current month when auto mode is turned on
+    - Never touched:
+      - a requested (`source = request`) row
+      - an auto row HR adjusted or rejected (`manually_adjusted_at`)
+      - a locked month (`PeriodLockService`)
+      - a month whose payslip is `processed`/`paid`
+    - 2nd-shift hours stay paid separately (`ExtraShiftOvertime`), so counting after the last shift never pays twice.
+    - Week-off/holiday work with no shift is not auto-counted.
+  - **Approvals**:
+    - Pending requests work as before, now also checked against the minimum and monthly limits.
+    - Automatic entries (already approved) can be adjusted (`approve` with new hours → `overtime.auto_adjusted`) or rejected (`overtime.auto_rejected`) from Overtime → View all.
+    - `show` returns `attendance_overtime` ("Attendance shows X h after 18:30 …") for the approver.
+    - The employee page hides "Request Overtime" in auto mode or when off; rows show an "Auto" badge.
+    - Mobile `GET /api/overtime/requests` (and pending-approvals) return `overtime_enabled`, `overtime_mode`, and per-row `source`.
+  - **Pay**: `App\Services\Payroll\OvertimePayService`.
+    - `hourlyRate()`: moved from `MonthlyPayrollController::overtimeHourlyRate`, which now delegates to it.
+    - `ratePerHour($t,$u,$hourly)`: the fixed amount, else hourly × multiplier.
+    - `describe()`.
+    - Used by the legacy engine: generation, the Edit Payroll preview (incl. JS `overtimeFixedRate`), and the post-approval recompute.
+    - Used by the **dynamic engine**: `PayrollCalculationEngine` now adds an `overtime` earning line ("Overtime", taxable, after the statutory pass like arrears).
+      - Hourly rate from the legacy UserPayroll/master when present, else the raw `basic` component / calendar days / 8 h.
+      - Returns `overtime_hours/rate/amount`, persisted to `monthly_payrolls.overtime_rate/overtime_amount` on generate and update.
+      - Before this change the dynamic engine paid no overtime.
+    - Payslip/PDF show "Overtime (N h)"; the dynamic PDF takes it from the stored columns.
+  - The Attendance Policy page's "Overtime after (hours)" / "Overtime multiplier" are relabelled *reports only* (attendance summary + cost estimates). They do not drive pay.
+  - Tests: `tests/Feature/OvertimePolicyTest.php`.
+- Web: `App\Http\Controllers\Attendance\OvertimeController` (self-service `overtime.*` routes); before 2026-10-06 also `OvertimeSettingController` (removed; tenant policy, `permission:overtime,manage`).
 - Mobile: `App\Http\Controllers\Api\Attendance\OvertimeController`.
 - **Business rule** (`OvertimeController::store`, `app/Http/Controllers/Attendance/OvertimeController.php:100`): one request per user per date (duplicate blocked); `overtime_hours` must be 0.5–24 and ≤ tenant's `max_hours_per_day` (from `overtime_settings`, tenant-specific row or a global fallback row with `tenant_id = null`); **auto-approval**: if the tenant's policy has `require_approval = false`, or `overtime_hours <= auto_approve_limit`, the request is created with `status = approved` immediately (no approver step) — otherwise `status = pending`.
 - Approve/reject gated `permission:overtime,approve`; view-all/show gated `permission:overtime,view`. Also routed through `ApprovalService` (`OvertimeApprovalHandler`) if a tenant workflow exists.
@@ -205,6 +268,13 @@ Functional/business-logic reference for the Laravel HRMS app at `D:\HRMNEW\hrm (
 - Leave status vocabulary: `pending`, `approved`, `cancelled` (used for both employee-initiated cancel and manager rejection).
 - **Leave Credit** (`LeaveCreditController`, `routes/web.php:474-484`): scheduled/manual crediting (`process`), manual credit/debit (`permission:leave,manage`), new-joiner proration (`handleNewJoiner`), per-user and self transaction history, reports.
 - **Subscription feature gating (added 2026-09-22)**: `leave.*`, `leave-type.*` and `leave-credit.*` routes, sidebar entries and the Leave Report tab all require `feature:leave_management`.
+- **Leave year (added 2026-10-05)**: `App\Services\LeaveYearService` (scoped) — `tenants.leave_year_start_month/_day` (default 4/1, day capped at 28), falling back to `config('leave.fiscal_year_start_*')`. `startFor($tenantId, $date)`, `startInYear()`, `label()` ("2026-27"; "2026" for a 1 Jan start). Drives the yearly credit, new-joiner pro-rata (`LeaveCreditController::getCycleStartDate/getNextCreditDate`) and carry forward. `leaves:credit-yearly` is now scheduled **daily 00:30** and, when run by the scheduler, credits a company only on its own leave-year start date; its once-only check is per leave year (`created_at >= leave-year start`), not per calendar year. Naming tenants on the command line still runs them on any day.
+- **Leave carry forward (added 2026-10-05)**:
+  - **Per leave type** (Leave Types add/edit modal, list card, detail page): `max_carry_forward` = days that move into the **next credit period** — required for paid credited types, prefilled with the credit value, 0 ≤ N ≤ `credit_value` (since 2026-10-05 per-period change; types saved earlier with NULL still mean "no limit" until edited) — and `carry_forward_expiry_months` (blank = never; 1–12; **yearly types only**, cleared for monthly/weekly). `LeaveTypeController::carryForwardRules()`. Both are cleared for unpaid types and credit type `no`. `LeaveType::carryForwardPeriod()` (month/week/leave_year) and `carryForwardText()` drive the labels.
+  - **Company switch** (Company Policies → "Leave carry forward" card, `Settings\LeaveCarryForwardSettingsController`, `PUT leave-carry-forward-settings`, `role:admin,hr` + `feature:leave_management`): `tenants.leave_carry_forward_enabled` + leave-year start. Off (default) = today's behaviour, nothing lapses. Turning it on stamps `leave_carry_forward_enabled_at`; a leave year that started before that date is never carried forward retroactively.
+  - **Run**: `leaves:carry-forward {tenant_id?*} {--dry-run} {--date=}` (daily 00:10, before the credits) → `App\Services\LeaveCarryForwardService::run()`. Once per (employee, type, **credit period**) — monthly types on the 1st of each month, weekly types each Monday, yearly types at the leave-year start — for types with a limit (yearly: or expiry): closing balance = current `leave_balances.balance` − net `leave_transactions` created since the period start (so a credit that already ran that day is not lapsed); days above the limit lapse as a `sub` transaction ("Carry forward: X days lapsed (limit N) — Nov 2026" / "week of 23 Nov 2026" / "leave year 2027-28"); the result goes to `leave_carry_forwards` (idempotency + expiry data; `leave_year_start` holds the period start). A period that started before the switch was turned on is skipped.
+  - **Expiry** (yearly types only): when `expires_on` (= year start + N months) is reached, carried − used (approved-leave `sub` minus revoked `add` transactions with a `leave_id`, since the year start — leave taken counts against carried days first), capped at the current balance, lapses as a "Carried leave expired" transaction.
+  - Not covered: a per-employee carry-forward override (Employee 360) and encashment of lapsed days.
 
 ## Holidays
 
@@ -347,6 +417,67 @@ Large module, two generations of code coexisting ("payroll rebuild" phases visib
 - Approvals restricted to `role:admin,hr`; reports to `role:admin,hr,manager`.
 - **Subscription feature gating enforced (added 2026-09-22)**: `feature:loan_management` (default OFF) now wraps the entire `loan.*` route group (categories/requests/approvals/reports). Same backfill precaution as Expense above (`tenants:backfill-feature-usage`) applied before enabling. Same sidebar gap as Expense: the admin "Approval Requests" submenu link (`loan.approvals.pending`) was gated first; the separate self-service "Loan" menu shown to hr/manager/employee (`loan.requests.index`, "My Request") was found ungated and fixed the same day.
 
+### Salary Advance — Loans & Advances (2026-10-06)
+
+A **salary advance** is a one-time advance against ONE salary month, kept inside the Loan module (not a separate module): a `loans` row with `loan_kind = 'salary_advance'` and `advance_month = 'YYYY-MM'`, under a `loan_categories` row with `kind = 'salary_advance'` (no interest, no tenure; optional `max_percent_of_gross`). It reuses the loan routes, buttons and statuses: request → approve / reject → disburse ("Paid") → deducted → closed; cancel while pending/approved (unpaid schedule deleted); manual repayment via the existing lump-sum payment.
+
+- **Service:** `App\Services\Loan\SalaryAdvanceService`
+  - `monthlyGross()` — current dynamic structure gross (`PayrollStructureAssignmentService::toLegacyShapedArray`), else legacy `user_payrolls.gross_salary`.
+  - `monthOpen()` — not locked (`PeriodLockService`) and the employee's payslip for it is absent or still pending.
+  - `openMonths()` — current … +`MONTHS_AHEAD` (2).
+  - `limit()` / `validate()` — category `max_amount` AND `max_percent_of_gross`% of monthly gross, both minus advances already pending/approved/active/closed for that month; also refuses: wrong category type, month outside the window or processed/locked, no salary structure, last working day (offboarding) before the month.
+  - `create()` — the employee, or admin/HR via `storeOnBehalf` (saved approved). `scheduleRow()` writes ONE `loan_repayments` row: month = advance month, due = month end, total = amount, number `LN-…-A1`.
+  - `ensureRecoverableMonth()` — on approve / disburse: if that month's payslip is already processed/paid or the month is locked, the advance (and its row) moves to the next open month (audit `salary_advance.month_moved`, notice returned to the approver); if a *pending* payslip exists the notice says to regenerate it.
+- **Controllers:**
+  - `Loan\LoanController::store/storeOnBehalf` branch on `loan_kind=salary_advance` (`storeSalaryAdvance`). Regular loan requests may only use `kind = loan` categories. `update()` refuses advances (cancel + re-request).
+  - `approve/reject/disburse/cancel/processLumpsumPayment` now write audit rows `loan|salary_advance.{approved,rejected,disbursed,cancelled,repaid_manually}` and notify the employee (`NotificationService::sendToUser`), for loans too.
+  - `GET loan/requests/advance/limit` (`advanceLimit`) feeds the My Loans form.
+  - `Loan\LoanCategoryController` accepts `kind` / `max_percent_of_gross` (advance: interest 0, tenure 1; a used category's type cannot change).
+- **Payroll:**
+  - `LoanDeductionService::dueItems/totalDue/applyDeduction/revokeForPayroll` take `?string $kind` (null = all), so advances and loans are collected, and undone, separately on the same payslip.
+  - `PayrollAttendanceContextBuilder` gives `salary_advance_deduction_amount`; `PayrollCalculationEngine` adds line `salary_advance_deduction` ("Salary Advance Deduction") before `loan_deduction` and returns `salary_advance_deduction(_due)`.
+  - `MonthlyPayrollController::capLoanAndAdvance()` / `capDynamicLoanAndAdvance()` cap both at net pay, **advance first** (generation, dynamic edit, preview, legacy path). New columns `monthly_payrolls.salary_advance_deduction` / `_computed`; legacy key `advance`.
+  - Shown on the payslip (component), PDF, payslip detail page, Edit Payroll ("Salary Advance" block + legacy "Advance" input) and the CSV export.
+  - Shortfall carries to the next payroll (overdue logic below).
+- **Fixed alongside:**
+  - Dynamic Edit Payroll / recalculate-preview / the edit screen's due list now undo this payslip's own loan/advance share before recalculating (they used to see the instalments it had collected as paid and drop the deduction on re-save).
+  - The dynamic payslip PDF takes the loan/advance lines from the stored columns (a live recalculation showed none).
+  - The mobile `Api\Loan\LoanController::store` reloads the trigger-set `loan_number`.
+- **UI:**
+  - My Loans: "Salary advance" button and modal (category, salary month from open months, live "you can take up to ₹X"), badges and deduction status in the list.
+  - Loans & Advances admin list: type filter, "Salary advance · Mon YYYY" badge, remaining amount.
+  - The admin "Create loan request" modal has a Loan / Salary advance toggle.
+  - Loan & Advance Types (categories) page: Type column/selector, % of gross.
+  - Sidebar: "Loans & Advances".
+- **APIs:** mobile `GET /api/loan/categories?kind=`, `GET /api/loan/view?kind=`, `GET /api/loan/advance-limit`, `POST /api/loan/store` with `loan_kind=salary_advance` (docs/api/03-expense-and-loan.md); AI `/api/ai/loan` returns `kind`, `advance_month`, `salary_advances_outstanding`.
+- Offboarding settlement labels the line "Outstanding salary advance (Mon YYYY)".
+
+### Loan deduction in payroll — overdue recovery (2026-10-05)
+
+- `App\Services\Payroll\LoanDeductionService::dueItems($user, $tenant, 'Y-m')` returns this month's instalments **plus every earlier instalment still pending / partial / overdue** on an ACTIVE loan (`month <= payroll month`, oldest due date first; items carry `month` and `is_overdue`). Future months are never touched. `totalDue()` / the dynamic engine's `PayrollAttendanceContextBuilder::loanDeduction()` / the legacy path all read it, so a missed EMI (payroll ran before the loan was active, or net pay could not cover it) is recovered in the next payroll.
+- **Cap**: both generation paths (`processEmployeeMonthlyPayroll`, `processEmployeeMonthlyPayrollDynamic`) cap the applied loan deduction at the net pay before loans (net never below 0); what's left stays due and is collected next month. `loan_deduction_computed` keeps the full amount due.
+- **Per-payslip shares**: `allocateToRepayment()` records each payslip's share in `loan_repayment_allocations`; `revokeForPayroll()` (payslip edit / force-reprocess / delete) undoes only that payslip's share, so an instalment part-paid by September and finished by October keeps September's part when October is re-done. Rows applied before the table existed fall back to the old whole-row reset.
+- Edit Payroll shows overdue items with an "Overdue from <Mon YYYY>" badge.
+- Repayment Schedule (Loan Management detail modal `loans/view-all.blade.php` and My Loans `loans/index.blade.php`, both JS-rendered from `loan.repayments`): columns Amount / Paid / Remaining; status "Partially paid" (with "· overdue" when past due), "Overdue" for an unpaid past-due instalment. My Loans' progress bar counts part-payments.
+- **Schedule start** (`LoanController::alignScheduleStart`): `approve()` moves a first EMI date (or lump-sum due date) that is already past to the next salary date; `disburse()` rebuilds the schedule from the next salary date when nothing has been paid yet and the first instalment is already past.
+
+## Requests raised on behalf of an employee (added 2026-10-05)
+
+Admin / HR (`role:admin,hr`) can raise a Loan, Overtime, Expense, Leave or Regularization for any active employee of the company from that module's admin list page. The request is saved **already approved by the caller** — through the same writes the module's own approval makes — and bypasses the approval workflow (`ApprovalService`).
+
+| Module | Button / page | Route (POST) | Controller | What "approved" writes |
+|---|---|---|---|---|
+| Loan | "Create loan request" — Loan Management (`loan.approvals.pending`) | `loan.approvals.on-behalf` | `LoanController::storeOnBehalf` | status `approved`, `approved_by/at`, repayment schedule (EMI or lump sum). Disburse stays a separate step. Category max amount / tenure enforced (shared `loanTerms()`). |
+| Overtime | "Add overtime" — `overtime.view-all` | `overtime.on-behalf` | `OvertimeController::storeOnBehalf` | status `approved`, `approved_hours` = hours. Any date (past allowed). Employee eligibility / monthly cap (`EmployeePolicyService::overtimeRefusal`) and per-day max still apply; one request per employee per date. |
+| Expense | "Add expense" — `expense.view-all` | `expense.on-behalf` | `ExpenseController::storeOnBehalf` → `ExpenseService::submitOnBehalf` | `submit()` with the employee as owner (category rules, receipts, monthly limit) + `decide(approved)` as the caller in ONE transaction (budget, settlement ledger, `cover_shortfall` option). Status history: pending ("raised by X on behalf of Y") → approved. Payment stays separate. |
+| Leave | "Apply leave for employee" — `leave.view-all` | `leave.on-behalf` | `LeaveController::storeOnBehalf` → `LeaveService::applyOnBehalf` (shared with Employee 360 → Leave → Apply) | `createApproved()` — balance deducted, `source = on_behalf`, `applied_by`. Notice period not enforced; other type / custom rules are. |
+| Regularization | "Add regularization" — `attendance-regularization.manage` | `attendance-regularization.on-behalf` | `AttendanceRegularizationController::storeOnBehalf` | status `approved` + `AttendanceEntryService::applyRegularization()` (attendance row written / audited). Any past date; company request limits ignored; shift / time check (`RegularizationShiftCheck`) applies. |
+
+- **Logs**: `created_by` (loans, overtime_requests, attendance_regularizations, expenses; leaves use `applied_by` + `source`), an `audit_logs` row `{module}.created_on_behalf` (`leave.applied_on_behalf` for leave) with `new_values.on_behalf_of`, `raised_by`, `raised_by_role` and the request details, and the employee gets the module's normal "approved" notification (loan: `NotificationService::sendToUser`). The lists show a "By <name>" badge (`<x-on-behalf.badge>`) and Employee 360 → Activity lists these entries ("Request").
+- Shared code: trait `App\Http\Controllers\Concerns\RaisesOnBehalf` (`onBehalfEmployee()` — active employee of the caller's company, else 422 on `user_id`; role check; `logOnBehalf()`), Blade components `<x-on-behalf.button module="…">`, `<x-on-behalf.modal module="…">` (one form per module, AJAX `FormData` post, select2 employee picker), `<x-on-behalf.badge>`.
+- Web only — the mobile API has no on-behalf endpoints.
+- Fixed alongside: `loans.loan_number` is set by the DB trigger `generate_loan_number_before_insert`, so `LoanController::store()` now `refresh()`es the model before building an auto-approved loan's schedule (repayment numbers used to come out as `-E001`, colliding on the unique key).
+
 ## Projects & Tasks
 
 - `App\Http\Controllers\Project\ProjectController` (routes/web.php `project.*`, all wrapped in `permission:projects,{view,create,edit,delete}` middleware) — CRUD + member listing, plus a full sub-resource set: `storeUpdate`/`resetProgress` (progress feed + manual-override toggle), `storeComment`/`destroyComment`, `storeAttachment`/`destroyAttachment`, `storeMilestone`/`updateMilestone`/`destroyMilestone`, `storeRisk`/`updateRisk`/`destroyRisk`.
@@ -481,7 +612,7 @@ Rebuilt 2026-09-30 (was dummy-data/manual-only). Full flow: submit -> approval (
 - **Leave Balance report (`report.leave.show/balance`) is per-`(user, leave_type)` row, unlike Leave Credit Management's table which is per-user**: `leave_balances` stores one row per `(user_id, leave_type_id)` — balance is tracked per leave type (Casual/Sick/Earned etc. each accrue and deduct independently), not a single pooled number per employee. The Leave Balance report lists `leave_balances` rows directly, so a user with 3 leave types legitimately appears as 3 rows, one balance each. `leave-credit/index.blade.php`'s "Employee Leave Balances" table instead shows one row per user, with `optional($user->leaveBalance)->sum('balance')` pre-summed across all that user's leave types — so despite now sharing the same card/table visual anatomy (2026-09-25), the two tables intentionally differ in row grain: Credit Management answers "what's this employee's total balance", the Leave Balance report answers "what's this employee's balance in each leave type".
 - `App\Http\Controllers\Analytics\AttendanceAnalyticsController` — dashboard + anomaly review (`role:admin,hr,manager`), backed by `AttendanceAnalyticsService`/`AnomalyScanner`.
 - Public API v1 analytics (key-authenticated, `scope:analytics:read`): `present-now`, `trends`, `overtime-cost`, `anomalies` (`App\Http\Controllers\Api\V1\AnalyticsV1Controller`).
-- AI read-only surface: `App\Http\Controllers\AI\*` — a family of `view_ai_all()` endpoints under `/api/ai/*` exposing near-read-only snapshots (attendance, requests, profile, announcements, project, task, expense, holiday, shift plan, regularization, team, leave) — appears purpose-built for an AI assistant/agent integration rather than the Flutter app.
+- AI read-only surface: `App\Http\Controllers\AI\*` — a family of `view_ai_all()` endpoints under `/api/ai/*` exposing near-read-only snapshots (attendance, requests, profile, announcements, project, task, expense, holiday, shift plan, regularization, team, leave; added 2026-10-05: asset, loan, performance, policy, offboarding, meeting, daily-report, onboarding, recruitment; added 2026-10-06: overtime, payroll (payslips), approvals (pending across modules), leave-history (ledger + carry forward) — the new ones share `AI\Concerns\AiScope` for own/team/company visibility; full reference `docs/api/08-ai-assistant-module.md`) — appears purpose-built for an AI assistant/agent integration rather than the Flutter app.
 - **Subscription feature gating (added 2026-09-22)**: each report category on `client/report/index.blade.php` — and its underlying `report.*` routes — is now gated by its **source module's** feature key rather than the Reports page having a key of its own: Attendance reports → `attendance`; the Overtime Hours card → `overtime`; the Shift Report card → `fixed_shift,custom_shift` (either); Task reports → `task_single,task_group` (either); Project reports → `project_management`; Asset reports → `asset_management`; Leave reports → `leave_management` (its Regularization card additionally needs `regularization`, its WFH & Travel card additionally needs `wfh_travel`). A tenant without a module never sees that module's tab, so "no Payroll → no Payroll Reports tab" generalizes to every module this way. Payroll Reports is unchanged (still gated only by the `payroll,view` RBAC scope check — out of scope for this pass).
 
 ## Notifications
