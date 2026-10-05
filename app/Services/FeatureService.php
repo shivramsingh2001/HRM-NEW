@@ -19,9 +19,19 @@ class FeatureService
 {
     private const TTL = 300;
 
+    /**
+     * Per-request memo on top of the cache. The service is registered as
+     * `scoped` (AppServiceProvider), so one instance lives for one request —
+     * a page that checks 50+ features (sidebar, dashboard, @feature) no longer
+     * makes 50+ cache-store round trips. bust() clears it too.
+     *
+     * @var array<string,bool>
+     */
+    private array $memo = [];
+
     public function enabled(int $tenantId, string $key): bool
     {
-        return (bool) Cache::remember(
+        return $this->memo["{$tenantId}:{$key}"] ??= (bool) Cache::remember(
             "feat:{$tenantId}:{$key}",
             self::TTL,
             fn () => $this->resolve($tenantId, $key, 0)
@@ -59,6 +69,7 @@ class FeatureService
     {
         foreach ($this->allKeys() as $key) {
             Cache::forget("feat:{$tenantId}:{$key}");
+            unset($this->memo["{$tenantId}:{$key}"]);
         }
     }
 

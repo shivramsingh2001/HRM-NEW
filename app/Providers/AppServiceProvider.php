@@ -28,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\Storage\FileStorageService::class);
         // Per-employee policy overrides are read many times per request (every graded day) — one instance, one query per employee.
         $this->app->scoped(\App\Services\EmployeePolicyService::class);
+        // Plan features are checked dozens of times per page (sidebar, @feature, controllers) — one instance per request so its memo applies.
+        $this->app->scoped(FeatureService::class);
     }
 
     /**

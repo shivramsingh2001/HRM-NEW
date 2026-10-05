@@ -81,6 +81,9 @@ Route::middleware('tenant')->group(function () {
         //User Profile
         Route::get('/user/profile', [UserController::class, 'index']);
 
+        // Today's birthdays + work anniversaries in the company (any signed-in user; not plan-gated)
+        Route::get('/user/celebrations/today', [\App\Http\Controllers\Api\User\CelebrationController::class, 'today']);
+
         //Leave
         Route::middleware('feature:leave_management')->group(function () {
             Route::get('/leave-type', [LeaveController::class, 'fetch_type']);

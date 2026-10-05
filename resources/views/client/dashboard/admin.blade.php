@@ -161,6 +161,80 @@
            long title/description never forces horizontal scroll in a
            narrow col-md-3 card.
            ============================================ */
+        /* ============================================
+           NEEDS YOUR ACTION — one tile per module with pending approvals
+           ============================================ */
+        .act-total { margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 20px; background: #fef3c7; color: #b45309; }
+        .act-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+        .act-tile { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fff; border: 1px solid var(--d-border, #eaeef5);
+            border-radius: 10px; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+        .act-tile:hover { border-color: #93c5fd; box-shadow: 0 2px 8px rgba(13, 110, 253, .08); }
+        .act-icon { width: 32px; height: 32px; flex: none; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+            background: #f1f5f9; color: #94a3b8; font-size: 14px; }
+        .act-tile.has .act-icon { background: #EFF6FF; color: #0D6EFD; }
+        .act-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+        .act-count { font-size: 16px; font-weight: 800; line-height: 1.1; color: #94a3b8; }
+        .act-tile.has .act-count { color: #0f172a; }
+        .act-label { font-size: 10.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .act-go { color: #cbd5e1; font-size: 13px; }
+        .act-tile:hover .act-go { color: #0D6EFD; }
+        .act-empty { grid-column: 1 / -1; padding: 10px 14px; border: 1px dashed #bbf7d0; background: #f0fdf4; color: #15803d; border-radius: 10px; font-size: 12px; font-weight: 600; }
+
+        /* Period filter — chip + ⋮ menu in the page header */
+        .dash-period-chip { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border-radius: 8px;
+            background: #EFF6FF; color: #0D6EFD; font-size: 11px; font-weight: 700; white-space: nowrap; }
+        .dash-period-chip i { font-size: 11px; }
+        .dash-period-chip.muted { background: #f1f5f9; color: #64748b; }
+        .dash-reset { text-decoration: none; }
+        .dash-reset i { font-size: 13px; }
+        .dash-kebab { width: 30px; height: 30px; border-radius: 8px; border: 1px solid #dfe5f0; background: #fff; color: #475569;
+            display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: background .15s, color .15s, border-color .15s; }
+        .dash-kebab:hover, .dash-kebab[aria-expanded="true"] { background: #EFF6FF; color: #0D6EFD; border-color: #93c5fd; }
+        .dash-kebab i { font-size: 15px; }
+        .dash-period-menu { width: 210px; padding: 5px; border-radius: 10px; border: 1px solid #e5e7eb; box-shadow: 0 8px 24px rgba(15, 23, 42, .12); }
+        .dash-period-head { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; padding: 3px 7px 5px; }
+        /* Beats the theme's `.dropdown .dropdown-menu .dropdown-item` (padding 10px 15px, margin 3px 10px, 13px/600) — this menu only. */
+        .dash-period .dash-period-menu .dropdown-item { display: flex; align-items: center; gap: 7px; margin: 0; padding: 5px 7px;
+            font-size: 11px; font-weight: 500; line-height: 1.35; color: #334155; border-radius: 6px; width: 100%; background: none; border: 0; text-align: left; }
+        .dash-period .dash-period-menu .dropdown-item i { font-size: 11.5px; color: #94a3b8; }
+        .dash-period .dash-period-menu .dropdown-item:hover { background: #f1f5f9; color: #0D6EFD; }
+        .dash-period .dash-period-menu .dropdown-item.active { background: #EFF6FF; color: #0D6EFD; font-weight: 700; }
+        .dash-period .dash-period-menu .dropdown-item.active i { color: #0D6EFD; }
+        .dash-period-menu .dropdown-divider { margin: 3px 0; }
+        .dash-custom { padding: 3px 7px 5px; }
+        .dash-custom-label { display: block; font-size: 9.5px; font-weight: 600; color: #64748b; margin: 3px 0 2px; }
+        .dash-date { width: 100%; border: 1px solid #dfe5f0; border-radius: 7px; padding: 3px 7px; font-size: 11px; height: 28px; }
+        .dash-date:focus { border-color: #0D6EFD; outline: none; box-shadow: 0 0 0 .15rem rgba(13, 110, 253, .12); }
+        .dash-custom .btn { font-size: 11px; padding: 4px 8px; }
+        .dash-period-foot { font-size: 9.5px; line-height: 1.35; color: #94a3b8; padding: 5px 7px 2px; border-top: 1px solid #f1f5f9; margin-top: 3px; }
+        .kpi5-period { font-size: 9.5px; color: #94a3b8; margin-top: -2px; }
+
+        /* Today's celebrations (only rendered when someone has a birthday / anniversary today) */
+        .celebrate-card { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 16px; border-radius: 12px;
+            background: linear-gradient(90deg, #EFF6FF 0%, #fff 70%); border: 1px solid #bfdbfe; }
+        .celebrate-head { display: flex; align-items: center; gap: 10px; flex: none; }
+        .celebrate-emoji { font-size: 26px; line-height: 1; }
+        .celebrate-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+        .celebrate-sub { font-size: 10.5px; color: #64748b; }
+        .celebrate-list { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
+        .celebrate-person { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; background: #fff; border: 1px solid #dbeafe;
+            border-radius: 30px; text-decoration: none; transition: border-color .15s, box-shadow .15s; max-width: 260px; }
+        .celebrate-person:hover { border-color: #0D6EFD; box-shadow: 0 2px 8px rgba(13, 110, 253, .12); }
+        .celebrate-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: none; display: inline-flex; align-items: center;
+            justify-content: center; background: #0D6EFD; color: #fff; font-size: 12px; font-weight: 700; }
+        .celebrate-info { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+        .celebrate-name { font-size: 12px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .celebrate-what { font-size: 10.5px; color: #0D6EFD; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .celebrate-what i { font-size: 10px; }
+
+        /* Today at a glance */
+        .glance-stats { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--d-border, #eaeef5); }
+        .glance-stats > div { padding: 10px 6px; text-align: center; }
+        .glance-stats > div + div { border-left: 1px solid var(--d-border, #eaeef5); }
+        .glance-stats .n { display: block; font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+        .glance-stats .l { font-size: 9.5px; color: #64748b; text-transform: uppercase; letter-spacing: .02em; }
+        .glance-sub { padding: 8px 14px 0; font-size: 9.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; border-top: 1px solid var(--d-border, #eaeef5); }
+
         .ann-list { padding: 4px 14px; }
         .ann-row { padding: 9px 0; border-bottom: 1px dashed var(--d-border); }
         .ann-row:last-child { border-bottom: none; }
@@ -331,6 +405,12 @@
 
         /* compact gutters */
         .row.g-compact { --bs-gutter-x: 8px; --bs-gutter-y: 8px; }
+        /* The theme gives every .card margin-bottom: 24px (and .stretch-full = 100% - 24px). Cards with a fixed
+           height (.fixed-h-card) or stretch-full therefore pushed 24px extra below their row, unlike the h-100
+           rows. Rows here space themselves (mb-2 + gutter), so cards inside them carry no margin of their own. */
+        .main-content .row.g-compact > [class*="col"] > .card,
+        .main-content .row.g-compact > [class*="col"] > a > .card { margin-bottom: 0; }
+        .main-content .row.g-compact .card.stretch-full:not(.fixed-h-card) { height: 100%; }
 
         a { text-decoration: none; }
         .text-dark { color: var(--d-text) !important; }
@@ -339,7 +419,60 @@
 
 @section('content-area')
     <!-- [ page-header ] start -->
-    <x-ui.page-header title="Admin Dashboard" :back="false" />
+    @php
+        $rg = $range ?? ['preset' => 'none', 'label' => 'All data', 'from' => now()->toDateString(), 'to' => now()->toDateString(), 'note' => null, 'is_today' => true, 'days' => 1, 'applied' => false];
+        $ap = $rg['applied'] ?? false; // a period filter is applied
+        $presets = ['today' => ['Today', 'sun'], 'last_7_days' => ['Last 7 days', 'clock'], 'this_month' => ['This month', 'calendar'], 'previous_month' => ['Previous month', 'rotate-ccw']];
+        $keep = request()->only('performance_month'); // other widgets' own choices survive a period change
+        $rangeText = \Carbon\Carbon::parse($rg['from'])->format('d M Y') . ($rg['from'] !== $rg['to'] ? ' – ' . \Carbon\Carbon::parse($rg['to'])->format('d M Y') . ' (' . $rg['days'] . ' days)' : '');
+    @endphp
+    <x-ui.page-header title="Admin Dashboard" :back="false">
+        <x-slot:actions>
+            {{-- Period filter: current period chip + ⋮ menu (Today / Last 7 days / This month / Previous month / Custom range) --}}
+            @if ($ap)
+                <span class="dash-period-chip" title="{{ $rangeText }}"><i class="feather-calendar"></i> {{ $rg['label'] }}</span>
+                <a href="{{ route('dashboard', $keep) }}" class="dash-kebab dash-reset" title="Reset filter — show all data" aria-label="Reset filter">
+                    <i class="feather-rotate-ccw"></i>
+                </a>
+            @else
+                <span class="dash-period-chip muted" title="No period filter — each card shows its normal data"><i class="feather-layers"></i> All data</span>
+            @endif
+            <div class="dropdown dash-period">
+                <button type="button" class="dash-kebab" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+                    aria-label="Dashboard period" title="Change period">
+                    <i class="feather-more-vertical"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end dash-period-menu">
+                    <div class="dash-period-head">Show data for</div>
+                    @foreach ($presets as $key => [$text, $icon])
+                        <a href="{{ route('dashboard', array_merge($keep, ['range' => $key])) }}" class="dropdown-item {{ $rg['preset'] === $key ? 'active' : '' }}">
+                            <i class="feather-{{ $icon }}"></i><span>{{ $text }}</span>
+                            @if ($rg['preset'] === $key)<i class="feather-check ms-auto"></i>@endif
+                        </a>
+                    @endforeach
+                    <div class="dropdown-divider"></div>
+                    <button type="button" class="dropdown-item {{ $rg['preset'] === 'custom' ? 'active' : '' }}" id="dashCustomBtn">
+                        <i class="feather-sliders"></i><span>Custom range</span>
+                        @if ($rg['preset'] === 'custom')<i class="feather-check ms-auto"></i>@else<i class="feather-chevron-down ms-auto"></i>@endif
+                    </button>
+                    <form method="GET" action="{{ route('dashboard') }}" class="dash-custom" id="dashCustom" style="{{ $rg['preset'] === 'custom' ? '' : 'display:none' }}">
+                        @foreach ($keep as $k => $v)<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endforeach
+                        <input type="hidden" name="range" value="custom">
+                        <label class="dash-custom-label">From</label>
+                        <input type="date" name="from" value="{{ $rg['preset'] === 'custom' ? $rg['from'] : '' }}" max="{{ now()->toDateString() }}" class="dash-date" aria-label="From date" required>
+                        <label class="dash-custom-label">To</label>
+                        <input type="date" name="to" value="{{ $rg['preset'] === 'custom' ? $rg['to'] : '' }}" max="{{ now()->toDateString() }}" class="dash-date" aria-label="To date" required>
+                        <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">Apply</button>
+                    </form>
+                    @if ($ap)
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ route('dashboard', $keep) }}" class="dropdown-item"><i class="feather-rotate-ccw"></i><span>Reset filter</span></a>
+                    @endif
+                    <div class="dash-period-foot">Pending approvals, celebrations and upcoming items always show "now".</div>
+                </div>
+            </div>
+        </x-slot:actions>
+    </x-ui.page-header>
     <!-- [ page-header ] end -->
 
     <!-- [ Main Content ] start -->
@@ -348,7 +481,7 @@
         <!-- Welcome Banner -->
         <div class="row g-compact mb-2">
             <div class="col-12">
-                <div class="card welcome-banner text-white">
+                <div class="welcome-banner text-white">
                     <div class="card-body">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                             <div>
@@ -366,11 +499,58 @@
             </div>
         </div>
 
+        @if (!empty($rg['note']))
+            <div class="alert alert-info py-2 mb-2" style="font-size:11px;border-radius:10px;"><i class="feather-info me-1"></i>{{ $rg['note'] }}</div>
+        @endif
+
+        <!-- Today's celebrations: shown only on a day someone has a birthday / work anniversary -->
+        @if (($today_celebrations['total'] ?? 0) > 0)
+            <div class="celebrate-card mb-2">
+                <div class="celebrate-head">
+                    <span class="celebrate-emoji" aria-hidden="true">🎉</span>
+                    <div>
+                        <div class="celebrate-title">Today's celebrations</div>
+                        <div class="celebrate-sub">Wish them today — {{ \Carbon\Carbon::parse($today_celebrations['date'])->format('l, d F') }}</div>
+                    </div>
+                </div>
+                <div class="celebrate-list">
+                    @foreach ($today_celebrations['birthdays'] as $p)
+                        <a href="{{ route('employee.show', encrypt($p['id'])) }}" class="celebrate-person">
+                            @if ($p['profile_image'])
+                                <img src="{{ $p['profile_image'] }}" alt="{{ $p['name'] }}" class="celebrate-avatar">
+                            @else
+                                <span class="celebrate-avatar">{{ strtoupper(mb_substr($p['name'], 0, 1)) }}</span>
+                            @endif
+                            <span class="celebrate-info">
+                                <span class="celebrate-name">{{ $p['name'] }}</span>
+                                <span class="celebrate-what"><i class="feather-gift"></i> Birthday{{ $p['designation'] ? ' · ' . $p['designation'] : '' }}</span>
+                            </span>
+                        </a>
+                    @endforeach
+                    @foreach ($today_celebrations['anniversaries'] as $p)
+                        <a href="{{ route('employee.show', encrypt($p['id'])) }}" class="celebrate-person">
+                            @if ($p['profile_image'])
+                                <img src="{{ $p['profile_image'] }}" alt="{{ $p['name'] }}" class="celebrate-avatar">
+                            @else
+                                <span class="celebrate-avatar">{{ strtoupper(mb_substr($p['name'], 0, 1)) }}</span>
+                            @endif
+                            <span class="celebrate-info">
+                                <span class="celebrate-name">{{ $p['name'] }}</span>
+                                <span class="celebrate-what"><i class="feather-award"></i> {{ $p['years'] }} {{ $p['years'] > 1 ? 'years' : 'year' }} at work</span>
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <!-- Employee Statistics Cards -->
         @php
             $empBase = $total_employees ?? 0;
             $pct = fn ($n) => $empBase > 0 ? round(($n / $empBase) * 100) : 0;
-            $inactiveEmployees = max(0, ($total_employees ?? 0) - ($active_employees ?? 0));
+            $inactiveEmployees = $inactive_employees ?? 0;
+            $show = $show ?? [];
+            $offToday = ($today['week_off'] ?? 0) + ($today['holiday'] ?? 0);
             $taskBase = $total_tasks ?? 0;
             $taskPct = $taskBase > 0 ? round((($completed_tasks ?? 0) / $taskBase) * 100) : 0;
             $projBase = $total_projects ?? 0;
@@ -400,19 +580,23 @@
                     <div class="kpi5-card">
                         <div class="kpi5-top">
                             <span class="kpi5-icon bg-soft-success"><i class="feather-check-circle"></i></span>
-                            <span class="kpi5-pill">{{ $pct($present_today ?? 0) }}% Rate</span>
+                            <span class="kpi5-pill" title="Present ÷ (present + leave + absent) — week-offs and holidays excluded">{{ $today['rate'] ?? 0 }}% Rate</span>
                         </div>
                         <div class="kpi5-value">{{ $present_today ?? 0 }}</div>
-                        <div class="kpi5-label">Present Today</div>
+                        <div class="kpi5-label">{{ ($rg['is_today'] ?? true) ? 'Present Today' : 'Present · ' . $rg['label'] }}</div>
+                        @unless ($rg['is_today'] ?? true)<div class="kpi5-period">employee-days</div>@endunless
                         <div class="kpi5-divider"></div>
+                        {{-- Each employee counted once: present → leave → holiday/week-off → absent --}}
                         <div class="kpi5-foot">
                             <div class="kpi5-stat"><span class="n">{{ $absent_today ?? 0 }}</span><span class="l">Absent</span></div>
-                            <div class="kpi5-stat"><span class="n">{{ $on_leave_today ?? 0 }}</span><span class="l">On leave</span></div>
+                            <div class="kpi5-stat"><span class="n">{{ $on_leave_today ?? 0 }}</span><span class="l">Leave</span></div>
+                            <div class="kpi5-stat" title="{{ ($today['holiday_name'] ?? null) ? 'Holiday: ' . $today['holiday_name'] : 'Week-off / holiday' }}"><span class="n">{{ $offToday }}</span><span class="l">Off</span></div>
                         </div>
                     </div>
                 </a>
             </div>
 
+            @if ($show['tasks'] ?? false)
             <div class="col">
                 <a href="{{ route('task.assigned-by-me') }}" class="text-decoration-none">
                     <div class="kpi5-card">
@@ -421,7 +605,7 @@
                             <span class="kpi5-pill">{{ $taskPct }}% Done</span>
                         </div>
                         <div class="kpi5-value">{{ $total_tasks ?? 0 }}</div>
-                        <div class="kpi5-label">Total Tasks</div>
+                        <div class="kpi5-label">{{ $ap ? 'Tasks · ' . $rg['label'] : 'Total Tasks' }}</div>
                         <div class="kpi5-divider"></div>
                         <div class="kpi5-foot">
                             <div class="kpi5-stat"><span class="n">{{ $pending_tasks ?? 0 }}</span><span class="l">Pending</span></div>
@@ -430,7 +614,9 @@
                     </div>
                 </a>
             </div>
+            @endif
 
+            @if ($show['projects'] ?? false)
             <div class="col">
                 <a href="{{ route('project.index') }}" class="text-decoration-none">
                     <div class="kpi5-card">
@@ -439,7 +625,7 @@
                             <span class="kpi5-pill">{{ $projPct }}% Done</span>
                         </div>
                         <div class="kpi5-value">{{ $total_projects ?? 0 }}</div>
-                        <div class="kpi5-label">Total Projects</div>
+                        <div class="kpi5-label">{{ $ap ? 'Projects · ' . $rg['label'] : 'Total Projects' }}</div>
                         <div class="kpi5-divider"></div>
                         <div class="kpi5-foot">
                             <div class="kpi5-stat"><span class="n">{{ $ongoing_projects ?? 0 }}</span><span class="l">Ongoing</span></div>
@@ -448,31 +634,217 @@
                     </div>
                 </a>
             </div>
+            @endif
 
             <div class="col">
                 <a href="{{ route('employee.index') }}" class="text-decoration-none">
                     <div class="kpi5-card">
                         <div class="kpi5-top">
                             <span class="kpi5-icon bg-soft-warning"><i class="feather-user-plus"></i></span>
-                            <span class="kpi5-pill">This month</span>
+                            <span class="kpi5-pill">{{ $ap ? $rg['label'] : 'This month' }}</span>
                         </div>
                         <div class="kpi5-value">{{ $monthly_joinings ?? 0 }}</div>
                         <div class="kpi5-label">New Joinings</div>
                         <div class="kpi5-divider"></div>
                         <div class="kpi5-foot">
-                            <div class="kpi5-stat"><span class="n">{{ $on_leave_today ?? 0 }}</span><span class="l">On leave</span></div>
-                            <div class="kpi5-stat"><span class="n">{{ $absent_today ?? 0 }}</span><span class="l">Absent</span></div>
+                            <div class="kpi5-stat"><span class="n">{{ $today['late_count'] ?? 0 }}</span><span class="l">Late today</span></div>
+                            <div class="kpi5-stat"><span class="n">{{ $today['early_count'] ?? 0 }}</span><span class="l">Left early</span></div>
                         </div>
                     </div>
                 </a>
             </div>
         </div>
 
+        <!-- Needs your action: pending approvals per module (enabled modules the viewer may open) -->
+        @if (!empty($pending_approvals))
+            @php $pendingTotal = collect($pending_approvals)->sum('count'); @endphp
+            <div class="section-hdr">
+                <div class="section-hdr-left">
+                    <span class="section-hdr-icon"><i class="feather-inbox"></i></span>
+                    <h6 class="section-hdr-title">Needs your action</h6>
+                    @if ($pendingTotal > 0)<span class="act-total">{{ $pendingTotal }} pending</span>@endif
+                </div>
+            </div>
+            <div class="act-grid mb-2">
+                @if ($pendingTotal === 0)
+                    <div class="act-empty"><i class="feather-check-circle"></i> All caught up — nothing is waiting for approval.</div>
+                @else
+                    @foreach ($pending_approvals as $item)
+                        <a href="{{ $item['url'] }}" class="act-tile {{ $item['count'] > 0 ? 'has' : '' }}">
+                            <span class="act-icon"><i class="feather-{{ $item['icon'] }}"></i></span>
+                            <span class="act-body">
+                                <span class="act-count">{{ $item['count'] }}</span>
+                                <span class="act-label">{{ $item['label'] }}</span>
+                            </span>
+                            <i class="feather-chevron-right act-go"></i>
+                        </a>
+                    @endforeach
+                @endif
+            </div>
+        @endif
+
+        <!-- Today / People / Holidays / Recent leave -->
+        <div class="row g-compact mb-2">
+            @if ($show['attendance'] ?? false)
+            <div class="col-xl-3 col-md-6">
+                <div class="card stretch-full fixed-h-card">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">{{ ($rg['is_today'] ?? true) ? 'Today at a glance' : 'Punctuality' }}</h5>
+                        <span class="badge bg-soft-primary">{{ ($rg['is_today'] ?? true) ? now()->format('d M') : $rg['label'] }}</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="glance-stats">
+                            <div><span class="n text-warning">{{ $today['late_count'] ?? 0 }}</span><span class="l">Late</span></div>
+                            <div><span class="n">{{ $today['early_count'] ?? 0 }}</span><span class="l">Left early</span></div>
+                            <div title="{{ ($rg['is_today'] ?? true) ? 'Clocked in yesterday but never clocked out' : 'Days in this period with a clock-in but no clock-out' }}"><span class="n text-danger">{{ $today['missed_clock_out'] ?? 0 }}</span><span class="l">{{ ($rg['is_today'] ?? true) ? 'No clock-out (yday)' : 'No clock-out' }}</span></div>
+                        </div>
+                        <div class="ann-list">
+                            @forelse ($today['late_list'] ?? [] as $late)
+                                <div class="ann-row d-flex justify-content-between align-items-center">
+                                    <span class="ann-title">{{ $late->name }} <span class="stat-sub">({{ $late->employee_id }})</span></span>
+                                    <span class="badge bg-soft-warning text-warning">{{ $late->late_days > 1 ? $late->late_days . ' days · ' : '' }}{{ $late->late_minutes }}m late</span>
+                                </div>
+                            @empty
+                                <div class="text-center py-3 text-muted fs-12">No late arrivals today</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card stretch-full fixed-h-card">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">birthdays &amp; anniversaries</h5>
+                        <span class="badge bg-soft-info">Next 30 days</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="ann-list">
+                            @php
+                                $celebrations = collect($upcoming_birthdays ?? [])->map(fn ($b) => ['icon' => 'gift', 'name' => $b['user']->name, 'what' => 'Birthday', 'days' => $b['days_until'], 'date' => $b['date']])
+                                    ->concat(collect($upcoming_anniversaries ?? [])->map(fn ($a) => ['icon' => 'award', 'name' => $a['user']->name, 'what' => $a['years'] . ' yr' . ($a['years'] > 1 ? 's' : '') . ' at work', 'days' => $a['days_until'], 'date' => $a['date']]))
+                                    ->sortBy('days')->take(6);
+                            @endphp
+                            @forelse ($celebrations as $c)
+                                <div class="ann-row d-flex justify-content-between align-items-center">
+                                    <span class="ann-title"><i class="feather-{{ $c['icon'] }} text-primary me-1"></i>{{ $c['name'] }} <span class="stat-sub">· {{ $c['what'] }}</span></span>
+                                    <span class="ann-date">{{ $c['days'] === 0 ? 'Today' : ($c['days'] === 1 ? 'Tomorrow' : $c['date']->format('d M')) }}</span>
+                                </div>
+                            @empty
+                                <div class="text-center py-4 text-muted fs-12">No birthdays or work anniversaries soon</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card stretch-full fixed-h-card">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">New joiners</h5>
+                        <a href="{{ route('employee.index') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        {{-- Same employee cell as the Top 5 Performer card --}}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead><tr><th>Employee</th><th>Joined</th></tr></thead>
+                                <tbody>
+                                    @forelse ($recent_joinings ?? [] as $j)
+                                        <tr onclick="window.location.href='{{ route('team.member-detail', ['id' => encrypt($j->id)]) }}'">
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="tbl-avatar bg-soft-primary">
+                                                        @if ($j->profile_image)
+                                                            <img src="{{ file_url($j->profile_image, 'profile_photo') }}">
+                                                        @else
+                                                            {{ strtoupper(substr($j->name, 0, 2)) }}
+                                                        @endif
+                                                    </div>
+                                                    <div>
+                                                        <span class="d-block fw-bold">{{ $j->name }}</span>
+                                                        <span class="stat-sub">{{ $j->employee_id ?: '—' }}{{ $j->designation_name ? ' · ' . $j->designation_name : '' }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><span class="fw-bold text-primary">{{ \Carbon\Carbon::parse($j->joined_on ?: $j->created_at)->format('d M') }}</span></td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="2" class="text-center py-4 text-muted">No employees yet</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (($show['holiday'] ?? false) && count($upcoming_holidays ?? []) > 0)
+                            <div class="glance-sub">Upcoming holidays</div>
+                            <div class="ann-list">
+                                @foreach ($upcoming_holidays as $h)
+                                    <div class="ann-row d-flex justify-content-between align-items-center">
+                                        <span class="ann-title"><i class="feather-sun text-primary me-1"></i>{{ $h->name }}</span>
+                                        <span class="ann-date">{{ \Carbon\Carbon::parse($h->start_date)->format('d M') }}{{ $h->end_date && $h->end_date != $h->start_date ? ' – ' . \Carbon\Carbon::parse($h->end_date)->format('d M') : '' }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            @if ($show['leave'] ?? false)
+            <div class="col-xl-3 col-md-6">
+                <div class="card stretch-full fixed-h-card">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">{{ $ap ? 'Leave requests · ' . $rg['label'] : 'Recent leave requests' }}</h5>
+                        <a href="{{ route('leave.view-all') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        {{-- Same employee cell as the Top 5 Performer card --}}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead><tr><th>Employee</th><th>Leave</th></tr></thead>
+                                <tbody>
+                                    @forelse ($recent_leaves ?? [] as $lv)
+                                        @php $st = strtolower((string) $lv->status); @endphp
+                                        <tr onclick="window.location.href='{{ route('leave.view-all') }}'">
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="tbl-avatar bg-soft-info">
+                                                        @if ($lv->profile_image)
+                                                            <img src="{{ file_url($lv->profile_image, 'profile_photo') }}">
+                                                        @else
+                                                            {{ strtoupper(substr($lv->user_name ?? '—', 0, 2)) }}
+                                                        @endif
+                                                    </div>
+                                                    <div>
+                                                        <span class="d-block fw-bold">{{ $lv->user_name ?? '—' }}</span>
+                                                        <span class="stat-sub">{{ $lv->employee_id ?: '—' }} · {{ $lv->leave_type_name ?? 'Leave' }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="d-block fw-bold text-primary">{{ \Carbon\Carbon::parse($lv->start_date)->format('d M') }}{{ $lv->end_date && $lv->end_date != $lv->start_date ? ' – ' . \Carbon\Carbon::parse($lv->end_date)->format('d M') : '' }}</span>
+                                                <span class="badge {{ ['approved' => 'bg-soft-success text-success', 'pending' => 'bg-soft-warning text-warning', 'rejected' => 'bg-soft-danger text-danger'][$st] ?? 'bg-soft-secondary text-secondary' }}">{{ ucfirst($st) }}</span>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="2" class="text-center py-4 text-muted">{{ $ap ? 'No leave requests in this period' : 'No leave requests yet' }}</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+        </div>
+
+        @if ($show['expenses'] ?? false)
         <!-- Expense Overview -->
         <div class="section-hdr">
             <div class="section-hdr-left">
                 <span class="section-hdr-icon"><i class="feather-credit-card"></i></span>
-                <h6 class="section-hdr-title">Expense Overview</h6>
+                <h6 class="section-hdr-title">Expense Overview @if ($ap)<span class="stat-sub fw-normal">· balances now, expenses dated {{ $rg['label'] }}</span>@endif</h6>
             </div>
             <a href="{{ route('expense.view-all') }}" class="section-hdr-view">View</a>
         </div>
@@ -578,10 +950,12 @@
                 </div>
             @endforeach
         </div>
+        @endif
 
         <!-- Task Overview / Company Trend / Calendar Row -->
         <div class="row g-compact mb-2">
             <!-- Task Overview -->
+            @if ($show['tasks'] ?? false)
             <div class="col-md-3">
                 <div class="card stretch-full h-100 proj-bar-card">
                     <div class="card-header">
@@ -623,9 +997,10 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <!-- Company Overview Trend -->
-            <div class="col-md-6">
+            <div class="{{ ($show['tasks'] ?? false) ? 'col-md-6' : 'col-md-9' }}">
                 <div class="card stretch-full h-100">
                     <div class="card-header">
                         <h5 class="card-title card-title-sm">Company Overview Trend</h5>
@@ -660,7 +1035,7 @@
         @php
             $projTiles = [
                 ['label'=>'Total','val'=>$total_projects ?? 0],
-                ['label'=>'Pending','val'=>$active_projects ?? 0],
+                ['label'=>'Pending','val'=>$pending_projects ?? 0],
                 ['label'=>'Ongoing','val'=>$ongoing_projects ?? 0],
                 ['label'=>'Completed','val'=>$completed_projects ?? 0],
                 ['label'=>'On Hold','val'=>$on_hold_projects ?? 0],
@@ -668,16 +1043,19 @@
             ];
         @endphp
         <div class="row g-compact mb-2">
+            @if ($show['attendance'] ?? false)
             <div class="col-md-3">
                 <div class="card stretch-full h-100">
                     <div class="card-header">
-                        <h5 class="card-title card-title-sm">Weekly Attendance Overview</h5>
+                        <h5 class="card-title card-title-sm">Attendance Overview</h5>
+                        <span class="badge bg-soft-primary">{{ $ap ? $rg['label'] : 'Last 7 days' }}</span>
                     </div>
                     <div class="card-body p-2">
                         <div id="attendance-chart" style="height: 200px;"></div>
                     </div>
                 </div>
             </div>
+            @endif
 
             <div class="col-md-3">
                 <div class="card stretch-full h-100">
@@ -704,6 +1082,7 @@
                 </div>
             </div>
 
+            @if ($show['projects'] ?? false)
             <div class="col-md-3">
                 <div class="card stretch-full h-100">
                     <div class="card-header">
@@ -713,7 +1092,7 @@
                     <div class="card-body">
                         <div id="project-status-chart" style="height: 190px; width: 100%;"></div>
                         @php
-                            $statusColors = ['active'=>'#0D6EFD','ongoing'=>'#0D6EFD','completed'=>'#3b82f6','on_hold'=>'#60a5fa','cancelled'=>'#bfdbfe'];
+                            $statusColors = ['pending'=>'#93c5fd','active'=>'#0D6EFD','ongoing'=>'#0D6EFD','completed'=>'#3b82f6','on_hold'=>'#60a5fa','cancelled'=>'#bfdbfe'];
                         @endphp
                         <table class="mini-table" id="project-status-table-view" style="display:none;">
                             <tbody>
@@ -765,16 +1144,18 @@
                     </div>
                 </div>
             </div>
+            @endif
         </div>
 
         <!-- Regularization / Performance / Calendar Row -->
         <div class="row g-compact mb-2">
             <!-- Most Regularization Request -->
+            @if ($show['regularization'] ?? false)
             <div class="col-md-3">
                 <div class="card stretch-full fixed-h-card">
                     <div class="card-header">
                         <h5 class="card-title card-title-sm">Most Regularization Requests</h5>
-                        <span class="badge bg-soft-success">This Month</span>
+                        <span class="badge bg-soft-success">{{ $ap ? $rg['label'] : 'All time' }}</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -809,13 +1190,15 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <!-- Top 5 Performer -->
+            @if ($show['attendance'] ?? false)
             <div class="col-md-3">
                 <div class="card stretch-full fixed-h-card">
                     <div class="card-header">
                         <h5 class="card-title card-title-sm">Top 5 Performer</h5>
-                        <select class="month-filter" onchange="location.search = 'performance_month=' + this.value">
+                        <select class="month-filter" onchange="dashSetParam('performance_month', this.value)">
                             @foreach ($performance_month_options ?? [] as $opt)
                                 <option value="{{ $opt['value'] }}" {{ ($selected_performance_month ?? '') === $opt['value'] ? 'selected' : '' }}>{{ $opt['label'] }}</option>
                             @endforeach
@@ -854,8 +1237,10 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <!-- Least Tasks Assigned -->
+            @if ($show['tasks'] ?? false)
             <div class="col-md-3">
                 <div class="card stretch-full fixed-h-card">
                     <div class="card-header">
@@ -895,8 +1280,10 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <!-- Recent Announcements -->
+            @if ($show['announcements'] ?? false)
             <div class="col-md-3">
                 <div class="card stretch-full fixed-h-card">
                     <div class="card-header">
@@ -920,6 +1307,7 @@
                     </div>
                 </div>
             </div>
+            @endif
         </div>
 
     </div>
@@ -1005,8 +1393,24 @@
         $(document).ready(function() {
             const colorPalette = ['#0D6EFD', '#0B5ED7', '#0D6EFD', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#0ea5e9'];
             const statusColors = {
-                'active': '#0D6EFD', 'ongoing': '#0D6EFD', 'completed': '#3b82f6', 'on_hold': '#60a5fa', 'cancelled': '#bfdbfe'
+                'pending': '#93c5fd', 'active': '#0D6EFD', 'ongoing': '#0D6EFD', 'completed': '#3b82f6', 'on_hold': '#60a5fa', 'cancelled': '#bfdbfe'
             };
+
+            // Period filter: "Custom" reveals the from/to dates; changing the Top-performer month keeps the period.
+            (function () {
+                const btn = document.getElementById('dashCustomBtn');
+                const box = document.getElementById('dashCustom');
+                if (btn && box) btn.addEventListener('click', function () {
+                    box.style.display = box.style.display === 'none' ? '' : 'none';
+                    const first = box.querySelector('input[name="from"]');
+                    if (box.style.display !== 'none' && first) first.focus();
+                });
+                window.dashSetParam = function (key, value) {
+                    const p = new URLSearchParams(location.search);
+                    p.set(key, value);
+                    location.search = p.toString();
+                };
+            })();
 
             // Attendance Chart
            

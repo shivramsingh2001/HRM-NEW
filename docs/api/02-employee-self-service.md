@@ -82,6 +82,66 @@ curl -X GET "https://vpshrms.shurttech.com/api/holiday" \
 
 ---
 
+## GET /user/celebrations/today
+
+**Purpose:** Today's birthdays and work anniversaries in the employee's company — for a "Wish them today" card in the app. Same list as the admin web dashboard's "Today's celebrations" card (`App\Services\CelebrationService::today()`).
+
+**Auth:** JWT bearer + singleLogin.
+
+**Tenant scope:** `User` is tenant-scoped via `TenantTrait`; only the caller's company.
+
+**Permissions/role requirements:** None (any authenticated user). Not plan-gated.
+
+**Headers:** `Authorization: Bearer <jwt>`, `Device-Token`, `Accept: application/json`.
+
+**Request parameters / body:** None (always "today" in the server timezone).
+
+**Sample request:**
+
+```bash
+curl -X GET "https://vpshrms.shurttech.com/api/user/celebrations/today" \
+  -H "Authorization: Bearer <jwt>" \
+  -H "Device-Token: <device-token>" \
+  -H "Accept: application/json"
+```
+
+**Success response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Today's celebrations fetched successfully.",
+  "data": {
+    "date": "2026-11-17",
+    "birthdays": [
+      { "id": 1, "name": "shivram singh", "employee_id": "EMP001", "designation": "Flutter Developer",
+        "department": "IT Department", "profile_image": "https://…/profile.jpg" }
+    ],
+    "anniversaries": [
+      { "id": 12, "name": "Rahul", "employee_id": "SH558121", "designation": "HR",
+        "department": "HR Department", "profile_image": null, "years": 2 }
+    ],
+    "total": 2
+  }
+}
+```
+
+With nobody to celebrate: `200` with `"message": "No birthdays or work anniversaries today."`, empty arrays and `"total": 0` — the app should hide the card when `total` is 0.
+
+**Error responses:**
+
+| HTTP Status | Condition | Example body |
+|---|---|---|
+| 500 | Unexpected exception | `{"success": false, "message": "Unable to fetch today's celebrations. Please try again later."}` |
+
+**Special behavior / notes:**
+- Active (`status = 1`), non-admin employees only, sorted by name.
+- Birthday = month/day of `user_basic_details.dob`; someone born on **29 Feb** is listed on **28 Feb** in non-leap years. Age is deliberately not returned.
+- Work anniversary = month/day of `user_job_details.joining_date`, only from the first full year (`years` ≥ 1).
+- `profile_image` is a full URL (via `file_url()`), or `null`.
+
+---
+
 ## GET /fetch-all-user
 
 **Purpose:** Fetch the company directory (all active non-admin users other than the caller) — used for things like picking a colleague/assignee in the mobile app.
