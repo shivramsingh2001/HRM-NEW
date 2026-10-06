@@ -380,13 +380,13 @@
         .employee-info-card .eic-top {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 14px;
+            gap: 8px;
+            padding: 6px 10px;
         }
 
         .employee-info-card .avatar-lg {
-            width: 42px;
-            height: 42px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background: #EFF6FF;
             display: flex;
@@ -394,7 +394,7 @@
             justify-content: center;
             color: #0D6EFD;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 11px;
             text-transform: uppercase;
             flex-shrink: 0;
         }
@@ -405,10 +405,10 @@
         }
 
         .employee-info-card .info h6 {
-            margin-bottom: 3px;
+            margin-bottom: 1px;
             font-weight: 600;
             color: #0f172a;
-            font-size: 13.5px;
+            font-size: 12px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -416,7 +416,7 @@
 
         .employee-info-card .info p {
             margin-bottom: 0;
-            font-size: 11.5px;
+            font-size: 10.5px;
             color: #64748b;
         }
 
@@ -424,19 +424,19 @@
             background: #EFF6FF;
             color: #0D6EFD;
             font-weight: 600;
-            font-size: 10.5px;
-            padding: 1px 7px;
+            font-size: 10px;
+            padding: 0 6px;
             border-radius: 4px;
             margin-right: 4px;
         }
 
         .employee-info-card .eic-date {
             flex-shrink: 0;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 600;
             color: #334155;
             background: #f1f5f9;
-            padding: 4px 9px;
+            padding: 2px 7px;
             border-radius: 6px;
             white-space: nowrap;
         }
@@ -449,7 +449,7 @@
         }
 
         .employee-info-card .eic-times > div {
-            padding: 8px 14px;
+            padding: 0px 14px;
         }
 
         .employee-info-card .eic-times > div + div {
@@ -828,6 +828,30 @@
                         </select>
                     </div>
 
+                    <div class="filter-item branch-filter">
+                        <select name="department_id" onchange="this.form.submit()">
+                            <option value="">All Departments</option>
+                            @foreach ($allDepartments as $department)
+                                <option value="{{ $department->id }}"
+                                    {{ request('department_id') == $department->id ? 'selected' : '' }}>
+                                    {{ $department->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="filter-item branch-filter">
+                        <select name="designation_id" onchange="this.form.submit()">
+                            <option value="">All Designations</option>
+                            @foreach ($allDesignations as $designation)
+                                <option value="{{ $designation->id }}"
+                                    {{ request('designation_id') == $designation->id ? 'selected' : '' }}>
+                                    {{ $designation->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <div class="filter-item">
                         <a href="{{ route('team.index') }}" class="reset-btn">
                             <i class="feather-refresh-cw"></i> Reset
@@ -1095,8 +1119,9 @@
                         <input type="hidden" name="date" id="attendanceDate"
                             value="{{ request('date', date('Y-m-d')) }}">
 
-                        <!-- Attendance Status Selection -->
-                        <div class="mb-3">
+                        <!-- Attendance Status + optional range end, side by side -->
+                        <div class="row g-3 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">
                                 <i class="feather-check-circle me-1" style="color: var(--icon-color, #0D6EFD);"></i>
                                 Attendance Status <span class="required">*</span>
@@ -1115,19 +1140,16 @@
                         </div>
 
                         <!-- Optional date range: apply the same status from `date` through `end_date` -->
-                        <div class="mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">
                                 <i class="feather-calendar me-1" style="color: var(--icon-color, #0D6EFD);"></i>
-                                Apply through <span class="text-muted" style="font-size: 11px;">(optional — leave blank
-                                    for a single day)</span>
+                                Apply through <span class="text-muted" style="font-size: 11px;"
+                                    title="Leave blank for a single day">(optional)</span>
                             </label>
                             <input type="date" class="form-control" name="end_date" id="attendanceEndDate"
                                 value="{{ request('date', date('Y-m-d')) }}" max="{{ date('Y-m-d') }}">
-                            <small class="text-muted" style="font-size: 11px; display: block; margin-top: 4px;">
-                                <i class="feather-info me-1"></i>
-                                When set to a later date, the selected status is applied to every day in the range.
-                            </small>
                             <div class="invalid-feedback"></div>
+                        </div>
                         </div>
 
                         <div class="row g-3" id="clockTimeFields">
@@ -1147,18 +1169,23 @@
                                 <input type="time" class="form-control" name="clock_out" id="clockOutTime">
                                 <div class="invalid-feedback"></div>
                             </div>
-                            <!-- Clock-in only: the employee forgot to clock in and is still working -->
-                            <div class="col-12" id="stillWorkingField">
-                                <div class="form-check">
+                            <div class="col-12 d-flex flex-wrap gap-4">
+                                <!-- Clock-in only: the employee forgot to clock in and is still working -->
+                                <div class="form-check mb-0" id="stillWorkingField"
+                                    title="Employee is still working — saves the clock-in and leaves the day open (today only)">
                                     <input class="form-check-input" type="checkbox" id="stillWorking">
                                     <label class="form-check-label" for="stillWorking" style="font-size: 12.5px;">
-                                        Clock in only (employee is still working)
+                                        Clock in only
                                     </label>
                                 </div>
-                                <small class="text-muted" style="font-size: 11px; display: block; margin-top: 2px;">
-                                    Saves the clock-in time and leaves the day open. The employee clocks out
-                                    as usual, or you can add the clock-out time here later. Today only.
-                                </small>
+                                <!-- Clock-out only: shown when the employee clocked in and has no clock-out -->
+                                <div class="form-check mb-0" id="clockOutOnlyField" style="display: none;"
+                                    title="Employee forgot to clock out — keeps their clock-in and adds the clock-out">
+                                    <input class="form-check-input" type="checkbox" id="clockOutOnly">
+                                    <label class="form-check-label" for="clockOutOnly" style="font-size: 12.5px;">
+                                        Clock out only
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -1279,6 +1306,7 @@
             const hasRecorded = punchIn !== '';
 
             clockInInput.value = punchIn;
+            clockInInput.dataset.recorded = punchIn;
             clockOutInput.value = punchOut;
 
             // 24h "HH:MM" → "h:mm AM/PM" for the recorded-times strip.
@@ -1290,8 +1318,15 @@
             document.getElementById('modalRecordedIn').textContent = asClock(punchIn);
             document.getElementById('modalRecordedOut').textContent =
                 punchOut ? asClock(punchOut) : (hasRecorded ? 'Still working' : '—');
-            // Clocked in and not out yet: keep the day open unless the admin adds a clock-out.
-            stillWorking.checked = hasRecorded && punchOut === '';
+            // Clocked in and not out yet: today the employee is probably still
+            // working; on an earlier date they forgot to clock out.
+            const isOpenDay = hasRecorded && punchOut === '';
+            const viewedDate = document.querySelector('input[name="date"]').value || '{{ date('Y-m-d') }}';
+            const isToday = viewedDate === '{{ date('Y-m-d') }}';
+            const clockOutOnly = document.getElementById('clockOutOnly');
+            clockOutOnly.dataset.available = isOpenDay ? '1' : '';
+            stillWorking.checked = isOpenDay && isToday;
+            clockOutOnly.checked = isOpenDay && !isToday;
             document.getElementById('attendanceStatus').value = 'present';
             onMarkStatusChange();
 
@@ -1501,8 +1536,15 @@
             // Clock-in only is offered for Present; a half day needs both times.
             const stillWorking = document.getElementById('stillWorking');
             document.getElementById('stillWorkingField').style.display = status === 'present' ? '' : 'none';
+            // Clock-out only needs Present and an open clock-in on the day.
+            const clockOutOnly = document.getElementById('clockOutOnly');
+            const outOnlyAvailable = status === 'present' && clockOutOnly.dataset.available === '1';
+            document.getElementById('clockOutOnlyField').style.display = outOnlyAvailable ? '' : 'none';
             if (status !== 'present') {
                 stillWorking.checked = false;
+            }
+            if (!outOnlyAvailable) {
+                clockOutOnly.checked = false;
             }
             onStillWorkingChange();
         }
@@ -1512,12 +1554,24 @@
                 && document.getElementById('stillWorking').checked;
         }
 
+        function isClockOutOnly() {
+            return document.getElementById('attendanceStatus').value === 'present'
+                && document.getElementById('clockOutOnly').checked;
+        }
+
         function onStillWorkingChange() {
             const inOnly = isClockInOnly();
+            const outOnly = isClockOutOnly();
+            const clockIn = document.getElementById('clockInTime');
             const clockOut = document.getElementById('clockOutTime');
             clockOut.disabled = inOnly;
             if (inOnly) {
                 clockOut.value = '';
+            }
+            // Clock-out only keeps the employee's own clock-in: shown, not editable.
+            clockIn.disabled = outOnly;
+            if (outOnly) {
+                clockIn.value = clockIn.dataset.recorded || clockIn.value;
             }
             document.getElementById('clockOutRequiredMark').style.display = inOnly ? 'none' : '';
         }
@@ -1525,8 +1579,18 @@
         document.addEventListener('DOMContentLoaded', function() {
             const sel = document.getElementById('attendanceStatus');
             if (sel) {
+                const stillWorking = document.getElementById('stillWorking');
+                const clockOutOnly = document.getElementById('clockOutOnly');
                 sel.addEventListener('change', onMarkStatusChange);
-                document.getElementById('stillWorking').addEventListener('change', onStillWorkingChange);
+                // The two options are alternatives — ticking one clears the other.
+                stillWorking.addEventListener('change', function() {
+                    if (stillWorking.checked) clockOutOnly.checked = false;
+                    onStillWorkingChange();
+                });
+                clockOutOnly.addEventListener('change', function() {
+                    if (clockOutOnly.checked) stillWorking.checked = false;
+                    onStillWorkingChange();
+                });
                 onMarkStatusChange();
             }
         });
@@ -1581,6 +1645,12 @@
                     formData.delete('end_date');
                 } else {
                     formData.set('clock_out', clockOut);
+                }
+                // Clock-out only: the server keeps the employee's own clock-in.
+                if (isClockOutOnly()) {
+                    formData.delete('clock_in');
+                    formData.delete('end_date');
+                    formData.set('clock_out_only', '1');
                 }
             } else {
                 formData.delete('clock_in');

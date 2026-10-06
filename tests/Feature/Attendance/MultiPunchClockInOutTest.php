@@ -293,6 +293,57 @@ class MultiPunchClockInOutTest extends TestCase
         $this->assertEqualsWithDelta(8.5, (float) $row->worked_hours, 0.01);
     }
 
+    /**
+     * Mark Attendance → "Clock out only": the employee clocked in and forgot
+     * to clock out; the admin adds the clock-out, the employee's own clock-in
+     * punch is kept, and the day is Present.
+     */
+    public function test_a_clock_out_only_mark_closes_the_employees_open_clock_in(): void
+    {
+        Tenant::whereKey($this->tenantId)->update(['allow_multiple_punches' => false]);
+        $actor = User::where('tenant_id', $this->tenantId)->where('role', 'admin')->first();
+        $entry = app(\App\Services\Attendance\AttendanceEntryService::class);
+
+        $in = app(AttendancePunchService::class)->capture($this->punch('in', '09:00:00'));
+        $this->assertNotNull($entry->openClockIn($this->userId, $this->tenantId, $this->date));
+
+        $result = $entry->markStatus([
+            'user_id' => $this->userId, 'tenant_id' => $this->tenantId, 'date' => $this->date,
+            'status' => \App\Enums\AttendanceStatus::Present,
+            'clock_out' => '17:30', 'clock_out_only' => true, 'remarks' => 'forgot to clock out',
+        ], $actor);
+
+        $row = $result['attendance'];
+        $this->assertSame($this->date . ' 09:00:00', (string) $row->clock_in);
+        $this->assertSame($this->date . ' 17:30:00', (string) $row->clock_out);
+        $this->assertEqualsWithDelta(8.5, (float) $row->worked_hours, 0.01);
+        $this->assertContains($row->attendance_status, ['present', 'late']);
+        $this->assertSame('manual', $row->attendance_type);
+
+        // The employee's own clock-in is still the active one, now paired with the manual clock-out.
+        $punches = AttendancePunch::withoutGlobalScopes()
+            ->where('tenant_id', $this->tenantId)->where('user_id', $this->userId)
+            ->where('date', $this->date)->where('status', 'active')->orderBy('punched_at')->get();
+        $this->assertCount(2, $punches);
+        $this->assertSame($in->id, $punches[0]->id);
+        $this->assertSame('mobile_app', $punches[0]->source);
+        $this->assertSame('manual', $punches[1]->source);
+        $this->assertNull($entry->openClockIn($this->userId, $this->tenantId, $this->date));
+    }
+
+    /** Clock-out only without an open clock-in is refused. */
+    public function test_a_clock_out_only_mark_needs_an_open_clock_in(): void
+    {
+        $actor = User::where('tenant_id', $this->tenantId)->where('role', 'admin')->first();
+
+        $this->expectException(\RuntimeException::class);
+        app(\App\Services\Attendance\AttendanceEntryService::class)->markStatus([
+            'user_id' => $this->userId, 'tenant_id' => $this->tenantId, 'date' => $this->date,
+            'status' => \App\Enums\AttendanceStatus::Present,
+            'clock_out' => '17:30', 'clock_out_only' => true,
+        ], $actor);
+    }
+
     /** Without the opt-in flag (public API), a present mark with no clock-out behaves as before. */
     public function test_present_without_clock_out_and_without_the_flag_creates_no_punch(): void
     {

@@ -458,6 +458,28 @@
             font-weight: 700; font-size: 11px;
         }
         .compact-modal .employee-details { flex: 1; min-width: 0; }
+        /* Employee picker options (Add Manual Credit) */
+        .emp-opt { display: flex; align-items: center; gap: 8px; }
+        .emp-opt-avatar {
+            width: 26px; height: 26px; border-radius: 50%; flex: none;
+            background: #EFF6FF; color: #0D6EFD; font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .emp-opt-text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+        .emp-opt-name { font-size: 11.5px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .emp-opt-email { font-size: 10px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .emp-opt-balance { flex: none; font-size: 10px; font-weight: 600; color: #0D6EFD; background: #EFF6FF; padding: 1px 7px; border-radius: 10px; }
+        .emp-opt-dropdown .select2-results__option { padding: 6px 10px; }
+        /* Hover keeps the text colours; only a light blue row background. */
+        .emp-opt-dropdown .select2-results__option--highlighted,
+        .emp-opt-dropdown .select2-results__option--highlighted[aria-selected] { background: #EFF6FF !important; color: #0f172a !important; }
+        .emp-opt-dropdown .select2-results__option--highlighted .emp-opt-balance { background: #fff; }
+        .emp-opt-dropdown .select2-search__field { font-size: 11.5px; padding: 5px 8px; border-radius: 6px; }
+        /* The closed box: the picked name stays inside it, on one line. */
+        .emp-opt-select .select2-selection--single { height: 34px !important; padding: 0 28px 0 10px !important; display: flex; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background-image: none; }
+        .emp-opt-select .select2-selection--single .select2-selection__rendered { padding: 0 !important; line-height: 32px !important; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .emp-opt-select .select2-selection--single .select2-selection__arrow { height: 32px !important; top: 1px !important; right: 6px !important; }
+
         .compact-modal .employee-name { font-weight: 700; color: #1a2236; font-size: 11.5px; }
         .compact-modal .employee-meta { font-size: 9.5px; color: #6b7385; }
 
@@ -1047,15 +1069,19 @@
 
                                 <div class="form-group">
                                     <label class="form-label">Select Employee *</label>
-                                    <select name="user_id" class="form-control select2" id="employeeSelect" required>
+                                    {{-- No "select2" class: initialised in script-area with dropdownParent (search needs it inside a modal) --}}
+                                    <select name="user_id" class="form-control" id="employeeSelect" required>
                                         <option value="">Search and select employee...</option>
                                         @foreach ($users as $u)
                                             <option value="{{ $u->id }}"
-                                                data-balance="{{ optional($u->leaveBalance)->balance ?? 0 }}"
+                                                data-name="{{ $u->name }}"
+                                                data-empid="{{ $u->employee_id }}"
+                                                data-balance="{{ (float) $u->leaveBalance->sum('balance') }}"
+                                                data-balances="{{ $u->leaveBalance->pluck('balance', 'leave_type_id')->toJson() }}"
                                                 data-joining="{{ $u->joining_date ? date('d M Y', strtotime($u->joining_date)) : 'N/A' }}"
                                                 data-email="{{ $u->email }}">
                                                 {{ $u->name }} ({{ $u->email }}) - Current:
-                                                {{ optional($u->leaveBalance)->balance ?? 0 }} days
+                                                {{ (float) $u->leaveBalance->sum('balance') }} days
                                             </option>
                                         @endforeach
                                     </select>
@@ -1097,7 +1123,7 @@
                                     <div class="row align-items-center">
                                         <div class="col-6">
                                             <div class="balance-amount" id="currentBalance">0.00</div>
-                                            <small class="text-muted">Current</small>
+                                            <small class="text-muted" id="currentBalanceLabel">Current</small>
                                         </div>
                                         <div class="col-6">
                                             <div class="balance-amount" id="newBalance">0.00</div>
@@ -1248,16 +1274,57 @@
             $('#newBalance').text(formatNumber(currentBalance + creditValue));
         }
 
+        // Employee picker: avatar + name (ID) + email, with the current balance on the right.
+        // dropdownParent keeps the search box typeable inside the Bootstrap modal.
+        function employeeOption(item) {
+            if (!item.id) return item.text;
+            const data = $(item.element).data();
+            const $row = $(
+                '<span class="emp-opt"><span class="emp-opt-avatar"></span>' +
+                '<span class="emp-opt-text"><span class="emp-opt-name"></span><span class="emp-opt-email"></span></span>' +
+                '<span class="emp-opt-balance"></span></span>'
+            );
+            $row.find('.emp-opt-avatar').text(getInitials(data.name));
+            $row.find('.emp-opt-name').text(data.name + (data.empid ? ' (' + data.empid + ')' : ''));
+            $row.find('.emp-opt-email').text(data.email || '');
+            $row.find('.emp-opt-balance').text(formatNumber(data.balance) + ' days');
+            return $row;
+        }
+
+        $('#employeeSelect').select2({
+            placeholder: 'Search and select employee...',
+            width: '100%',
+            dropdownParent: $('#manualCreditModal'),
+            dropdownCssClass: 'emp-opt-dropdown',
+            templateResult: employeeOption,
+            templateSelection: item => item.id ? $(item.element).data('name') : item.text,
+        });
+        $('#employeeSelect').next('.select2-container').addClass('emp-opt-select');
+
+        // "Current" = the balance of the leave type being credited (the credit goes to
+        // that one type); before a type is picked, the employee's total across all types.
+        function showCurrentBalance() {
+            const selected = $('#employeeSelect option:selected');
+            if (!$('#employeeSelect').val()) {
+                $('#currentBalance').text('0.00');
+                $('#newBalance').text('0.00');
+                return;
+            }
+            const typeId = $('#leaveTypeSelect').val();
+            const balances = selected.data('balances') || {};
+            const current = typeId ? balances[typeId] : selected.data('balance');
+            $('#currentBalance').text(formatNumber(current));
+            updateNewBalance();
+        }
+
         $('#employeeSelect').on('change', function() {
             const selected = $(this).find('option:selected');
             const userId = $(this).val();
 
             if (userId) {
-                const fullText = selected.text();
-                const name = fullText.split(' (')[0];
+                const name = selected.data('name');
                 const email = selected.data('email');
                 const joiningDate = selected.data('joining');
-                const currentBalance = parseFloat(selected.data('balance')) || 0;
 
                 $('#employeePreview').show();
                 $('#employeeInitials').text(getInitials(name));
@@ -1265,9 +1332,8 @@
                 $('#employeeMeta').html(
                     `<i class="fas fa-envelope me-1"></i> ${email} | <i class="fas fa-calendar me-1"></i> Joined: ${joiningDate}`
                 );
-                $('#currentBalance').text(formatNumber(currentBalance));
                 $('#creditValue').val('');
-                updateNewBalance();
+                showCurrentBalance();
             } else {
                 $('#employeePreview').hide();
                 $('#currentBalance').text('0.00');
@@ -1289,7 +1355,7 @@
                 $('#creditValue').val(creditValue);
             }
 
-            updateNewBalance();
+            showCurrentBalance();
         });
 
         $('#creditValue').on('input', updateNewBalance);
@@ -1345,6 +1411,7 @@
 
         $('#manualCreditModal').on('hidden.bs.modal', function() {
             $('#manualCreditForm')[0].reset();
+            $('#employeeSelect').val('').trigger('change.select2');
             $('#employeePreview').hide();
             $('#currentBalance').text('0.00');
             $('#newBalance').text('0.00');

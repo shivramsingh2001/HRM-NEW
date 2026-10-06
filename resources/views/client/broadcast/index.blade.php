@@ -159,7 +159,6 @@
                     <div class="filter-item">
                         <input type="text" name="search" class="form-control-sm-custom" style="width: 200px;" placeholder="Search title…" value="{{ $filters['search'] ?? '' }}">
                     </div>
-                    <div class="filter-item"><button type="submit" class="btn-sm-custom-outline"><i class="feather-eye"></i> View</button></div>
                     <div class="filter-item"><a href="{{ route('broadcast.index') }}" class="btn-sm-custom-outline"><i class="feather-refresh-cw"></i> Reset</a></div>
                 </div>
             </form>
@@ -233,6 +232,14 @@
             // ---------- filter bar ----------
             const filterForm = $('#broadcastFilterForm');
             filterForm.find('select.auto-submit').on('change', () => filterForm.submit());
+            // No View button: dates apply on change, search after a short pause (or Enter).
+            filterForm.find('input[type="date"]').on('change', () => filterForm.submit());
+            let searchTimeout;
+            filterForm.find('input[name="search"]').on('keyup', function (e) {
+                if (e.key === 'Enter') return;
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => filterForm.submit(), 500);
+            });
 
             // ---------- send-broadcast drawer ----------
             const form = $('#broadcastForm');

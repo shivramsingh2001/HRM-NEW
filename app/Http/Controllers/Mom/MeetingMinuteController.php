@@ -207,7 +207,8 @@ class MeetingMinuteController extends Controller
                 ? 'Meeting minutes saved as draft.'
                 : 'Meeting minutes and ' . ($request->has('tasks') ? count($request->tasks) : 0) . ' task(s) created successfully!';
 
-            return redirect()->route('meetings.show', $meeting->id)->with('success', $message);
+            // Back to the meeting list (the minutes are written from its drawer).
+            return redirect()->route('meetings.index')->with('success', $message);
         } catch (Exception $e) {
             DB::rollBack();
             return redirect()->back()

@@ -157,6 +157,10 @@ Actions there do not get a modal each. Any element with `data-p360-open="{form u
 
 Policy forms (Policies tab) reuse the same modal: `forms/policy.blade.php` renders any "one value per setting" section from `EmployeePolicyService::fields($section)` as rows of *custom checkbox · setting · company value · input* (the input is enabled only while its box is ticked — `forms/_policy-script.blade.php`); `forms/policy-leave.blade.php` does the same per leave type. To make a new company setting customisable per employee, add it to `EmployeePolicyService::FIELDS` / `LIMIT_FIELDS` and to `EmployeeProfileController::companyPolicy()` — the tab, form and validation follow automatically.
 
+## Employee picker options (2026-10-06)
+
+Searchable employee selects in popups use select2 with `dropdownParent` set to the modal (without it the search box cannot be typed in) and a `templateResult` that renders each option as `.emp-opt`: round initials avatar, name (employee ID), email underneath. Used by `<x-on-behalf.modal>` (leave, expense, loan, regularization, overtime) and Leave Credit → Add Manual Credit (which adds a balance pill, `.emp-opt-balance`). Options carry `data-name`, `data-empid`, `data-email`. Hover is a light blue row (`#EFF6FF`); text colours do not change.
+
 ## Maps
 
 Maps use Leaflet 1.9.4 with OpenStreetMap tiles (no key). The Attendance Sessions page (`client/attendance/sessions.blade.php`) switches to the Google Maps JavaScript API when `GOOGLE_MAPS_API_KEY` is set (`config('services.google_maps.key')`); it falls back to Leaflet when the key is blank, the Google script cannot load, or Google rejects the key (`gm_authFailure`). Leaflet is always loaded there as the fallback. A new map page should follow the same rule: Leaflet by default, Google only behind that key.

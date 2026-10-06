@@ -231,9 +231,34 @@
             const $el = $(selector);
             if (!$el.length) return;
             if ($el.hasClass('select2-hidden-accessible')) { $el.select2('destroy'); }
-            $el.select2({ placeholder: placeholder, allowClear: true, width: '100%', dropdownParent: $(modalSelector) });
+            $el.select2({
+                placeholder: placeholder,
+                width: '100%',
+                dropdownParent: $(modalSelector),
+                dropdownCssClass: 'emp-opt-dropdown',
+                // Avatar + name (ID) + email; the option text (name, ID, email) is what search matches.
+                templateResult: function(item) {
+                    if (!item.id) return item.text;
+                    const data = $(item.element).data();
+                    const name = String(data.name || '');
+                    const $row = $(
+                        '<span class="emp-opt"><span class="emp-opt-avatar"></span>' +
+                        '<span class="emp-opt-text"><span class="emp-opt-name"></span><span class="emp-opt-email"></span></span></span>'
+                    );
+                    $row.find('.emp-opt-avatar').text(name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().substring(0, 2) || 'NA');
+                    $row.find('.emp-opt-name').text(name + (data.empid ? ' (' + data.empid + ')' : ''));
+                    $row.find('.emp-opt-email').text(data.email || '');
+                    return $row;
+                },
+                templateSelection: function(item) {
+                    if (!item.id) return item.text;
+                    const data = $(item.element).data();
+                    return data.name + (data.empid ? ' (' + data.empid + ')' : '');
+                },
+            });
+            $el.next('.select2-container').addClass('emp-opt-select');
         }
-        initEmployeeSelect2('#transferModal select[name="to_user_id"]', '#transferModal', 'Search employee by name or ID…');
+        initEmployeeSelect2('#transferModal select[name="to_user_id"]', '#transferModal', 'Select employee');
 
         function postAction(url, data, successMsg) {
             $.ajax({

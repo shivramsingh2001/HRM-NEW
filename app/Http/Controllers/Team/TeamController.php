@@ -51,9 +51,11 @@ class TeamController extends Controller
             $statusFilter = $request->get('status');
             $search = $request->get('search');
             $branchId = $request->get('branch_id');
+            $departmentId = $request->get('department_id');
+            $designationId = $request->get('designation_id');
 
             // Get team members based on user role
-            $teamData = $this->getTeamMembers($authUser, $currentDate, null, $search, $branchId);
+            $teamData = $this->getTeamMembers($authUser, $currentDate, null, $search, $branchId, $departmentId, $designationId);
             if ($statusFilter && in_array($statusFilter, ['present', 'absent', 'on_leave', 'holiday', 'weekoff','halfday','checked_in_only'])) {
                 $teamData = $teamData->filter(function ($member) use ($statusFilter) {
                     $memberStatus = strtolower($member->status ?? 'absent');
@@ -140,8 +142,22 @@ class TeamController extends Controller
                 ->orderBy('name')
                 ->get();
 
+            // Department / designation dropdowns for the filters
+            $allDepartments = DB::table('departments')
+                ->where('tenant_id', $authUser->tenant_id)
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
+            $allDesignations = DB::table('designations')
+                ->where('tenant_id', $authUser->tenant_id)
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
+
             // Prepare data for view
             $data = [
+                'allDepartments' => $allDepartments,
+                'allDesignations' => $allDesignations,
                 'teamData' => $teamDataPaginated,
                 'statusCount' => $statusCount,
                 'currentDate' => $currentDate,
@@ -167,7 +183,7 @@ class TeamController extends Controller
     /**
      * Get team members based on user role
      */
-    private function getTeamMembers($authUser, $currentDate, $managerId = null, $search = null, $branchId = null)
+    private function getTeamMembers($authUser, $currentDate, $managerId = null, $search = null, $branchId = null, $departmentId = null, $designationId = null)
     {
         $query = User::query()
             ->with(['jobDetails.department', 'jobDetails.designation', 'jobDetails.branch', 'basicDetails'])
@@ -200,6 +216,14 @@ class TeamController extends Controller
 
         if ($branchId) {
             $query->whereHas('jobDetails', fn ($q) => $q->where('branch_id', $branchId));
+        }
+
+        if ($departmentId) {
+            $query->whereHas('jobDetails', fn ($q) => $q->where('department', $departmentId));
+        }
+
+        if ($designationId) {
+            $query->whereHas('jobDetails', fn ($q) => $q->where('designation', $designationId));
         }
 
         $users = $query->get();
@@ -326,9 +350,10 @@ class TeamController extends Controller
         $isManual = (($attendance->attendance_type ?? null) === 'manual')
             || !empty($attendance->marked_by ?? null);
 
-        // An auto row that has only been clocked into (no clock-out) must still
-        // read as "Checked In Only", not the 'present' the policy writes for it.
-        if (!$isManual && !empty($attendance->clock_in ?? null) && empty($attendance->clock_out ?? null)) {
+        // A row that has only been clocked into (no clock-out) must still read
+        // as "Checked In Only", not the 'present' stored for it — whether the
+        // employee clocked in or it was hand-marked as clock-in only.
+        if (!empty($attendance->clock_in ?? null) && empty($attendance->clock_out ?? null)) {
             return null;
         }
 
@@ -3203,6 +3228,8 @@ class TeamController extends Controller
                 'clock_out' => $request->input('clock_out'),
                 // Present + clock-in with no clock-out = checked in, still working.
                 'clock_in_only' => ! $request->filled('clock_out'),
+                // Present + clock-out only = close the employee's own open clock-in.
+                'clock_out_only' => $request->clockOutOnly(),
                 'leave_type_id' => $request->input('leave_type_id'),
                 'remarks' => $request->input('remarks'),
             ], $actor);

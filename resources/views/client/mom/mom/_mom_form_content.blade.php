@@ -22,7 +22,7 @@
             @csrf
             <input type="hidden" name="meeting_id" value="{{ $meeting->id ?? '' }}">
 
-            <div class="card-body" style="padding: 30px;">
+            <div class="card-body mom-body">
                 <div class="form-group-modern">
                     <label class="form-label-modern">
                         <i class="feather-file-text"></i> Meeting Minutes <span class="required-star">*</span>
@@ -34,13 +34,13 @@
                     <small class="text-muted">Document the key discussion points, decisions, and action items</small>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+                <div class="mom-tasks-head">
                     <div>
-                        <h5 class="mb-1"><i class="feather-check-square me-2" style="color: var(--icon-color, #0D6EFD);"></i> Action Items & Tasks</h5>
-                        <p class="text-muted mb-0" style="font-size: 13px;">Create and assign tasks to team members</p>
+                        <h5><i class="feather-check-square me-1" style="color: var(--icon-color, #0D6EFD);"></i> Action Items & Tasks</h5>
+                        <p class="text-muted">Create and assign tasks to team members</p>
                     </div>
                     <button type="button" class="btn-add-task btn" onclick="addTaskRow()">
-                        <i class="feather-plus-circle me-2"></i> Add New Task
+                        <i class="feather-plus-circle me-1"></i> Add Task
                     </button>
                 </div>
 
@@ -71,7 +71,7 @@
                                             value="{{ old("tasks.$index.title", $task->title) }}">
                                     </div>
 
-                                    <div class="full-width" style="margin-top: 15px;">
+                                    <div class="full-width">
                                         <label class="form-label-modern"><i class="feather-align-left"></i> Description</label>
                                         <textarea name="tasks[{{ $index }}][description]" class="form-control-modern" rows="2"
                                             placeholder="Enter task description">{{ old("tasks.$index.description", $task->description) }}</textarea>
@@ -80,12 +80,12 @@
                                     <div class="row-grid-4">
                                         <div>
                                             <label class="form-label-modern"><i class="feather-user-check"></i> Assigned To <span class="required-star">*</span></label>
-                                            <select name="tasks[{{ $index }}][assigned_to]" class="assigned-to-select select2" style="width: 100%;">
+                                            <select name="tasks[{{ $index }}][assigned_to]" class="assigned-to-select" style="width: 100%;">
                                                 <option value="">Select User</option>
                                                 @foreach ($allUsers as $user)
-                                                    <option value="{{ $user->id }}"
+                                                    <option value="{{ $user->id }}" data-name="{{ $user->name }}" data-empid="{{ $user->employee_id }}" data-email="{{ $user->email }}"
                                                         {{ old("tasks.$index.assigned_to", $task->assignments->first()->assignedTo->id ?? '') == $user->id ? 'selected' : '' }}>
-                                                        {{ $user->name }} ({{ $user->employee_id ?? $user->email }})
+                                                        {{ $user->name }} ({{ $user->employee_id }}) {{ $user->email }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -131,7 +131,7 @@
                                             </div>
                                             <div class="audio-preview-modern" id="audio_preview_{{ $index }}">
                                                 @if ($task->voice_file)
-                                                    <audio controls style="width: 100%; margin-top: 10px;">
+                                                    <audio controls style="width: 100%;">
                                                         <source src="{{ file_url($task->voice_file, 'task_voice') }}" type="audio/wav">
                                                         Your browser does not support the audio element.
                                                     </audio>
@@ -141,7 +141,7 @@
                                         </div>
                                         <div>
                                             <label class="form-label-modern"><i class="feather-paperclip"></i> Attachment</label>
-                                            <input type="file" name="tasks[{{ $index }}][attachment]" class="form-control-modern" accept=".pdf,.doc,.docx,.jpg,.png" style="padding: 7px;">
+                                            <input type="file" name="tasks[{{ $index }}][attachment]" class="form-control-modern" accept=".pdf,.doc,.docx,.jpg,.png">
                                             <div class="file-preview-modern" id="file_preview_{{ $index }}">
                                                 @if ($task->file)
                                                     <div class="existing-file">
@@ -160,18 +160,18 @@
                     @endif
                 </div>
 
-                <div class="alert alert-info" style="border-radius: 10px; margin-top: 20px;">
-                    <i class="feather-info me-2"></i>
+                <div class="alert alert-info mom-note">
+                    <i class="feather-info me-1"></i>
                     <strong>Note:</strong> Each task will be assigned to the selected team member and will appear in their dashboard. Voice notes and attachments will be accessible to the assignee.
                 </div>
             </div>
 
             <div class="submit-section">
                 <button type="submit" class="btn-submit">
-                    <i class="feather-save me-2"></i> Save Meeting Minutes & Tasks
+                    <i class="feather-save me-1"></i> Save Minutes & Tasks
                 </button>
                 <button type="reset" class="btn-cancel">
-                    <i class="feather-x me-2"></i> Cancel
+                    <i class="feather-x me-1"></i> Cancel
                 </button>
             </div>
         </form>
@@ -186,9 +186,43 @@
         let currentRecordingRow = null;
         let deletedTasksList = [];
 
+        // "Assigned To" picker — same option design as the "for an employee" popups:
+        // avatar + name (ID) + email. Inside the drawer the dropdown is attached to it,
+        // otherwise the drawer's focus trap blocks typing in the search box.
+        function initAssigneeSelect($els) {
+            $els.each(function() {
+                const $el = $(this);
+                const $drawer = $el.closest('.offcanvas, .modal');
+                $el.select2({
+                    placeholder: 'Select employee',
+                    width: '100%',
+                    dropdownParent: $drawer.length ? $drawer : $(document.body),
+                    dropdownCssClass: 'emp-opt-dropdown',
+                    templateResult: function(item) {
+                        if (!item.id) return item.text;
+                        const data = $(item.element).data();
+                        const name = String(data.name || '');
+                        const $row = $(
+                            '<span class="emp-opt"><span class="emp-opt-avatar"></span>' +
+                            '<span class="emp-opt-text"><span class="emp-opt-name"></span><span class="emp-opt-email"></span></span></span>'
+                        );
+                        $row.find('.emp-opt-avatar').text(name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().substring(0, 2) || 'NA');
+                        $row.find('.emp-opt-name').text(name + (data.empid ? ' (' + data.empid + ')' : ''));
+                        $row.find('.emp-opt-email').text(data.email || '');
+                        return $row;
+                    },
+                    templateSelection: function(item) {
+                        if (!item.id) return item.text;
+                        const data = $(item.element).data();
+                        return data.name + (data.empid ? ' (' + data.empid + ')' : '');
+                    },
+                });
+            });
+        }
+
         $(document).ready(function() {
             $('#mom_content').summernote({
-                height: 250,
+                height: 160,
                 toolbar: [
                     ['style', ['style']],
                     ['font', ['bold', 'underline', 'clear']],
@@ -201,11 +235,7 @@
                 placeholder: 'Document the meeting minutes here...'
             });
 
-            $('.assigned-to-select').select2({
-                placeholder: "Select team member",
-                allowClear: true,
-                width: '100%'
-            });
+            initAssigneeSelect($('.assigned-to-select'));
 
             const today = new Date().toISOString().split('T')[0];
             $('.deadline-date').attr('min', today);
@@ -251,7 +281,7 @@
                         <input type="text" name="tasks[${newRowId}][title]" class="form-control-modern"
                             placeholder="Enter task title" value="">
                     </div>
-                    <div class="full-width" style="margin-top: 15px;">
+                    <div class="full-width">
                         <label class="form-label-modern">
                             <i class="feather-align-left"></i> Description
                         </label>
@@ -263,10 +293,10 @@
                             <label class="form-label-modern">
                                 <i class="feather-user-check"></i> Assigned To <span class="required-star">*</span>
                             </label>
-                            <select name="tasks[${newRowId}][assigned_to]" class="assigned-to-select select2" style="width: 100%;">
+                            <select name="tasks[${newRowId}][assigned_to]" class="assigned-to-select" style="width: 100%;">
                                 <option value="">Select User</option>
                                 @foreach ($allUsers as $user)
-                                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->employee_id ?? $user->email }})</option>
+                                    <option value="{{ $user->id }}" data-name="{{ $user->name }}" data-empid="{{ $user->employee_id }}" data-email="{{ $user->email }}">{{ $user->name }} ({{ $user->employee_id }}) {{ $user->email }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -320,7 +350,7 @@
                                 <i class="feather-paperclip"></i> Attachment
                             </label>
                             <input type="file" name="tasks[${newRowId}][attachment]" class="form-control-modern"
-                                accept=".pdf,.doc,.docx,.jpg,.png" style="padding: 7px;">
+                                accept=".pdf,.doc,.docx,.jpg,.png">
                             <div class="file-preview-modern" id="file_preview_${newRowId}"></div>
                         </div>
                     </div>
@@ -330,11 +360,7 @@
 
             $('#tasksContainer').append(newRow);
 
-            $(`#row_${newRowId} .assigned-to-select`).select2({
-                placeholder: "Select team member",
-                allowClear: true,
-                width: '100%'
-            });
+            initAssigneeSelect($(`#row_${newRowId} .assigned-to-select`));
 
             const today = new Date().toISOString().split('T')[0];
             $(`#row_${newRowId} .deadline-date`).attr('min', today);

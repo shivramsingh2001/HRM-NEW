@@ -490,7 +490,7 @@
                                 <tr>
                                     <td>{{ $meetings->firstItem() + $loop->index }}</td>
                                     <td><span class="meeting-code">{{ $meeting->meeting_id }}</span></td>
-                                    <td><a href="{{ route('meetings.show', $meeting->id) }}" class="title-link">{{ $meeting->title }}</a></td>
+                                    <td><a href="{{ route('meetings.show', $meeting->id) }}" class="title-link" onclick="if (!event.ctrlKey && !event.metaKey && !event.shiftKey) { event.preventDefault(); openShowDrawer({{ $meeting->id }}); }">{{ $meeting->title }}</a></td>
                                     <td class="fs-12">{{ \Carbon\Carbon::parse($meeting->meeting_date)->format('d M Y') }}</td>
                                     <td class="fs-12">
                                         {{ \Carbon\Carbon::parse($meeting->start_time)->format('h:i A') }} &ndash; {{ \Carbon\Carbon::parse($meeting->end_time)->format('h:i A') }}

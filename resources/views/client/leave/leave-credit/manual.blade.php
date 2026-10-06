@@ -423,11 +423,12 @@
                                     <option value="">Search and select employee...</option>
                                     @foreach ($users as $user)
                                         <option value="{{ $user->id }}"
-                                            data-balance="{{ optional($user->leaveBalance)->balance ?? 0 }}"
+                                            data-balance="{{ (float) $user->leaveBalance->sum('balance') }}"
+                                            data-balances="{{ $user->leaveBalance->pluck('balance', 'leave_type_id')->toJson() }}"
                                             data-joining="{{ $user->joining_date ? date('d M Y', strtotime($user->joining_date)) : 'N/A' }}"
                                             data-email="{{ $user->email }}">
                                             {{ $user->name }} ({{ $user->email }}) - Current:
-                                            {{ optional($user->leaveBalance)->balance ?? 0 }} days
+                                            {{ (float) $user->leaveBalance->sum('balance') }} days
                                         </option>
                                     @endforeach
                                 </select>
@@ -587,6 +588,22 @@
                 $('#newBalance').text(formatNumber(newBalance));
             }
 
+            // "Current" = the balance of the leave type being credited (the credit goes to
+            // that one type); before a type is picked, the employee's total across all types.
+            function showCurrentBalance() {
+                const selected = $('#employeeSelect option:selected');
+                if (!$('#employeeSelect').val()) {
+                    $('#currentBalance').text('0.00');
+                    $('#newBalance').text('0.00');
+                    return;
+                }
+                const typeId = $('#leaveTypeSelect').val();
+                const balances = selected.data('balances') || {};
+                const current = typeId ? balances[typeId] : selected.data('balance');
+                $('#currentBalance').text(formatNumber(current));
+                updateNewBalance();
+            }
+
             // Handle employee selection change
             $('#employeeSelect').on('change', function() {
                 const selected = $(this).find('option:selected');
@@ -617,14 +634,11 @@
                         `<i class="fas fa-envelope me-1"></i> ${email} | <i class="fas fa-calendar me-1"></i> Joined: ${joiningDate}`
                     );
 
-                    // Update balance display
-                    $('#currentBalance').text(formatNumber(currentBalance));
-
                     // Reset credit value
                     $('#creditValue').val('');
 
-                    // Update new balance
-                    updateNewBalance();
+                    // Current balance for the picked leave type (or the total)
+                    showCurrentBalance();
                 } else {
                     // Hide preview and reset balances
                     $('#employeePreview').hide();
@@ -654,7 +668,7 @@
                     $('#creditValue').val(creditValue);
                 }
 
-                updateNewBalance();
+                showCurrentBalance();
             });
 
             // Handle credit value change
@@ -709,7 +723,12 @@
                             var newText = oldText.replace(/Current: [\d.]+/, 'Current: ' +
                                 formatNumber(newBalance));
                             selectedOption.text(newText);
-                            selectedOption.data('balance', newBalance);
+                            // new_balance is the credited leave type's balance
+                            var creditedType = $('#leaveTypeSelect').val();
+                            var typeBalances = Object.assign({}, selectedOption.data('balances') || {});
+                            typeBalances[creditedType] = newBalance;
+                            selectedOption.data('balances', typeBalances);
+                            selectedOption.data('balance', Object.values(typeBalances).reduce((sum, v) => sum + (parseFloat(v) || 0), 0));
 
                             // Update preview
                             $('#currentBalance').text(formatNumber(newBalance));

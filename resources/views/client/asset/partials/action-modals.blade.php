@@ -2,6 +2,29 @@
      All use the app's .compact-modal chrome (380px, matching every other
      small modal in the app). --}}
 
+@once
+    {{-- Employee picker options: avatar + name (ID) + email — see docs/ui-guidelines.md § Employee picker options --}}
+    <style>
+        .emp-opt { display: flex; align-items: center; gap: 8px; }
+        .emp-opt-avatar {
+            width: 26px; height: 26px; border-radius: 50%; flex: none;
+            background: #EFF6FF; color: #0D6EFD; font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .emp-opt-text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+        .emp-opt-name { font-size: 11.5px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .emp-opt-email { font-size: 10px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .emp-opt-dropdown .select2-results__option { padding: 6px 10px; }
+        .emp-opt-dropdown .select2-results__option--highlighted,
+        .emp-opt-dropdown .select2-results__option--highlighted[aria-selected] { background: #EFF6FF !important; color: #0f172a !important; }
+        .emp-opt-dropdown .select2-search__field { font-size: 11.5px; padding: 5px 8px; border-radius: 6px; }
+        /* The closed box: the picked name stays inside it, on one line. */
+        .emp-opt-select .select2-selection--single { height: 34px !important; padding: 0 28px 0 10px !important; display: flex; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background-image: none; }
+        .emp-opt-select .select2-selection--single .select2-selection__rendered { padding: 0 !important; line-height: 32px !important; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .emp-opt-select .select2-selection--single .select2-selection__arrow { height: 32px !important; top: 1px !important; right: 6px !important; }
+    </style>
+@endonce
+
 {{-- ==================== ASSIGN ==================== --}}
 <div class="modal fade-scale" id="assignModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm compact-modal">
@@ -15,10 +38,10 @@
                     <form id="assignForm">
                         <div class="mb-3">
                             <label class="fw-semibold">Employee *</label>
-                            <select class="form-control select2" name="user_id" required>
-                                <option value="">-- Select Employee --</option>
+                            <select class="form-control" name="user_id" required>
+                                <option value="">Select employee</option>
                                 @foreach ($users as $u)
-                                    <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->employee_id }})</option>
+                                    <option value="{{ $u->id }}" data-name="{{ $u->name }}" data-empid="{{ $u->employee_id }}" data-email="{{ $u->email ?? '' }}">{{ $u->name }} ({{ $u->employee_id }}) {{ $u->email ?? '' }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -54,10 +77,10 @@
                     <form id="transferForm">
                         <div class="mb-3">
                             <label class="fw-semibold">New Employee *</label>
-                            <select class="form-control select2" name="to_user_id" required>
-                                <option value="">-- Select Employee --</option>
+                            <select class="form-control" name="to_user_id" required>
+                                <option value="">Select employee</option>
                                 @foreach ($users as $u)
-                                    <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->employee_id }})</option>
+                                    <option value="{{ $u->id }}" data-name="{{ $u->name }}" data-empid="{{ $u->employee_id }}" data-email="{{ $u->email ?? '' }}">{{ $u->name }} ({{ $u->employee_id }}) {{ $u->email ?? '' }}</option>
                                 @endforeach
                             </select>
                         </div>

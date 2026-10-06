@@ -39,7 +39,7 @@ class LeaveCreditController extends Controller
         $leaveTypes = LeaveType::where('tenant_id', $tenantId)->where('status', 1)->get();
 
         // For the "Manual Credit" modal's employee select
-        $users = User::with('jobDetails')
+        $users = User::with(['jobDetails', 'leaveBalance'])
             ->where('tenant_id', $tenantId)
             ->where('status', 1)
             ->orderBy('name')
@@ -95,7 +95,7 @@ class LeaveCreditController extends Controller
     {
         $tenantId = session('tenant_id');
 
-        $users = User::with('jobDetails')
+        $users = User::with(['jobDetails', 'leaveBalance'])
             ->where('tenant_id', $tenantId)
             ->where('status', 1)
             ->orderBy('name')

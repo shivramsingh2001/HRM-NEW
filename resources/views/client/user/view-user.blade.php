@@ -1100,9 +1100,8 @@
                     </div> --}}
 
                     <div class="filter-item" style="min-width: auto;">
-                        <a href="{{ route('employee.index') }}" class="reset-btn">
+                        <a href="{{ route('employee.index') }}" class="reset-btn" title="Reset filters" aria-label="Reset filters">
                             <i class="feather-refresh-cw"></i>
-                            Reset
                         </a>
                     </div>
                 </div>

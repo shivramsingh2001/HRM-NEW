@@ -1085,9 +1085,9 @@ html.app-skin-dark .content-area-header {
     display: none;
 }
 .mp-mom-toggle.active {
-    background: var(--purple-light);
-    border-color: var(--purple-mid);
-    color: var(--purple);
+    background: #0D6EFD;
+    border-color: #0D6EFD;
+    color: #fff;
 }
 .mp-remove {
     width: 18px;
@@ -1395,6 +1395,73 @@ html.app-skin-dark .content-area-header {
     .row-grid-2 { grid-template-columns: 1fr; }
     .full-width { grid-column: span 1; }
 }
+
+/* EMPLOYEE PICKER OPTIONS (2026-10-06) — select2 options rendered as avatar +
+   name (ID) + email. See docs/ui-guidelines.md § Employee picker options. */
+.emp-opt { display: flex; align-items: center; gap: 8px; }
+.emp-opt-avatar {
+    width: 26px; height: 26px; border-radius: 50%; flex: none;
+    background: #EFF6FF; color: #0D6EFD; font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.emp-opt-text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.emp-opt-name { font-size: 11.5px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emp-opt-email { font-size: 10px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emp-opt-dropdown .select2-results__option { padding: 6px 10px; }
+/* Hover keeps the text colours; only a light blue row background. */
+.emp-opt-dropdown .select2-results__option--highlighted,
+.emp-opt-dropdown .select2-results__option--highlighted[aria-selected] { background: #EFF6FF !important; color: #0f172a !important; }
+.emp-opt-dropdown .select2-search__field { font-size: 11.5px; padding: 5px 8px; border-radius: 6px; }
+
+/* MOM AUTHORING — compact + responsive (2026-10-06). The form mostly lives
+   in the 480px "Minutes of Meeting" drawer, so sizes are small and the field
+   grids wrap by the space they actually have (auto-fit), not by screen width:
+   2 columns in the drawer, up to 4 on the full page, 1 on a phone. */
+.mom-authoring-container .card-header-modern { padding: 8px 12px; }
+.mom-authoring-container .card-header-modern h5 { font-size: 13px; }
+.mom-authoring-container .card-header-modern p { font-size: 11px; margin-top: 2px; }
+.mom-authoring-container .mom-body { padding: 12px; }
+.mom-authoring-container .form-group-modern small { font-size: 10.5px; }
+.mom-authoring-container .mom-tasks-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0 8px; }
+.mom-authoring-container .mom-tasks-head h5 { font-size: 12.5px; font-weight: 600; margin: 0; }
+.mom-authoring-container .mom-tasks-head p { font-size: 10.5px; margin: 1px 0 0; }
+.mom-authoring-container .btn-add-task { padding: 4px 10px; font-size: 11.5px; margin-bottom: 0; border-radius: var(--radius-sm); }
+.mom-authoring-container .task-card { margin-bottom: 8px; }
+.mom-authoring-container .task-header { padding: 5px 10px; }
+.mom-authoring-container .task-header .fw-semibold { font-size: 11.5px; margin-left: 6px !important; }
+.mom-authoring-container .task-header small { font-size: 10px; }
+.mom-authoring-container .task-number { width: 20px; height: 20px; font-size: 10.5px; }
+.mom-authoring-container .btn-remove-task { padding: 2px 8px; font-size: 10.5px; }
+.mom-authoring-container .task-body { padding: 8px 10px 10px; }
+.mom-authoring-container .task-body .full-width + .full-width { margin-top: 8px; }
+.mom-authoring-container .form-label-modern { font-size: 10.5px; margin-bottom: 2px; }
+.mom-authoring-container .form-label-modern i { margin-right: 3px; font-size: 10.5px; }
+.mom-authoring-container .required-star { margin-left: 1px; }
+.mom-authoring-container .form-control-modern,
+.mom-authoring-container .form-select-modern { padding: 4px 8px; font-size: 11.5px; min-height: 30px; }
+.mom-authoring-container textarea.form-control-modern { min-height: 46px; }
+.mom-authoring-container .row-grid-4 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
+.mom-authoring-container .row-grid-2 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 8px; }
+.mom-authoring-container .row-grid-4 > div,
+.mom-authoring-container .row-grid-2 > div { min-width: 0; }
+.mom-authoring-container .btn-record-modern,
+.mom-authoring-container .btn-stop-modern { padding: 4px 9px; font-size: 10.5px; }
+.mom-authoring-container .audio-preview-modern { margin-top: 5px; }
+.mom-authoring-container audio { height: 30px !important; }
+.mom-authoring-container .file-preview-modern { margin-top: 4px; padding: 3px 7px; font-size: 10.5px; }
+.mom-authoring-container .file-preview-modern:empty,
+.mom-authoring-container .audio-preview-modern:empty { display: none; }
+.mom-authoring-container .mom-note { font-size: 10.5px; padding: 6px 10px; margin: 8px 0 0; border-radius: var(--radius-sm); }
+.mom-authoring-container .submit-section { padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.mom-authoring-container .btn-submit,
+.mom-authoring-container .btn-cancel { padding: 5px 12px; font-size: 11.5px; margin-left: 0; border-radius: var(--radius-sm); }
+/* "Assigned To" select2 — same height as the other task fields */
+.mom-authoring-container .select2-container .select2-selection--single { height: 30px !important; padding: 0 22px 0 8px !important; display: flex; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-sm); background-image: none; }
+.mom-authoring-container .select2-container .select2-selection--single .select2-selection__rendered { padding: 0 !important; line-height: 28px !important; font-size: 11.5px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.mom-authoring-container .select2-container .select2-selection--single .select2-selection__arrow { height: 28px !important; top: 1px !important; right: 3px !important; }
+.mom-authoring-container .note-editor .note-toolbar { padding: 2px 4px; }
+.mom-authoring-container .note-editor .note-btn { padding: 2px 6px; font-size: 11px; }
+.mom-authoring-container .note-editor .note-editable { font-size: 12px; padding: 8px 10px; }
 
 /* Select2 multi-selects — global app-wide compact/blue design, so every
    Select2 multi-select (Languages, Reporting Head, Leave Types, etc. on

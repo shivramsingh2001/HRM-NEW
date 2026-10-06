@@ -24,7 +24,7 @@
     ][$module];
 
     $employees = \App\Models\User::withoutGlobalScopes()->where('tenant_id', auth()->user()->tenant_id)->where('status', 1)
-        ->orderBy('name')->get(['id', 'name', 'employee_id']);
+        ->orderBy('name')->get(['id', 'name', 'employee_id', 'email']);
 
     $loanCategories = $module === 'loan' ? \App\Models\LoanCategory::where('status', 1)->orderBy('name')->get() : collect();
     $leaveTypes = $module === 'leave' ? \App\Models\LeaveType::where('status', 1)->orderBy('name')->get(['id', 'name']) : collect();
@@ -32,6 +32,30 @@
     $projects = $module === 'expense' ? \App\Models\Project::whereNotIn('status', ['completed', 'cancelled'])->orderBy('name')->get(['id', 'name']) : collect();
     $today = now()->toDateString();
 @endphp
+
+@once
+    {{-- Employee picker options: avatar + name (ID) + email — same design as Leave Credit → Add Manual Credit --}}
+    <style>
+        .emp-opt { display: flex; align-items: center; gap: 8px; }
+        .emp-opt-avatar {
+            width: 26px; height: 26px; border-radius: 50%; flex: none;
+            background: #EFF6FF; color: #0D6EFD; font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .emp-opt-text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+        .emp-opt-name { font-size: 11.5px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .emp-opt-email { font-size: 10px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .emp-opt-dropdown .select2-results__option { padding: 6px 10px; }
+        /* Hover keeps the text colours; only a light blue row background. */
+        .emp-opt-dropdown .select2-results__option--highlighted,
+        .emp-opt-dropdown .select2-results__option--highlighted[aria-selected] { background: #EFF6FF !important; color: #0f172a !important; }
+        .emp-opt-dropdown .select2-search__field { font-size: 11.5px; padding: 5px 8px; border-radius: 6px; }
+        /* The closed box: the picked name stays inside it, on one line. */
+        .emp-opt-select .select2-selection--single { height: 34px !important; padding: 0 28px 0 10px !important; display: flex; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background-image: none; }
+        .emp-opt-select .select2-selection--single .select2-selection__rendered { padding: 0 !important; line-height: 32px !important; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .emp-opt-select .select2-selection--single .select2-selection__arrow { height: 32px !important; top: 1px !important; right: 6px !important; }
+    </style>
+@endonce
 
 <x-ui.modal :id="$id" :title="$config['title']" size="md">
     <form class="on-behalf-form" action="{{ route($config['route']) }}" method="POST" enctype="multipart/form-data" novalidate>
@@ -44,7 +68,7 @@
                 <select name="user_id" class="form-control ob-employee" required>
                     <option value="">Select employee</option>
                     @foreach ($employees as $e)
-                        <option value="{{ $e->id }}">{{ $e->name }}{{ $e->employee_id ? ' (' . $e->employee_id . ')' : '' }}</option>
+                        <option value="{{ $e->id }}" data-name="{{ $e->name }}" data-empid="{{ $e->employee_id }}" data-email="{{ $e->email }}">{{ $e->name }}{{ $e->employee_id ? ' (' . $e->employee_id . ')' : '' }} {{ $e->email }}</option>
                     @endforeach
                 </select>
             </div>
@@ -263,7 +287,33 @@
         const $form = $modal.find('form.on-behalf-form');
 
         if ($.fn.select2) {
-            $form.find('.ob-employee').select2({ placeholder: 'Select employee', width: '100%', dropdownParent: $modal });
+            const employeeOption = function (item) {
+                if (!item.id) return item.text;
+                const data = $(item.element).data();
+                const name = String(data.name || '');
+                const $row = $(
+                    '<span class="emp-opt"><span class="emp-opt-avatar"></span>' +
+                    '<span class="emp-opt-text"><span class="emp-opt-name"></span><span class="emp-opt-email"></span></span></span>'
+                );
+                $row.find('.emp-opt-avatar').text(name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().substring(0, 2) || 'NA');
+                $row.find('.emp-opt-name').text(name + (data.empid ? ' (' + data.empid + ')' : ''));
+                $row.find('.emp-opt-email').text(data.email || '');
+                return $row;
+            };
+            $form.find('.ob-employee').select2({
+                placeholder: 'Select employee',
+                width: '100%',
+                dropdownParent: $modal,
+                dropdownCssClass: 'emp-opt-dropdown',
+                templateResult: employeeOption,
+                // Search still matches name, ID and email (the option text); the box shows name (ID).
+                templateSelection: function (item) {
+                    if (!item.id) return item.text;
+                    const data = $(item.element).data();
+                    return data.name + (data.empid ? ' (' + data.empid + ')' : '');
+                },
+            });
+            $form.find('.ob-employee').next('.select2-container').addClass('emp-opt-select');
         }
 
         // Module-specific field toggles.

@@ -322,6 +322,11 @@ class EmployeeProfileActionsTest extends TestCase
             'user_id' => $this->employee->id, 'date' => $date, 'status' => 'present', 'clock_in' => '09:30',
         ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonStructure(['errors' => ['clock_out']]);
 
+        // Clock-out only needs an open clock-in on the day (this day was marked absent above).
+        $this->post(route('team.mark-attendance'), [
+            'user_id' => $this->employee->id, 'date' => $date, 'status' => 'present', 'clock_out' => '18:00', 'clock_out_only' => 1,
+        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonStructure(['errors' => ['clock_out']]);
+
         // ...and so does a half day.
         $this->post(route('team.mark-attendance'), [
             'user_id' => $this->employee->id, 'date' => $date, 'status' => 'half_day', 'clock_in' => '09:30',
