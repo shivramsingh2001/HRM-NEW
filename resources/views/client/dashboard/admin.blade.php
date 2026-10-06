@@ -655,33 +655,8 @@
             </div>
         </div>
 
-        <!-- Needs your action: pending approvals per module (enabled modules the viewer may open) -->
-        @if (!empty($pending_approvals))
-            @php $pendingTotal = collect($pending_approvals)->sum('count'); @endphp
-            <div class="section-hdr">
-                <div class="section-hdr-left">
-                    <span class="section-hdr-icon"><i class="feather-inbox"></i></span>
-                    <h6 class="section-hdr-title">Needs your action</h6>
-                    @if ($pendingTotal > 0)<span class="act-total">{{ $pendingTotal }} pending</span>@endif
-                </div>
-            </div>
-            <div class="act-grid mb-2">
-                @if ($pendingTotal === 0)
-                    <div class="act-empty"><i class="feather-check-circle"></i> All caught up — nothing is waiting for approval.</div>
-                @else
-                    @foreach ($pending_approvals as $item)
-                        <a href="{{ $item['url'] }}" class="act-tile {{ $item['count'] > 0 ? 'has' : '' }}">
-                            <span class="act-icon"><i class="feather-{{ $item['icon'] }}"></i></span>
-                            <span class="act-body">
-                                <span class="act-count">{{ $item['count'] }}</span>
-                                <span class="act-label">{{ $item['label'] }}</span>
-                            </span>
-                            <i class="feather-chevron-right act-go"></i>
-                        </a>
-                    @endforeach
-                @endif
-            </div>
-        @endif
+        {{-- "Needs your action" (pending approvals per module) now lives in the top header,
+             as a warning icon just before the notification bell — see the push at the end of this file. --}}
 
         <!-- Today / People / Holidays / Recent leave -->
         <div class="row g-compact mb-2">
@@ -1613,3 +1588,57 @@
         });
     </script>
 @endsection
+
+{{-- Needs your action: pending approvals per module (enabled modules the viewer may open),
+     shown as a warning icon before the notification bell. Click = small list with a count per module. --}}
+@if (!empty($pending_approvals))
+    @php $pendingTotal = collect($pending_approvals)->sum('count'); @endphp
+    @push('header-before-bell')
+        <div class="dropdown nxl-h-item" id="needsActionWrapper">
+            <a href="javascript:void(0);" class="nxl-head-link me-0 needs-action-toggle" data-bs-toggle="dropdown"
+                aria-expanded="false" aria-label="Needs your action" title="Needs your action">
+                <i class="feather-alert-triangle {{ $pendingTotal > 0 ? 'text-warning' : '' }}"></i>
+                @if ($pendingTotal > 0)
+                    <span class="badge bg-warning text-dark rounded-pill needs-action-badge">{{ $pendingTotal > 99 ? '99+' : $pendingTotal }}</span>
+                @endif
+            </a>
+            <div class="dropdown-menu dropdown-menu-end nxl-h-dropdown needs-action-menu">
+                <div class="needs-action-head">
+                    Needs your action
+                    @if ($pendingTotal > 0)<span class="needs-action-total">{{ $pendingTotal }} pending</span>@endif
+                </div>
+                @if ($pendingTotal === 0)
+                    <div class="needs-action-empty"><i class="feather-check-circle me-1"></i>All caught up — nothing is waiting for approval.</div>
+                @else
+                    @foreach ($pending_approvals as $item)
+                        <a href="{{ $item['url'] }}" class="needs-action-row {{ $item['count'] > 0 ? 'has' : '' }}">
+                            <span class="needs-action-count">{{ $item['count'] }}</span>
+                            <span class="needs-action-label"><i class="feather-{{ $item['icon'] }} me-1"></i>{{ $item['label'] }}</span>
+                            <i class="feather-chevron-right needs-action-go"></i>
+                        </a>
+                    @endforeach
+                @endif
+            </div>
+        </div>
+        <style>
+            .needs-action-toggle { position: relative; }
+            .needs-action-badge { position: absolute; top: 2px; right: 2px; font-size: 9px; min-width: 16px; line-height: 1.3; padding: 1px 4px; }
+            .needs-action-menu { width: 250px; padding: 0; }
+            .needs-action-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px;
+                border-bottom: 1px solid #f1f5f9; font-size: 12.5px; font-weight: 700; color: #0f172a; }
+            .needs-action-total { font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 20px; background: #fef3c7; color: #b45309; }
+            .needs-action-row { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-bottom: 1px solid #f8fafc;
+                text-decoration: none; color: #94a3b8; }
+            .needs-action-row:last-child { border-bottom: 0; }
+            .needs-action-row:hover { background: #f8fafc; }
+            .needs-action-count { min-width: 26px; text-align: center; font-size: 12px; font-weight: 800; padding: 1px 6px;
+                border-radius: 6px; background: #f1f5f9; color: #94a3b8; }
+            .needs-action-row.has .needs-action-count { background: #EFF6FF; color: #0D6EFD; }
+            .needs-action-label { flex: 1; min-width: 0; font-size: 11.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .needs-action-row.has .needs-action-label { color: #0f172a; font-weight: 600; }
+            .needs-action-go { font-size: 12px; color: #cbd5e1; }
+            .needs-action-row:hover .needs-action-go { color: #0D6EFD; }
+            .needs-action-empty { padding: 12px; font-size: 11.5px; font-weight: 600; color: #15803d; }
+        </style>
+    @endpush
+@endif

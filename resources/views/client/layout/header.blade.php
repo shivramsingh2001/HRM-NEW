@@ -56,6 +56,8 @@
                          </a>
                      </div>
                  </div>
+                 {{-- A page can put its own icon just before the bell (admin dashboard: "Needs your action"). --}}
+                 @stack('header-before-bell')
                  @include('client.layout.partials.notification-bell')
 
                  {{-- The dark/light theme switch was removed (2026-10-04): reset anyone who had picked
