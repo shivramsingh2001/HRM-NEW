@@ -1035,11 +1035,28 @@
                         <!-- Payroll Tab -->
                         <div class="tab-pane fade" id="payrollTab" role="tabpanel">
                             @php
+                                // Salary is saved as a payroll structure revision (wizard Payroll step /
+                                // "Edit salary" here), so show that when the employee has one; an
+                                // employee with only an old user_payrolls row keeps showing that.
                                 $currentPayroll = null;
-                                if ($user->currentPayroll && $user->currentPayroll->count() > 0) {
-                                    $currentPayroll = $user->currentPayroll;;
+                                $salaryStructure = $user->currentDynamicPayrollStructure;
+                                if ($salaryStructure) {
+                                    $currentPayroll = (object) app(\App\Services\Payroll\PayrollStructureAssignmentService::class)->toLegacyShapedArray($salaryStructure);
+                                    $currentPayroll->net_salary = $currentPayroll->gross_salary - $currentPayroll->provident_fund
+                                        - $currentPayroll->esi - $currentPayroll->professional_tax - $currentPayroll->tds;
+                                } elseif ($user->currentPayroll && $user->currentPayroll->count() > 0) {
+                                    $currentPayroll = $user->currentPayroll;
                                 }
                             @endphp
+
+                            @if ($can['payroll_edit'] ?? false)
+                                <div class="text-end mb-2">
+                                    <a href="#" class="btn btn-sm btn-primary" data-p360-open="{{ $form('payroll') }}"
+                                        data-title="{{ $currentPayroll ? 'Edit salary' : 'Set salary' }} — {{ $user->name }}" data-size="lg">
+                                        <i class="feather-edit-2 me-1"></i>{{ $currentPayroll ? 'Edit salary' : 'Set salary' }}
+                                    </a>
+                                </div>
+                            @endif
 
                             @if ($currentPayroll)
                                 <div class="payroll-header">
@@ -1302,6 +1319,8 @@
 @endsection
 
 @section('script-area')
+    {{-- Salary split used by the "Edit salary" form (profile/forms/payroll.blade.php) --}}
+    <script src="{{ asset('assets/js/salary-breakdown.js') }}?v={{ filemtime(public_path('assets/js/salary-breakdown.js')) }}"></script>
     <script>
         $(document).ready(function() {
             // Initialize tooltips

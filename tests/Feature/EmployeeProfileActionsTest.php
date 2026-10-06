@@ -106,6 +106,38 @@ class EmployeeProfileActionsTest extends TestCase
         }
     }
 
+    public function test_edit_salary_form_saves_a_salary_revision(): void
+    {
+        if (!app(\App\Services\FeatureService::class)->enabled($this->tenantId, 'payroll')) {
+            $this->markTestSkipped('Payroll is not in this company\'s plan.');
+        }
+        $this->actingAs($this->admin);
+
+        $this->get(route('employee.show', $this->enc()))->assertOk()->assertSee('/form/payroll', false);
+        $this->get($this->formUrl('payroll'))->assertOk()
+            ->assertSee('data-p360-form', false)->assertSee('name="annual_ctc"', false)->assertSee('value="6"', false);
+
+        // What the form posts for a 6,00,000 CTC with the default split, from a new effective date.
+        $date = now()->addMonth()->startOfMonth()->toDateString();
+        $this->post(route('employee.update.step', $this->enc()), [
+            'step' => 6, 'annual_ctc' => 600000, 'salary_effective_date' => $date, 'payroll_structure_id' => '',
+            'basic_salary' => 25000, 'hra' => 10000, 'conveyence' => 1600, 'medical_allowance' => 1250,
+            'children_allowance' => 0, 'post_allowance' => 0, 'leave_travel_allowance' => 0, 'monthly_incentive' => 0,
+            'special_allowance' => 0, 'provident_fund' => 1800, 'employer_provident_fund' => 1800, 'esi' => 0,
+            'employer_esi' => 0, 'professional_tax' => 200, 'gross_salary' => 37850, 'net_salary' => 35850,
+        ], ['Accept' => 'application/json'])->assertOk()->assertJson(['success' => true]);
+
+        $structure = DB::table('payroll_employee_structures')->where('tenant_id', $this->tenantId)
+            ->where('user_id', $this->employee->id)->whereDate('effective_from', $date)->first();
+        $this->assertNotNull($structure);
+        $this->assertEquals(600000, (float) $structure->ctc);
+        $this->assertEquals(37850, (float) DB::table('user_job_details')->where('user_id', $this->employee->id)->value('salary'));
+
+        // A CTC below the minimum comes back as a field error for the modal.
+        $this->post(route('employee.update.step', $this->enc()), ['step' => 6, 'annual_ctc' => 5000, 'salary_effective_date' => $date],
+            ['Accept' => 'application/json'])->assertStatus(422)->assertJsonStructure(['errors' => ['annual_ctc']]);
+    }
+
     public function test_forms_are_for_admin_and_hr_and_this_company_only(): void
     {
         $plain = User::withoutGlobalScopes()->where('tenant_id', $this->tenantId)->where('role', 'employee')->where('status', 1)

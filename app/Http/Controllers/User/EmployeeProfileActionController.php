@@ -13,6 +13,7 @@ use App\Models\Language;
 use App\Models\Leave;
 use App\Models\LeaveBalance;
 use App\Models\LeaveType;
+use App\Models\PayrollStructure;
 use App\Models\Shift;
 use App\Models\User;
 use App\Enums\AttendanceStatus;
@@ -52,6 +53,7 @@ class EmployeeProfileActionController extends EmployeeProfileController
         'job' => 'overview',
         'address' => 'overview',
         'bank' => 'overview',
+        'payroll' => 'payroll',
         'document' => 'overview',
         'password' => 'overview',
         'status' => 'overview',
@@ -154,6 +156,29 @@ class EmployeeProfileActionController extends EmployeeProfileController
     private function formBank(User $user): array
     {
         return ['bank' => $user->bankDetails];
+    }
+
+    /**
+     * Set / revise the salary. Saved by the wizard's Payroll step
+     * (UserController::updateStep6), which writes a payroll_employee_structures
+     * revision — so the form starts from that structure, falling back to the
+     * legacy user_payrolls row for an employee who only has one of those.
+     */
+    private function formPayroll(User $user): array
+    {
+        abort_unless($this->abilities()['payroll_edit'], 403, 'You do not have permission to edit salaries.');
+
+        $structure = $user->currentDynamicPayrollStructure;
+        $legacy = $structure ? null : $user->currentPayroll;
+
+        return [
+            'payrollStructures' => PayrollStructure::where('status', 1)->with('components.component')->orderBy('name')->get(),
+            'current' => [
+                'ctc' => (float) ($structure->ctc ?? ($legacy->ctc ?? 0)),
+                'effective_from' => optional($structure->effective_from ?? ($legacy->effective_from ?? null))->format('Y-m-d'),
+                'payroll_structure_id' => $structure->payroll_structure_id ?? null,
+            ],
+        ];
     }
 
     private function formDocument(User $user, int $tenantId, Request $request): array

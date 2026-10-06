@@ -81,6 +81,7 @@ class EmployeeProfileController extends Controller
             'expenses_approve' => $can('expenses', 'approve'),
             'assets_manage' => $can('assets', 'manage'),
             'payroll_view' => $can('payroll', 'view'),
+            'payroll_edit' => $can('payroll', 'edit') && $this->features->enabledForCurrentTenant('payroll'),
             'custom_shifts' => app(TenantShiftResolver::class)->isCustomShifts((int) $actor->tenant_id),
         ];
     }
