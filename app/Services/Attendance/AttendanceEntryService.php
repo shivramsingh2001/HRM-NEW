@@ -148,7 +148,7 @@ class AttendanceEntryService
      * @param array{
      *   user_id:int, tenant_id:int, date:string, end_date?:?string,
      *   status:AttendanceStatus, clock_in?:?string, clock_out?:?string,
-     *   remarks?:?string, leave_type_id?:?int
+     *   remarks?:?string, leave_type_id?:?int, clock_in_only?:bool
      * } $input
      * @return array{attendance:Attendance, leave:?\App\Models\Leave, is_update:bool, shift:?object, marked:int}
      */
@@ -167,6 +167,14 @@ class AttendanceEntryService
             source: 'manual',
             reason: $input['remarks'] ?? ('Marked by ' . $actor->name . ' (' . $status->value . ')'),
         );
+
+        // Present with a clock-in but no clock-out: the employee is checked in
+        // and still working — one day only, never a range. Opt-in per caller
+        // (`clock_in_only`), so the public API keeps its existing behaviour.
+        if (!empty($input['clock_in_only']) && $status === AttendanceStatus::Present
+            && !empty($input['clock_in']) && empty($input['clock_out'])) {
+            return $this->markClockIn($userId, $tenantId, $start->format('Y-m-d'), $input['clock_in'], $actor, $ctx);
+        }
 
         $lastAttendance = null;
         $lastLeave = null;
@@ -278,6 +286,89 @@ class AttendanceEntryService
             'is_update' => $isUpdate,
             'shift' => $lastShift,
             'marked' => $marked,
+        ];
+    }
+
+    /**
+     * Hand-set only the clock-in for a day (the employee forgot to clock in
+     * and is still working). Written as a manual `in` PUNCH, like a
+     * regularization, so the session stays open: the employee can clock out
+     * from the app as usual, auto clock-out still applies, and a later full
+     * manual mark can close it. Punches already on the day are voided.
+     *
+     * @return array{attendance:Attendance, leave:null, is_update:bool, shift:?object, marked:int}
+     */
+    private function markClockIn(int $userId, int $tenantId, string $date, string $time, User $actor, AuditContext $ctx): array
+    {
+        $ym = Carbon::parse($date)->format('Y-m');
+        if (app(PeriodLockService::class)->isLocked($tenantId, $ym)) {
+            throw new \App\Exceptions\PeriodLockedException($ym);
+        }
+
+        $resolver = app(TenantShiftResolver::class);
+        $shift = $resolver->forUserDate($userId, $tenantId, $date);
+        $clockIn = $this->regularizedTime($date, $time, $shift, 'in', null);
+
+        $attendance = DB::transaction(function () use ($userId, $tenantId, $date, $actor, $ctx, $resolver, $clockIn) {
+            AttendancePunch::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)->where('user_id', $userId)
+                ->where('date', $date)->where('status', 'active')
+                ->update([
+                    'status' => 'void',
+                    'voided_by' => $actor->id,
+                    'voided_at' => now(),
+                    'void_reason' => 'Superseded by manual attendance marking',
+                ]);
+
+            $tz = app(TimezoneResolver::class)->forUser($userId, $tenantId);
+            $userShiftId = $resolver->primaryRow($userId, $tenantId, $date)?->id;
+
+            AttendancePunch::create([
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'date' => $date,
+                'direction' => 'in',
+                'punched_at' => $clockIn->format('Y-m-d H:i:s'),
+                'punched_at_utc' => $this->calc->toUtc($clockIn->format('Y-m-d H:i:s'), $tz),
+                'timezone' => $tz,
+                'source' => 'manual',
+                'method' => 'manual_mark',
+                'address' => 'Marked by ' . $actor->name,
+                'attendance_location_id' => UserJobDetail::where('user_id', $userId)->where('tenant_id', $tenantId)->value('office_branch'),
+                'actor_id' => $actor->id,
+                'actor_role' => $actor->role,
+                'reason' => $ctx->reason,
+                'status' => 'active',
+                'session_seq' => 1,
+                'user_shift_id' => $userShiftId,
+            ]);
+
+            // The shift is in progress again, whatever it was set to before.
+            if ($userShiftId) {
+                DB::table('user_shifts')->where('id', $userShiftId)->update(['status' => 'ongoing', 'updated_at' => now()]);
+            }
+
+            $row = app(AttendanceRollupService::class)->recompute($userId, $tenantId, $date, $ctx);
+
+            // The rollup leaves a status set by an earlier manual mark alone;
+            // a checked-in day is present (or late) until clock-out decides.
+            return $this->record($userId, $tenantId, $date, [
+                'attendance_status' => in_array($row->attendance_status, ['present', 'late'], true) ? $row->attendance_status : 'present',
+                'day_fraction' => 1.00,
+                'effective_status' => null,
+                'policy_note' => null,
+                'is_regularized' => 0,
+                'clock_out_address' => null,
+                'remarks' => $ctx->reason,
+            ], $ctx);
+        });
+
+        return [
+            'attendance' => $attendance,
+            'leave' => null,
+            'is_update' => true,
+            'shift' => $shift,
+            'marked' => 1,
         ];
     }
 

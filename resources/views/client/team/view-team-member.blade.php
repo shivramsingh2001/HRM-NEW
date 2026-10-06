@@ -370,41 +370,102 @@
 
         /* Employee Info Card */
         .employee-info-card {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 16px 20px;
+            background: #fff;
+            border-radius: 10px;
             border: 1px solid #e2e8f0;
+            border-left: 3px solid #0D6EFD;
+            overflow: hidden;
+        }
+
+        .employee-info-card .eic-top {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
+            padding: 12px 14px;
         }
 
         .employee-info-card .avatar-lg {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, var(--primary-light), var(--primary-light));
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #EFF6FF;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--primary);
+            color: #0D6EFD;
             font-weight: 700;
-            font-size: 11.5px;
+            font-size: 13px;
             text-transform: uppercase;
             flex-shrink: 0;
         }
 
+        .employee-info-card .info {
+            min-width: 0;
+            flex: 1;
+        }
+
         .employee-info-card .info h6 {
-            margin-bottom: 2px;
+            margin-bottom: 3px;
             font-weight: 600;
             color: #0f172a;
-            font-size: 12px;
+            font-size: 13.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .employee-info-card .info p {
             margin-bottom: 0;
             font-size: 11.5px;
             color: #64748b;
+        }
+
+        .employee-info-card .eic-id {
+            background: #EFF6FF;
+            color: #0D6EFD;
+            font-weight: 600;
+            font-size: 10.5px;
+            padding: 1px 7px;
+            border-radius: 4px;
+            margin-right: 4px;
+        }
+
+        .employee-info-card .eic-date {
+            flex-shrink: 0;
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+            background: #f1f5f9;
+            padding: 4px 9px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .employee-info-card .eic-times {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .employee-info-card .eic-times > div {
+            padding: 8px 14px;
+        }
+
+        .employee-info-card .eic-times > div + div {
+            border-left: 1px solid #e2e8f0;
+        }
+
+        .employee-info-card .eic-label {
+            display: block;
+            font-size: 10.5px;
+            color: #64748b;
+        }
+
+        .employee-info-card .eic-value {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #0f172a;
         }
 
         /* Shift Info Card */
@@ -610,10 +671,6 @@
                 margin: 10px;
             }
 
-            .employee-info-card {
-                flex-direction: column;
-                text-align: center;
-            }
         }
 
         @media (max-width: 480px) {
@@ -942,7 +999,7 @@
                                                     <!-- Mark Attendance Button - Admin / HR / Manager (own reportees) -->
                                                     @if ($canMarkAttendance)
                                                         <button type="button" class="action-btn mark-btn"
-                                                            onclick="openMarkAttendanceModal({{ $member->id }}, '{{ $member->name }}', '{{ $member->employee_id }}', '{{ $member->designation ?? 'N/A' }}')"
+                                                            onclick="openMarkAttendanceModal({{ $member->id }}, '{{ $member->name }}', '{{ $member->employee_id }}', '{{ $member->designation ?? 'N/A' }}', '{{ $member->punch_in ? \Carbon\Carbon::parse($member->punch_in)->format('H:i') : '' }}', '{{ $member->punch_out ? \Carbon\Carbon::parse($member->punch_out)->format('H:i') : '' }}')"
                                                             title="Mark Attendance">
                                                             <i class="feather-edit-2"></i>
                                                         </button>
@@ -975,33 +1032,35 @@
 @endsection
 
 @section('create-modal')
-    <!-- Mark Attendance Modal -->
-    <div class="modal fade-scale" id="markAttendanceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered compact-modal compact-modal-plain modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="feather-edit-2 me-2" style="color: var(--icon-color, #0D6EFD);"></i>
-                        Mark Attendance
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
+    <!-- Mark Attendance Drawer -->
+    <x-ui.drawer id="markAttendanceDrawer" title="Mark Attendance" width="480px">
                     <!-- Employee Info -->
                     <div class="employee-info-card mb-3">
-                        <div class="avatar-lg" id="modalEmployeeAvatar">
-                            {{-- Dynamic --}}
+                        <div class="eic-top">
+                            <div class="avatar-lg" id="modalEmployeeAvatar">
+                                {{-- Dynamic --}}
+                            </div>
+                            <div class="info">
+                                <h6 id="modalEmployeeName">Employee Name</h6>
+                                <p>
+                                    <span class="eic-id" id="modalEmployeeId">ID</span>
+                                    <span id="modalEmployeeDesignation">Designation</span>
+                                </p>
+                            </div>
+                            <span class="eic-date">
+                                <i class="feather-calendar me-1"></i>{{ \Carbon\Carbon::parse(request('date', date('Y-m-d')))->format('d M Y') }}
+                            </span>
                         </div>
-                        <div class="info">
-                            <h6 id="modalEmployeeName">Employee Name</h6>
-                            <p>
-                                <span id="modalEmployeeId">ID</span> •
-                                <span id="modalEmployeeDesignation">Designation</span>
-                            </p>
-                            <p class="text-muted" style="font-size: 12px;">
-                                <i class="feather-calendar me-1"></i>
-                                Date: {{ \Carbon\Carbon::parse(request('date', date('Y-m-d')))->format('d M Y') }}
-                            </p>
+                        {{-- What is recorded for the day right now --}}
+                        <div class="eic-times">
+                            <div>
+                                <span class="eic-label">Recorded clock in</span>
+                                <span class="eic-value" id="modalRecordedIn">—</span>
+                            </div>
+                            <div>
+                                <span class="eic-label">Recorded clock out</span>
+                                <span class="eic-value" id="modalRecordedOut">—</span>
+                            </div>
                         </div>
                     </div>
 
@@ -1083,10 +1142,23 @@
                             <div class="col-md-6">
                                 <label class="form-label">
                                     <i class="feather-clock me-1" style="color: var(--icon-color, #0D6EFD);"></i>
-                                    Clock Out Time <span class="required">*</span>
+                                    Clock Out Time <span class="required" id="clockOutRequiredMark">*</span>
                                 </label>
                                 <input type="time" class="form-control" name="clock_out" id="clockOutTime">
                                 <div class="invalid-feedback"></div>
+                            </div>
+                            <!-- Clock-in only: the employee forgot to clock in and is still working -->
+                            <div class="col-12" id="stillWorkingField">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="stillWorking">
+                                    <label class="form-check-label" for="stillWorking" style="font-size: 12.5px;">
+                                        Clock in only (employee is still working)
+                                    </label>
+                                </div>
+                                <small class="text-muted" style="font-size: 11px; display: block; margin-top: 2px;">
+                                    Saves the clock-in time and leaves the day open. The employee clocks out
+                                    as usual, or you can add the clock-out time here later. Today only.
+                                </small>
                             </div>
                         </div>
 
@@ -1141,19 +1213,17 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">
-                        <i class="feather-x me-1"></i> Cancel
-                    </button>
-                    <button type="button" class="btn btn-primary" id="markAttendanceSubmitBtn"
-                        onclick="submitMarkAttendance()">
-                        <i class="feather-check me-1"></i> Mark Attendance
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-primary btn-sm" id="markAttendanceSubmitBtn"
+                            onclick="submitMarkAttendance()">
+                            <i class="feather-check me-1"></i> Mark Attendance
+                        </button>
+                        <button type="button" class="btn btn-modal-cancel btn-sm" data-bs-dismiss="offcanvas">
+                            <i class="feather-x me-1"></i> Cancel
+                        </button>
+                    </div>
+    </x-ui.drawer>
 @endsection
 
 @section('script-area')
@@ -1180,26 +1250,6 @@
                 }, 500);
             });
 
-            // Set default time values
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const currentTime = hours + ':' + minutes;
-
-            // When modal is shown
-            $('#markAttendanceModal').on('shown.bs.modal', function() {
-                if (!$('#clockInTime').val()) {
-                    $('#clockInTime').val(currentTime);
-                }
-                if (!$('#clockOutTime').val()) {
-                    const clockOut = new Date();
-                    clockOut.setHours(clockOut.getHours() + 1);
-                    const outHours = String(clockOut.getHours()).padStart(2, '0');
-                    const outMinutes = String(clockOut.getMinutes()).padStart(2, '0');
-                    $('#clockOutTime').val(outHours + ':' + outMinutes);
-                }
-            });
-
             // Toastr options
             toastr.options = {
                 "closeButton": true,
@@ -1217,9 +1267,34 @@
         });
 
         /**
-         * Open the Mark Attendance Modal with employee details
+         * Open the Mark Attendance drawer with employee details.
+         * punchIn / punchOut (HH:MM, may be empty) are the times already
+         * recorded for the day — they are shown as they are, so changing only
+         * one of them keeps the other.
          */
-        function openMarkAttendanceModal(userId, name, employeeId, designation) {
+        function openMarkAttendanceModal(userId, name, employeeId, designation, punchIn = '', punchOut = '') {
+            const clockInInput = document.getElementById('clockInTime');
+            const clockOutInput = document.getElementById('clockOutTime');
+            const stillWorking = document.getElementById('stillWorking');
+            const hasRecorded = punchIn !== '';
+
+            clockInInput.value = punchIn;
+            clockOutInput.value = punchOut;
+
+            // 24h "HH:MM" → "h:mm AM/PM" for the recorded-times strip.
+            const asClock = time => {
+                if (!time) return '—';
+                const [h, m] = time.split(':').map(Number);
+                return ((h % 12) || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM');
+            };
+            document.getElementById('modalRecordedIn').textContent = asClock(punchIn);
+            document.getElementById('modalRecordedOut').textContent =
+                punchOut ? asClock(punchOut) : (hasRecorded ? 'Still working' : '—');
+            // Clocked in and not out yet: keep the day open unless the admin adds a clock-out.
+            stillWorking.checked = hasRecorded && punchOut === '';
+            document.getElementById('attendanceStatus').value = 'present';
+            onMarkStatusChange();
+
             // Set employee details
             document.getElementById('modalEmployeeAvatar').textContent = name.substring(0, 2).toUpperCase();
             document.getElementById('modalEmployeeName').textContent = name;
@@ -1271,12 +1346,12 @@
                             document.getElementById('shiftNote').style.display = 'none';
                         }
 
-                        // Set default clock in/out based on shift
-                        if (shift.start_time) {
-                            document.getElementById('clockInTime').value = shift.start_time;
+                        // Nothing recorded for the day: default clock in/out to the shift.
+                        if (!hasRecorded && shift.start_time) {
+                            clockInInput.value = String(shift.start_time).substring(0, 5);
                         }
-                        if (shift.end_time) {
-                            document.getElementById('clockOutTime').value = shift.end_time;
+                        if (!hasRecorded && shift.end_time && !stillWorking.checked) {
+                            clockOutInput.value = String(shift.end_time).substring(0, 5);
                         }
                     } else {
                         document.getElementById('modalShiftName').textContent = 'No Shift Assigned';
@@ -1320,9 +1395,7 @@
                 document.getElementById('attendanceLogToggleText').textContent = 'Show recent changes';
             }
 
-            // Show modal
-            var modal = new bootstrap.Modal(document.getElementById('markAttendanceModal'));
-            modal.show();
+            bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('markAttendanceDrawer')).show();
         }
 
         /**
@@ -1424,11 +1497,36 @@
             const isLeave = LEAVE_STATUSES.includes(status);
             document.getElementById('clockTimeFields').style.display = needsClock ? '' : 'none';
             document.getElementById('leaveTypeField').style.display = isLeave ? '' : 'none';
+
+            // Clock-in only is offered for Present; a half day needs both times.
+            const stillWorking = document.getElementById('stillWorking');
+            document.getElementById('stillWorkingField').style.display = status === 'present' ? '' : 'none';
+            if (status !== 'present') {
+                stillWorking.checked = false;
+            }
+            onStillWorkingChange();
         }
+
+        function isClockInOnly() {
+            return document.getElementById('attendanceStatus').value === 'present'
+                && document.getElementById('stillWorking').checked;
+        }
+
+        function onStillWorkingChange() {
+            const inOnly = isClockInOnly();
+            const clockOut = document.getElementById('clockOutTime');
+            clockOut.disabled = inOnly;
+            if (inOnly) {
+                clockOut.value = '';
+            }
+            document.getElementById('clockOutRequiredMark').style.display = inOnly ? 'none' : '';
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const sel = document.getElementById('attendanceStatus');
             if (sel) {
                 sel.addEventListener('change', onMarkStatusChange);
+                document.getElementById('stillWorking').addEventListener('change', onStillWorkingChange);
                 onMarkStatusChange();
             }
         });
@@ -1448,29 +1546,42 @@
             let clockIn = document.getElementById('clockInTime').value;
             let clockOut = document.getElementById('clockOutTime').value;
 
+            const inOnly = isClockInOnly();
+
             if (needsClock) {
-                if (!clockIn || !clockOut) {
-                    toastr.error('Clock In and Clock Out are required for ' + status.replace('_', ' '));
+                if (!clockIn) {
+                    toastr.error('Clock In time is required');
+                    return;
+                }
+                if (!inOnly && !clockOut) {
+                    toastr.error(status === 'present' ?
+                        'Enter the Clock Out time, or tick "Clock in only" if the employee is still working' :
+                        'Clock In and Clock Out are required for half day');
                     return;
                 }
                 clockIn = clockIn.substring(0, 5);
-                clockOut = clockOut.substring(0, 5);
+                clockOut = inOnly ? '' : clockOut.substring(0, 5);
 
                 const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-                if (!timeRegex.test(clockIn) || !timeRegex.test(clockOut)) {
+                if (!timeRegex.test(clockIn) || (!inOnly && !timeRegex.test(clockOut))) {
                     toastr.error('Invalid time format. Please use HH:MM (24-hour).');
                     return;
                 }
 
                 const shiftType = document.getElementById('modalShiftType');
                 const isOvernight = shiftType && shiftType.textContent.includes('Overnight');
-                if (!isOvernight && clockOut <= clockIn) {
+                if (!inOnly && !isOvernight && clockOut <= clockIn) {
                     toastr.error('Clock Out must be after Clock In for a regular shift');
                     return;
                 }
 
                 formData.set('clock_in', clockIn);
-                formData.set('clock_out', clockOut);
+                if (inOnly) {
+                    formData.delete('clock_out');
+                    formData.delete('end_date');
+                } else {
+                    formData.set('clock_out', clockOut);
+                }
             } else {
                 formData.delete('clock_in');
                 formData.delete('clock_out');
@@ -1544,10 +1655,9 @@
                         message += ' | Status: ' + statusLabel;
 
                         toastr.success(message);
-                        // Close modal
-                        var modal = bootstrap.Modal.getInstance(document.getElementById('markAttendanceModal'));
-                        if (modal) {
-                            modal.hide();
+                        const drawer = bootstrap.Offcanvas.getInstance(document.getElementById('markAttendanceDrawer'));
+                        if (drawer) {
+                            drawer.hide();
                         }
                         // Reload page after 1.5 seconds
                         setTimeout(() => {

@@ -42,4 +42,9 @@ return [
         'panel_url' => env('SUPERADMIN_PANEL_URL', 'http://127.0.0.1:8001'),
     ],
 
+    // Browser key for the Maps JavaScript API. Blank = pages use OpenStreetMap.
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_API_KEY', ''),
+    ],
+
 ];

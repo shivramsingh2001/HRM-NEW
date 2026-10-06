@@ -315,7 +315,17 @@ class EmployeeProfileActionsTest extends TestCase
         // Present without times → field errors for the modal.
         $this->post(route('team.mark-attendance'), [
             'user_id' => $this->employee->id, 'date' => $date, 'status' => 'present',
-        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonStructure(['errors' => ['clock_in', 'clock_out']]);
+        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonStructure(['errors' => ['clock_in']]);
+
+        // Clock-in only (no clock-out) is for the current day: a past date still needs both times...
+        $this->post(route('team.mark-attendance'), [
+            'user_id' => $this->employee->id, 'date' => $date, 'status' => 'present', 'clock_in' => '09:30',
+        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonStructure(['errors' => ['clock_out']]);
+
+        // ...and so does a half day.
+        $this->post(route('team.mark-attendance'), [
+            'user_id' => $this->employee->id, 'date' => $date, 'status' => 'half_day', 'clock_in' => '09:30',
+        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonStructure(['errors' => ['clock_out']]);
     }
 
     public function test_assign_shift_form_posts_to_the_shift_endpoint(): void

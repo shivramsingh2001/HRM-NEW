@@ -23,8 +23,11 @@
             <input type="time" name="clock_in" class="form-control">
         </div>
         <div class="col-md-6" data-for="present half_day">
-            <label class="form-label">Clock out <span class="text-danger">*</span></label>
-            <input type="time" name="clock_out" class="form-control">
+            <label class="form-label">Clock out <span class="text-danger" data-required-mark>*</span></label>
+            <input type="time" name="clock_out" class="form-control" data-optional-for="present">
+        </div>
+        <div class="col-12" data-for="present">
+            <div class="p360-note">Present: leave Clock out blank if the employee is still working (today only). The day stays open and the employee clocks out as usual.</div>
         </div>
         <div class="col-12 d-none" data-for="on_leave first_half_leave second_half_leave">
             <label class="form-label">Leave type <span class="text-danger">*</span></label>
@@ -53,6 +56,10 @@
                 const show = $(this).data('for').split(' ').includes(status);
                 $(this).toggleClass('d-none', !show).find('input, select').prop('disabled', !show).prop('required', show);
             });
+            // Clock out is optional for Present (clock-in only).
+            const optional = $form.find('[data-optional-for]').data('optional-for') === status;
+            $form.find('[data-optional-for]').prop('required', !optional && ['present', 'half_day'].includes(status));
+            $form.find('[data-required-mark]').toggleClass('d-none', optional);
         };
         $form.on('change', '[name=status]', sync);
         sync();

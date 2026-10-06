@@ -3201,6 +3201,8 @@ class TeamController extends Controller
                 'status' => $request->attendanceStatus(),
                 'clock_in' => $request->input('clock_in'),
                 'clock_out' => $request->input('clock_out'),
+                // Present + clock-in with no clock-out = checked in, still working.
+                'clock_in_only' => ! $request->filled('clock_out'),
                 'leave_type_id' => $request->input('leave_type_id'),
                 'remarks' => $request->input('remarks'),
             ], $actor);

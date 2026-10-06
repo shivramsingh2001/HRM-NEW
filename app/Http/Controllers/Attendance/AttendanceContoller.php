@@ -763,6 +763,7 @@ class AttendanceContoller extends Controller
                 'last_track_time' => $lastTrack['track_time'],
                 'tracking_duration_hours' => round($totalMinutes / 60, 2),
                 'tracking_duration_minutes' => $totalMinutes,
+                'distance_km' => $this->routeDistanceKm($locationTracks->all()),
             ];
 
             return view('client.attendance.sessions', [
@@ -781,5 +782,41 @@ class AttendanceContoller extends Controller
             Log::error('Error in viewAttendanceSessions: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load attendance sessions. Please try again.');
         }
+    }
+
+    /**
+     * Length of the tracked route in km: straight-line distance between each
+     * pair of consecutive points. Hops under 10 m are skipped — that is GPS
+     * drift while the employee is standing still, not travel.
+     */
+    private function routeDistanceKm(array $tracks): float
+    {
+        $metres = 0.0;
+        $previous = null;
+
+        foreach ($tracks as $track) {
+            if (! is_numeric($track['latitude']) || ! is_numeric($track['longitude'])
+                || ((float) $track['latitude'] == 0.0 && (float) $track['longitude'] == 0.0)) {
+                continue;
+            }
+
+            $point = [deg2rad((float) $track['latitude']), deg2rad((float) $track['longitude'])];
+
+            if ($previous !== null) {
+                $a = sin(($point[0] - $previous[0]) / 2) ** 2
+                    + cos($previous[0]) * cos($point[0]) * sin(($point[1] - $previous[1]) / 2) ** 2;
+                $hop = 6371000 * 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+                if ($hop < 10) {
+                    continue;
+                }
+
+                $metres += $hop;
+            }
+
+            $previous = $point;
+        }
+
+        return round($metres / 1000, 2);
     }
 }

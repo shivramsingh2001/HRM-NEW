@@ -201,15 +201,6 @@
             color: white;
         }
 
-        .map-legend-dot {
-            display: inline-block;
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            margin-right: 3px;
-            vertical-align: middle;
-        }
-
         .no-data {
             text-align: center;
             padding: 60px;
@@ -302,6 +293,18 @@
                             </div>
                             <div class="icon-circle" style="background: var(--primary-light);">
                                 <i class="feather-map-pin" style="color: var(--primary-dark);"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-muted mb-1">Distance Travelled</div>
+                                <h5 class="mb-0">{{ number_format($statistics['distance_km'] ?? 0, 2) }} km</h5>
+                            </div>
+                            <div class="icon-circle" style="background: var(--primary-light);">
+                                <i class="feather-navigation" style="color: var(--icon-color, #0D6EFD);"></i>
                             </div>
                         </div>
                     </div>
@@ -447,10 +450,8 @@
 
                     <!-- Route Map (all points joined by a polyline, in chronological order) -->
                     <div id="sessionLocationMap" class="location-map"></div>
-                    <div class="d-flex flex-wrap gap-3 mb-2" style="font-size: 10.5px; color: #64748b;">
-                        <span><span class="map-legend-dot" style="background:#22c55e;"></span> Start</span>
-                        <span><span class="map-legend-dot" style="background:#0D6EFD;"></span> Waypoint</span>
-                        <span><span class="map-legend-dot" style="background:#ef4444;"></span> End</span>
+                    <div class="mb-2" style="font-size: 10.5px; color: #64748b;">
+                        Click the route line to see the time and location at that point.
                     </div>
 
                     <!-- Tracks List -->
@@ -471,6 +472,8 @@
                                         <div class="track-coords">
                                             📍 {{ number_format($track['latitude'], 6) }},
                                             {{ number_format($track['longitude'], 6) }}
+                                            <a href="https://www.google.com/maps?q={{ $track['latitude'] }},{{ $track['longitude'] }}"
+                                                target="_blank" rel="noopener" class="ms-2">Open in Google Maps</a>
                                         </div>
                                     @endif
                                     @if ($track['battery_per'])
@@ -497,6 +500,7 @@
 @endsection
 
 @section('script-area')
+    @php $googleMapsKey = config('services.google_maps.key'); @endphp
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         function toggleTask(index) {
@@ -514,25 +518,168 @@
             }
         }
 
-        // Renders the full route for this session in one shot: every tracked
-        // point joined chronologically by a single polyline, with a distinct
-        // start/end marker so the direction of travel is obvious at a glance.
-        function initSessionMap() {
-            const mapContainer = document.getElementById('sessionLocationMap');
-            if (!mapContainer) return;
-
+        // Tracked points that carry usable coordinates, in recorded order.
+        function sessionTracks() {
             const tracks = @json($locationTracks);
 
-            const validTracks = (tracks || []).filter(track =>
+            return (tracks || []).filter(track =>
                 track.latitude && track.longitude &&
                 !isNaN(track.latitude) && !isNaN(track.longitude)
             );
+        }
+
+        function trackLabel(index, total) {
+            if (index === 0) return 'Start';
+
+            return index === total - 1 ? 'End' : `Point #${index + 1}`;
+        }
+
+        // The map shows the route line only (no dots). A click on the line
+        // opens the details of the tracked point closest to the click.
+        function nearestTrackIndex(tracks, lat, lng) {
+            let best = 0;
+            let bestDistance = Infinity;
+
+            tracks.forEach((track, index) => {
+                const dLat = parseFloat(track.latitude) - lat;
+                const dLng = parseFloat(track.longitude) - lng;
+                const distance = dLat * dLat + dLng * dLng;
+
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = index;
+                }
+            });
+
+            return best;
+        }
+
+        function trackPopupHtml(track, label) {
+            const safe = value => {
+                const span = document.createElement('span');
+                span.textContent = value;
+                return span.innerHTML;
+            };
+
+            return `
+                <strong>${label}</strong><br>
+                Time: ${moment(track.track_time).format('h:mm A')}<br>
+                ${track.address ? `Address: ${safe(track.address)}<br>` : ''}
+                Lat/Long: ${parseFloat(track.latitude).toFixed(6)}, ${parseFloat(track.longitude).toFixed(6)}<br>
+                ${track.battery_per ? `Battery: ${safe(track.battery_per)}%` : ''}
+            `;
+        }
+
+        // Set once either map has been drawn, so a late Google callback or a
+        // fallback never draws a second map in the same box.
+        let sessionMapDrawn = false;
+
+        // Google Maps version of the route — used only when a key is configured.
+        // Any failure (script blocked, key rejected) falls back to Leaflet below.
+        function initGoogleSessionMap() {
+            const mapContainer = document.getElementById('sessionLocationMap');
+            if (!mapContainer || sessionMapDrawn) return;
+
+            const validTracks = sessionTracks();
+            if (validTracks.length === 0) {
+                initSessionMap();
+                return;
+            }
+
+            sessionMapDrawn = true;
+
+            const path = validTracks.map(track => ({
+                lat: parseFloat(track.latitude),
+                lng: parseFloat(track.longitude),
+            }));
+
+            const map = new google.maps.Map(mapContainer, {
+                center: path[0],
+                zoom: 15,
+                mapTypeControl: false,
+                streetViewControl: false,
+            });
+
+            new google.maps.Polyline({
+                path,
+                map,
+                strokeColor: '#0D6EFD',
+                strokeWeight: 4,
+                strokeOpacity: 0.85,
+            });
+
+            const infoWindow = new google.maps.InfoWindow();
+            const bounds = new google.maps.LatLngBounds();
+            path.forEach(point => bounds.extend(point));
+
+            const showTrack = index => {
+                infoWindow.setContent(trackPopupHtml(validTracks[index], trackLabel(index, validTracks.length)));
+                infoWindow.setPosition(path[index]);
+                infoWindow.open(map);
+            };
+
+            if (path.length > 1) {
+                // Wide invisible line on top, so the thin route is easy to click.
+                new google.maps.Polyline({
+                    path,
+                    map,
+                    strokeOpacity: 0,
+                    strokeWeight: 20,
+                    zIndex: 2,
+                }).addListener('click', event => {
+                    showTrack(nearestTrackIndex(validTracks, event.latLng.lat(), event.latLng.lng()));
+                });
+            } else {
+                // A single point has no line to draw, so it gets one dot.
+                new google.maps.Marker({
+                    position: path[0],
+                    map,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 6,
+                        fillColor: '#0D6EFD',
+                        fillOpacity: 1,
+                        strokeColor: '#fff',
+                        strokeWeight: 2,
+                    },
+                }).addListener('click', () => showTrack(0));
+            }
+
+            if (path.length > 1) {
+                map.fitBounds(bounds, 24);
+            }
+        }
+
+        // Google calls this when it refuses the key (wrong key, billing off,
+        // domain not allowed) — swap the broken map for the Leaflet one.
+        window.gm_authFailure = function() {
+            const mapContainer = document.getElementById('sessionLocationMap');
+            if (!mapContainer) return;
+
+            const fresh = mapContainer.cloneNode(false);
+            fresh.removeAttribute('style');
+            mapContainer.replaceWith(fresh);
+
+            sessionMapDrawn = false;
+            initSessionMap();
+        };
+
+        // Renders the full route for this session in one shot: every tracked
+        // point joined chronologically by a single polyline. No dots — a click
+        // on the line shows the nearest tracked point.
+        function initSessionMap() {
+            const mapContainer = document.getElementById('sessionLocationMap');
+            if (!mapContainer || sessionMapDrawn) return;
+
+            const validTracks = sessionTracks();
 
             if (validTracks.length === 0) {
                 mapContainer.innerHTML =
                     '<div class="alert alert-warning mb-0">No valid coordinates found for map display</div>';
                 return;
             }
+
+            sessionMapDrawn = true;
 
             const map = L.map('sessionLocationMap');
 
@@ -553,32 +700,30 @@
                 lineJoin: 'round',
             }).addTo(map);
 
-            const dotIcon = (color, size) => L.divIcon({
-                className: '',
-                html: `<span style="display:block;width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 1px ${color};"></span>`,
-                iconSize: [size, size],
-                iconAnchor: [size / 2, size / 2],
-            });
+            const showTrack = index => {
+                L.popup()
+                    .setLatLng(latlngs[index])
+                    .setContent(trackPopupHtml(validTracks[index], trackLabel(index, validTracks.length)))
+                    .openOn(map);
+            };
 
-            validTracks.forEach((track, index) => {
-                const isStart = index === 0;
-                const isEnd = index === validTracks.length - 1 && validTracks.length > 1;
-                const color = isStart ? '#22c55e' : (isEnd ? '#ef4444' : '#0D6EFD');
-                const size = (isStart || isEnd) ? 16 : 10;
-
-                const marker = L.marker([track.latitude, track.longitude], {
-                    icon: dotIcon(color, size),
-                    zIndexOffset: isStart || isEnd ? 1000 : 0,
-                }).addTo(map);
-
-                const label = isStart ? 'Start' : (isEnd ? 'End' : `Point #${index + 1}`);
-                marker.bindPopup(`
-                    <strong>${label}</strong><br>
-                    Time: ${moment(track.track_time).format('h:mm A')}<br>
-                    ${track.address ? `Address: ${track.address}<br>` : ''}
-                    ${track.battery_per ? `Battery: ${track.battery_per}%` : ''}
-                `);
-            });
+            if (latlngs.length > 1) {
+                // Wide invisible line on top, so the thin route is easy to click.
+                L.polyline(latlngs, { weight: 20, opacity: 0 })
+                    .addTo(map)
+                    .on('click', event => {
+                        showTrack(nearestTrackIndex(validTracks, event.latlng.lat, event.latlng.lng));
+                    });
+            } else {
+                // A single point has no line to draw, so it gets one dot.
+                L.circleMarker(latlngs[0], {
+                    radius: 6,
+                    color: '#fff',
+                    weight: 2,
+                    fillColor: '#0D6EFD',
+                    fillOpacity: 1,
+                }).addTo(map).on('click', () => showTrack(0));
+            }
 
             map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
         }
@@ -606,6 +751,18 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', initSessionMap);
+        @if ($googleMapsKey && $hasTracks && count($locationTracks) > 0)
+            // Google draws the map through its callback; Leaflet only steps in
+            // if the script cannot be loaded at all.
+            document.addEventListener('DOMContentLoaded', function() {
+                const script = document.createElement('script');
+                script.src = 'https://maps.googleapis.com/maps/api/js?key={{ urlencode($googleMapsKey) }}&loading=async&callback=initGoogleSessionMap';
+                script.async = true;
+                script.onerror = initSessionMap;
+                document.head.appendChild(script);
+            });
+        @else
+            document.addEventListener('DOMContentLoaded', initSessionMap);
+        @endif
     </script>
 @endsection

@@ -157,6 +157,10 @@ Actions there do not get a modal each. Any element with `data-p360-open="{form u
 
 Policy forms (Policies tab) reuse the same modal: `forms/policy.blade.php` renders any "one value per setting" section from `EmployeePolicyService::fields($section)` as rows of *custom checkbox · setting · company value · input* (the input is enabled only while its box is ticked — `forms/_policy-script.blade.php`); `forms/policy-leave.blade.php` does the same per leave type. To make a new company setting customisable per employee, add it to `EmployeePolicyService::FIELDS` / `LIMIT_FIELDS` and to `EmployeeProfileController::companyPolicy()` — the tab, form and validation follow automatically.
 
+## Maps
+
+Maps use Leaflet 1.9.4 with OpenStreetMap tiles (no key). The Attendance Sessions page (`client/attendance/sessions.blade.php`) switches to the Google Maps JavaScript API when `GOOGLE_MAPS_API_KEY` is set (`config('services.google_maps.key')`); it falls back to Leaflet when the key is blank, the Google script cannot load, or Google rejects the key (`gm_authFailure`). Leaflet is always loaded there as the fallback. A new map page should follow the same rule: Leaflet by default, Google only behind that key.
+
 ## Icon colour
 
 Every content icon uses one colour, `--icon-color: #0D6EFD` (theme-custom.css `:root`). Views write `color: var(--icon-color, #0D6EFD)`; add `.icon-primary` to an icon (or to its wrapper) to give it that colour. Shared rules also colour icons in section/card titles, the page-header title, `<x-ui.stat-card>` tiles and the theme's `.avatar-text` / `.bg-soft-*` icon circles. Deliberately not blue: status icons (green / red / amber), white icons on coloured badges or buttons, and grey placeholder / empty-state icons. The theme's `.text-primary` / `.bg-soft-primary` follow the palette (`#0D6EFD` / `#EFF6FF`).
