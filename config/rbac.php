@@ -7,6 +7,14 @@
  * for tenants that predate provisioning-time seeding.
  */
 return [
+    // Mobile API (/api/*, not the public /api/v1): enforce the `permission:`
+    // route checks. Switched OFF for now (2026-10-06) because they were
+    // blocking the mobile app — while off, a signed-in user passes every
+    // `permission:` check on those routes (login and plan-feature checks
+    // still apply). Set API_PERMISSION_CHECKS=true in .env to turn them
+    // back on. The web panel is never affected.
+    'api_permission_checks' => env('API_PERMISSION_CHECKS', false),
+
     'modules' => [
         'employee', 'attendance', 'leave', 'payroll', 'tasks', 'projects', 'recruitment',
         'onboarding', 'offboarding', 'expenses', 'loans', 'meetings',

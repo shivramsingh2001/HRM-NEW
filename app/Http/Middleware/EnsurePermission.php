@@ -24,6 +24,13 @@ class EnsurePermission
     public function handle(Request $request, Closure $next, string $module, string $action = 'view'): Response
     {
         $user = $request->user();
+
+        // Mobile API permission checks are switched off for now
+        // (config rbac.api_permission_checks) — the user must still be signed in.
+        if ($user && ! config('rbac.api_permission_checks') && $request->is('api/*') && ! $request->is('api/v1/*')) {
+            return $next($request);
+        }
+
         if (! $user || ! $this->rbac->can($user, $module, $action)) {
             if ($request->expectsJson()) {
                 abort(403, 'You do not have permission for this action.');

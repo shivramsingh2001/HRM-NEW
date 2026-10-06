@@ -751,17 +751,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        @if (($show['holiday'] ?? false) && count($upcoming_holidays ?? []) > 0)
-                            <div class="glance-sub">Upcoming holidays</div>
-                            <div class="ann-list">
-                                @foreach ($upcoming_holidays as $h)
-                                    <div class="ann-row d-flex justify-content-between align-items-center">
-                                        <span class="ann-title"><i class="feather-sun text-primary me-1"></i>{{ $h->name }}</span>
-                                        <span class="ann-date">{{ \Carbon\Carbon::parse($h->start_date)->format('d M') }}{{ $h->end_date && $h->end_date != $h->start_date ? ' – ' . \Carbon\Carbon::parse($h->end_date)->format('d M') : '' }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -1251,6 +1240,30 @@
                                     @endforelse
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <!-- Upcoming holidays -->
+            @if ($show['holiday'] ?? false)
+            <div class="col-md-3">
+                <div class="card stretch-full fixed-h-card">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">Upcoming holidays</h5>
+                        <a href="{{ route('holiday.index') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="ann-list">
+                            @forelse ($upcoming_holidays ?? [] as $h)
+                                <div class="ann-row d-flex justify-content-between align-items-center">
+                                    <span class="ann-title"><i class="feather-sun text-primary me-1"></i>{{ $h->name }}</span>
+                                    <span class="ann-date">{{ \Carbon\Carbon::parse($h->start_date)->format('d M') }}{{ $h->end_date && $h->end_date != $h->start_date ? ' – ' . \Carbon\Carbon::parse($h->end_date)->format('d M') : '' }}</span>
+                                </div>
+                            @empty
+                                <div class="text-center py-4 text-muted fs-12">No upcoming holidays</div>
+                            @endforelse
                         </div>
                     </div>
                 </div>
