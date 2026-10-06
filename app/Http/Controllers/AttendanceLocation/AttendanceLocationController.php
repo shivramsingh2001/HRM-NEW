@@ -25,7 +25,9 @@ class AttendanceLocationController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            // Unique within the company only.
+            'name' => ['required', 'string', 'max:255',
+                \Illuminate\Validation\Rule::unique('attendance_locations', 'name')->where('tenant_id', auth()->user()->tenant_id)],
             'description' => 'nullable|string',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
@@ -64,7 +66,8 @@ class AttendanceLocationController extends Controller
         $location = AttendanceLocation::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'name' => ['required', 'string', 'max:255',
+                \Illuminate\Validation\Rule::unique('attendance_locations', 'name')->where('tenant_id', $location->tenant_id)->ignore($location->id)],
             'description' => 'nullable|string',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',

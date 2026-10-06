@@ -299,7 +299,7 @@ Used by leave/regularization/overtime/payroll-structure changes and, as of 2026-
 | `announcements` | Company-wide announcements, optional acknowledgment requirement + expiry. | `acknowledge`, `expire_date` |
 | `announcement_acknowledgments` | Per-user ack tracking: `tenant_id`, `announcement_id`, `user_id`, `acknowledged_at`; unique (`announcement_id`,`user_id`). | FK `announcement_id`→`announcements` (cascade), `user_id`→`users` (cascade). Table created on hrm_22_04 2026-09-30 (migration had never been run). |
 | `requests` | Generic WFH/Travel request (feeds `daily_reports` for WFH work logs). | `status` enum(PENDING/APPROVED/REJECTED/CANCELLED, **uppercase** — inconsistent with most other status enums which are lowercase) |
-| `request_types` | Only 2 values today. | `type_name` enum(WFH/TRAVEL) |
+| `request_types` | WFH / Travel request types, per company (`TenantTrait`). | `tenant_id`, `type_name` (WFH / TRAVEL), `description`, `is_active`; unique `(tenant_id, type_name)` `request_types_tenant_type_name_unique` since 2026-10-06 (was unique on `type_name` alone, so only one company could have each type) |
 | `request_attachments` / `request_histories` | Files + status-change audit trail. | `request_histories.action` enum(CREATED/SUBMITTED/APPROVED/REJECTED/CANCELLED/UPDATED) |
 | `otps` | SMS OTP login codes (Airtel SMS gateway). | `expire_at`, `is_used` |
 | `notifications` | Laravel's standard notifications table (FCM push + in-app). | polymorphic `notifiable_type`/`notifiable_id` |

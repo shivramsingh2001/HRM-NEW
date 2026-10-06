@@ -33,8 +33,9 @@ class LoanCategoryController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:100',
-            'code' => 'nullable|string|max:20|unique:loan_categories,code',
+            // Name and code are unique within the company only.
+            'name' => ['required', 'string', 'max:100', Rule::unique('loan_categories', 'name')->where('tenant_id', auth()->user()->tenant_id)],
+            'code' => ['nullable', 'string', 'max:20', Rule::unique('loan_categories', 'code')->where('tenant_id', auth()->user()->tenant_id)],
             // Loans & Advances: a Salary Advance category has no interest / tenure, and an
             // optional cap as % of the employee's monthly gross.
             'kind' => 'nullable|in:loan,salary_advance',
@@ -115,12 +116,14 @@ class LoanCategoryController extends Controller
         $category = LoanCategory::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:100',
+            'name' => ['sometimes', 'string', 'max:100',
+                Rule::unique('loan_categories', 'name')->where('tenant_id', $category->tenant_id)->ignore($category->id)],
             'code' => [
                 'sometimes',
+                'nullable',
                 'string',
                 'max:20',
-                Rule::unique('loan_categories', 'code')->ignore($category->id)
+                Rule::unique('loan_categories', 'code')->where('tenant_id', $category->tenant_id)->ignore($category->id)
             ],
             // Loans & Advances: a Salary Advance category has no interest / tenure, and an
             // optional cap as % of the employee's monthly gross.
