@@ -58,6 +58,10 @@ class RbacService
             return 'company';
         }
 
+        if ($this->mobileApiChecksOff()) {
+            return $this->roleScope($user, $action);
+        }
+
         $matrix = $this->permissionMatrix($user);
         $moduleGrants = $matrix[$module] ?? [];
 
@@ -70,6 +74,38 @@ class RbacService
         }
 
         return null;
+    }
+
+    /**
+     * Mobile API permission checks are switched off for now
+     * (config rbac.api_permission_checks, see EnsurePermission): on /api/*
+     * the role_permissions matrix is not consulted. Not the public /api/v1
+     * or the AI API (/api/ai), and never the web panel.
+     */
+    private function mobileApiChecksOff(): bool
+    {
+        if (config('rbac.api_permission_checks')) {
+            return false;
+        }
+
+        $request = request();
+
+        return $request->is('api/*') && ! $request->is('api/v1/*') && ! $request->is('api/ai/*');
+    }
+
+    /**
+     * What a role may do while the matrix is switched off — the plain
+     * role-based rule the app used before permissions: HR sees the whole
+     * company, a manager their own records and their reportees', everyone
+     * else their own records only (and cannot approve / manage / delete).
+     */
+    private function roleScope(User $user, string $action): ?string
+    {
+        return match ($user->role ?? null) {
+            'hr' => 'company',
+            'manager' => 'team',
+            default => in_array($action, ['view', 'create', 'edit'], true) ? 'own' : null,
+        };
     }
 
     /**

@@ -13,6 +13,11 @@ return [
     // `permission:` check on those routes (login and plan-feature checks
     // still apply). Set API_PERMISSION_CHECKS=true in .env to turn them
     // back on. The web panel is never affected.
+    // While off, RbacService also skips the role_permissions matrix on those
+    // routes (not /api/ai) and uses the plain role rule: hr = whole company,
+    // manager = own + reportees, anyone else = own records only, with no
+    // approve / manage / delete. Temporary — the real fix for a company whose
+    // roles have no permission rows is `php artisan rbac:sync-roles`.
     'api_permission_checks' => env('API_PERMISSION_CHECKS', false),
 
     'modules' => [
