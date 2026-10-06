@@ -33,18 +33,9 @@
                 </li>
 
                 {{-- ==================== Admin-only grouped order:
-                     Broadcast, Team, Holiday, Reports, Project, Meeting, Hiring, Employee,
+                     Team, Holiday, Reports, Project, Meeting, Hiring, Employee,
                      Shift, Asset, Payroll, Performance, Approval, Company, Basic Setup ==================== --}}
                 @if ($role === 'admin')
-                    @feature('broadcast_notifications')
-                        <li class="nxl-item">
-                            <a href="{{ route('broadcast.index') }}" class="nxl-link">
-                                <span class="nxl-micon"><i class="feather-radio"></i></span>
-                                <span class="nxl-mtext">Broadcast</span><span class="nxl-arrow"></span>
-                            </a>
-                        </li>
-                    @endfeature
-
                     <li class="nxl-item">
                         <a href="{{ route('team.index') }}" class="nxl-link">
                             <span class="nxl-micon"><i class="feather-users"></i></span>
@@ -334,6 +325,11 @@
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('workforce-settings.index') }}">
                                         Company Policies</a>
                                 </li>
+                                @feature('broadcast_notifications')
+                                    <li class="nxl-item"><a class="nxl-link" href="{{ route('broadcast.index') }}">
+                                            Broadcast</a>
+                                    </li>
+                                @endfeature
                                 @feature('attendance_biometric')
                                     <li class="nxl-item"><a class="nxl-link" href="{{ route('settings.biometric.index') }}">
                                             Biometric Terminals</a>
@@ -609,17 +605,6 @@
                     @endif
                 @endfeature
 
-                @feature('broadcast_notifications')
-                    @if ($role === 'hr')
-                        <li class="nxl-item">
-                            <a href="{{ route('broadcast.index') }}" class="nxl-link">
-                                <span class="nxl-micon"><i class="feather-radio"></i></span>
-                                <span class="nxl-mtext">Broadcast</span><span class="nxl-arrow"></span>
-                            </a>
-                        </li>
-                    @endif
-                @endfeature
-
                 @if (in_array($role, ['hr', 'manager']))
                     <li class="nxl-item">
                         <a href="{{ route('team.index') }}" class="nxl-link">
@@ -859,6 +844,11 @@
                             <li class="nxl-item"><a class="nxl-link" href="{{ route('workforce-settings.index') }}">
                                     Company Policies</a>
                             </li>
+                            @feature('broadcast_notifications')
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('broadcast.index') }}">
+                                        Broadcast</a>
+                                </li>
+                            @endfeature
                             @feature('attendance_biometric')
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('settings.biometric.index') }}">
                                         Biometric Terminals</a>
