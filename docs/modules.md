@@ -576,6 +576,8 @@ Rebuilt 2026-09-30 (was dummy-data/manual-only). Full flow: submit -> approval (
 - `App\Http\Controllers\Mom\MeetingController` (CRUD, `cancel`, `reschedule`, `markAttendance`, all gated `permission:meetings,*`) + `App\Http\Controllers\Mom\MeetingMinuteController` (create/store/reopen minutes for a meeting).
 - Mobile equivalents under `Api\Mom\MeetingController`, including a `mom-writer/meetings` listing for whoever is assigned to write minutes.
 - Models: `Meeting`, `MeetingParticipant`, `MeetingHistory`.
+- **Location / link rules (2026-10-06)**: `store()` and `update()` require `location` for physical and hybrid meetings only, and require `virtual_meeting_link` for a virtual meeting (was: location always required, link always optional — a virtual meeting with no location was refused). The form posts `_drawer=create|edit`; when a Schedule Meeting save is refused, `meeting/index.blade.php` reopens the drawer with the entries kept, and the errors are also listed at the top of the list (a refused edit shows there only).
+- **Minutes**: saving minutes (`MeetingMinuteController::store`) completes the meeting, finalizes the minutes and redirects to `meetings.index`. The Minutes of Meeting form is compact and its field grids wrap by available width (`.mom-authoring-container` in `theme-custom.css`).
 - **Subscription feature gating (added 2026-09-22)**: `meetings.*` and `meetings.mom.*` routes and the sidebar entry require `feature:meetings`.
 
 ## Announcements

@@ -71,6 +71,8 @@
         @if ($formMethod === 'PUT')
             @method('PUT')
         @endif
+        {{-- Which drawer was submitted — a failed save reopens the Schedule drawer (index.blade.php). --}}
+        <input type="hidden" name="_drawer" value="{{ $formMethod === 'PUT' ? 'edit' : 'create' }}">
 
         <div class="meeting-form-section mb-3">
             <label class="form-label fw-semibold" for="{{ $idPrefix }}title">Meeting Title <span class="text-danger">*</span></label>
@@ -117,7 +119,7 @@
         </div>
 
         <div class="meeting-form-section mb-3" id="{{ $idPrefix }}virtualLinkGroup" style="display:none;">
-            <label class="form-label fw-semibold" for="{{ $idPrefix }}virtual_meeting_link">Virtual Meeting Link</label>
+            <label class="form-label fw-semibold" for="{{ $idPrefix }}virtual_meeting_link" id="{{ $idPrefix }}virtualLinkLabel">Virtual Meeting Link</label>
             <input type="text" class="form-control form-control-sm @error('virtual_meeting_link') is-invalid @enderror"
                 id="{{ $idPrefix }}virtual_meeting_link" name="virtual_meeting_link" placeholder="https://meet.google.com/xxx-xxxx-xxx"
                 value="{{ old('virtual_meeting_link', $meeting->virtual_meeting_link ?? '') }}" {{ !$isEditable ? 'readonly' : '' }}>
@@ -258,8 +260,13 @@
         // ── Meeting type cards + location label swap ──
         const locationLabel = byId('locationLabel');
         const virtualLinkGroup = byId('virtualLinkGroup');
+        const virtualLinkLabel = byId('virtualLinkLabel');
 
         function updateLocationField(type) {
+            // A virtual meeting must have a link; a hybrid one may.
+            if (virtualLinkLabel) {
+                virtualLinkLabel.innerHTML = 'Virtual Meeting Link' + (type === 'virtual' ? ' <span class="text-danger">*</span>' : '');
+            }
             if (!locationLabel) return;
             if (type === 'virtual') {
                 locationLabel.innerHTML = 'Location <span class="text-muted fw-normal">(optional for fully virtual)</span>';
@@ -483,6 +490,22 @@
                 if (meetingDate && meetingDate.value && new Date(meetingDate.value) < new Date().setHours(0, 0, 0, 0)) {
                     e.preventDefault();
                     alert('Meeting date cannot be in the past.');
+                    return false;
+                }
+                const typeRadio = meetingForm.querySelector('input[name="meeting_type"]:checked');
+                const type = typeRadio ? typeRadio.value : 'physical';
+                const locationField = byId('location');
+                const linkField = byId('virtual_meeting_link');
+                if (type === 'virtual' && linkField && !linkField.value.trim()) {
+                    e.preventDefault();
+                    alert('Please enter the meeting link for a virtual meeting.');
+                    linkField.focus();
+                    return false;
+                }
+                if (type !== 'virtual' && locationField && !locationField.value.trim()) {
+                    e.preventDefault();
+                    alert('Please enter the meeting location.');
+                    locationField.focus();
                     return false;
                 }
                 validateTimes();

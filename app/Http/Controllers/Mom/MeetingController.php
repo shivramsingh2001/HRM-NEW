@@ -178,6 +178,11 @@ class MeetingController extends Controller
         return view('client.mom.meeting.create', compact('allUsers', 'projects'));
     }
 
+    private const LOCATION_MESSAGES = [
+        'location.required_unless' => 'Location is required for a physical or hybrid meeting.',
+        'virtual_meeting_link.required_if' => 'A meeting link is required for a virtual meeting.',
+    ];
+
     /**
      * Store meeting
      */
@@ -189,8 +194,9 @@ class MeetingController extends Controller
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
             'meeting_type' => 'required|in:physical,virtual,hybrid', // Added validation
-            'location' => 'required|string', // Added validation
-            'virtual_meeting_link' => 'nullable|string|max:500',
+            // A fully virtual meeting needs a link, not a place; the others need a place.
+            'location' => 'nullable|string|max:255|required_unless:meeting_type,virtual',
+            'virtual_meeting_link' => 'nullable|string|max:500|required_if:meeting_type,virtual',
             'participants' => 'required|json|min:1',
             'participants.*' => 'exists:users,id',
             'mom_writers' => 'nullable|json', // Changed to nullable
@@ -198,7 +204,7 @@ class MeetingController extends Controller
             'reminder_minutes' => 'nullable|integer|min:0|max:1440', // Added validation
             'agenda_items' => 'nullable', // json string or array, decoded below
             'decisions' => 'nullable',
-        ]);
+        ], self::LOCATION_MESSAGES);
 
         DB::beginTransaction();
 
@@ -371,14 +377,14 @@ class MeetingController extends Controller
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
             'meeting_type' => 'required|in:physical,virtual,hybrid',
-            'location' => 'required|string',
+            'location' => 'nullable|string|max:255|required_unless:meeting_type,virtual',
             'participants' => 'required|array|min:1',
             'participants.*' => 'exists:users,id',
             'mom_writers' => 'nullable|array',
             'mom_writers.*' => 'exists:users,id',
             'reminder_minutes' => 'nullable|integer|min:0|max:1440',
-            'virtual_meeting_link' => 'nullable|string|max:500',
-        ])->validate();
+            'virtual_meeting_link' => 'nullable|string|max:500|required_if:meeting_type,virtual',
+        ], self::LOCATION_MESSAGES)->validate();
 
         DB::beginTransaction();
 
@@ -406,7 +412,7 @@ class MeetingController extends Controller
                 'start_time' => $validated['start_time'],
                 'end_time' => $validated['end_time'],
                 'meeting_type' => $validated['meeting_type'],
-                'location' => $validated['location'],
+                'location' => $validated['location'] ?? null,
                 'virtual_meeting_link' => $validated['virtual_meeting_link'] ?? null,
                 'reminder_minutes_before' => $validated['reminder_minutes'] ?? 15,
                 'agenda_items' => $agendaItems,

@@ -345,6 +345,18 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
+        {{-- A refused save: the reasons are shown here as well as inside the reopened drawer. --}}
+        @if ($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong><i class="feather-alert-circle me-1"></i>The meeting was not saved:</strong>
+                <ul class="mb-0 ps-3">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
 
         {{-- Stat cards — same .stats-grid/.stats-card pattern as the Task
              "Assigned By Me" page; clicking one filters the table. --}}
@@ -621,6 +633,15 @@
             </button>
         </x-slot:footer>
     </x-ui.modal>
+
+    @if (($errors->any() || session('error')) && old('_drawer') === 'create')
+        {{-- Schedule Meeting was refused: reopen its drawer with the entries kept and the errors visible. --}}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('meetingDrawer')).show();
+            });
+        </script>
+    @endif
 
     <script>
         function openCancelModal(meetingId, meetingTitle) {
