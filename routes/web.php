@@ -1130,6 +1130,14 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::get('/attendance/shift-monthly/export', [ShiftReportController::class, 'monthlyExport'])->name('attendance.shift-monthly.export');
             });
 
+            // Shift traceability: change log + swap/change requests register (employee-wise shifts only).
+            Route::middleware('feature:custom_shift')->group(function () {
+                Route::get('/attendance/shift-changes', [\App\Http\Controllers\Report\ShiftActivityReportController::class, 'changeLog'])->name('attendance.shift-changes.index');
+                Route::get('/attendance/shift-changes/export', [\App\Http\Controllers\Report\ShiftActivityReportController::class, 'changeLogExport'])->name('attendance.shift-changes.export');
+                Route::get('/attendance/shift-requests', [\App\Http\Controllers\Report\ShiftActivityReportController::class, 'requests'])->name('attendance.shift-requests.index');
+                Route::get('/attendance/shift-requests/export', [\App\Http\Controllers\Report\ShiftActivityReportController::class, 'requestsExport'])->name('attendance.shift-requests.export');
+            });
+
             // Task Reports
             Route::middleware('feature:task_single,task_group')->group(function () {
                 Route::get('/task-project', [TaskReportController::class, 'index'])->name('task-project.index');

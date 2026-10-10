@@ -276,6 +276,11 @@
                                         <td>
                                             <span class="shift-dot" style="background: {{ $shift->color_code ?: '#4f46e5' }}"></span>
                                             <span class="shift-name">{{ $shift->name }}</span>
+                                            @if (($shift->allowance_type ?? 'none') !== 'none' && (float) $shift->allowance_amount > 0)
+                                                <span class="badge bg-light text-dark ms-1" title="Shift allowance, paid in payroll">
+                                                    ₹{{ rtrim(rtrim(number_format((float) $shift->allowance_amount, 2), '0'), '.') }}/{{ $shift->allowance_type === 'per_hour' ? 'hour' : 'day' }}
+                                                </span>
+                                            @endif
                                             @if ($shift->description)
                                                 <div class="muted-cell small">{{ \Illuminate\Support\Str::limit($shift->description, 60) }}</div>
                                             @endif
@@ -315,6 +320,9 @@
                                                    data-grace_minutes="{{ (int) $shift->grace_minutes }}"
                                                    data-break_time="{{ (int) $shift->break_time }}"
                                                    data-status="{{ (int) $shift->status }}"
+                                                   data-allowance_type="{{ $shift->allowance_type ?? 'none' }}"
+                                                   data-allowance_amount="{{ (float) ($shift->allowance_amount ?? 0) }}"
+                                                   data-allowance_min_hours="{{ $shift->allowance_min_hours !== null ? (float) $shift->allowance_min_hours : '' }}"
                                                    data-description="{{ $shift->description }}">
                                                     <i class="feather-edit-3"></i>
                                                 </a>
@@ -398,6 +406,7 @@
                                 <label class="form-label">Break (min)</label>
                                 <input type="number" min="0" max="180" name="break_time" class="form-control" value="0">
                             </div>
+                            @include('client.shift.partials.allowance-fields', ['prefix' => 'add_'])
                             <div class="col-12">
                                 <label class="form-label">Description</label>
                                 <textarea name="description" class="form-control" rows="2"></textarea>
@@ -468,6 +477,7 @@
                                     <option value="0">Inactive</option>
                                 </select>
                             </div>
+                            @include('client.shift.partials.allowance-fields', ['prefix' => 'edit_'])
                             <div class="col-12">
                                 <label class="form-label">Description</label>
                                 <textarea name="description" id="edit_description" class="form-control" rows="2"></textarea>
@@ -525,6 +535,15 @@
                 if (start && end) $form.find('.overnight-check').prop('checked', end <= start);
             });
 
+            // Allowance amount / min hours only matter once a type is picked.
+            $(document).on('change', '.allowance-type', function () {
+                const $form = $(this).closest('form');
+                const on = $(this).val() !== 'none';
+                $form.find('.allowance-detail').toggleClass('d-none', !on);
+                $form.find('.allowance-unit').text($(this).val() === 'per_hour' ? '/ hour' : '/ day');
+            });
+            $('.allowance-type').trigger('change');
+
             $('#addShiftForm').on('submit', function (e) {
                 e.preventDefault();
                 $('.error-text').text(''); $('#addFormError').addClass('d-none').text('');
@@ -552,6 +571,9 @@
                 $('#edit_break_time').val(d.break_time);
                 $('#edit_status').val(d.status);
                 $('#edit_description').val(d.description || '');
+                $('#edit_allowance_type').val(d.allowance_type || 'none').trigger('change');
+                $('#edit_allowance_amount').val(d.allowance_amount || '');
+                $('#edit_allowance_min_hours').val(d.allowance_min_hours);
                 $('.error-text').text(''); $('#editFormError').addClass('d-none');
                 new bootstrap.Modal('#editShiftModal').show();
             });

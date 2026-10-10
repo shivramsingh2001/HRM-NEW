@@ -143,7 +143,10 @@ class ShiftController extends Controller
                 'description' => 'nullable|string|max:500',
                 'grace_minutes' => 'nullable|integer|min:0|max:120',
                 'color_code' => 'nullable|string|max:7',
-                'break_time' => 'nullable|integer|min:0|max:180'
+                'break_time' => 'nullable|integer|min:0|max:180',
+                'allowance_type' => 'nullable|in:none,per_day,per_hour',
+                'allowance_amount' => 'nullable|numeric|min:0|max:99999999',
+                'allowance_min_hours' => 'nullable|numeric|min:0|max:24',
             ]);
             $this->validateOvernightTimes($validator, $request);
        if ($validator->fails()) {
@@ -165,6 +168,7 @@ class ShiftController extends Controller
                 'grace_minutes' => $request->grace_minutes ?? 0,
                 'color_code' => $request->color_code ?? '#3b82f6',
                 'break_time' => $request->break_time ?? 0,
+                ...$this->allowanceColumns($request),
                 'status' => 1,
                 'created_by' => Auth::id()
             ]);
@@ -211,7 +215,10 @@ class ShiftController extends Controller
                 'grace_minutes' => 'nullable|integer|min:0|max:120',
                 'status' => 'nullable|boolean',
                 'color_code' => 'nullable|string|max:7',
-                'break_time' => 'nullable|integer|min:0|max:180'
+                'break_time' => 'nullable|integer|min:0|max:180',
+                'allowance_type' => 'nullable|in:none,per_day,per_hour',
+                'allowance_amount' => 'nullable|numeric|min:0|max:99999999',
+                'allowance_min_hours' => 'nullable|numeric|min:0|max:24',
             ]);
             $this->validateOvernightTimes($validator, $request);
 
@@ -234,6 +241,7 @@ class ShiftController extends Controller
                 'grace_minutes' => $request->grace_minutes ?? 0,
                 'color_code' => $request->color_code ?? '#3b82f6',
                 'break_time' => $request->break_time ?? 0,
+                ...$this->allowanceColumns($request),
                 'status' => $request->status ?? $shift->status
             ]);
 
@@ -253,6 +261,26 @@ class ShiftController extends Controller
                 'message' => 'Shift update failed. Please try again.'
             ], 500);
         }
+    }
+
+    /**
+     * Shift allowance (paid in payroll by ShiftAllowanceCalculator): none, or
+     * an amount per day / per hour worked, optionally only once the shift's
+     * worked hours reach allowance_min_hours.
+     */
+    private function allowanceColumns(Request $request): array
+    {
+        $type = $request->input('allowance_type', 'none') ?: 'none';
+        $amount = (float) ($request->allowance_amount ?? 0);
+        if ($type === 'none' || $amount <= 0) {
+            return ['allowance_type' => 'none', 'allowance_amount' => 0, 'allowance_min_hours' => null];
+        }
+
+        return [
+            'allowance_type' => $type,
+            'allowance_amount' => round($amount, 2),
+            'allowance_min_hours' => $request->filled('allowance_min_hours') ? (float) $request->allowance_min_hours : null,
+        ];
     }
 
     /**

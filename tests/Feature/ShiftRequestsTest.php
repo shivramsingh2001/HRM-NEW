@@ -515,4 +515,117 @@ class ShiftRequestsTest extends TestCase
         $this->assertSame(ShiftRequest::STATUS_EXPIRED, $req->refresh()->status);
         $this->assertSame($this->morning->id, $this->shiftOn($this->a, $this->day()));
     }
+
+    // ------------------------------------------------------------------ Phase 7: reports, Employee 360, dashboards
+
+    /** A direct swap (a ⇄ b) on day(5) and a pending change request by a on day(6). */
+    private function swapAndPendingChange(): array
+    {
+        $this->permanent($this->a, $this->morning);
+        $this->permanent($this->b, $this->evening);
+        $swap = $this->service()->directSwap($this->admin, $this->a->id, $this->b->id, [$this->day(5)], 'Doctor visit');
+        $change = $this->service()->createChangeRequest($this->fresh($this->a), [$this->day(6)], $this->night->id, 'Night class');
+        $this->assertSame(ShiftRequest::STATUS_PENDING_APPROVAL, $change->status);
+
+        return [$swap, $change];
+    }
+
+    public function test_shift_change_log_report_filters_and_exports(): void
+    {
+        [$swap] = $this->swapAndPendingChange();
+        $range = ['date_by' => 'shift', 'start_date' => $this->day(0), 'end_date' => $this->day(10), 'search' => $this->tag];
+
+        $html = $this->actingAs($this->admin)->get(route('report.attendance.shift-changes.index', $range))->assertOk()->getContent();
+        $this->assertStringContainsString($this->a->name, $html);
+        $this->assertStringContainsString('Direct swap', $html);
+        $this->assertStringContainsString($swap->request_no, $html);
+
+        // Source filter.
+        $this->actingAs($this->admin)->get(route('report.attendance.shift-changes.index', $range + ['source' => 'rotation']))
+            ->assertOk()->assertDontSee($swap->request_no);
+
+        $csv = $this->actingAs($this->admin)->get(route('report.attendance.shift-changes.export', $range + ['change_type' => 'swap']))->assertOk()->getContent();
+        $this->assertStringContainsString($this->a->name, $csv);
+        $this->assertStringContainsString('Swapped', $csv);
+        $this->assertStringContainsString('Doctor visit', $csv);
+        $this->assertSame(2, substr_count($csv, $swap->request_no), 'one line per employee swapped');
+
+        // A manager sees only their reportees.
+        $this->actingAs($this->manager)->get(route('report.attendance.shift-changes.index', $range))->assertOk()->assertDontSee($this->a->email);
+        DB::table('user_reporting_heads')->insert(['tenant_id' => $this->tenantId, 'user_id' => $this->a->id, 'reporting_head_id' => $this->manager->id, 'is_primary' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $this->actingAs($this->manager)->get(route('report.attendance.shift-changes.index', $range))->assertOk()->assertSee($this->a->email)->assertDontSee($this->b->email);
+    }
+
+    public function test_shift_requests_register_shows_status_turnaround_and_exports(): void
+    {
+        [$swap, $change] = $this->swapAndPendingChange();
+        $this->service()->decide($change->fresh(), $this->admin, 'approved', 'ok');
+        $range = ['start_date' => $this->day(0), 'end_date' => $this->day(0), 'search' => $this->tag];
+
+        $html = $this->actingAs($this->admin)->get(route('report.attendance.shift-requests.index', $range))->assertOk()->getContent();
+        $this->assertStringContainsString($swap->request_no, $html);
+        $this->assertStringContainsString($change->request_no, $html);
+        $this->assertStringContainsString('open=' . $change->id, $html);
+
+        $this->actingAs($this->admin)->get(route('report.attendance.shift-requests.index', $range + ['type' => 'swap']))
+            ->assertOk()->assertSee($swap->request_no)->assertDontSee($change->request_no);
+        $this->actingAs($this->admin)->get(route('report.attendance.shift-requests.index', $range + ['status' => 'pending']))
+            ->assertOk()->assertDontSee($change->request_no);
+
+        // Shift date range instead of raised-on.
+        $this->actingAs($this->admin)->get(route('report.attendance.shift-requests.index', ['date_by' => 'shift', 'start_date' => $this->day(6), 'end_date' => $this->day(6), 'search' => $this->tag]))
+            ->assertOk()->assertSee($change->request_no)->assertDontSee($swap->request_no);
+
+        $csv = $this->actingAs($this->admin)->get(route('report.attendance.shift-requests.export', $range))->assertOk()->getContent();
+        $lines = collect(explode("\n", trim($csv)))->keyBy(fn ($l) => str_contains($l, $change->request_no) ? 'change' : (str_contains($l, $swap->request_no) ? 'swap' : 'other'));
+        $this->assertStringContainsString('Shift change', $lines['change']);
+        $this->assertStringContainsString('Approved', $lines['change']);
+        $this->assertMatchesRegularExpression('/,"?(\d+ h )?\d+ m"?,/', $lines['change'], 'turnaround for a decided request');
+        $this->assertStringContainsString('Direct (admin)', $lines['swap']);
+        $this->assertStringContainsString($this->morning->name . ' → ' . $this->evening->name, $lines['swap']);
+    }
+
+    public function test_shift_report_marks_swapped_days(): void
+    {
+        $this->swapAndPendingChange();
+        $month = substr($this->day(5), 0, 7);
+
+        $html = $this->actingAs($this->admin)->get(route('report.attendance.shift-monthly.index', ['month' => $month, 'search' => $this->a->name]))->assertOk()->getContent();
+        $this->assertStringContainsString('class="swap-mark">⇄', $html);
+
+        $csv = $this->actingAs($this->admin)->get(route('report.attendance.shift-monthly.export', ['month' => $month, 'search' => $this->a->name]))->assertOk()->getContent();
+        $swapped = collect(explode("\n", $csv))->filter(fn ($l) => str_contains($l, 'Shift (swapped)'))->values();
+        $this->assertCount(1, $swapped);
+        $this->assertStringStartsWith($this->day(5), $swapped[0]);
+    }
+
+    public function test_employee_360_and_dashboards_list_shift_requests(): void
+    {
+        [$swap, $change] = $this->swapAndPendingChange();
+
+        $html = $this->actingAs($this->admin)->get(route('employee.profile.tab', ['id' => encrypt($this->a->id), 'tab' => 'shift']))->assertOk()->getContent();
+        $this->assertStringContainsString($swap->request_no, $html);
+        $this->assertStringContainsString($change->request_no, $html);
+        $this->assertStringContainsString('Shift change history', $html);
+        $this->assertStringContainsString('Direct swap', $html);
+
+        $this->actingAs($this->admin)->get(route('employee.profile.tab', ['id' => encrypt($this->a->id), 'tab' => 'activity']))
+            ->assertOk()->assertSee('Direct swap');
+
+        // Admin "Needs your action": the pending change request.
+        $this->actingAs($this->admin);
+        $dash = app(\App\Http\Controllers\Dashboard\DashboardController::class);
+        $items = collect((new \ReflectionMethod($dash, 'adminPendingApprovals'))->invoke($dash, fn () => true))->keyBy('key');
+        $this->assertGreaterThanOrEqual(1, $items['shift_request']['count']);
+        $this->assertStringContainsString('tab=approvals', $items['shift_request']['url']);
+
+        // Manager: only once the requester reports to them.
+        $this->actingAs($this->manager);
+        $data = fn () => (new \ReflectionMethod($dash, 'managerDashboard'))->invoke($dash)->getData();
+        $this->assertSame(0, $data()['pending_shift_requests']);
+        DB::table('user_reporting_heads')->insert(['tenant_id' => $this->tenantId, 'user_id' => $this->a->id, 'reporting_head_id' => $this->manager->id, 'is_primary' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $d = $data();
+        $this->assertSame(1, $d['pending_shift_requests']);
+        $this->assertSame($change->id, $d['team_shift_requests']->first()->id);
+    }
 }

@@ -603,6 +603,9 @@ class DashboardController extends Controller
                 fn () => Expense::where('status', 'pending')->count(), 'expense.view-all'],
             ['offboarding', 'Offboarding', 'log-out', $on('offboarding') && $can('offboarding', 'view'),
                 fn () => \App\Models\OffboardingRequest::where('status', \App\Models\OffboardingRequest::STATUS_PENDING_APPROVAL)->count(), 'offboarding.index'],
+            // Shift swaps / changes waiting for this approver (no RBAC module for shifts — role-gated like its routes).
+            ['shift_request', 'Shift requests', 'shuffle', $on('custom_shift') && in_array($user->role, ['admin', 'hr', 'manager'], true),
+                fn () => app(\App\Services\Shift\ShiftRequestPresenter::class)->approvalQuery($user)->count(), 'shift.requests.index'],
         ];
 
         $out = [];
@@ -615,7 +618,7 @@ class DashboardController extends Controller
                 'label' => $label,
                 'icon' => $icon,
                 'count' => (int) $count(),
-                'url' => route($route, $key === 'expense' ? ['status' => 'pending'] : []),
+                'url' => route($route, match ($key) { 'expense' => ['status' => 'pending'], 'shift_request' => ['tab' => 'approvals'], default => [] }),
             ];
         }
 
@@ -849,8 +852,18 @@ class DashboardController extends Controller
             ->where('status', 'pending_approval')
             ->count();
 
+        // Team shift swaps / changes waiting for this manager (same scope as Shift Requests → Approvals).
+        $pendingShiftRequests = 0;
+        $teamShiftRequests = collect();
+        if (app(\App\Services\FeatureService::class)->enabledForCurrentTenant('custom_shift')) {
+            $shiftApprovals = app(\App\Services\Shift\ShiftRequestPresenter::class)->approvalQuery($user);
+            $pendingShiftRequests = (clone $shiftApprovals)->count();
+            $teamShiftRequests = $shiftApprovals->with(['requester:id,name', 'counterpart:id,name', 'items:id,shift_request_id,date'])
+                ->orderBy('id')->limit(3)->get();
+        }
+
         $totalPendingApprovals = $pendingLeaveRequests + $pendingRegularizations + $pendingOvertimeRequests
-            + $pendingExpenseApprovals + $pendingWfhTravelRequests + $pendingOffboardingRequests;
+            + $pendingExpenseApprovals + $pendingWfhTravelRequests + $pendingOffboardingRequests + $pendingShiftRequests;
 
         // Kept for back-compat with the old "Task Approvals" card wording —
         // count of team tasks marked completed, awaiting the manager's review.
@@ -1068,6 +1081,8 @@ class DashboardController extends Controller
             'pending_expense_approvals' => $pendingExpenseApprovals,
             'pending_wfh_travel_requests' => $pendingWfhTravelRequests,
             'pending_offboarding_requests' => $pendingOffboardingRequests,
+            'pending_shift_requests' => $pendingShiftRequests,
+            'team_shift_requests' => $teamShiftRequests,
             'pending_task_approvals' => $pendingTaskApprovals,
             'total_pending_approvals' => $totalPendingApprovals,
             'team_members' => $teamMembers,

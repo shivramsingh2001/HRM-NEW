@@ -195,6 +195,57 @@ curl "https://vpshrms.shurttech.com/api/user/shift/plan?start_date=2026-09-01&en
 
 **Special behavior / notes:** Multi-shift (added 2026-10-02): each date item is the day's main shift (same keys as before) and carries `additional_shifts` — an array of the day's 2nd+ shifts in the same item shape (empty when there is only one). If the tenant has custom shifts **disabled** (`tenant->custom_shifts_enabled = false`), every working day is filled with the tenant's single default/fixed shift instead of reading per-user `user_shifts` assignments (day-based week-off patterns are still honored). Default start date has joining-date-aware logic: joined this month after the 15th → starts next month; otherwise starts this month; joined in a future month → starts that month.
 
+### Shift swaps & change requests (added 2026-10-09)
+
+**Controller:** `Api\Shift\ShiftRequestController` — same rules and JSON shapes as the web Shift Requests page (`ShiftRequestService` / `ShiftRequestPresenter`). **Auth:** JWT + Device-Token. **Gate:** `feature:custom_shift`; a company on one fixed shift (`tenants.custom_shifts_enabled = 0`) gets `403 {"success": false, "message": "Your company uses one fixed shift — shift swaps and changes are not available."}` on `request-options` / create. **Refusals:** any rule failure (notice period, rest hours, max daily hours, monthly limit, same department/branch, period lock, day already has attendance, overlap, …) is `422 {"success": false, "message": "<first reason>", "errors": ["<every reason>"]}`; validation errors are `422` with `errors` keyed by field.
+
+| Method & path | Purpose | Body / query |
+|---|---|---|
+| `GET /api/user/shift/request-options` | Company rules + active shifts for the "new request" screen. | — |
+| `GET /api/user/shift/requests` | My requests. | `tab` = `mine` (raised by / involving me, default) \| `to_me` (swaps asked of me); `status` (`pending` = any pending, or a status below), `type` (`swap`/`change`), `per_page` (≤ 50), `page` |
+| `GET /api/user/shift/requests/{id}` | One request: row + per-day before/after + timeline. | — |
+| `GET /api/user/shift/swap-candidates` | Colleagues I may swap with on a date, with their shift that day. | `date` (required) |
+| `POST /api/user/shift/requests/preview` | Check a swap / change without saving. | same as create, plus `type` = `swap`/`change` |
+| `POST /api/user/shift/swap-request` | Ask a colleague to swap shifts. | `counterpart_id` (required), `start_date` (required), `end_date` (optional, ≥ start), `reason` (≤ 500) |
+| `POST /api/user/shift/change-request` | Ask for another shift on day(s). | `to_shift_id` (required), `start_date`, `end_date`, `reason` |
+| `POST /api/user/shift/requests/{id}/respond` | Colleague accepts / declines a swap. | `accept` (boolean, required), `remarks` |
+| `POST /api/user/shift/requests/{id}/cancel` | Requester (or admin/HR) cancels a pending request. | `remarks` (optional) |
+| `GET /api/manager/shift/requests` | Requests waiting for this approver (manager: their reportees; admin/HR: all; never their own). | `status`, `type`, `per_page`, `page` |
+| `POST /api/manager/shift/requests/{id}/decision` | Approve / reject. Approval writes the shifts immediately. | `action` = `approved`\|`rejected` (required), `remarks` |
+
+**Statuses:** `pending_peer` (waiting for colleague), `pending_approval`, `approved`, `rejected`, `peer_declined`, `cancelled`, `expired` (colleague didn't answer in time / first shift started — `shift-requests:expire`, every 15 min), `reverted` (admin/HR undid an approved request on the web).
+
+**`request-options` response:**
+```json
+{"success": true, "message": "Shift request options", "data": {
+  "swap_enabled": true, "change_enabled": true, "requires_approval": true, "min_notice_hours": 24,
+  "min_rest_hours": 8, "max_daily_hours": null, "max_requests_per_month": 4, "peer_response_hours": 24,
+  "same_department_only": true, "same_branch_only": false,
+  "shifts": [{"id": 3, "name": "Morning", "color_code": "#3b82f6", "start_time": "06:00:00", "end_time": "14:00:00", "is_overnight": false}]
+}}
+```
+`min_rest_hours` / `max_daily_hours` come from Company Policies → Working-time thresholds (null = no limit).
+
+**List response** (`requests`, `approvals`): `{"requests": [<row>], "pagination": {"total", "current_page", "last_page", "per_page"}}`. A **row**:
+```json
+{"id": 41, "request_no": "SR-2026-000041", "type": "swap", "type_label": "Shift swap", "mode": "request",
+ "status": "pending_peer", "status_label": "Waiting for colleague", "status_badge": "bg-soft-warning text-warning",
+ "requester": {"id": 12, "name": "Asha", "employee_id": "E012"}, "counterpart": {"id": 15, "name": "Ravi", "employee_id": "E015"},
+ "created_by": "Asha", "on_behalf": false, "reason": "Family function",
+ "dates_label": "14 Oct 2026", "start_date": "2026-10-14", "end_date": "2026-10-14",
+ "from_shift": {"id": 3, "name": "Morning", "color_code": "#3b82f6", "time": "06:00 AM – 02:00 PM"},
+ "to_shift": {"id": 5, "name": "Night", "color_code": "#6366f1", "time": "10:00 PM – 06:00 AM"},
+ "created_at": "10 Oct 2026, 11:02 AM", "expires_at": "11 Oct 2026, 11:02 AM",
+ "can": {"respond": false, "decide": false, "cancel": true, "revert": false}}
+```
+**Detail / create / respond / cancel / decision** return the row plus `items` (each day: employee, date, before → after shift), `peer_remarks`, `approver_remarks`, `decided_by`, `decided_at`, `channel` and `events` (`event`, `label`, `actor`, `actor_role`, `remarks`, `channel`, `ip`, `at`) — the full timeline. The create/decision `message` says what happened (e.g. "Swap request SR-2026-000041 sent — waiting for your colleague to accept.", "Approved — the shifts are updated (SR-2026-000041).").
+
+**`swap-candidates` response:** `{"date": "2026-10-14", "my_shift": <shift|null>, "colleagues": [{"id", "name", "employee_id", "shift": <shift|null>, "can_swap": true}]}` — `can_swap` is false when either side has no shift that day or both have the same shift. Respects the company's same-department / same-branch rule.
+
+**`preview` response:** `{"items": [...], "errors": [...], "warnings": [...]}` with `message` = the first error, or "This request can be sent.".
+
+**Notifications** (database + push, `ShiftNotificationService`): colleague asked to swap, colleague answered, waiting for your approval, decided, changed directly by admin/manager, expired, cancelled, reverted, and roster changes (when Company Policies → Shift Requests → notify on roster change is on).
+
 ---
 
 ## Payroll (Payslips)

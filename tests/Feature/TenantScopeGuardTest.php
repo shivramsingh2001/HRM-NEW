@@ -29,6 +29,8 @@ class TenantScopeGuardTest extends TestCase
         'app/Console/Commands/UpdateAttendanceSummaries.php',  // CLI: spans tenants, re-scopes per user
         'app/Console/Commands/AutoClockOutCommand.php',        // CLI: sweeps open rows, filters per row
         'app/Console/Commands/CheckMissedCheckIns.php',        // CLI: hydrates notifiables by id list
+        'app/Console/Commands/RepairRunawayClockOuts.php',     // CLI: one-off data repair across tenants, re-grades per row's tenant
+        'app/Console/Commands/ExpireShiftRequests.php',        // CLI: sweeps every company's due requests, each row keeps its tenant_id
         'app/Http/Controllers/Auth/AuthController.php',        // login runs before tenant context exists
         'app/Http/Middleware/TenantMiddleware.php',            // resolves the tenant itself (forgot/reset email → tenant)
         'app/Services/AttendanceSummaryService.php',           // every query carries an explicit tenant_id / scoped id list

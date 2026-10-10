@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\DB;
  *    applied at once — directSwap(), directChange().
  *  - Employee request: swap → colleague accepts → approval → applied
  *    (createSwapRequest, respond, decide); change → approval → applied
- *    (createChangeRequest, decide). cancel(), expireDue(), revert().
+ *    (createChangeRequest, decide). cancel(), expire(), revert().
  *
  * Approval goes through the generic ApprovalService ('shift_request',
  * ShiftRequestApprovalHandler) when the company configured a workflow for it,
@@ -605,29 +605,19 @@ class ShiftRequestService
     }
 
     /**
-     * Scheduled (shift-requests:expire): a colleague who didn't answer in
-     * time, or any pending request whose first shift has started → expired.
+     * Scheduled (shift-requests:expire, which finds the due requests across
+     * companies): a colleague who didn't answer in time, or a pending request
+     * whose first shift has started → expired.
      */
-    public function expireDue(): int
+    public function expire(ShiftRequest $req): void
     {
-        $count = 0;
-        ShiftRequest::withoutGlobalScopes()
-            ->whereIn('status', ShiftRequest::PENDING)
-            ->whereNotNull('expires_at')
-            ->where('expires_at', '<=', now())
-            ->orderBy('id')
-            ->each(function (ShiftRequest $req) use (&$count) {
-                DB::transaction(function () use ($req) {
-                    $wasWaitingForPeer = $req->status === ShiftRequest::STATUS_PENDING_PEER;
-                    $req->update(['status' => ShiftRequest::STATUS_EXPIRED]);
-                    $this->closeWorkflow($req);
-                    $this->event($req, 'expired', null, $wasWaitingForPeer ? 'The colleague did not answer in time.' : 'Not decided before the shift started.', [], 'system');
-                });
-                $this->notify->expired($req);
-                $count++;
-            });
-
-        return $count;
+        DB::transaction(function () use ($req) {
+            $wasWaitingForPeer = $req->status === ShiftRequest::STATUS_PENDING_PEER;
+            $req->update(['status' => ShiftRequest::STATUS_EXPIRED]);
+            $this->closeWorkflow($req);
+            $this->event($req, 'expired', null, $wasWaitingForPeer ? 'The colleague did not answer in time.' : 'Not decided before the shift started.', [], 'system');
+        });
+        $this->notify->expired($req);
     }
 
     // ==================================================================

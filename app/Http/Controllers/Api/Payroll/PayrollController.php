@@ -381,6 +381,7 @@ class PayrollController extends Controller
                 ['name' => 'Monthly Incentive', 'amount' => $payslip->monthly_incentive ?? 0],
                 ['name' => 'Special Allowance', 'amount' => $payslip->special_allowance ?? 0],
                 ['name' => 'Overtime', 'amount' => $payslip->overtime_amount ?? 0],
+                ['name' => 'Shift Allowance', 'amount' => $payslip->shift_allowance_amount ?? 0],
             ];
 
             // Get deductions breakdown

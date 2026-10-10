@@ -623,6 +623,13 @@ class MonthlyPayrollController extends Controller
             $earnings['overtime'] = round($overtimeAmount, 2);
         }
 
+        // Shift allowance (Shifts → allowance per day / per hour) for the shifts actually worked.
+        $shiftAllowance = app(\App\Services\Payroll\ShiftAllowanceCalculator::class)
+            ->calculate((int) $tenantId, (int) $employee->id, $yearMonth);
+        if ($shiftAllowance['amount'] > 0) {
+            $earnings['shift_allowance'] = $shiftAllowance['amount'];
+        }
+
         // =====================================================================
         // LOAN DEDUCTIONS -- always computed (for display via
         // loan_deduction_computed) even when $includeLoanDeductions is
@@ -736,6 +743,8 @@ class MonthlyPayrollController extends Controller
             'overtime_hours_calculated' => round($overtimeHoursCalculated, 2),
             'overtime_rate'             => round($overtimeRateApplied, 2),
             'overtime_amount'           => $earnings['overtime'] ?? 0,
+            'shift_allowance_amount'    => $earnings['shift_allowance'] ?? 0,
+            'shift_allowance_days'      => $shiftAllowance['days'],
             'expected_hours'            => round($expectedHours, 2),
             'actual_worked_hours'       => round($actualWorkedHours, 2),
             'hourly_rate'               => round($hourlyRate, 2),
@@ -780,7 +789,8 @@ class MonthlyPayrollController extends Controller
             ),
         ]);
 
-        $this->savePayrollComponents($monthlyPayroll->id, $earnings, $employeeDeductions, $employerContributions);
+        $this->savePayrollComponents($monthlyPayroll->id, $earnings, $employeeDeductions, $employerContributions,
+            ['shift_allowance' => $shiftAllowance['label']]);
 
         // Mark loan repayments paid -- NO inner transaction; we are already inside one
         if ($includeLoanDeductions && $advanceDeduction > 0) {
@@ -861,6 +871,8 @@ class MonthlyPayrollController extends Controller
             'overtime_hours' => $context['approved_overtime_hours'],
             'overtime_rate' => $result['overtime_rate'] ?? 0,
             'overtime_amount' => $result['overtime_amount'] ?? 0,
+            'shift_allowance_amount' => round((float) optional($earnings->get('shift_allowance'))['amount'], 2),
+            'shift_allowance_days' => $result['shift_allowance_days'] ?? 0,
             'actual_worked_hours' => $context['actual_worked_hours'],
             'loan_deduction' => $result['loan_deduction'],
             'loan_deduction_enabled' => $includeLoanDeductions,
@@ -1736,7 +1748,7 @@ class MonthlyPayrollController extends Controller
      * Save payroll components to database
      * Separates earnings, employee deductions, and employer contributions
      */
-    private function savePayrollComponents(int $monthlyPayrollId, array $earnings, array $employeeDeductions, array $employerContributions = []): void
+    private function savePayrollComponents(int $monthlyPayrollId, array $earnings, array $employeeDeductions, array $employerContributions = [], array $earningNames = []): void
     {
         // Save earnings
         foreach ($earnings as $key => $amount) {
@@ -1748,10 +1760,10 @@ class MonthlyPayrollController extends Controller
             if ($amount != 0) {
                 PayrollComponent::create([
                     'monthly_payroll_id' => $monthlyPayrollId,
-                    'component_name'     => $this->formatComponentName($key),
+                    'component_name'     => $earningNames[$key] ?? $this->formatComponentName($key),
                     'component_type'     => 'earning',
                     'amount'             => $amount,
-                    'is_taxable'         => in_array($key, ['basic', 'hra', 'special', 'incentive']),
+                    'is_taxable'         => in_array($key, ['basic', 'hra', 'special', 'incentive', 'shift_allowance']),
                     'description'        => $this->formatComponentName($key) . ' for the month',
                 ]);
             }
@@ -1807,6 +1819,7 @@ class MonthlyPayrollController extends Controller
             'incentive'  => 'Monthly Incentive',
             'special'    => 'Special Allowance',
             'overtime'   => 'Overtime',
+            'shift_allowance' => 'Shift Allowance',
         ][$key] ?? ucwords(str_replace('_', ' ', $key));
     }
 
@@ -2008,6 +2021,7 @@ class MonthlyPayrollController extends Controller
             'present_days'       => 'required|numeric|min:0',
             'paid_leaves'        => 'nullable|numeric|min:0',
             'overtime_hours'     => 'nullable|numeric|min:0',
+            'shift_allowance_amount' => 'nullable|numeric|min:0',
             'basic_salary'       => 'required|numeric|min:0',
             'hra'                => 'required|numeric|min:0',
             'conveyence'         => 'required|numeric|min:0',
@@ -2067,6 +2081,7 @@ class MonthlyPayrollController extends Controller
             + (float) ($request->monthly_incentive ?? 0)
             + (float) ($request->special_allowance ?? 0)
             + (float) ($request->overtime_amount ?? 0)
+            + (float) ($request->shift_allowance_amount ?? 0)
             + $pendingOvertimePreviewAmount;
 
         $loanDeductionEnabled = $request->boolean('loan_deduction_enabled', true);
@@ -2188,7 +2203,8 @@ class MonthlyPayrollController extends Controller
                 + ($request->leave_travel_allowance ?? 0)
                 + ($request->monthly_incentive     ?? 0)
                 + ($request->special_allowance     ?? 0)
-                + $overtimeAmount;
+                + $overtimeAmount
+                + (float) ($request->shift_allowance_amount ?? 0);
 
             $totalDeductions = $request->provident_fund
                 + $request->esi
@@ -2228,6 +2244,7 @@ class MonthlyPayrollController extends Controller
                 'monthly_incentive'      => $request->monthly_incentive     ?? 0,
                 'special_allowance'      => $request->special_allowance     ?? 0,
                 'overtime_amount'        => $overtimeAmount,
+                'shift_allowance_amount' => (float) ($request->shift_allowance_amount ?? 0),
                 'provident_fund'         => $request->provident_fund,
                 'esi'                    => $request->esi,
                 'professional_tax'       => $request->professional_tax,
@@ -2251,6 +2268,10 @@ class MonthlyPayrollController extends Controller
                 $updateData['actual_worked_hours'] = $request->actual_worked_hours;
             }
 
+            // Keep the "Shift Allowance (Night × 12 days)" label the generated payslip had.
+            $shiftAllowanceName = PayrollComponent::where('monthly_payroll_id', $id)
+                ->where('component_name', 'like', 'Shift Allowance%')->value('component_name') ?? 'Shift Allowance';
+
             $monthlyPayroll->update($updateData);
 
             PayrollComponent::where('monthly_payroll_id', $id)->delete();
@@ -2266,6 +2287,7 @@ class MonthlyPayrollController extends Controller
                 'incentive'  => $request->monthly_incentive     ?? 0,
                 'special'    => $request->special_allowance     ?? 0,
                 'overtime'   => $overtimeAmount,
+                'shift_allowance' => (float) ($request->shift_allowance_amount ?? 0),
             ];
 
             $employeeDeductions = [
@@ -2283,7 +2305,8 @@ class MonthlyPayrollController extends Controller
                 'employer_esi' => $monthlyPayroll->employer_esi ?? 0,
             ];
 
-            $this->savePayrollComponents($id, $earnings, $employeeDeductions, $employerContributions);
+            $this->savePayrollComponents($id, $earnings, $employeeDeductions, $employerContributions,
+                ['shift_allowance' => $shiftAllowanceName]);
 
             // Sync the loan ledger to match what was actually saved on this
             // payslip -- idempotent (applyDeduction()/revokeForPayroll()
@@ -2542,6 +2565,8 @@ class MonthlyPayrollController extends Controller
             'overtime_hours' => $context['approved_overtime_hours'],
             'overtime_rate' => $result['overtime_rate'] ?? 0,
             'overtime_amount' => $result['overtime_amount'] ?? 0,
+            'shift_allowance_amount' => round((float) optional($earnings->get('shift_allowance'))['amount'], 2),
+            'shift_allowance_days' => $result['shift_allowance_days'] ?? 0,
             'actual_worked_hours' => $context['actual_worked_hours'],
             'loan_deduction' => $result['loan_deduction'],
             'loan_deduction_enabled' => $includeLoanDeductions,

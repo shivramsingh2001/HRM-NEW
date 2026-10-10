@@ -165,6 +165,20 @@ class PayrollCalculationEngine
             }
         }
 
+        // Shift allowance (Shifts → allowance per day / per hour) for the shifts actually worked —
+        // same placement as overtime: taxable, not a PF/ESI/PT base.
+        $shiftAllowance = app(ShiftAllowanceCalculator::class)->calculate($tenantId, (int) $employee->id, $yearMonth);
+        if ($shiftAllowance['amount'] > 0) {
+            $lineItems[] = [
+                'code' => 'shift_allowance',
+                'name' => $shiftAllowance['label'],
+                'component_type' => 'earning',
+                'calculation_method' => 'system_computed',
+                'amount' => $shiftAllowance['amount'],
+                'is_taxable' => true,
+            ];
+        }
+
         // Loan deduction is folded in as a real deduction line item (rather
         // than subtracted separately at the end) so total_deductions and
         // net_payable stay consistent with each other -- previously
@@ -255,6 +269,8 @@ class PayrollCalculationEngine
             'overtime_hours' => round($overtimeHours, 2),
             'overtime_rate' => $overtimeRate,
             'overtime_amount' => $overtimeAmount,
+            'shift_allowance_amount' => $shiftAllowance['amount'],
+            'shift_allowance_days' => $shiftAllowance['days'],
             'late_deduction' => round($lateEarly['late_deduction_amount'], 2),
             'early_deduction' => round($lateEarly['early_deduction_amount'], 2),
             'employer_contributions_total' => round($employerContributions, 2),

@@ -22,6 +22,10 @@
             ['Attendance Location Wise', 'report.attendance.branch-wise', ['report.attendance.branch-wise*']],
             ($subnavFeatures->enabledForCurrentTenant('fixed_shift') || $subnavFeatures->enabledForCurrentTenant('custom_shift'))
                 ? ['Shift Report', 'report.attendance.shift-monthly.index', ['report.attendance.shift-monthly.*']] : null,
+            $subnavFeatures->enabledForCurrentTenant('custom_shift')
+                ? ['Shift Change Log', 'report.attendance.shift-changes.index', ['report.attendance.shift-changes.*']] : null,
+            $subnavFeatures->enabledForCurrentTenant('custom_shift')
+                ? ['Shift Requests', 'report.attendance.shift-requests.index', ['report.attendance.shift-requests.*']] : null,
         ],
         'project' => [
             ['Project Summary', 'report.project.summary.index', ['report.project.summary.*']],

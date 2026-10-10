@@ -93,3 +93,74 @@
 @if (!$customShifts)
     <p class="p360-note mt-2">Week-offs are the same for everyone and are set in Shift Settings.</p>
 @endif
+
+@if ($customShifts)
+    <div class="p360-toolbar mt-4 mb-2">
+        <div class="p360-sub m-0">Shift swap &amp; change requests</div>
+        @feature('custom_shift')
+        @feature('daily_reports')
+            <a href="{{ route('report.attendance.shift-requests.index', ['user_id' => $user->id, 'start_date' => now()->subYear()->toDateString(), 'end_date' => now()->toDateString()]) }}" class="btn btn-sm btn-light-brand">
+                <i class="feather-list me-1"></i>Full register</a>
+        @endfeature
+        @endfeature
+    </div>
+    @if ($shiftRequests->isEmpty())
+        <p class="p360-note">No shift swap or change requests for this employee.</p>
+    @else
+        <div class="table-responsive">
+            <table class="p360-table">
+                <thead><tr><th>Request</th><th>Shifts</th><th>Status</th><th>Decided by</th></tr></thead>
+                <tbody>
+                    @foreach ($shiftRequests as $sr)
+                        <tr>
+                            <td>
+                                <a href="{{ route('shift.requests.index', ['open' => $sr->id]) }}">{{ $sr->request_no }}</a>
+                                <div class="p360-note m-0">{{ $sr->typeLabel() }}{{ $sr->mode === 'direct' ? ' · direct' : '' }}
+                                    · {{ (int) $sr->requester_id === (int) $user->id ? 'raised' : 'colleague of ' . ($sr->requester->name ?? '—') }}
+                                    · {{ $sr->created_at->format('d M Y') }}</div>
+                            </td>
+                            <td>
+                                @foreach ($sr->items as $i)
+                                    <div>{{ $i->user->name ?? '—' }} · {{ \Carbon\Carbon::parse($i->date)->format('d M') }}: {{ $i->fromShift->name ?? 'None' }} → <strong>{{ $i->toShift->name ?? 'None' }}</strong></div>
+                                @endforeach
+                            </td>
+                            <td><span class="badge {{ $sr->statusBadge() }}">{{ $sr->statusLabel() }}</span></td>
+                            <td>{{ $sr->decider->name ?? '—' }}@if ($sr->decided_at)<div class="p360-note m-0">{{ $sr->decided_at->format('d M Y, h:i A') }}</div>@endif</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
+    <div class="p360-toolbar mt-4 mb-2">
+        <div class="p360-sub m-0">Shift change history</div>
+        @feature('custom_shift')
+        @feature('daily_reports')
+            <a href="{{ route('report.attendance.shift-changes.index', ['user_id' => $user->id, 'start_date' => now()->subYear()->toDateString(), 'end_date' => now()->toDateString()]) }}" class="btn btn-sm btn-light-brand">
+                <i class="feather-list me-1"></i>Full log</a>
+        @endfeature
+        @endfeature
+    </div>
+    @if ($changeLog->isEmpty())
+        <p class="p360-note">No shift changes recorded yet.</p>
+    @else
+        <div class="table-responsive">
+            <table class="p360-table">
+                <thead><tr><th>Changed on</th><th>Shift date</th><th>From → To</th><th>How</th><th>By</th><th>Reason</th></tr></thead>
+                <tbody>
+                    @foreach ($changeLog as $l)
+                        <tr>
+                            <td style="white-space:nowrap">{{ \Carbon\Carbon::parse($l->created_at)->format('d M Y, h:i A') }}</td>
+                            <td style="white-space:nowrap">{{ \Carbon\Carbon::parse($l->date)->format('d M Y') }}@if ($l->is_additional) <span class="p360-chip extra">Additional</span>@endif</td>
+                            <td>{{ $l->from_name ?? 'None' }} → <strong>{{ $l->to_name ?? 'None' }}</strong></td>
+                            <td>{{ \App\Models\ShiftChangeLog::SOURCE_LABELS[$l->source] ?? ucfirst(str_replace('_', ' ', $l->source)) }}@if ($l->request_no)<div class="p360-note m-0">{{ $l->request_no }}</div>@endif</td>
+                            <td>{{ $l->actor_name ?? 'System' }}</td>
+                            <td>{{ $l->reason ?: '—' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+@endif

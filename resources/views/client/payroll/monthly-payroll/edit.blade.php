@@ -1190,6 +1190,12 @@
                                             class="form-control" style="background: #eef3fd;"
                                             value="{{ old('overtime_amount', $monthlyPayroll->overtime_amount ?? 0) }}">
                                     </div>
+                                    <div class="input-group" title="Shift allowance for the shifts worked (Shifts → allowance)">
+                                        <span class="input-group-text">Shift</span>
+                                        <input type="number" step="0.01" min="0" name="shift_allowance_amount" id="shift_allowance_amount"
+                                            class="form-control"
+                                            value="{{ old('shift_allowance_amount', $monthlyPayroll->shift_allowance_amount ?? 0) }}">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1901,6 +1907,7 @@
             let lta = parseFloat($('#lta').val()) || 0;
             let incentive = parseFloat($('#monthly_incentive').val()) || 0;
             let special = parseFloat($('#special_allowance').val()) || 0;
+            let shiftAllowance = parseFloat($('#shift_allowance_amount').val()) || 0;
             let overtime = (parseFloat($('#overtime_amount').val()) || 0)
                 + (includePendingOvertime ? pendingOvertimePreviewAmount : 0);
             let pf = parseFloat($('#pf').val()) || 0;
@@ -1913,7 +1920,7 @@
             let employerPf = parseFloat($('#employer_pf').val()) || 0;
             let employerEsi = parseFloat($('#employer_esi').val()) || 0;
             
-            let gross = basic + hra + conveyence + medical + children + post + lta + incentive + special + overtime;
+            let gross = basic + hra + conveyence + medical + children + post + lta + incentive + special + overtime + shiftAllowance;
             let deductions = pf + esi + pt + tds + loan + advance + other;
             let net = gross - deductions;
             let employerTotal = employerPf + employerEsi;
@@ -2074,7 +2081,7 @@
         });
 
         // Any earning/deduction change
-        $('#basic_salary, #hra, #conveyence, #medical_allowance, #children_allowance, #post_allowance, #lta, #monthly_incentive, #special_allowance, #overtime_amount, #pf, #esi, #pt, #tds, #loan_deduction, #salary_advance_deduction, #other_deductions')
+        $('#basic_salary, #hra, #conveyence, #medical_allowance, #children_allowance, #post_allowance, #lta, #monthly_incentive, #special_allowance, #overtime_amount, #shift_allowance_amount, #pf, #esi, #pt, #tds, #loan_deduction, #salary_advance_deduction, #other_deductions')
             .on('input change', function() {
                 calculateTotals();
             });

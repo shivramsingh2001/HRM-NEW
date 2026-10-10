@@ -169,6 +169,20 @@ class EmployeeProfileController extends Controller
                 ->get(['sa.*', 's.name as shift_name', 's.start_time', 's.end_time', 's.is_overnight']),
             'weekoffs' => DB::table('user_weekoffs')->where('tenant_id', $tenantId)->where('user_id', $user->id)
                 ->where('status', 1)->orderBy('off_type')->orderBy('start_date')->get(),
+            // Swap / change requests this employee raised or is the colleague in.
+            'shiftRequests' => \App\Models\ShiftRequest::where('tenant_id', $tenantId)
+                ->where(fn ($q) => $q->where('requester_id', $user->id)->orWhere('counterpart_id', $user->id))
+                ->with(['requester:id,name', 'counterpart:id,name', 'decider:id,name', 'items.user:id,name', 'items.fromShift:id,name', 'items.toShift:id,name'])
+                ->orderByDesc('id')->limit(15)->get(),
+            // Every change to this employee's shifts (shift_change_logs).
+            'changeLog' => DB::table('shift_change_logs as l')
+                ->leftJoin('shifts as fs', 'fs.id', '=', 'l.from_shift_id')
+                ->leftJoin('shifts as ts', 'ts.id', '=', 'l.to_shift_id')
+                ->leftJoin('users as a', 'a.id', '=', 'l.actor_id')
+                ->leftJoin('shift_requests as sr', 'sr.id', '=', 'l.shift_request_id')
+                ->where('l.tenant_id', $tenantId)->where('l.user_id', $user->id)
+                ->orderByDesc('l.id')->limit(25)
+                ->get(['l.*', 'fs.name as from_name', 'ts.name as to_name', 'a.name as actor_name', 'sr.request_no']),
         ];
     }
 
@@ -420,8 +434,25 @@ class EmployeeProfileController extends Controller
                 ];
             });
 
+        // Shift changes (roster edits, swaps, approved requests, rotations).
+        $shifts = DB::table('shift_change_logs as l')
+            ->leftJoin('shifts as fs', 'fs.id', '=', 'l.from_shift_id')
+            ->leftJoin('shifts as ts', 'ts.id', '=', 'l.to_shift_id')
+            ->leftJoin('users as a', 'a.id', '=', 'l.actor_id')
+            ->where('l.tenant_id', $tenantId)->where('l.user_id', $user->id)
+            ->orderByDesc('l.id')->limit(25)
+            ->get(['l.created_at', 'l.date', 'l.source', 'l.reason', 'fs.name as from_name', 'ts.name as to_name', 'a.name as actor_name'])
+            ->map(fn ($r) => [
+                'at' => $r->created_at,
+                'what' => (\App\Models\ShiftChangeLog::SOURCE_LABELS[$r->source] ?? str_replace('_', ' ', (string) $r->source))
+                    . ' · ' . Carbon::parse($r->date)->format('d M') . ': ' . ($r->from_name ?? 'none') . ' → ' . ($r->to_name ?? 'none')
+                    . ($r->reason ? ' — ' . $r->reason : ''),
+                'by' => $r->actor_name,
+                'kind' => 'shift',
+            ]);
+
         return [
-            'events' => $audit->concat($attendance)->concat($onBehalf)->sortByDesc('at')->take(40)->values(),
+            'events' => $audit->concat($attendance)->concat($onBehalf)->concat($shifts)->sortByDesc('at')->take(40)->values(),
         ];
     }
 

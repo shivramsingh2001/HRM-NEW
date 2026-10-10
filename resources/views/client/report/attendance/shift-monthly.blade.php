@@ -34,6 +34,7 @@
     .shift-chip { display: inline-block; min-width: 30px; padding: 2px 4px; border-radius: 6px; font-size: 9px; font-weight: 700; letter-spacing: .2px; line-height: 1.3; cursor: default; }
     .shift-chip.wo { background: #eef1f7; color: #64748b; }
     .shift-chip.none { background: transparent; color: #cbd5e1; font-weight: 400; }
+    .swap-mark { margin-left: 2px; font-weight: 800; }
 </style>
 @endsection
 
@@ -85,6 +86,13 @@
             </div>
         @endunless
 
+        @if (($stats['swapped'] ?? 0) > 0)
+            <div class="text-muted mb-2" style="font-size:10.5px;">
+                <strong>⇄</strong> = the day's shift came from a shift swap ({{ $stats['swapped'] }} this month).
+                @feature('custom_shift')<a href="{{ route('report.attendance.shift-changes.index', ['change_type' => 'swap', 'date_by' => 'shift', 'start_date' => $month . '-01', 'end_date' => \Carbon\Carbon::parse($month . '-01')->endOfMonth()->toDateString()]) }}">See the swaps</a>@endfeature
+            </div>
+        @endif
+
         <div class="card stretch stretch-full">
             <div class="card-body p-0">
                 <div class="shift-matrix-wrap">
@@ -134,7 +142,7 @@
                                         <td>
                                             @if ($c['type'] === 'shift')
                                                 <span class="shift-chip" style="background: {{ $c['color'] }}22; color: {{ $c['color'] }}"
-                                                    title="{{ $c['name'] }} ({{ $c['start'] }}–{{ $c['end'] }}) — {{ $d->format('d M Y') }}">{{ $c['short'] }}</span>
+                                                    title="{{ $c['name'] }} ({{ $c['start'] }}–{{ $c['end'] }}) — {{ $d->format('d M Y') }}{{ !empty($c['swapped']) ? ' — swapped' : '' }}">{{ $c['short'] }}@if (!empty($c['swapped']))<span class="swap-mark">⇄</span>@endif</span>
                                                 @foreach ($c['extra'] ?? [] as $x)
                                                     <span class="shift-chip" style="background: {{ $x['color'] }}22; color: {{ $x['color'] }}; margin-top: 2px"
                                                         title="Additional: {{ $x['name'] }} ({{ $x['start'] }}–{{ $x['end'] }}) — {{ $d->format('d M Y') }}">+{{ $x['short'] }}</span>

@@ -248,13 +248,18 @@
 
                     $slipEarnings = collect($slipResolved['earnings'])
                         ->merge($slipResolved['reimbursements'])
-                        ->reject(fn ($c) => ($c['code'] ?? null) === 'overtime')
+                        ->reject(fn ($c) => in_array($c['code'] ?? null, ['overtime', 'shift_allowance'], true))
                         ->filter(fn ($c) => $c['amount'] > 0)
                         ->map(fn ($c) => ['name' => $c['name'], 'amount' => $c['amount']])
                         ->values();
                     // Overtime as stored on this payslip (hours × rate at generation).
                     if ((float) ($monthlyPayroll->overtime_amount ?? 0) > 0) {
                         $slipEarnings->push(['name' => 'Overtime (' . rtrim(rtrim(number_format((float) $monthlyPayroll->overtime_hours, 2), '0'), '.') . ' h)', 'amount' => (float) $monthlyPayroll->overtime_amount]);
+                    }
+                    // Shift allowance as stored on this payslip, with its "Night × 12 days" label.
+                    if ((float) ($monthlyPayroll->shift_allowance_amount ?? 0) > 0) {
+                        $slipEarnings->push(['name' => optional($monthlyPayroll->components)->first(fn ($c) => str_starts_with($c->component_name, 'Shift Allowance'))?->component_name ?? 'Shift Allowance',
+                            'amount' => (float) $monthlyPayroll->shift_allowance_amount]);
                     }
                     // Loan / salary-advance lines come from what THIS payslip stored: a live recalculation
                     // sees the instalments it already collected as paid and would show nothing.

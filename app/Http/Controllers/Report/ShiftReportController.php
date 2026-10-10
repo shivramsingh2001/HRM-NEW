@@ -78,7 +78,7 @@ class ShiftReportController extends Controller
                         $cell['type'] === 'shift' ? $cell['start'] : '',
                         $cell['type'] === 'shift' ? $cell['end'] : '',
                         match ($cell['type']) {
-                            'shift' => 'Shift',
+                            'shift' => empty($cell['swapped']) ? 'Shift' : 'Shift (swapped)',
                             'weekoff' => 'Week off',
                             default => 'Unassigned',
                         },
@@ -162,6 +162,24 @@ class ShiftReportController extends Controller
             ->get()
             ->groupBy('user_id');
 
+        // Days whose (primary) shift came from a swap — an active one-day swap override.
+        $swapped = [];
+        if ($customShifts && $userIds !== []) {
+            \Illuminate\Support\Facades\DB::table('shift_assignments')->where('tenant_id', $tenantId)
+                ->whereIn('user_id', $userIds)->where('source', 'swap')->where('is_override', 1)
+                ->where('is_additional', 0)->where('status', 'active')
+                ->where('start_date', '<=', end($dateStrings))
+                ->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $dateStrings[0]))
+                ->get(['user_id', 'start_date', 'end_date'])
+                ->each(function ($a) use (&$swapped, $dateStrings) {
+                    foreach ($dateStrings as $ds) {
+                        if ($ds >= substr((string) $a->start_date, 0, 10) && ($a->end_date === null || $ds <= substr((string) $a->end_date, 0, 10))) {
+                            $swapped[$a->user_id . '|' . $ds] = true;
+                        }
+                    }
+                });
+        }
+
         $shiftFilter = $request->filled('shift_id') ? (int) $request->query('shift_id') : null;
 
         $rows = collect();
@@ -183,6 +201,7 @@ class ShiftReportController extends Controller
                 if ($shift) {
                     $cells[$ds] = $this->shiftCell($shift) + [
                         'extra' => $dayShifts->slice(1)->map(fn ($x) => $this->shiftCell($x))->values()->all(),
+                        'swapped' => isset($swapped[$user->id . '|' . $ds]),
                     ];
                     $counts['shift']++;
                     if ($shiftFilter !== null && $dayShifts->contains(fn ($x) => (int) $x->id === $shiftFilter)) {
@@ -235,6 +254,7 @@ class ShiftReportController extends Controller
                 'shift_days' => (int) $rows->sum('shift_days'),
                 'weekoffs' => (int) $rows->sum('weekoffs'),
                 'unassigned' => (int) $rows->sum('unassigned'),
+                'swapped' => count(array_filter($rows->flatMap(fn ($r) => array_column($r['cells'], 'swapped'))->all())),
                 'shifts_in_use' => $legend->count(),
             ],
             'departments' => Department::where('status', 1)->orderBy('name')->get(['id', 'name']),

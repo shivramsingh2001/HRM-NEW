@@ -403,7 +403,10 @@
                 });
             });
 
-            load();
+            // ?tab=approvals (dashboard links) opens that tab; otherwise My Requests.
+            const startTab = new URLSearchParams(location.search).get('tab');
+            if (startTab && $('[data-tab="' + startTab + '"]').length) $('[data-tab="' + startTab + '"]').trigger('click');
+            else load();
             const openId = new URLSearchParams(location.search).get('open');
             if (openId) openDetail(openId);
         });

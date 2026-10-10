@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\ShiftRequest;
 use App\Services\Shift\ShiftRequestService;
 use Illuminate\Console\Command;
 
@@ -18,7 +19,19 @@ class ExpireShiftRequests extends Command
 
     public function handle(ShiftRequestService $service): int
     {
-        $this->info('Expired ' . $service->expireDue() . ' shift request(s).');
+        // Every company's due requests; each one carries its own tenant_id.
+        $count = 0;
+        ShiftRequest::withoutGlobalScopes()
+            ->whereIn('status', ShiftRequest::PENDING)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->orderBy('id')
+            ->each(function (ShiftRequest $req) use ($service, &$count) {
+                $service->expire($req);
+                $count++;
+            });
+
+        $this->info("Expired {$count} shift request(s).");
 
         return self::SUCCESS;
     }

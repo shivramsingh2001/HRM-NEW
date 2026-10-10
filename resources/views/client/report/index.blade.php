@@ -632,6 +632,38 @@
                         </div>
                     </div>
                     @endif
+
+                    @if ($reportFeatures->enabledForCurrentTenant('custom_shift'))
+                    <!-- Shift Change Log -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-git-commit"></i>
+                        </div>
+                        <h6 class="card-title">Shift Change Log</h6>
+                        <p class="card-description">Every change to an employee's shift — from and to shift, roster edit / swap / request / rotation, who changed it, when and why.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-info">Audit</span>
+                            <a href="{{ route('report.attendance.shift-changes.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Shift Requests Register -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-shuffle"></i>
+                        </div>
+                        <h6 class="card-title">Shift Requests Register</h6>
+                        <p class="card-description">Every shift swap and change request with its shifts, status, who decided it and how long the decision took.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-info">Requests</span>
+                            <a href="{{ route('report.attendance.shift-requests.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
             @endif

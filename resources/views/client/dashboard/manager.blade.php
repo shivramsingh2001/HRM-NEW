@@ -334,6 +334,19 @@
                             <span class="approval-count">{{ $pending_offboarding_requests }}</span>
                         </a>
                     @endfeature
+                    @feature('custom_shift')
+                        <a href="{{ route('shift.requests.index', ['tab' => 'approvals']) }}" class="approval-row">
+                            <span class="approval-row-left"><i class="feather-shuffle text-muted"></i> Shift Swaps / Changes</span>
+                            <span class="approval-count">{{ $pending_shift_requests ?? 0 }}</span>
+                        </a>
+                        @foreach ($team_shift_requests ?? [] as $sr)
+                            <a href="{{ route('shift.requests.index', ['tab' => 'approvals', 'open' => $sr->id]) }}" class="d-block fs-11 text-muted ps-4 pb-1 text-truncate">
+                                {{ $sr->requester->name ?? '—' }}{{ $sr->counterpart ? ' ⇄ ' . $sr->counterpart->name : '' }}
+                                · {{ $sr->type === 'swap' ? 'swap' : 'change' }}
+                                @if ($sr->items->isNotEmpty()) · {{ \Carbon\Carbon::parse($sr->items->min('date'))->format('d M') }}@endif
+                            </a>
+                        @endforeach
+                    @endfeature
                 </x-ui.card>
             </div>
 
