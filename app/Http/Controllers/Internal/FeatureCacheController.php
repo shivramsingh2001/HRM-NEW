@@ -31,6 +31,10 @@ class FeatureCacheController extends Controller
             $rbac->forgetRole($roleId);
         }
 
+        if ($request->boolean('maintenance')) {
+            app(\App\Services\MaintenanceModeService::class)->forget();
+        }
+
         return response()->json(['ok' => true, 'tenant_id' => $tenantId, 'role_id' => $roleId]);
     }
 }

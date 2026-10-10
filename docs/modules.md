@@ -739,6 +739,19 @@ All under `role:admin,hr`, `routes/web.php:550-591`:
 
 ---
 
+## Platform maintenance mode (2026-10-10)
+
+Platform-wide (all companies) switch, managed only from the Super Admin Panel (`hrm-superadmin` → Maintenance Mode, `MaintenanceController`, superadmin role to change it). Table `maintenance_modes` (one row).
+
+| Piece | Where |
+|---|---|
+| Model | `App\Models\MaintenanceMode` (`isActive()` = enabled and inside the optional start/end window — a past `end_time` switches it off by itself, a future `start_time` schedules it) |
+| Service | `App\Services\MaintenanceModeService` — `row()` (creates the default row if missing), `cached()` (30 s), `forget()`, `publicPayload()`, `bypasses()` (allowed IP/CIDR or allowed user id) |
+| Public API | `GET /api/maintenance` → `Api\MaintenanceController@show` — **frozen response shape** (older mobile apps), see `docs/api/01-auth-and-account.md` |
+| Enforcement | `CheckMaintenanceMode` middleware on the `web` and `api` groups — 503 maintenance page / JSON; exemptions listed in `docs/architecture.md` middleware table |
+| Cache bust | Panel calls `POST /internal/superadmin/feature-cache/bust` with `maintenance: true` (`Internal\FeatureCacheController`) |
+| Tests | `tests/Feature/MaintenanceModeTest` |
+
 ## Summary: what's surprising / worth knowing before extending this app
 
 1. Two approval mechanisms coexist per module (legacy direct single-approver code + the generic `ApprovalService` multi-level engine) — always check whether a tenant workflow is configured before assuming which path a request takes.

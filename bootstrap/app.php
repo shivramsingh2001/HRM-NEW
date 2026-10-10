@@ -28,7 +28,18 @@ return Application::configure(basePath: dirname(__DIR__))
         // Hard-expire impersonation sessions on every web request.
         $middleware->web(append: [
             \App\Http\Middleware\EnforceImpersonationExpiry::class,
+            \App\Http\Middleware\CheckMaintenanceMode::class,
         ]);
+        // Platform maintenance (Super Admin Panel) also gates the API.
+        $middleware->api(append: [
+            \App\Http\Middleware\CheckMaintenanceMode::class,
+        ]);
+        // ...and runs before auth, so a logged-out / expired-token request
+        // gets the maintenance answer, not a 401.
+        $middleware->prependToPriorityList(
+            \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            \App\Http\Middleware\CheckMaintenanceMode::class,
+        );
         $middleware->alias([
             'tenant' => \App\Http\Middleware\TenantMiddleware::class,
             'singleLogin' => \App\Http\Middleware\CheckSingleDeviceLogin::class,

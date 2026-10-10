@@ -6,6 +6,40 @@ All URLs below are relative to base URL `https://vpshrms.shurttech.com`.
 
 ---
 
+## GET /api/maintenance
+
+**Purpose:** Platform maintenance status — the app calls it on start-up and shows a maintenance screen when `is_active` is `true`. Managed from the Super Admin Panel (Maintenance Mode page).
+**Auth:** None. No tenant header, not rate-limited by tenant.
+**Controller:** `App\Http\Controllers\Api\MaintenanceController@show` → `MaintenanceModeService::publicPayload()`.
+
+**Response shape is frozen** — older app versions read it; never add, rename or reorder keys.
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "is_enabled": false,
+        "title": "Under Maintenance",
+        "message": "We are currently performing scheduled maintenance. Please check back soon.",
+        "start_time": null,
+        "end_time": null,
+        "allowed_ips": [],
+        "allowed_users": [],
+        "enabled_by": null,
+        "created_at": "2026-10-09T06:55:31.000000Z",
+        "updated_at": "2026-10-09T06:55:31.000000Z"
+    },
+    "is_active": false
+}
+```
+
+- `is_active` = `is_enabled` **and** now is inside the optional `start_time`/`end_time` window (times in UTC ISO-8601). Use `is_active`, not `is_enabled`, to decide whether to block.
+- `allowed_users` are `users.id` values; `enabled_by` is a `super_admins.id`.
+- While maintenance is active, every other `/api/*` call (except login/OTP and `api/v1/biometric/*`) returns **503** `{"success": false, "maintenance": true, "title", "message", "end_time"}` with a `Retry-After` header when an end time is set — unless the caller's IP or user is on the allow-list.
+
+---
+
 ## POST /api/login
 
 **Purpose:** Authenticate an employee/manager with employee ID + password and issue a JWT.

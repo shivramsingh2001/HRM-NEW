@@ -50,6 +50,10 @@ use App\Http\Controllers\AI\RecruitmentController as AIRecruitmentController;
 use Illuminate\Support\Facades\Route;
 
 
+// Platform maintenance status — public, no auth/tenant. Response shape is
+// frozen (older mobile app versions read it). Managed in the Super Admin Panel.
+Route::get('/maintenance', [\App\Http\Controllers\Api\MaintenanceController::class, 'show'])->name('api.maintenance');
+
 Route::middleware('tenant')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
