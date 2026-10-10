@@ -1083,17 +1083,17 @@
         </div>
         @endif
 
-        {{-- Assets & meetings --}}
-        @if (($show['assets'] ?? false) || ($show['meetings'] ?? false))
+        {{-- Assets, meetings & upcoming holidays: 3 equal cards (col-md-4 each) --}}
+        @if (($show['assets'] ?? false) || ($show['meetings'] ?? false) || ($show['holiday'] ?? false))
         <div class="section-hdr">
             <div class="section-hdr-left">
                 <span class="section-hdr-icon"><i class="feather-box"></i></span>
-                <h6 class="section-hdr-title">Assets &amp; meetings</h6>
+                <h6 class="section-hdr-title">Assets, meetings &amp; holidays</h6>
             </div>
         </div>
-        <div class="row g-compact dash-grid mb-2" data-n="{{ $cardsShown(($show['assets'] ?? false) && $asset_snapshot, ($show['meetings'] ?? false) && $meeting_snapshot) }}">
+        <div class="row g-compact dash-grid mb-2" data-n="{{ $cardsShown(($show['assets'] ?? false) && $asset_snapshot, ($show['meetings'] ?? false) && $meeting_snapshot, $show['holiday'] ?? false) }}">
             @if (($show['assets'] ?? false) && $asset_snapshot)
-            <div class="col-xl-6 col-md-6">
+            <div class="col-md-4">
                 <div class="card stretch-full">
                     <div class="card-header">
                         <h5 class="card-title card-title-sm">Assets <span class="stat-sub fw-normal">· {{ $asset_snapshot['total'] }} in use or stock</span></h5>
@@ -1125,7 +1125,7 @@
                 $meetingRows = $meeting_snapshot['today']->isNotEmpty() ? $meeting_snapshot['today'] : $meeting_snapshot['upcoming'];
                 $meetingsAreToday = $meeting_snapshot['today']->isNotEmpty();
             @endphp
-            <div class="col-xl-6 col-md-6">
+            <div class="col-md-4">
                 <div class="card stretch-full">
                     <div class="card-header">
                         <h5 class="card-title card-title-sm">Meetings <span class="stat-sub fw-normal">· {{ $meeting_snapshot['today_count'] }} today</span></h5>
@@ -1153,6 +1153,40 @@
                                 <span class="ann-title">Completed, minutes not finalized</span>
                                 <span class="fw-bold {{ $meeting_snapshot['minutes_pending'] > 0 ? 'text-warning' : '' }}">{{ $meeting_snapshot['minutes_pending'] }}</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <!-- Upcoming holidays -->
+            @if ($show['holiday'] ?? false)
+            <div class="col-md-4">
+                <div class="card stretch-full">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">Upcoming holidays</h5>
+                        <a href="{{ route('holiday.index') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="ann-list">
+                            @forelse ($upcoming_holidays ?? [] as $h)
+                                @php
+                                    $hFrom = \Carbon\Carbon::parse($h->start_date);
+                                    $hTo = $h->end_date && $h->end_date != $h->start_date ? \Carbon\Carbon::parse($h->end_date) : null;
+                                @endphp
+                                <div class="ann-row has-date">
+                                    <span class="attn-date" title="{{ $hFrom->format('l, d M Y') }}{{ $hTo ? ' – ' . $hTo->format('l, d M Y') : '' }}">
+                                        <span class="d">{{ $hFrom->format('d') }}</span>
+                                        <span class="m">{{ $hFrom->format('M') }}</span>
+                                    </span>
+                                    <span class="ann-main">
+                                        <span class="ann-title"><i class="feather-sun text-primary me-1"></i>{{ $h->name }}</span>
+                                        <span class="stat-sub">{{ $hFrom->format('l') }}{{ $hTo ? ' · till ' . $hTo->format('d M') : '' }}</span>
+                                    </span>
+                                </div>
+                            @empty
+                                <div class="text-center py-4 text-muted fs-12">No upcoming holidays</div>
+                            @endforelse
                         </div>
                     </div>
                 </div>
@@ -1357,8 +1391,8 @@
             @endif
         </div>
 
-        <!-- Regularization / Performance / Calendar Row -->
-        @php $lastRowN = $cardsShown($show['regularization'] ?? false, $show['attendance'] ?? false, $show['tasks'] ?? false, $show['holiday'] ?? false, $show['announcements'] ?? false); @endphp
+        <!-- Regularization / Top performers / Least tasks / Announcements: 4 cards (col-md-3 each) -->
+        @php $lastRowN = $cardsShown($show['regularization'] ?? false, $show['attendance'] ?? false, $show['tasks'] ?? false, $show['announcements'] ?? false); @endphp
         @if ($lastRowN > 0)
         <div class="row g-compact dash-grid mb-2" data-n="{{ $lastRowN }}">
             <!-- Most Regularization Request -->
@@ -1488,40 +1522,6 @@
                                     @endforelse
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @endif
-
-            <!-- Upcoming holidays -->
-            @if ($show['holiday'] ?? false)
-            <div class="col-md-3">
-                <div class="card stretch-full fixed-h-card">
-                    <div class="card-header">
-                        <h5 class="card-title card-title-sm">Upcoming holidays</h5>
-                        <a href="{{ route('holiday.index') }}" class="badge bg-soft-primary">View all</a>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="ann-list">
-                            @forelse ($upcoming_holidays ?? [] as $h)
-                                @php
-                                    $hFrom = \Carbon\Carbon::parse($h->start_date);
-                                    $hTo = $h->end_date && $h->end_date != $h->start_date ? \Carbon\Carbon::parse($h->end_date) : null;
-                                @endphp
-                                <div class="ann-row has-date">
-                                    <span class="attn-date" title="{{ $hFrom->format('l, d M Y') }}{{ $hTo ? ' – ' . $hTo->format('l, d M Y') : '' }}">
-                                        <span class="d">{{ $hFrom->format('d') }}</span>
-                                        <span class="m">{{ $hFrom->format('M') }}</span>
-                                    </span>
-                                    <span class="ann-main">
-                                        <span class="ann-title"><i class="feather-sun text-primary me-1"></i>{{ $h->name }}</span>
-                                        <span class="stat-sub">{{ $hFrom->format('l') }}{{ $hTo ? ' · till ' . $hTo->format('d M') : '' }}</span>
-                                    </span>
-                                </div>
-                            @empty
-                                <div class="text-center py-4 text-muted fs-12">No upcoming holidays</div>
-                            @endforelse
                         </div>
                     </div>
                 </div>
