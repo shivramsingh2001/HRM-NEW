@@ -141,7 +141,7 @@
         .badge-theme { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 6px; display: inline-block; }
         .badge-theme.sm { font-size: 9px; padding: 2px 7px; }
         .badge-theme.upcoming { background: var(--primary-light, #EFF6FF); color: var(--primary, #0D6EFD); }
-        .badge-theme.ongoing, .badge-theme.permanent, .badge-theme.active { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; }
+        .badge-theme.ongoing, .badge-theme.permanent, .badge-theme.rotating, .badge-theme.active { background: linear-gradient(135deg, #0D6EFD, #0D6EFD); color: #fff; }
         .badge-theme.complete, .badge-theme.flexible { background: var(--primary-light, #EFF6FF); color: var(--primary, #0D6EFD); }
         .badge-theme.superseded, .badge-theme.ended, .badge-theme.cancelled { background: #f1f5f9; color: #64748b; }
         .badge-theme.additional { background: #fef3c7; color: #92400e; }
@@ -150,6 +150,26 @@
         .shift-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; }
         #assignList table { font-size: 12px; }
         #assignList th, #assignList td { padding: 5px 8px; }
+
+        /* Roster cell → day details (history + swap / change) */
+        .roster-table td.rcell { cursor: pointer; }
+        .roster-table td.rcell:hover { background: var(--primary-light, #EFF6FF); }
+        .roster-table td.rcell:focus-visible { outline: 2px solid var(--primary, #0D6EFD); outline-offset: -2px; }
+        .chip-changed { font-size: 9px; margin-left: 4px; color: var(--primary, #0D6EFD); }
+        .mday-changed { box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--primary, #0D6EFD); }
+        .day-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .day-head .n { font-weight: 700; font-size: 13px; }
+        .day-head .s { font-size: 11px; color: #64748b; }
+        .log-list { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; }
+        .log-list li { border-left: 2px solid var(--primary-light, #EFF6FF); padding: 4px 0 8px 10px; position: relative; font-size: 12px; }
+        .log-list li::before { content: ''; position: absolute; left: -5px; top: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--primary, #0D6EFD); }
+        .log-list .meta { font-size: 10.5px; color: #64748b; }
+        .swap-preview { font-size: 12px; }
+        .swap-preview table { font-size: 12px; margin-bottom: 6px; }
+        .swap-preview .chg { color: var(--primary, #0D6EFD); font-weight: 600; }
+        .msg-box { font-size: 12px; padding: 6px 10px; border-radius: 8px; margin-bottom: 6px; }
+        .msg-box.err { background: #fef2f2; color: #b91c1c; }
+        .msg-box.warn { background: #fffbeb; color: #92400e; }
     </style>
 @endsection
 
@@ -163,10 +183,16 @@
         <x-ui.page-header class="content-area-header sticky-top" title="Shift Roster" current="Roster" :crumbs="[['label' => 'Shift']]">
             <x-slot:actions>
                 <div class="hstack gap-2">
-                    <a href="{{ route('shift.index') }}" class="btn-reset"><i class="feather-clock"></i>Manage Shifts</a>
-                    <a href="#" class="btn-grad" data-bs-toggle="modal" data-bs-target="#assignShiftModal">
-                        <i class="feather-user-check"></i>Assign Shift
-                    </a>
+                    @if ($canManageShifts)
+                        <a href="{{ route('shift.index') }}" class="btn-reset"><i class="feather-clock"></i>Manage Shifts</a>
+                    @endif
+                    <a href="{{ route('shift.requests.index') }}" class="btn-reset"><i class="feather-inbox"></i>Shift Requests</a>
+                    <a href="#" class="btn-reset" id="openSwapModal"><i class="feather-repeat"></i>Swap Shifts</a>
+                    @if ($canManageShifts)
+                        <a href="#" class="btn-grad" data-bs-toggle="modal" data-bs-target="#assignShiftModal">
+                            <i class="feather-user-check"></i>Assign Shift
+                        </a>
+                    @endif
                 </div>
             </x-slot:actions>
         </x-ui.page-header>
@@ -271,12 +297,21 @@
                                                     </div>
                                                 </td>
                                                 @foreach ($dates as $d)
-                                                    @php $cell = $cells[$user->id][$d->format('Y-m-d')] ?? ['type' => 'unassigned']; @endphp
-                                                    <td class="text-center {{ $d->isWeekend() ? 'wknd' : '' }}">
+                                                    @php
+                                                        $cell = $cells[$user->id][$d->format('Y-m-d')] ?? ['type' => 'unassigned'];
+                                                        $changedTip = !empty($cell['changed'])
+                                                            ? ($cell['changed']['request_no'] ? 'Changed by ' . $cell['changed']['request_no'] : 'Changed for this day only')
+                                                            : '';
+                                                    @endphp
+                                                    <td class="text-center rcell {{ $d->isWeekend() ? 'wknd' : '' }}" role="button" tabindex="0"
+                                                        data-user="{{ $user->id }}" data-name="{{ $user->name }}" data-date="{{ $d->format('Y-m-d') }}"
+                                                        data-label="{{ $d->format('D, d M Y') }}" data-shift="{{ $cell['shift_id'] ?? '' }}"
+                                                        data-shift-name="{{ $cell['type'] === 'shift' ? $cell['name'] : ($cell['type'] === 'weekoff' ? 'Week Off' : 'No shift') }}"
+                                                        data-type="{{ $cell['type'] }}" data-clocked="{{ !empty($cell['clocked_in']) ? 1 : 0 }}">
                                                         @if ($view === 'month')
                                                             @if ($cell['type'] === 'shift')
-                                                                <span class="mday" style="background: {{ $cell['color'] }}"
-                                                                      title="{{ $cell['name'] }} {{ \Carbon\Carbon::parse($cell['start'])->format('h:i A') }}–{{ \Carbon\Carbon::parse($cell['end'])->format('h:i A') }}"></span>
+                                                                <span class="mday {{ $changedTip ? 'mday-changed' : '' }}" style="background: {{ $cell['color'] }}"
+                                                                      title="{{ $cell['name'] }} {{ \Carbon\Carbon::parse($cell['start'])->format('h:i A') }}–{{ \Carbon\Carbon::parse($cell['end'])->format('h:i A') }}{{ $changedTip ? ' · ' . $changedTip : '' }}"></span>
                                                                 @foreach ($cell['extra'] ?? [] as $x)
                                                                     <span class="mday mday-extra" style="background: {{ $x['color'] }}"
                                                                           title="+ {{ $x['name'] }} {{ \Carbon\Carbon::parse($x['start'])->format('h:i A') }}–{{ \Carbon\Carbon::parse($x['end'])->format('h:i A') }}"></span>
@@ -290,7 +325,7 @@
                                                             @if ($cell['type'] === 'shift')
                                                                 @php $muted = $shiftFilter && $shiftFilter != $cell['shift_id']; @endphp
                                                                 <span class="shift-chip {{ $muted ? 'chip-muted' : '' }}" style="border-left-color: {{ $cell['color'] }}; background: {{ $cell['color'] }}22;">
-                                                                    {{ $cell['name'] }}
+                                                                    {{ $cell['name'] }}@if ($changedTip)<i class="feather-repeat chip-changed" title="{{ $changedTip }}"></i>@endif
                                                                     <span class="t">{{ \Carbon\Carbon::parse($cell['start'])->format('h:i A') }}&ndash;{{ \Carbon\Carbon::parse($cell['end'])->format('h:i A') }}</span>
                                                                 </span>
                                                                 @foreach ($cell['extra'] ?? [] as $x)
@@ -364,6 +399,7 @@
                                         <option value="">All Types</option>
                                         <option value="permanent">Permanent</option>
                                         <option value="flexible">Flexible</option>
+                                        <option value="rotating">Rotating</option>
                                     </select>
                                 </div>
                                 <a href="#" class="btn-reset" id="listReset">Reset</a>
@@ -387,7 +423,8 @@
                                     <option value="ongoing">Ongoing</option>
                                     <option value="complete">Complete</option>
                                 </select>
-                                <button class="btn btn-sm btn-primary" id="applyBulk">Apply</button>
+                                <input type="text" class="form-control form-control-sm" id="bulkReason" style="width:180px" maxlength="500" placeholder="Reason (saved in history)">
+                        <button class="btn btn-sm btn-primary" id="applyBulk">Apply</button>
                                 <button class="btn btn-sm btn-outline-danger" id="bulkDelete">Delete</button>
                                 <button class="btn btn-sm btn-light ms-auto" id="clearSel">Clear</button>
                                 <button class="btn btn-sm btn-light" id="exportBtn"><i class="feather-download me-1"></i>CSV</button>
@@ -576,7 +613,7 @@
                                 <option value="complete">Complete</option>
                             </select>
                         </div>
-                        <div class="mb-1"><label class="form-label">Reason (optional)</label><textarea class="form-control" name="reason" id="ea_reason" rows="2"></textarea></div>
+                        <div class="mb-1"><label class="form-label">Reason <span class="text-danger">*</span></label><textarea class="form-control" name="reason" id="ea_reason" rows="2" maxlength="500" required placeholder="Why is this day changing? Saved in the shift history."></textarea></div>
                     </form>
                 </div>
                 <div class="modal-footer py-2">
@@ -633,11 +670,102 @@
                             <tbody id="historyBody"><tr><td colspan="5" class="text-center text-muted py-3">Loading…</td></tr></tbody>
                         </table>
                     </div>
+                    <h6 class="mt-2 mb-1" style="font-size:12px">Change log <span class="text-muted fw-normal">· every day changed, by whom and why</span></h6>
+                    <ul class="log-list" id="historyLog"></ul>
                 </div>
             </div>
         </div>
     </div>
 @endif
+
+    {{-- Day details: who works what, the day's change history, swap / change actions --}}
+    <div class="modal fade modal-custom" id="dayModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2"><h5 class="modal-title" style="font-size:15px">Shift Day</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="day-head">
+                        <div><div class="n" id="dm_name"></div><div class="s" id="dm_date"></div></div>
+                        <span class="badge bg-soft-primary text-primary" id="dm_shift"></span>
+                    </div>
+                    <div class="hstack gap-2 mb-2" id="dm_actions">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="dm_swap"><i class="feather-repeat me-1"></i>Swap with…</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="dm_change"><i class="feather-edit-2 me-1"></i>Change shift</button>
+                    </div>
+                    <div class="msg-box warn d-none" id="dm_note"></div>
+                    <h6 class="mb-1" style="font-size:12px">History of this day</h6>
+                    <ul class="log-list" id="dm_log"><li class="text-muted">Loading…</li></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Direct swap (admin / HR / manager for own team) --}}
+    <div class="modal fade modal-custom" id="swapModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header py-2"><h5 class="modal-title" style="font-size:15px">Swap Shifts</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="swapForm" autocomplete="off">
+                        <div class="row g-2">
+                            <div class="col-md-6"><label class="form-label">Employee</label>
+                                <select class="form-control" name="user_a" id="sw_a" required>
+                                    <option value="">Select employee</option>
+                                    @foreach ($manageableUsers as $u)<option value="{{ $u->id }}">{{ $u->name }} ({{ $u->employee_id }})</option>@endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6"><label class="form-label">Swap with</label>
+                                <select class="form-control" name="user_b" id="sw_b" required>
+                                    <option value="">Select employee</option>
+                                    @foreach ($manageableUsers as $u)<option value="{{ $u->id }}">{{ $u->name }} ({{ $u->employee_id }})</option>@endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3"><label class="form-label">From date</label><input type="date" class="form-control" name="start_date" id="sw_from" required></div>
+                            <div class="col-md-3"><label class="form-label">To date <span class="text-muted">(optional)</span></label><input type="date" class="form-control" name="end_date" id="sw_to"></div>
+                            <div class="col-md-6"><label class="form-label">Reason <span class="text-danger">*</span></label><input type="text" class="form-control" name="reason" id="sw_reason" maxlength="500" required placeholder="Saved in both employees' shift history"></div>
+                        </div>
+                        <p class="text-muted mt-2 mb-1" style="font-size:11px">On each date the two employees exchange their main shift. Both are notified. No request or approval is needed.</p>
+                        <div class="swap-preview" id="sw_preview"></div>
+                    </form>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="swapForm" class="btn btn-primary btn-sm" id="sw_submit" disabled>Swap Shifts</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Direct change of one employee's shift for one or more days --}}
+    <div class="modal fade modal-custom" id="changeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2"><h5 class="modal-title" style="font-size:15px">Change Shift</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="changeForm" autocomplete="off">
+                        <input type="hidden" name="user_id" id="ch_user">
+                        <div class="mb-2"><label class="form-label">Employee</label><input type="text" class="form-control" id="ch_name" disabled></div>
+                        <div class="row g-2">
+                            <div class="col-6"><label class="form-label">From date</label><input type="date" class="form-control" name="start_date" id="ch_from" required></div>
+                            <div class="col-6"><label class="form-label">To date <span class="text-muted">(optional)</span></label><input type="date" class="form-control" name="end_date" id="ch_to"></div>
+                        </div>
+                        <div class="mt-2"><label class="form-label">New shift</label>
+                            <select class="form-control" name="to_shift_id" id="ch_shift" required>
+                                <option value="">Select shift</option>
+                                @foreach ($shifts as $s)<option value="{{ $s->id }}">{{ $s->name }} ({{ \Carbon\Carbon::parse($s->start_time)->format('h:i A') }}–{{ \Carbon\Carbon::parse($s->end_time)->format('h:i A') }})</option>@endforeach
+                            </select>
+                        </div>
+                        <div class="mt-2"><label class="form-label">Reason <span class="text-danger">*</span></label><input type="text" class="form-control" name="reason" id="ch_reason" maxlength="500" required></div>
+                        <div class="swap-preview mt-2" id="ch_preview"></div>
+                    </form>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="changeForm" class="btn btn-primary btn-sm" id="ch_submit" disabled>Change Shift</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script-area')
@@ -794,7 +922,7 @@
             }
             function typeBadge(sa) {
                 if (!sa) return '<span class="text-muted small">—</span>';
-                const label = sa.type === 'permanent' ? 'Permanent' : 'Flexible';
+                const label = { permanent: 'Permanent', rotating: 'Rotating' }[sa.type] || (sa.is_override ? 'One day' : 'Flexible');
                 return '<span class="badge-theme ' + sa.type + '">' + label + '</span> ' +
                     '<span class="badge-theme sm ' + (sa.status || '') + '">' + (sa.status || '') + '</span>';
             }
@@ -803,7 +931,7 @@
                 $('#listBody').html(rows.map((r, i) => {
                     const color = r.shift?.color_code || '#4f46e5';
                     const sa = r.shift_assignment;
-                    const canEndPermanent = sa && sa.type === 'permanent' && sa.status === 'active';
+                    const canEndPermanent = sa && ['permanent', 'rotating'].includes(sa.type) && sa.status === 'active';
                     const srNo = (page - 1) * perPage + i + 1;
                     return '<tr>' +
                         '<td><input type="checkbox" class="row-sel" value="' + r.id + '" data-shift="' + (r.shift_id || '') + '"></td>' +
@@ -877,7 +1005,7 @@
                 const shift = $('#bulkShift').val(), status = $('#bulkStatus').val();
                 if (!shift && !status) { toastr.warning('Pick a shift or status'); return; }
                 const rows = ids.map(id => { const $c = $('.row-sel[value="' + id + '"]'); return { id, shift_id: shift || $c.data('shift'), status: status || 'upcoming' }; });
-                $.ajax({ url: "{{ route('shift.user-shifts.bulk-update') }}", type: 'POST', data: { user_shifts: rows }, headers: { 'X-CSRF-TOKEN': csrf },
+                $.ajax({ url: "{{ route('shift.user-shifts.bulk-update') }}", type: 'POST', data: { user_shifts: rows, reason: $('#bulkReason').val() }, headers: { 'X-CSRF-TOKEN': csrf },
                     success: r => { toastr.success(r.message || 'Updated'); loadList(); }, error: x => toastr.error(x.responseJSON?.message || 'Bulk update failed') });
             });
             $('#bulkDelete').on('click', function () {
@@ -926,7 +1054,7 @@
                 });
             });
 
-            function historyTypeLabel(t) { return t === 'permanent' ? 'Permanent' : 'Flexible'; }
+            function historyTypeLabel(t) { return { permanent: 'Permanent', rotating: 'Rotating' }[t] || 'Flexible'; }
             $(document).on('click', '.view-history', function (e) {
                 e.preventDefault();
                 const userId = $(this).data('user');
@@ -943,6 +1071,10 @@
                         '<td>' + statusBadge2(h.status) + '</td>' +
                     '</tr>').join(''));
                 }).fail(() => $('#historyBody').html('<tr><td colspan="5" class="text-center text-danger py-3">Failed to load history.</td></tr>'));
+                $('#historyLog').html('<li class="text-muted">Loading…</li>');
+                $.get(changeLogUrl, { user_id: userId }, r => {
+                    $('#historyLog').html(r.status && r.data.length ? r.data.map(l => logItem(l, true)).join('') : '<li class="text-muted">No changes logged yet.</li>');
+                }).fail(() => $('#historyLog').html('<li class="text-danger">Failed to load the change log.</li>'));
             });
             function statusBadge2(s) {
                 return '<span class="badge-theme ' + (s || '') + '">' + (s || '—') + '</span>';
@@ -950,6 +1082,118 @@
 
             // Lazy-load the assignments list the first time its tab is opened.
             $('#assignTabBtn').on('shown.bs.tab', function () { if (!listLoaded) { listLoaded = true; loadList(); } });
+        });
+
+        /* ---------- day details · direct swap · direct change ---------- */
+        const changeLogUrl = "{{ route('shift.change-log') }}";
+        const requestsUrl = "{{ route('shift.requests.index') }}";
+        const todayIso = "{{ now()->toDateString() }}";
+        const esc = s => $('<div>').text(s ?? '').html();
+
+        function logItem(l, withDate) {
+            const what = (l.from || 'No shift') + ' → ' + (l.to || 'No shift') + (l.is_additional ? ' (additional shift)' : '');
+            return '<li><div><strong>' + esc(what) + '</strong>' + (withDate ? ' <span class="meta">· ' + esc(l.date) + '</span>' : '') + '</div>' +
+                '<div class="meta">' + esc(l.source) +
+                (l.request_no ? ' · <a href="' + requestsUrl + '?open=' + l.shift_request_id + '">' + esc(l.request_no) + '</a>' : '') +
+                ' · ' + esc(l.actor) + (l.actor_role ? ' (' + esc(l.actor_role) + ')' : '') + ' · ' + esc(l.at) + (l.channel === 'mobile' ? ' · mobile app' : '') + '</div>' +
+                (l.reason ? '<div class="meta">Reason: ' + esc(l.reason) + '</div>' : '') + '</li>';
+        }
+
+        /** Preview table + errors / warnings from shift.requests.preview; returns true when it can be saved. */
+        function renderPreview($box, r) {
+            let html = '';
+            (r.errors || []).forEach(e => html += '<div class="msg-box err"><i class="feather-x-circle me-1"></i>' + esc(e) + '</div>');
+            (r.warnings || []).forEach(w => html += '<div class="msg-box warn"><i class="feather-alert-triangle me-1"></i>' + esc(w) + '</div>');
+            if (r.items && r.items.length) {
+                html += '<table class="table table-sm"><thead><tr><th>Employee</th><th>Date</th><th>Now</th><th>After</th></tr></thead><tbody>' +
+                    r.items.map(i => '<tr><td>' + esc(i.user_name) + '</td><td>' + esc(i.date_label) + '</td><td>' + esc(i.from ? i.from.name : 'No shift') +
+                        '</td><td class="chg">' + esc(i.to ? i.to.name + ' · ' + i.to.time : '—') + '</td></tr>').join('') + '</tbody></table>';
+            }
+            $box.html(html);
+            return !(r.errors || []).length && (r.items || []).length > 0;
+        }
+
+        function previewRequest(data, $box, $btn) {
+            $btn.prop('disabled', true);
+            $box.html('<div class="text-muted" style="font-size:12px">Checking…</div>');
+            $.ajax({ url: "{{ route('shift.requests.preview') }}", type: 'POST', data: data, headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                success: r => $btn.prop('disabled', !renderPreview($box, r.data)),
+                error: x => renderPreview($box, { errors: x.responseJSON?.errors ? Object.values(x.responseJSON.errors).flat() : [x.responseJSON?.message || 'Could not check this change.'] })
+            });
+        }
+
+        $(function () {
+            const csrf = $('meta[name="csrf-token"]').attr('content');
+            const modal = id => bootstrap.Modal.getOrCreateInstance(document.getElementById(id));
+            let dayCtx = null;
+
+            $(document).on('click keydown', 'td.rcell', function (e) {
+                if (e.type === 'keydown' && e.key !== 'Enter') return;
+                const d = $(this).data();
+                dayCtx = d;
+                const past = d.date < todayIso;
+                $('#dm_name').text(d.name); $('#dm_date').text(d.label); $('#dm_shift').text(d.shiftName);
+                $('#dm_actions').toggle(!past);
+                $('#dm_swap').prop('disabled', d.type !== 'shift' || +d.clocked === 1);
+                $('#dm_change').prop('disabled', d.type === 'weekoff' || +d.clocked === 1);
+                let note = '';
+                if (past) note = 'This day is in the past — change it from Existing Assignments if needed.';
+                else if (d.type === 'weekoff') note = 'Week-off — only working days can be swapped or changed here.';
+                else if (+d.clocked === 1) note = 'Already clocked in on this day — it can no longer be swapped or changed.';
+                $('#dm_note').toggleClass('d-none', !note).text(note);
+                $('#dm_log').html('<li class="text-muted">Loading…</li>');
+                modal('dayModal').show();
+                $.get(changeLogUrl, { user_id: d.user, date: d.date }, r => {
+                    $('#dm_log').html(r.status && r.data.length ? r.data.map(l => logItem(l, false)).join('') : '<li class="text-muted">No changes on this day — the shift comes from the regular assignment.</li>');
+                }).fail(x => $('#dm_log').html('<li class="text-danger">' + esc(x.responseJSON?.message || 'Failed to load history.') + '</li>'));
+            });
+
+            /* swap */
+            $('#sw_a,#sw_b').select2({ width: '100%', dropdownParent: $('#swapModal'), placeholder: 'Select employee' });
+            function openSwap(userId, date) {
+                $('#swapForm')[0].reset(); $('#sw_preview').empty(); $('#sw_submit').prop('disabled', true);
+                $('#sw_a').val(userId || '').trigger('change.select2'); $('#sw_b').val('').trigger('change.select2');
+                $('#sw_from').val(date || ''); $('#sw_to').val('');
+                modal('swapModal').show();
+            }
+            $('#openSwapModal').on('click', e => { e.preventDefault(); openSwap(); });
+            $('#dm_swap').on('click', () => { modal('dayModal').hide(); openSwap(dayCtx.user, dayCtx.date); });
+            let swTimer = null;
+            $('#sw_a,#sw_b,#sw_from,#sw_to').on('change', function () {
+                clearTimeout(swTimer);
+                if (!$('#sw_a').val() || !$('#sw_b').val() || !$('#sw_from').val()) { $('#sw_preview').empty(); $('#sw_submit').prop('disabled', true); return; }
+                swTimer = setTimeout(() => previewRequest({ mode: 'direct', type: 'swap', user_a: $('#sw_a').val(), user_b: $('#sw_b').val(), start_date: $('#sw_from').val(), end_date: $('#sw_to').val() }, $('#sw_preview'), $('#sw_submit')), 250);
+            });
+            $('#swapForm').on('submit', function (e) {
+                e.preventDefault();
+                const $btn = $('#sw_submit').prop('disabled', true).text('Swapping…');
+                $.ajax({ url: "{{ route('shift.requests.direct-swap') }}", type: 'POST', data: $(this).serialize(), headers: { 'X-CSRF-TOKEN': csrf },
+                    success: r => { modal('swapModal').hide(); toastr.success(r.message); setTimeout(() => location.reload(), 900); },
+                    error: x => { $btn.prop('disabled', false).text('Swap Shifts'); toastr.error(x.responseJSON?.message || 'Swap failed'); }
+                });
+            });
+
+            /* change */
+            $('#dm_change').on('click', () => {
+                modal('dayModal').hide();
+                $('#changeForm')[0].reset(); $('#ch_preview').empty(); $('#ch_submit').prop('disabled', true);
+                $('#ch_user').val(dayCtx.user); $('#ch_name').val(dayCtx.name); $('#ch_from').val(dayCtx.date); $('#ch_to').val('');
+                modal('changeModal').show();
+            });
+            let chTimer = null;
+            $('#ch_shift,#ch_from,#ch_to').on('change', function () {
+                clearTimeout(chTimer);
+                if (!$('#ch_shift').val() || !$('#ch_from').val()) { $('#ch_preview').empty(); $('#ch_submit').prop('disabled', true); return; }
+                chTimer = setTimeout(() => previewRequest({ mode: 'direct', type: 'change', user_id: $('#ch_user').val(), to_shift_id: $('#ch_shift').val(), start_date: $('#ch_from').val(), end_date: $('#ch_to').val() }, $('#ch_preview'), $('#ch_submit')), 250);
+            });
+            $('#changeForm').on('submit', function (e) {
+                e.preventDefault();
+                const $btn = $('#ch_submit').prop('disabled', true).text('Saving…');
+                $.ajax({ url: "{{ route('shift.requests.direct-change') }}", type: 'POST', data: $(this).serialize(), headers: { 'X-CSRF-TOKEN': csrf },
+                    success: r => { modal('changeModal').hide(); toastr.success(r.message); setTimeout(() => location.reload(), 900); },
+                    error: x => { $btn.prop('disabled', false).text('Change Shift'); toastr.error(x.responseJSON?.message || 'Change failed'); }
+                });
+            });
         });
     </script>
 @endsection

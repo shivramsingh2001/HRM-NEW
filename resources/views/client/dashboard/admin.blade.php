@@ -245,6 +245,17 @@
         }
         .ann-date { flex: none; font-size: 10.5px; font-weight: 600; color: var(--d-text-muted); white-space: nowrap; }
         .ann-desc { display: block; margin-top: 2px; font-size: 10.5px; color: var(--d-text-soft); }
+        .ann-row.has-date { display: flex; align-items: center; gap: 8px; }
+        .ann-row .ann-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .ann-row .ann-main .ann-title { margin-right: 0; }
+
+        /* Date block — same as the Employee Dashboard's Attendance Attention card */
+        .attn-date {
+            flex: none; display: inline-block; width: 36px; text-align: center; border-radius: 8px; padding: 3px 0;
+            background: #EFF6FF; color: var(--primary); line-height: 1.1;
+        }
+        .attn-date .d { display: block; font-size: 13px; font-weight: 800; }
+        .attn-date .m { display: block; font-size: 8.5px; font-weight: 700; text-transform: uppercase; }
 
         /* ============================================
            ATTENDANCE CALENDAR (top-right month nav, click a date
@@ -412,6 +423,32 @@
         .main-content .row.g-compact > [class*="col"] > a > .card { margin-bottom: 0; }
         .main-content .row.g-compact .card.stretch-full:not(.fixed-h-card) { height: 100%; }
 
+        /* Rows whose cards depend on the plan / permissions: data-n = cards actually shown, and the
+           grid always fills the row — no empty slots when a module is missing.
+           Phone: 1 per row · tablet (≥768): 2 per row, an odd last card spans the row ·
+           desktop (≥1200): all n side by side (5 cards = 3 + 2 below 1400px, 5 in a row above). */
+        .main-content .row.dash-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 0 0 .5rem; }
+        .main-content .row.dash-grid > * { width: auto; max-width: none; padding: 0; margin: 0; flex: none; min-width: 0; }
+        @media (min-width: 768px) {
+            .main-content .row.dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .main-content .row.dash-grid[data-n="1"] { grid-template-columns: minmax(0, 1fr); }
+            .main-content .row.dash-grid[data-n="3"] > :last-child,
+            .main-content .row.dash-grid[data-n="5"] > :last-child { grid-column: 1 / -1; }
+        }
+        @media (min-width: 1200px) {
+            .main-content .row.dash-grid[data-n="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .main-content .row.dash-grid[data-n="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .main-content .row.dash-grid[data-n="3"] > :last-child { grid-column: auto; }
+            .main-content .row.dash-grid[data-n="5"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+            .main-content .row.dash-grid[data-n="5"] > * { grid-column: span 2; }
+            .main-content .row.dash-grid[data-n="5"] > :nth-child(n+4) { grid-column: span 3; }
+        }
+        @media (min-width: 1400px) {
+            .main-content .row.dash-grid[data-n="5"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+            .main-content .row.dash-grid[data-n="5"] > *,
+            .main-content .row.dash-grid[data-n="5"] > :nth-child(n+4) { grid-column: auto; }
+        }
+
         a { text-decoration: none; }
         .text-dark { color: var(--d-text) !important; }
     </style>
@@ -555,8 +592,10 @@
             $taskPct = $taskBase > 0 ? round((($completed_tasks ?? 0) / $taskBase) * 100) : 0;
             $projBase = $total_projects ?? 0;
             $projPct = $projBase > 0 ? round((($completed_projects ?? 0) / $projBase) * 100) : 0;
+            // Number of cards a responsive row (.dash-grid) actually shows.
+            $cardsShown = fn (...$flags) => count(array_filter($flags));
         @endphp
-        <div class="row row-cols-1 row-cols-md-2 row-cols-xxl-5 g-compact mb-2">
+        <div class="row g-compact dash-grid mb-2" data-n="{{ $cardsShown(true, true, $show['tasks'] ?? false, $show['projects'] ?? false, true) }}">
             <div class="col">
                 <a href="{{ route('employee.index') }}" class="text-decoration-none">
                     <div class="kpi5-card">
@@ -580,14 +619,16 @@
                     <div class="kpi5-card">
                         <div class="kpi5-top">
                             <span class="kpi5-icon bg-soft-success"><i class="feather-check-circle"></i></span>
-                            <span class="kpi5-pill" title="Present ÷ (present + leave + absent) — week-offs and holidays excluded">{{ $today['rate'] ?? 0 }}% Rate</span>
+                            <span class="kpi5-pill" title="(Present + ½ half days) ÷ (present + half day + leave + absent) — week-offs and holidays excluded">{{ $today['rate'] ?? 0 }}% Rate</span>
                         </div>
                         <div class="kpi5-value">{{ $present_today ?? 0 }}</div>
                         <div class="kpi5-label">{{ ($rg['is_today'] ?? true) ? 'Present Today' : 'Present · ' . $rg['label'] }}</div>
                         @unless ($rg['is_today'] ?? true)<div class="kpi5-period">employee-days</div>@endunless
                         <div class="kpi5-divider"></div>
-                        {{-- Each employee counted once: present → leave → holiday/week-off → absent --}}
+                        {{-- Each employee counted once, by the day's graded status (same as the Team page):
+                             present → half day → leave → holiday/week-off → absent --}}
                         <div class="kpi5-foot">
+                            <div class="kpi5-stat" title="Worked, but graded a half day by the attendance policy"><span class="n">{{ $today['half_day'] ?? 0 }}</span><span class="l">Half day</span></div>
                             <div class="kpi5-stat"><span class="n">{{ $absent_today ?? 0 }}</span><span class="l">Absent</span></div>
                             <div class="kpi5-stat"><span class="n">{{ $on_leave_today ?? 0 }}</span><span class="l">Leave</span></div>
                             <div class="kpi5-stat" title="{{ ($today['holiday_name'] ?? null) ? 'Holiday: ' . $today['holiday_name'] : 'Week-off / holiday' }}"><span class="n">{{ $offToday }}</span><span class="l">Off</span></div>
@@ -659,7 +700,7 @@
              as a warning icon just before the notification bell — see the push at the end of this file. --}}
 
         <!-- Today / People / Holidays / Recent leave -->
-        <div class="row g-compact mb-2">
+        <div class="row g-compact dash-grid mb-2" data-n="{{ $cardsShown($show['attendance'] ?? false, true, true, $show['leave'] ?? false) }}">
             @if ($show['attendance'] ?? false)
             <div class="col-xl-3 col-md-6">
                 <div class="card stretch-full fixed-h-card">
@@ -702,9 +743,18 @@
                                     ->sortBy('days')->take(6);
                             @endphp
                             @forelse ($celebrations as $c)
-                                <div class="ann-row d-flex justify-content-between align-items-center">
-                                    <span class="ann-title"><i class="feather-{{ $c['icon'] }} text-primary me-1"></i>{{ $c['name'] }} <span class="stat-sub">· {{ $c['what'] }}</span></span>
-                                    <span class="ann-date">{{ $c['days'] === 0 ? 'Today' : ($c['days'] === 1 ? 'Tomorrow' : $c['date']->format('d M')) }}</span>
+                                <div class="ann-row has-date">
+                                    <span class="attn-date" title="{{ $c['date']->format('l, d M Y') }}">
+                                        <span class="d">{{ $c['date']->format('d') }}</span>
+                                        <span class="m">{{ $c['date']->format('M') }}</span>
+                                    </span>
+                                    <span class="ann-main">
+                                        <span class="ann-title"><i class="feather-{{ $c['icon'] }} text-primary me-1"></i>{{ $c['name'] }}</span>
+                                        <span class="stat-sub">{{ $c['what'] }}</span>
+                                    </span>
+                                    @if ($c['days'] <= 1)
+                                        <span class="ann-date">{{ $c['days'] === 0 ? 'Today' : 'Tomorrow' }}</span>
+                                    @endif
                                 </div>
                             @empty
                                 <div class="text-center py-4 text-muted fs-12">No birthdays or work anniversaries soon</div>
@@ -739,11 +789,17 @@
                                                     </div>
                                                     <div>
                                                         <span class="d-block fw-bold">{{ $j->name }}</span>
-                                                        <span class="stat-sub">{{ $j->employee_id ?: '—' }}{{ $j->designation_name ? ' · ' . $j->designation_name : '' }}</span>
+                                                        <span class="stat-sub">{{ $j->employee_id ?: '—' }}</span>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td><span class="fw-bold text-primary">{{ \Carbon\Carbon::parse($j->joined_on ?: $j->created_at)->format('d M') }}</span></td>
+                                            @php $joinDay = \Carbon\Carbon::parse($j->joined_on ?: $j->created_at); @endphp
+                                            <td>
+                                                <span class="attn-date" title="{{ $joinDay->format('l, d M Y') }}">
+                                                    <span class="d">{{ $joinDay->format('d') }}</span>
+                                                    <span class="m">{{ $joinDay->format('M') }}</span>
+                                                </span>
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr><td colspan="2" class="text-center py-4 text-muted">No employees yet</td></tr>
@@ -769,7 +825,6 @@
                                 <thead><tr><th>Employee</th><th>Leave</th></tr></thead>
                                 <tbody>
                                     @forelse ($recent_leaves ?? [] as $lv)
-                                        @php $st = strtolower((string) $lv->status); @endphp
                                         <tr onclick="window.location.href='{{ route('leave.view-all') }}'">
                                             <td>
                                                 <div class="d-flex align-items-center gap-2">
@@ -787,8 +842,17 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="d-block fw-bold text-primary">{{ \Carbon\Carbon::parse($lv->start_date)->format('d M') }}{{ $lv->end_date && $lv->end_date != $lv->start_date ? ' – ' . \Carbon\Carbon::parse($lv->end_date)->format('d M') : '' }}</span>
-                                                <span class="badge {{ ['approved' => 'bg-soft-success text-success', 'pending' => 'bg-soft-warning text-warning', 'rejected' => 'bg-soft-danger text-danger'][$st] ?? 'bg-soft-secondary text-secondary' }}">{{ ucfirst($st) }}</span>
+                                                @php
+                                                    $lvFrom = \Carbon\Carbon::parse($lv->start_date);
+                                                    $lvTo = $lv->end_date && $lv->end_date != $lv->start_date ? \Carbon\Carbon::parse($lv->end_date) : null;
+                                                @endphp
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="attn-date" title="{{ $lvFrom->format('l, d M Y') }}{{ $lvTo ? ' – ' . $lvTo->format('l, d M Y') : '' }}">
+                                                        <span class="d">{{ $lvFrom->format('d') }}</span>
+                                                        <span class="m">{{ $lvFrom->format('M') }}</span>
+                                                    </span>
+                                                    @if ($lvTo)<span class="stat-sub">to {{ $lvTo->format('d M') }}</span>@endif
+                                                </div>
                                             </td>
                                         </tr>
                                     @empty
@@ -916,11 +980,192 @@
         </div>
         @endif
 
+        {{-- Payroll, loans & overtime — each card only with the module in the plan and view permission --}}
+        @if (($show['payroll'] ?? false) || ($show['loans'] ?? false) || ($show['overtime'] ?? false))
+        @php $inr = fn ($v) => '₹' . number_format((float) $v, 2); @endphp
+        <div class="section-hdr">
+            <div class="section-hdr-left">
+                <span class="section-hdr-icon"><i class="feather-dollar-sign"></i></span>
+                <h6 class="section-hdr-title">Payroll, loans &amp; overtime</h6>
+            </div>
+        </div>
+        <div class="row g-compact dash-grid mb-2" data-n="{{ $cardsShown(($show['payroll'] ?? false) && $payroll_snapshot, ($show['loans'] ?? false) && $loan_snapshot, ($show['overtime'] ?? false) && $overtime_snapshot) }}">
+            @if (($show['payroll'] ?? false) && $payroll_snapshot)
+            <div class="col-xl-4 col-md-6">
+                <div class="card stretch-full">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">Payroll · {{ $payroll_snapshot['month_label'] }}</h5>
+                        <a href="{{ route('monthly-payrolls.index') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        @if ($payroll_snapshot['has'])
+                            <div class="glance-stats">
+                                <div><span class="n text-warning">{{ $payroll_snapshot['pending'] }}</span><span class="l">Pending</span></div>
+                                <div><span class="n">{{ $payroll_snapshot['processed'] }}</span><span class="l">Processed</span></div>
+                                <div><span class="n text-success">{{ $payroll_snapshot['paid'] }}</span><span class="l">Paid</span></div>
+                            </div>
+                            <div class="ann-list">
+                                <div class="ann-row d-flex justify-content-between align-items-center">
+                                    <span class="ann-title">Total net pay</span>
+                                    <span class="fw-bold text-primary">{{ $inr($payroll_snapshot['net']) }}</span>
+                                </div>
+                                <div class="ann-row d-flex justify-content-between align-items-center">
+                                    <span class="ann-title">Employees without a payslip</span>
+                                    <span class="fw-bold {{ $payroll_snapshot['without'] > 0 ? 'text-warning' : '' }}">{{ $payroll_snapshot['without'] }}</span>
+                                </div>
+                                @if ($payroll_snapshot['fell_back'])
+                                    <div class="ann-row stat-sub">Latest month with payslips — nothing generated for the selected month yet.</div>
+                                @endif
+                            </div>
+                        @else
+                            <div class="text-center py-4 text-muted fs-12">No payroll generated yet</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            @if (($show['loans'] ?? false) && $loan_snapshot)
+            <div class="col-xl-4 col-md-6">
+                <div class="card stretch-full">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">Loans &amp; advances</h5>
+                        <a href="{{ route('loan.approvals.pending') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="glance-stats">
+                            <div><span class="n">{{ $loan_snapshot['active_count'] }}</span><span class="l">Active loans</span></div>
+                            <div><span class="n">{{ $loan_snapshot['advance_count'] }}</span><span class="l">Advances · {{ $loan_snapshot['month_label'] }}</span></div>
+                            <div><span class="n text-warning">{{ $loan_snapshot['pending'] }}</span><span class="l">Waiting approval</span></div>
+                        </div>
+                        <div class="ann-list">
+                            <div class="ann-row d-flex justify-content-between align-items-center">
+                                <span class="ann-title">Total outstanding</span>
+                                <span class="fw-bold text-primary">{{ $inr($loan_snapshot['outstanding']) }}</span>
+                            </div>
+                            <div class="ann-row d-flex justify-content-between align-items-center">
+                                <span class="ann-title">Salary advances to recover · {{ $loan_snapshot['month_label'] }}</span>
+                                <span class="fw-bold">{{ $inr($loan_snapshot['advance_amount']) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            @if (($show['overtime'] ?? false) && $overtime_snapshot)
+            <div class="col-xl-4 col-md-6">
+                <div class="card stretch-full">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">Overtime · {{ $overtime_snapshot['month_label'] }}</h5>
+                        <a href="{{ route('overtime.view-all') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="glance-stats">
+                            <div><span class="n text-primary">{{ rtrim(rtrim(number_format($overtime_snapshot['approved_hours'], 2), '0'), '.') }}</span><span class="l">Approved hours</span></div>
+                            <div><span class="n">{{ $overtime_snapshot['approved_count'] }}</span><span class="l">Approved</span></div>
+                            <div><span class="n text-warning">{{ $overtime_snapshot['pending'] }}</span><span class="l">Pending</span></div>
+                        </div>
+                        <div class="ann-list">
+                            @forelse ($overtime_snapshot['top'] as $ot)
+                                <div class="ann-row d-flex justify-content-between align-items-center">
+                                    <span class="ann-title">{{ $ot->name }} <span class="stat-sub">({{ $ot->employee_id ?: '—' }})</span></span>
+                                    <span class="ann-date">{{ rtrim(rtrim(number_format((float) $ot->hours, 2), '0'), '.') }} h</span>
+                                </div>
+                            @empty
+                                <div class="text-center py-3 text-muted fs-12">No approved overtime this month</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+        </div>
+        @endif
+
+        {{-- Assets & meetings --}}
+        @if (($show['assets'] ?? false) || ($show['meetings'] ?? false))
+        <div class="section-hdr">
+            <div class="section-hdr-left">
+                <span class="section-hdr-icon"><i class="feather-box"></i></span>
+                <h6 class="section-hdr-title">Assets &amp; meetings</h6>
+            </div>
+        </div>
+        <div class="row g-compact dash-grid mb-2" data-n="{{ $cardsShown(($show['assets'] ?? false) && $asset_snapshot, ($show['meetings'] ?? false) && $meeting_snapshot) }}">
+            @if (($show['assets'] ?? false) && $asset_snapshot)
+            <div class="col-xl-6 col-md-6">
+                <div class="card stretch-full">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">Assets <span class="stat-sub fw-normal">· {{ $asset_snapshot['total'] }} in use or stock</span></h5>
+                        <a href="{{ route('assets.index') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="glance-stats">
+                            <div><span class="n text-primary">{{ $asset_snapshot['assigned'] }}</span><span class="l">Assigned</span></div>
+                            <div><span class="n text-success">{{ $asset_snapshot['available'] }}</span><span class="l">Available</span></div>
+                            <div><span class="n text-warning">{{ $asset_snapshot['in_repair'] }}</span><span class="l">Under repair</span></div>
+                        </div>
+                        <div class="ann-list">
+                            <div class="ann-row d-flex justify-content-between align-items-center">
+                                <span class="ann-title">Waiting for the employee to accept</span>
+                                <span class="fw-bold">{{ $asset_snapshot['pending_acceptance'] }}</span>
+                            </div>
+                            <div class="ann-row d-flex justify-content-between align-items-center">
+                                <span class="ann-title">Damaged or lost</span>
+                                <span class="fw-bold {{ $asset_snapshot['damaged_lost'] > 0 ? 'text-danger' : '' }}">{{ $asset_snapshot['damaged_lost'] }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            @if (($show['meetings'] ?? false) && $meeting_snapshot)
+            @php
+                $meetingRows = $meeting_snapshot['today']->isNotEmpty() ? $meeting_snapshot['today'] : $meeting_snapshot['upcoming'];
+                $meetingsAreToday = $meeting_snapshot['today']->isNotEmpty();
+            @endphp
+            <div class="col-xl-6 col-md-6">
+                <div class="card stretch-full">
+                    <div class="card-header">
+                        <h5 class="card-title card-title-sm">Meetings <span class="stat-sub fw-normal">· {{ $meeting_snapshot['today_count'] }} today</span></h5>
+                        <a href="{{ route('meetings.index') }}" class="badge bg-soft-primary">View all</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="ann-list">
+                            @if (! $meetingsAreToday)
+                                <div class="ann-row stat-sub">No meetings today{{ $meetingRows->isNotEmpty() ? ' — coming up:' : '' }}</div>
+                            @endif
+                            @foreach ($meetingRows as $mt)
+                                @php $mtDay = \Carbon\Carbon::parse($mt->meeting_date); @endphp
+                                <div class="ann-row has-date">
+                                    <span class="attn-date" title="{{ $mtDay->format('l, d M Y') }}">
+                                        <span class="d">{{ $mtDay->format('d') }}</span>
+                                        <span class="m">{{ $mtDay->format('M') }}</span>
+                                    </span>
+                                    <span class="ann-main">
+                                        <span class="ann-title"><i class="feather-{{ $mt->meeting_type === 'physical' ? 'map-pin' : 'video' }} text-primary me-1"></i>{{ $mt->title }}</span>
+                                    </span>
+                                    <span class="ann-date">{{ \Carbon\Carbon::parse($mt->start_time)->format('h:i A') }}</span>
+                                </div>
+                            @endforeach
+                            <div class="ann-row d-flex justify-content-between align-items-center">
+                                <span class="ann-title">Completed, minutes not finalized</span>
+                                <span class="fw-bold {{ $meeting_snapshot['minutes_pending'] > 0 ? 'text-warning' : '' }}">{{ $meeting_snapshot['minutes_pending'] }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+        </div>
+        @endif
+
         <!-- Task Overview / Company Trend / Calendar Row -->
         <div class="row g-compact mb-2">
             <!-- Task Overview -->
             @if ($show['tasks'] ?? false)
-            <div class="col-md-3">
+            <div class="col-md-6 col-xl-3">
                 <div class="card stretch-full h-100 proj-bar-card">
                     <div class="card-header">
                         <h5 class="card-title card-title-sm">Task Overview</h5>
@@ -964,7 +1209,8 @@
             @endif
 
             <!-- Company Overview Trend -->
-            <div class="{{ ($show['tasks'] ?? false) ? 'col-md-6' : 'col-md-9' }}">
+            {{-- Below 1200px the trend chart goes first at full width; Tasks + Calendar share the row under it --}}
+            <div class="order-first order-xl-0 {{ ($show['tasks'] ?? false) ? 'col-12 col-xl-6' : 'col-12 col-xl-9' }}">
                 <div class="card stretch-full h-100">
                     <div class="card-header">
                         <h5 class="card-title card-title-sm">Company Overview Trend</h5>
@@ -977,7 +1223,7 @@
             </div>
 
             <!-- Attendance Calendar -->
-            <div class="col-md-3">
+            <div class="{{ ($show['tasks'] ?? false) ? 'col-md-6' : 'col-12' }} col-xl-3">
                 <div class="card stretch-full h-100">
                     <div class="card-header">
                         <h5 class="card-title card-title-sm">Attendance Calendar</h5>
@@ -1006,7 +1252,7 @@
                 ['label'=>'Cancelled','val'=>$cancelled_projects ?? 0],
             ];
         @endphp
-        <div class="row g-compact mb-2">
+        <div class="row g-compact dash-grid mb-2" data-n="{{ $cardsShown($show['attendance'] ?? false, true, $show['projects'] ?? false, $show['projects'] ?? false) }}">
             @if ($show['attendance'] ?? false)
             <div class="col-md-3">
                 <div class="card stretch-full h-100">
@@ -1112,7 +1358,9 @@
         </div>
 
         <!-- Regularization / Performance / Calendar Row -->
-        <div class="row g-compact mb-2">
+        @php $lastRowN = $cardsShown($show['regularization'] ?? false, $show['attendance'] ?? false, $show['tasks'] ?? false, $show['holiday'] ?? false, $show['announcements'] ?? false); @endphp
+        @if ($lastRowN > 0)
+        <div class="row g-compact dash-grid mb-2" data-n="{{ $lastRowN }}">
             <!-- Most Regularization Request -->
             @if ($show['regularization'] ?? false)
             <div class="col-md-3">
@@ -1257,9 +1505,19 @@
                     <div class="card-body p-0">
                         <div class="ann-list">
                             @forelse ($upcoming_holidays ?? [] as $h)
-                                <div class="ann-row d-flex justify-content-between align-items-center">
-                                    <span class="ann-title"><i class="feather-sun text-primary me-1"></i>{{ $h->name }}</span>
-                                    <span class="ann-date">{{ \Carbon\Carbon::parse($h->start_date)->format('d M') }}{{ $h->end_date && $h->end_date != $h->start_date ? ' – ' . \Carbon\Carbon::parse($h->end_date)->format('d M') : '' }}</span>
+                                @php
+                                    $hFrom = \Carbon\Carbon::parse($h->start_date);
+                                    $hTo = $h->end_date && $h->end_date != $h->start_date ? \Carbon\Carbon::parse($h->end_date) : null;
+                                @endphp
+                                <div class="ann-row has-date">
+                                    <span class="attn-date" title="{{ $hFrom->format('l, d M Y') }}{{ $hTo ? ' – ' . $hTo->format('l, d M Y') : '' }}">
+                                        <span class="d">{{ $hFrom->format('d') }}</span>
+                                        <span class="m">{{ $hFrom->format('M') }}</span>
+                                    </span>
+                                    <span class="ann-main">
+                                        <span class="ann-title"><i class="feather-sun text-primary me-1"></i>{{ $h->name }}</span>
+                                        <span class="stat-sub">{{ $hFrom->format('l') }}{{ $hTo ? ' · till ' . $hTo->format('d M') : '' }}</span>
+                                    </span>
                                 </div>
                             @empty
                                 <div class="text-center py-4 text-muted fs-12">No upcoming holidays</div>
@@ -1281,12 +1539,16 @@
                     <div class="card-body p-0">
                         <div class="ann-list">
                             @forelse($recent_announcements ?? [] as $announcement)
-                                <div class="ann-row">
-                                    <div class="d-flex align-items-center justify-content-between">
+                                @php $annDay = \Carbon\Carbon::parse($announcement->created_at); @endphp
+                                <div class="ann-row has-date">
+                                    <span class="attn-date" title="{{ $annDay->format('l, d M Y') }}">
+                                        <span class="d">{{ $annDay->format('d') }}</span>
+                                        <span class="m">{{ $annDay->format('M') }}</span>
+                                    </span>
+                                    <span class="ann-main">
                                         <span class="ann-title">{{ $announcement->title }}</span>
-                                        <span class="ann-date">{{ \Carbon\Carbon::parse($announcement->created_at)->format('d M') }}</span>
-                                    </div>
-                                    <span class="ann-desc">{{ \Illuminate\Support\Str::limit($announcement->description, 60) }}</span>
+                                        <span class="ann-desc">{{ \Illuminate\Support\Str::limit($announcement->description, 60) }}</span>
+                                    </span>
                                 </div>
                             @empty
                                 <div class="text-center py-4 text-muted fs-12">No recent announcements</div>
@@ -1297,6 +1559,7 @@
             </div>
             @endif
         </div>
+        @endif
 
     </div>
     <!-- [ Main Content ] end -->

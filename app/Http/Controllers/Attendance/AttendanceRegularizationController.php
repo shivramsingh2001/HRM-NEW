@@ -137,6 +137,7 @@ class AttendanceRegularizationController extends Controller
             $request->input('user_shift_id'),
             $request->request_type == 'both' ? $request->in_time : null,
             $request->request_type == 'both' ? $request->out_time : null,
+            $request->boolean('out_next_day'),
         );
         if ($shiftCheck['error']) {
             return response()->json([
@@ -179,6 +180,7 @@ class AttendanceRegularizationController extends Controller
                 'request_type' => $request->request_type,
                 'in_time' => $request->in_time,
                 'out_time' => $request->out_time,
+                'out_next_day' => $request->boolean('out_next_day'),
                 'reason' => $request->reason,
                 'file' => $filePath,
                 'status' => 'pending'
@@ -240,6 +242,7 @@ class AttendanceRegularizationController extends Controller
             (int) $employee->id, $tenantId, $date, $request->input('user_shift_id'),
             $request->request_type == 'both' ? $request->in_time : null,
             $request->request_type == 'both' ? $request->out_time : null,
+            $request->boolean('out_next_day'),
         );
         if ($shiftCheck['error']) {
             return response()->json(['success' => false, 'errors' => [$shiftCheck['field'] => [$shiftCheck['error']]]], 422);
@@ -272,6 +275,7 @@ class AttendanceRegularizationController extends Controller
                     'request_type' => $request->request_type,
                     'in_time' => $request->in_time,
                     'out_time' => $request->out_time,
+                'out_next_day' => $request->boolean('out_next_day'),
                     'reason' => $request->reason,
                     'file' => $filePath,
                     'status' => 'approved',
@@ -364,6 +368,7 @@ class AttendanceRegularizationController extends Controller
             $request->input('user_shift_id'),
             $request->request_type == 'both' ? $request->in_time : null,
             $request->request_type == 'both' ? $request->out_time : null,
+            $request->boolean('out_next_day'),
         );
         if ($shiftCheck['error']) {
             return response()->json([
@@ -407,6 +412,7 @@ class AttendanceRegularizationController extends Controller
                 'request_type' => $request->request_type,
                 'in_time' => $request->in_time,
                 'out_time' => $request->out_time,
+                'out_next_day' => $request->boolean('out_next_day'),
                 'reason' => $request->reason,
             ];
             if ($filePath !== null) {

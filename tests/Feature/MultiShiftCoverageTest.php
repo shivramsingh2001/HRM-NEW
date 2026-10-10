@@ -155,7 +155,7 @@ class MultiShiftCoverageTest extends TestCase
         // Primary (day) shift: out before in is a typo.
         $r = $controller->regularizationStore(Request::create('/x', 'POST', $base))->getData(true);
         $this->assertFalse($r['success']);
-        $this->assertSame('Out time must be after in time', $r['message']);
+        $this->assertStringStartsWith('Out time must be after in time', $r['message']);
 
         // A shift that is not the employee's on that date.
         $r = $controller->regularizationStore(Request::create('/x', 'POST', $base + ['user_shift_id' => 999999999]))->getData(true);

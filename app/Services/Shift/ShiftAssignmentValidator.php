@@ -29,6 +29,19 @@ class ShiftAssignmentValidator
             ->first();
     }
 
+    /** The employee's active standing (open-ended) assignment: Permanent or Rotating. */
+    public function findActiveStanding(int $tenantId, int $userId): ?ShiftAssignment
+    {
+        return ShiftAssignment::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->whereIn('type', ['permanent', 'rotating'])
+            ->where('is_additional', 0)
+            ->where('status', 'active')
+            ->orderByDesc('id')
+            ->first();
+    }
+
     /**
      * Active Flexible assignments for this user overlapping [start, end].
      * A Flexible request colliding with one of these is only allowed when

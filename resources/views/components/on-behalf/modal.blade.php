@@ -258,6 +258,10 @@
                 <div class="col-md-6 ob-out">
                     <label class="fw-semibold small">Out time</label>
                     <input type="time" name="out_time" class="form-control">
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" name="out_next_day" value="1" id="ob_out_next_day">
+                        <label class="form-check-label small" for="ob_out_next_day">Out time is on the next day</label>
+                    </div>
                 </div>
                 <div class="col-12">
                     <label class="fw-semibold small">Reason * <span class="text-muted fw-normal">(at least 10 characters)</span></label>

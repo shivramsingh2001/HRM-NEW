@@ -50,6 +50,8 @@ class MarkAttendanceRequest extends FormRequest
             // Present may leave clock-out blank (checked in, still working) — see withValidator().
             'clock_out' => ['nullable', 'date_format:H:i', 'required_if:status,half_day', Rule::requiredIf(fn () => $this->clockOutOnly())],
             'clock_out_only' => ['nullable', 'boolean'],
+            // The clock-out is on the day after the date (06:30 in → 09:00 out next morning).
+            'clock_out_next_day' => ['nullable', 'boolean'],
             'leave_type_id' => [
                 'nullable',
                 'required_if:status,on_leave,first_half_leave,second_half_leave',
@@ -79,6 +81,11 @@ class MarkAttendanceRequest extends FormRequest
             }
 
             if ($this->filled('clock_out')) {
+                if ($this->boolean('clock_out_next_day')
+                    && Carbon::parse($date->copy()->addDay()->toDateString() . ' ' . $this->input('clock_out'))->gt(now())) {
+                    $validator->errors()->add('clock_out', 'The next-day clock-out time cannot be in the future.');
+                }
+
                 return;
             }
 
@@ -125,7 +132,9 @@ class MarkAttendanceRequest extends FormRequest
         $shift = app(TenantShiftResolver::class)->forUserDate($userId, $tenantId, $date->toDateString());
         $overnight = $shift && ShiftWindow::isOvernight($shift);
 
-        if ($clockOut->lte($clockIn)) {
+        if ($this->boolean('clock_out_next_day')) {
+            $clockOut->addDay();
+        } elseif ($clockOut->lte($clockIn)) {
             if (! $overnight) {
                 $validator->errors()->add('clock_out', 'Clock-out time must be after the clock-in time (' . $clockIn->format('h:i A') . ').');
 

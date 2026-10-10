@@ -179,7 +179,7 @@ class AttendanceEntryService
         // Present with only a clock-out: the employee clocked in and forgot to
         // clock out — close their open session, keep their own clock-in.
         if (!empty($input['clock_out_only']) && $status === AttendanceStatus::Present && !empty($input['clock_out'])) {
-            return $this->markClockOut($userId, $tenantId, $start->format('Y-m-d'), $input['clock_out'], $actor, $ctx);
+            return $this->markClockOut($userId, $tenantId, $start->format('Y-m-d'), $input['clock_out'], $actor, $ctx, ! empty($input['clock_out_next_day']));
         }
 
         $lastAttendance = null;
@@ -224,6 +224,10 @@ class AttendanceEntryService
             if ($status->requiresClockTimes() && !empty($input['clock_in']) && !empty($input['clock_out'])) {
                 $clockIn = Carbon::parse($date . ' ' . $input['clock_in']);
                 $clockOut = $this->calc->resolveClockOut($clockIn, Carbon::parse($date . ' ' . $input['clock_out']), $shift);
+                // "Clock-out is on the next day" (06:30 in → 09:00 out next morning).
+                if (! empty($input['clock_out_next_day'])) {
+                    $clockOut = $this->calc->nextDayClockOut($clockOut, $date);
+                }
                 $seconds = $this->calc->workedSeconds($clockIn, $clockOut);
                 $attrs['clock_in'] = $clockIn->format('Y-m-d H:i:s');
                 $attrs['clock_out'] = $clockOut->format('Y-m-d H:i:s');
@@ -398,7 +402,7 @@ class AttendanceEntryService
      *
      * @return array{attendance:Attendance, leave:null, is_update:bool, shift:?object, marked:int}
      */
-    private function markClockOut(int $userId, int $tenantId, string $date, string $time, User $actor, AuditContext $ctx): array
+    private function markClockOut(int $userId, int $tenantId, string $date, string $time, User $actor, AuditContext $ctx, bool $nextDay = false): array
     {
         $ym = Carbon::parse($date)->format('Y-m');
         if (app(PeriodLockService::class)->isLocked($tenantId, $ym)) {
@@ -413,6 +417,12 @@ class AttendanceEntryService
         $shift = app(TenantShiftResolver::class)->forUserDate($userId, $tenantId, $date);
         $clockIn = Carbon::parse($open->punched_at);
         $clockOut = $this->regularizedTime($date, $time, $shift, 'out', $clockIn);
+        if ($nextDay) {
+            $clockOut = $this->calc->nextDayClockOut($clockOut, $date);
+        }
+        if ($this->calc->workedSeconds($clockIn, $clockOut) > AttendanceCalculator::MAX_SESSION_SECONDS) {
+            throw new \RuntimeException('A clock-out more than 48 hours after the clock-in is not allowed — check the date.');
+        }
 
         $attendance = DB::transaction(function () use ($userId, $tenantId, $date, $actor, $ctx, $open, $clockOut) {
             $tz = $open->timezone ?: app(TimezoneResolver::class)->forUser($userId, $tenantId);
@@ -523,6 +533,10 @@ class AttendanceEntryService
 
         $clockIn = filled($reg->in_time) ? $this->regularizedTime($date, $reg->in_time, $shift, 'in', null) : null;
         $clockOut = filled($reg->out_time) ? $this->regularizedTime($date, $reg->out_time, $shift, 'out', $clockIn) : null;
+        // "Out time is on the next day" (06:30 in → 09:00 out next morning).
+        if ($clockOut && ! empty($reg->out_next_day)) {
+            $clockOut = $this->calc->nextDayClockOut($clockOut, $date);
+        }
 
         return DB::transaction(function () use ($reg, $approver, $userId, $tenantId, $date, $instances, $target, $shift, $jobDetail, $ctx, $flags, $clockIn, $clockOut) {
             $punches = $this->punchesOfShift($userId, $tenantId, $date, $instances, $target);

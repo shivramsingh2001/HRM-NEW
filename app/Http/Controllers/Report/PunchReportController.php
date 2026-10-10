@@ -76,7 +76,7 @@ class PunchReportController extends Controller
             $handle = fopen('php://temp', 'w+');
             fwrite($handle, "\xEF\xBB\xBF");
             $this->writeCsvRow($handle, [
-                'Date', 'Time', 'Direction', 'Session', 'Employee ID', 'Employee', 'Department', 'Designation', 'Branch',
+                'Date', 'Punched On', 'Time', 'Direction', 'Session', 'Employee ID', 'Employee', 'Department', 'Designation', 'Branch',
                 'Attendance Location', 'Source', 'Method', 'Terminal', 'Address', 'Latitude', 'Longitude', 'Office location', 'Radius (m)',
                 'Distance (m)', 'Location check', 'GPS accuracy (m)', 'Phone device', 'Network', 'Wi-Fi', 'IP', 'Battery %',
                 'Regularized', 'Recorded by', 'Note',
@@ -84,7 +84,7 @@ class PunchReportController extends Controller
 
             foreach ($this->query($f)->orderBy('r.punched_at')->orderBy('r.row_id')->cursor() as $r) {
                 $this->writeCsvRow($handle, [
-                    $r->date, Carbon::parse($r->punched_at)->format('H:i:s'), strtoupper($r->direction), $r->session_seq,
+                    $r->date, Carbon::parse($r->punched_at)->format('Y-m-d'), Carbon::parse($r->punched_at)->format('H:i:s'), strtoupper($r->direction), $r->session_seq,
                     $r->employee_code, $r->employee_name, $r->department_name, $r->designation_name, $r->branch_name,
                     \App\Models\AttendanceLocation::labelFor($r->office_branch, $r->assigned_location_name), self::sourceLabel($r->source), $r->method, $r->terminal_name, $r->address, $r->lat, $r->lng,
                     $r->location_name, $r->radius, $r->distance_meters, $r->location_verification, $r->accuracy_meters,

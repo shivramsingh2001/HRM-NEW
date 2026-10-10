@@ -84,6 +84,7 @@ class AttendanceV1Controller extends Controller
             'status' => ['required', 'string'],
             'clock_in' => ['nullable', 'date_format:H:i'],
             'clock_out' => ['nullable', 'date_format:H:i'],
+            'clock_out_next_day' => ['nullable', 'boolean'],
             'leave_type_id' => ['nullable', 'integer'],
             'remarks' => ['nullable', 'string', 'max:500'],
         ]);
@@ -112,6 +113,7 @@ class AttendanceV1Controller extends Controller
             'status' => AttendanceStatus::from($data['status']),
             'clock_in' => $data['clock_in'] ?? null,
             'clock_out' => $data['clock_out'] ?? null,
+            'clock_out_next_day' => (bool) ($data['clock_out_next_day'] ?? false),
             'leave_type_id' => $data['leave_type_id'] ?? null,
             'remarks' => $data['remarks'] ?? null,
         ], $actor);

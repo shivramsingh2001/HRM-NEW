@@ -107,15 +107,24 @@
         ];
     @endphp
 
-    <x-ui.page-header title="Employee Performance Report" :parent="['label' => 'Team Report', 'route' => 'performance.team']">
+    @php
+        // The same report doubles as the employee's own My Performance page.
+        $selfView = $selfView ?? false;
+        $monthUrl = fn ($m) => $selfView
+            ? route('performance.my-dashboard', ['month' => $m])
+            : route('performance.individual', ['userId' => $employee->id, 'month' => $m]);
+    @endphp
+    <x-ui.page-header :title="$selfView ? 'My Performance' : 'Employee Performance Report'"
+        :parent="$selfView ? null : ['label' => 'Team Report', 'route' => 'performance.team']"
+        :crumbs="$selfView ? [['label' => 'Performance']] : []">
         <x-slot:actions>
             <div class="btn-group btn-group-sm">
-                <a href="{{ route('performance.individual', ['userId' => $employee->id, 'month' => $prevMonth]) }}" class="btn btn-outline-secondary">
+                <a href="{{ $monthUrl($prevMonth) }}" class="btn btn-outline-secondary">
                     <i class="feather-chevron-left"></i>
                 </a>
                 <button class="btn btn-light disabled">{{ date('F Y', strtotime($month . '-01')) }}</button>
                 @if($nextMonth)
-                    <a href="{{ route('performance.individual', ['userId' => $employee->id, 'month' => $nextMonth]) }}" class="btn btn-outline-secondary">
+                    <a href="{{ $monthUrl($nextMonth) }}" class="btn btn-outline-secondary">
                         <i class="feather-chevron-right"></i>
                     </a>
                 @else

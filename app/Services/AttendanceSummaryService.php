@@ -237,6 +237,8 @@ class AttendanceSummaryService
                         if ($workedHours > 0) {
                             $summary['holiday_work_days']++;
                             $worked = $this->classifyByHours($workedHours, $dayData['expected_seconds'] ?? 0, $policy);
+                            // How the worked off-day was graded — PayrollDaysService pays the day once.
+                            $dailyDetails[$dateString]['worked_as'] = $worked;
                             if ($worked === 'present') {
                                 $summary['present_days']++;
                             } elseif ($worked === 'half_day') {
@@ -251,6 +253,7 @@ class AttendanceSummaryService
                         if ($workedHours > 0) {
                             $summary['weekoff_work_days']++;
                             $worked = $this->classifyByHours($workedHours, $dayData['expected_seconds'] ?? 0, $policy);
+                            $dailyDetails[$dateString]['worked_as'] = $worked;
                             if ($worked === 'present') {
                                 $summary['present_days']++;
                             } elseif ($worked === 'half_day') {
@@ -476,9 +479,9 @@ class AttendanceSummaryService
         $effectiveStatus = null;
         $persistedStatus = null;
 
-        // A single session cannot sanely exceed 24h — clamp obvious bad data
+        // A single session cannot sanely exceed 48h — clamp obvious bad data
         // (missed clock-out closed days later) so one row can't wreck the month.
-        $maxSessionSeconds = 24 * 3600;
+        $maxSessionSeconds = AttendanceCalculator::MAX_SESSION_SECONDS;
 
         foreach ($attendanceEntries as $entry) {
             if ($entry->clock_in && $entry->clock_out) {
@@ -486,7 +489,7 @@ class AttendanceSummaryService
                 $clockOut = Carbon::parse($entry->clock_out);
                 $sessionSeconds = $calc->workedSeconds($clockIn, $clockOut);
                 if ($sessionSeconds > $maxSessionSeconds) {
-                    Log::warning('Attendance session exceeds 24h, clamping', [
+                    Log::warning('Attendance session exceeds 48h, clamping', [
                         'entry_id' => $entry->id ?? null,
                         'clock_in' => $entry->clock_in,
                         'clock_out' => $entry->clock_out,

@@ -35,6 +35,9 @@ class WorkforceSettingsController extends Controller
             // Overtime cards (shown when the overtime feature is on and the user may manage overtime).
             'overtime' => app(\App\Services\Attendance\OvertimePolicyService::class)->company($tenant->id),
             'canManageOvertime' => app(\App\Services\RbacService::class)->can(Auth::user(), 'overtime', 'manage'),
+            // Shift Requests card (employee-wise shifts only).
+            'showShiftRequests' => $tenant->custom_shifts_enabled && app(\App\Services\FeatureService::class)->enabledForCurrentTenant('custom_shift'),
+            'shiftRequests' => \App\Models\ShiftRequestSetting::forTenant($tenant->id),
         ]);
     }
 }

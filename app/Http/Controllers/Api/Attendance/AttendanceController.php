@@ -1668,6 +1668,7 @@ class AttendanceController extends Controller
             $shiftCheck = app(\App\Services\Attendance\RegularizationShiftCheck::class)->check(
                 (int) $authUser->id, (int) $authUser->tenant_id, $request->date,
                 $request->input('user_shift_id'), $request->in_time, $request->out_time,
+                $request->boolean('out_next_day'),
             );
             if ($shiftCheck['error']) {
                 return response()->json([
@@ -1700,6 +1701,7 @@ class AttendanceController extends Controller
                 'request_type' => $request->request_type,
                 'in_time' => $request->in_time,
                 'out_time' => $request->out_time,
+                'out_next_day' => $request->boolean('out_next_day'),
                 'file' => $filePath,
                 'reason' => $request->reason,
                 'status' => 'pending'
@@ -1793,6 +1795,7 @@ class AttendanceController extends Controller
                     'request_type' => $request->request_type,
                     'in_time' => $request->in_time,
                     'out_time' => $request->out_time,
+                'out_next_day' => $request->boolean('out_next_day'),
                     'reason' => $request->reason,
                     'file' => file_url($request->file, 'regularization'),
                     'status' => $request->status,
@@ -1944,6 +1947,7 @@ class AttendanceController extends Controller
                     'request_type' => $request->request_type,
                     'in_time' => $request->in_time,
                     'out_time' => $request->out_time,
+                'out_next_day' => $request->boolean('out_next_day'),
                     'reason' => $request->reason,
                     'file' => file_url($request->file, 'regularization'),
                     'status' => $request->status,

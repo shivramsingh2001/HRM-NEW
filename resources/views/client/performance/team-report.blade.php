@@ -148,7 +148,7 @@
                     <i class="feather-filter"></i>
                     Filter Team
                     @php
-                        $activeFilterCount = collect(request()->only(['department_id', 'employee_id']))
+                        $activeFilterCount = collect(request()->only(['search', 'branch_id', 'department_id', 'designation_id', 'employee_id']))
                             ->filter()
                             ->count();
                     @endphp
@@ -165,16 +165,23 @@
             <form action="{{ route('performance.team') }}" method="GET" id="filterForm">
                 <input type="hidden" name="month" value="{{ $month }}">
                 <div class="filter-row">
-                    <div class="filter-item">
-                        <select name="department_id" class="filter-select">
-                            <option value="">All Departments</option>
-                            @foreach ($departments as $dept)
-                                <option value="{{ $dept->id }}"
-                                    {{ request('department_id') == $dept->id ? 'selected' : '' }}>{{ $dept->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                    {{-- Search: submits on Enter or when the box loses focus (no Apply button) --}}
+                    <div class="filter-item search">
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" name="search" class="form-control" value="{{ request('search') }}"
+                                placeholder="Search name, employee ID, email" aria-label="Search"
+                                onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.form.submit(); }"
+                                onchange="this.form.submit()">
+                        </div>
                     </div>
+                    {{-- Branch (plan-gated) / Department / Designation — shared with the reports --}}
+                    @include('client.report.partials.employee-filters', [
+                        'selectClass' => 'filter-select',
+                        'deptParam' => 'department_id',
+                        'desigParam' => 'designation_id',
+                        'except' => ['location'],
+                    ])
                     <div class="filter-item">
                         <select name="employee_id" class="filter-select">
                             <option value="">All Employees</option>
@@ -184,6 +191,12 @@
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+                    {{-- Reset: clears every filter, keeps the selected month --}}
+                    <div class="filter-item narrow">
+                        <a href="{{ route('performance.team', ['month' => $month]) }}" class="reset-btn" title="Reset filters" aria-label="Reset filters">
+                            <i class="feather-rotate-ccw"></i>
+                        </a>
                     </div>
                 </div>
             </form>
@@ -280,7 +293,9 @@
 @section('script-area')
     <script>
         $(function() {
-            $('.filter-select').on('change', function() {
+            // Selects without their own onchange (the employee picker); the shared
+            // filters and the search box submit themselves.
+            $('#filterForm select.filter-select:not([onchange])').on('change', function() {
                 $('#filterForm').submit();
             });
             $('.clickable-row').on('click', function() {

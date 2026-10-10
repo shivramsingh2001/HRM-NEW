@@ -166,6 +166,21 @@ Route::middleware('tenant')->group(function () {
         //shift plan
         Route::get('/user/shift/plan', [ShiftController::class, 'myShiftPlan'])->middleware('feature:fixed_shift,custom_shift');
 
+        // Shift swaps / change requests (employee-wise shifts only)
+        Route::middleware('feature:custom_shift')->controller(\App\Http\Controllers\Api\Shift\ShiftRequestController::class)->group(function () {
+            Route::get('/user/shift/request-options', 'options');
+            Route::get('/user/shift/requests', 'index');
+            Route::get('/user/shift/requests/{id}', 'show')->whereNumber('id');
+            Route::get('/user/shift/swap-candidates', 'candidates');
+            Route::post('/user/shift/requests/preview', 'preview');
+            Route::post('/user/shift/swap-request', 'storeSwap');
+            Route::post('/user/shift/change-request', 'storeChange');
+            Route::post('/user/shift/requests/{id}/respond', 'respond')->whereNumber('id');
+            Route::post('/user/shift/requests/{id}/cancel', 'cancel')->whereNumber('id');
+            Route::get('/manager/shift/requests', 'approvals');
+            Route::post('/manager/shift/requests/{id}/decision', 'decide')->whereNumber('id');
+        });
+
         //Payslip plan
         Route::middleware('feature:payroll')->group(function () {
             Route::get('/payslips', [PayrollController::class, 'getMyPayslips'])

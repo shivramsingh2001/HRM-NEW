@@ -164,7 +164,7 @@ class AttendanceDayResolver
         $isRegularized = false;
         $effectiveStatus = null;
         $persistedStatus = null;
-        $max = 24 * 3600;
+        $max = AttendanceCalculator::MAX_SESSION_SECONDS;
 
         foreach ($rows as $entry) {
             $hasRow = true;
@@ -186,7 +186,7 @@ class AttendanceDayResolver
                     $seconds = (int) round(((float) $entry->worked_hours) * 3600);
                 }
                 if ($seconds > $max) {
-                    Log::warning('AttendanceDayResolver: session exceeds 24h, clamping', [
+                    Log::warning('AttendanceDayResolver: session exceeds 48h, clamping', [
                         'entry_id' => $entry->id ?? null,
                     ]);
                     $seconds = $max;

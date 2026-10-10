@@ -204,7 +204,7 @@ class MultiShiftTest extends TestCase
         $this->assign($evening, $date, null, ['is_additional' => 1])->assertOk();
         $primary = $this->rowsOn($date)->first();
 
-        $this->actingAs($this->admin)->postJson(route('shift.update-user-shift'), ['user_shift_id' => $primary->id, 'shift_id' => $long->id])
+        $this->actingAs($this->admin)->postJson(route('shift.update-user-shift'), ['user_shift_id' => $primary->id, 'shift_id' => $long->id, 'reason' => 'Test'])
             ->assertStatus(422)->assertJsonPath('message', fn ($m) => str_contains($m, 'Evening'));
         $this->assertSame($morning->id, (int) $primary->fresh()->shift_id);
     }

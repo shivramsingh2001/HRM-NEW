@@ -35,6 +35,7 @@ class ApprovalService
         // (2-level Manager->HR vs 1-level HR-only) differs. See
         // OffboardingService::ensureDefaultWorkflow().
         'offboarding' => OffboardingApprovalHandler::class,
+        'shift_request' => ShiftRequestApprovalHandler::class,
         'offboarding_termination' => OffboardingApprovalHandler::class,
     ];
 
@@ -343,7 +344,7 @@ class ApprovalService
     }
 
     /** Request types whose outcome handler already sends its own, specific employee notification. */
-    private const HANDLER_NOTIFIES = ['leave', 'overtime', 'regularization'];
+    private const HANDLER_NOTIFIES = ['leave', 'overtime', 'regularization', 'shift_request'];
 
     private function notifyRequester(ApprovalRequest $request, string $status): void
     {

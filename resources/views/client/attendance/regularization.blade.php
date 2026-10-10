@@ -725,6 +725,7 @@
                                                             data-date="{{ $regularization->date }}"
                                                             data-in_time="{{ $regularization->in_time }}"
                                                             data-out_time="{{ $regularization->out_time }}"
+                                                            data-out_next_day="{{ $regularization->out_next_day ? 1 : 0 }}"
                                                             data-reason="{{ $regularization->reason }}">
                                                             <i class="feather-edit-3"></i>
                                                         </a>
@@ -823,6 +824,10 @@
                                         <div class="form-group">
                                             <label class="fw-semibold" for="out_time">Out Time</label>
                                             <input type="time" class="form-control" name="out_time" id="out_time">
+                                            <div class="form-check mt-1">
+                                                <input class="form-check-input" type="checkbox" name="out_next_day" value="1" id="out_next_day">
+                                                <label class="form-check-label small" for="out_next_day">Out time is on the next day</label>
+                                            </div>
                                             <small class="text-danger error-text out_time_error"></small>
                                         </div>
                                     </div>
@@ -916,6 +921,10 @@
                                         <div class="form-group">
                                             <label class="fw-semibold" for="edit_out_time">Out Time</label>
                                             <input type="time" class="form-control" name="out_time" id="edit_out_time">
+                                            <div class="form-check mt-1">
+                                                <input class="form-check-input" type="checkbox" name="out_next_day" value="1" id="edit_out_next_day">
+                                                <label class="form-check-label small" for="edit_out_next_day">Out time is on the next day</label>
+                                            </div>
                                             <small class="text-danger error-text edit_out_time_error"></small>
                                         </div>
                                     </div>
@@ -1062,6 +1071,13 @@
                 });
             });
 
+            // ?date=YYYY-MM-DD (e.g. the dashboard's "Regularize" button): open the form on that date.
+            const prefillDate = new URLSearchParams(window.location.search).get('date');
+            if (prefillDate && /^\d{4}-\d{2}-\d{2}$/.test(prefillDate)) {
+                $('#date').val(prefillDate).trigger('change');
+                $('#addRegularizationModal').modal('show');
+            }
+
             // Add Regularization Form Submission
             $('#addRegularizationForm').on('submit', function(e) {
                 e.preventDefault();
@@ -1113,6 +1129,7 @@
                 $('#edit_date').val($(this).data('date'));
                 $('#edit_in_time').val($(this).data('in_time'));
                 $('#edit_out_time').val($(this).data('out_time'));
+                $('#edit_out_next_day').prop('checked', +$(this).data('out_next_day') === 1);
                 $('#edit_reason').val($(this).data('reason'));
 
                 toggleTimeFields(requestType, 'edit');

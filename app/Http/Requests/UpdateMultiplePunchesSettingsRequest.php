@@ -16,6 +16,8 @@ class UpdateMultiplePunchesSettingsRequest extends FormRequest
     {
         return [
             'allow_multiple_punches' => ['nullable', 'boolean'],
+            // A clock-in left open this long is closed by attendance:auto-clockout.
+            'auto_clockout_hours' => ['nullable', 'integer', 'min:4', 'max:48'],
         ];
     }
 }

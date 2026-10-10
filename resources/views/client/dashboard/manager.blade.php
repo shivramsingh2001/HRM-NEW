@@ -140,6 +140,25 @@
         }
 
         .table-responsive .table { margin-bottom: 0; }
+
+        /* Team cards (Recent Team Leaves / WFH / Regularizations): employee cell as on the Admin
+           Dashboard's "Most Regularization Requests", date block as on the Employee Dashboard's
+           Attendance Attention card. */
+        .tbl-avatar { width: 32px; height: 32px; border-radius: 9px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+        .tbl-avatar img { width: 32px; height: 32px; object-fit: cover; border-radius: 9px; }
+        .stat-sub { font-size: 9.5px; color: var(--d-text-muted); }
+        .min-w-0 { min-width: 0; }
+        .attn-date {
+            flex: none; display: inline-block; width: 36px; text-align: center; border-radius: 8px; padding: 3px 0;
+            background: #EFF6FF; color: var(--primary); line-height: 1.1;
+        }
+        .attn-date .d { display: block; font-size: 13px; font-weight: 800; }
+        .attn-date .m { display: block; font-size: 8.5px; font-weight: 700; text-transform: uppercase; }
+        .team-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f1f2f4; font-size: 12px; }
+        .team-row:last-child { border-bottom: none; }
+        .team-row .team-emp { flex: 1; min-width: 0; }
+        .team-row .team-type { font-size: 10px; color: var(--d-text-soft); }
+        .team-table td { vertical-align: middle; }
     </style>
 @endsection
 
@@ -325,16 +344,28 @@
                         <a href="{{ route('leave.view-all') }}" class="fs-11">View All</a>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-sm mb-0">
+                        <table class="table table-sm mb-0 team-table">
                             <thead>
                                 <tr><th>Employee</th><th>Type</th><th>Date</th><th>Status</th></tr>
                             </thead>
                             <tbody>
                                 @forelse($recent_team_leaves as $leave)
+                                    @php $leaveDay = \Carbon\Carbon::parse($leave->start_date); @endphp
                                     <tr>
-                                        <td>{{ Str::limit($leave->user_name ?? 'N/A', 16) }}</td>
+                                        <td>
+                                            @include('client.dashboard.partials.team-emp', [
+                                                'name' => $leave->user_name,
+                                                'employeeId' => $leave->employee_id,
+                                                'image' => $team_profile_images[$leave->user_id] ?? null,
+                                            ])
+                                        </td>
                                         <td>{{ $leave->leave_type_name ?? 'N/A' }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($leave->start_date)->format('d M') }}</td>
+                                        <td>
+                                            <span class="attn-date" title="{{ $leaveDay->format('l, d M Y') }}">
+                                                <span class="d">{{ $leaveDay->format('d') }}</span>
+                                                <span class="m">{{ $leaveDay->format('M') }}</span>
+                                            </span>
+                                        </td>
                                         <td><x-ui.status-badge :status="$leave->status" /></td>
                                     </tr>
                                 @empty
@@ -539,9 +570,20 @@
                             <a href="{{ route('manager.requests') }}" class="fs-11">View All</a>
                         </div>
                         @forelse($recent_team_requests as $reqRow)
-                            <div class="today-status-row">
-                                <span class="text-muted">{{ Str::limit($reqRow->user->name ?? 'N/A', 12) }}</span>
-                                <span>{{ $reqRow->requestType->type_name ?? 'Request' }}</span>
+                            @php $reqDay = $reqRow->start_date ? \Carbon\Carbon::parse($reqRow->start_date) : \Carbon\Carbon::parse($reqRow->created_at); @endphp
+                            <div class="team-row">
+                                <span class="attn-date" title="{{ $reqDay->format('l, d M Y') }}">
+                                    <span class="d">{{ $reqDay->format('d') }}</span>
+                                    <span class="m">{{ $reqDay->format('M') }}</span>
+                                </span>
+                                <div class="team-emp">
+                                    @include('client.dashboard.partials.team-emp', [
+                                        'name' => $reqRow->user->name ?? null,
+                                        'employeeId' => $reqRow->user->employee_id ?? null,
+                                        'image' => $team_profile_images[$reqRow->user_id] ?? null,
+                                    ])
+                                    <div class="team-type">{{ $reqRow->requestType->type_name ?? 'Request' }}</div>
+                                </div>
                                 <x-ui.status-badge :status="strtolower($reqRow->status)" />
                             </div>
                         @empty
@@ -559,10 +601,18 @@
                             <a href="{{ route('attendance-regularization.manage') }}" class="fs-11">View All</a>
                         </div>
                         @forelse($recent_team_regularizations as $reg)
-                            <div class="dash-list-item">
-                                <div>
-                                    <span class="d-block dash-list-title">{{ Str::limit($reg->user_name ?? 'N/A', 14) }}</span>
-                                    <span class="dash-list-sub">{{ \Carbon\Carbon::parse($reg->date)->format('d M Y') }}</span>
+                            @php $regDay = \Carbon\Carbon::parse($reg->date); @endphp
+                            <div class="team-row">
+                                <span class="attn-date" title="{{ $regDay->format('l, d M Y') }}">
+                                    <span class="d">{{ $regDay->format('d') }}</span>
+                                    <span class="m">{{ $regDay->format('M') }}</span>
+                                </span>
+                                <div class="team-emp">
+                                    @include('client.dashboard.partials.team-emp', [
+                                        'name' => $reg->user_name,
+                                        'employeeId' => $reg->user_employee_id,
+                                        'image' => $team_profile_images[$reg->user_id] ?? null,
+                                    ])
                                 </div>
                                 <x-ui.status-badge :status="$reg->status" />
                             </div>

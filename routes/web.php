@@ -551,6 +551,26 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::get('/get-users-by-type', [ShiftController::class, 'getUsersByType'])->name('get-users-by-type');
                 Route::post('/assignment-conflicts', [ShiftController::class, 'checkAssignmentConflicts'])->name('assignment-conflicts');
                 Route::get('/assignments/history', [ShiftController::class, 'assignmentHistory'])->name('assignments.history');
+                Route::get('/change-log', [ShiftController::class, 'changeLog'])->name('change-log');
+            });
+
+            // Shift swap / change requests — every role; ShiftRequestService decides
+            // who may do what (own requests, colleague answer, approver scope).
+            Route::prefix('requests')->name('requests.')->controller(\App\Http\Controllers\Shift\ShiftRequestController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/data', 'data')->name('data');
+                Route::get('/candidates', 'candidates')->name('candidates');
+                Route::get('/export', 'export')->name('export')->middleware('role:admin,hr,manager');
+                Route::post('/preview', 'preview')->name('preview');
+                Route::post('/', 'store')->name('store');
+                Route::post('/direct-swap', 'directSwap')->name('direct-swap')->middleware('role:admin,hr,manager');
+                Route::post('/direct-change', 'directChange')->name('direct-change')->middleware('role:admin,hr,manager');
+                Route::post('/bulk-decide', 'bulkDecide')->name('bulk-decide');
+                Route::get('/{id}', 'show')->whereNumber('id')->name('show');
+                Route::post('/{id}/respond', 'respond')->whereNumber('id')->name('respond');
+                Route::post('/{id}/decide', 'decide')->whereNumber('id')->name('decide');
+                Route::post('/{id}/cancel', 'cancel')->whereNumber('id')->name('cancel');
+                Route::post('/{id}/revert', 'revert')->whereNumber('id')->name('revert')->middleware('role:admin,hr');
             });
 
             // Everything that mutates shift data — admin / hr only
@@ -568,6 +588,13 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::post('/user-shifts/bulk-update', [ShiftController::class, 'bulkUpdateUserShifts'])->name('user-shifts.bulk-update');
                 Route::post('/user-shifts/assign-bulk', [ShiftController::class, 'assignBulkShifts'])->name('user-shifts.assign-bulk');
                 Route::post('/assignments/{id}/end-permanent', [ShiftController::class, 'endPermanentShift'])->name('assignments.end-permanent');
+
+                // Rotating shift patterns
+                Route::get('/rotations', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'index'])->name('rotations.index');
+                Route::post('/rotations', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'store'])->name('rotations.store');
+                Route::post('/rotations/assign', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'assign'])->name('rotations.assign');
+                Route::put('/rotations/{id}', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'update'])->whereNumber('id')->name('rotations.update');
+                Route::delete('/rotations/{id}', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'destroy'])->whereNumber('id')->name('rotations.destroy');
             });
         });
         Route::prefix('my-payroll')->name('my-payroll.')->middleware(['feature:payroll', 'permission:payroll,view'])->group(function () {
@@ -797,6 +824,7 @@ Route::group(['middleware' => ['tenant']], function () {
         // Combined Employee ID + Notice Period page (Basic Setup). One sidebar
         // link; each card still posts to its own controller's update route.
         Route::middleware('role:admin,hr')->get('workforce-settings', [\App\Http\Controllers\Settings\WorkforceSettingsController::class, 'index'])->name('workforce-settings.index');
+        Route::middleware(['role:admin,hr', 'feature:custom_shift'])->put('shift-request-settings', [\App\Http\Controllers\Settings\ShiftRequestPolicySettingsController::class, 'update'])->name('shift-request-settings.update');
 
         // Company-wide Notice Period (Basic Setup) — default used to compute
         // the minimum last working date on every offboarding request.

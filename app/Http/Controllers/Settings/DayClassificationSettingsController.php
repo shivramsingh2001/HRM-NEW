@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateDayClassificationSettingsRequest;
 use App\Models\AttendancePolicy;
 use Illuminate\Support\Facades\Auth;
+use App\Services\Attendance\AttendanceRegradeService;
 use App\Services\Attendance\PolicyResolver;
+use Carbon\Carbon;
 
 /**
  * "Day classification" card on the Company Policies page (WorkforceSettingsController) —
@@ -20,25 +22,21 @@ use App\Services\Attendance\PolicyResolver;
  */
 class DayClassificationSettingsController extends Controller
 {
-    public function update(UpdateDayClassificationSettingsRequest $request, PolicyResolver $resolver)
+    public function update(UpdateDayClassificationSettingsRequest $request)
     {
         $tenantId = (int) Auth::user()->tenant_id;
-        $effectiveFrom = now()->format('Y-m-d');
-        $current = $resolver->forTenantDate($tenantId, $effectiveFrom);
         // Off: only the switch is posted/kept; the thresholds carry forward.
         $data = $request->validated();
+        $applyFrom = $data['apply_from'] ?? null;
+        unset($data['apply_from']);
 
-        AttendancePolicy::updateOrCreate(
-            ['tenant_id' => $tenantId, 'effective_from' => $effectiveFrom],
-            array_merge($current->toPersistableArray(), $data, [
-                'created_by' => Auth::id(),
-            ])
-        );
+        // Saved days are re-graded at once (it used to wait for "the next
+        // recalculation", so the Team page kept showing the old half days).
+        $saved = app(\App\Services\Attendance\AttendancePolicyWriter::class)->save($tenantId, $data, $applyFrom, Auth::id());
 
-        $resolver->forget();
-
-        return back()->with('success', $data['day_classification_enabled']
-            ? 'Day classification turned on. It applies from the next summary recalculation.'
-            : 'Day classification turned off — any day with work now counts as present. It applies from the next summary recalculation.');
+        return back()->with('success', ($data['day_classification_enabled']
+            ? 'Day classification turned on'
+            : 'Day classification turned off — any day with work now counts as present')
+            . \App\Services\Attendance\AttendancePolicyWriter::summary($saved));
     }
 }

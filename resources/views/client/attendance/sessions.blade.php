@@ -135,6 +135,11 @@
             font-size: 0.65rem;
         }
 
+        /* Focus button sits over the map's top-right corner (above both Leaflet and Google controls). */
+        .session-map-wrap { position: relative; }
+        .session-map-focus { position: absolute; top: 10px; right: 10px; z-index: 1000; font-size: 11.5px; padding: 3px 9px;
+            border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(15, 23, 42, .15); }
+
         .location-map {
             height: 300px;
             border-radius: 6px;
@@ -317,7 +322,7 @@
                                     @if ($attendance && $attendance->clock_in)
                                         {{ \Carbon\Carbon::parse($attendance->clock_in)->format('h:i A') }}
                                         @if ($attendance->clock_out)
-                                            → {{ \Carbon\Carbon::parse($attendance->clock_out)->format('h:i A') }}
+                                            → {{ clock_out_time($attendance->clock_out, $attendance->date) }}
                                         @endif
                                     @else
                                         --:--
@@ -449,9 +454,15 @@
                     </h6>
 
                     <!-- Route Map (all points joined by a polyline, in chronological order) -->
-                    <div id="sessionLocationMap" class="location-map"></div>
+                    <div class="session-map-wrap">
+                        <div id="sessionLocationMap" class="location-map"></div>
+                        <button type="button" class="btn btn-sm btn-light session-map-focus d-none" id="sessionMapFocusBtn"
+                            title="Show the whole route" onclick="focusSessionMap && focusSessionMap()">
+                            <i class="feather-crosshair me-1"></i>Focus
+                        </button>
+                    </div>
                     <div class="mb-2" style="font-size: 10.5px; color: #64748b;">
-                        Click the route line to see the time and location at that point.
+                        Click the route line to see the time and location at that point. Hold Ctrl and scroll to zoom.
                     </div>
 
                     <!-- Tracks List -->
@@ -574,6 +585,15 @@
         // fallback never draws a second map in the same box.
         let sessionMapDrawn = false;
 
+        // Set by whichever map gets drawn: brings the whole route back into view.
+        let focusSessionMap = null;
+
+        function enableSessionMapFocus(focus) {
+            focusSessionMap = focus;
+            const button = document.getElementById('sessionMapFocusBtn');
+            if (button) button.classList.remove('d-none');
+        }
+
         // Google Maps version of the route — used only when a key is configured.
         // Any failure (script blocked, key rejected) falls back to Leaflet below.
         function initGoogleSessionMap() {
@@ -597,6 +617,8 @@
                 center: path[0],
                 zoom: 15,
                 mapTypeControl: false,
+                // The page scrolls over the map; Ctrl + scroll (or two fingers) zooms it.
+                gestureHandling: 'cooperative',
                 streetViewControl: false,
             });
 
@@ -648,6 +670,16 @@
             if (path.length > 1) {
                 map.fitBounds(bounds, 24);
             }
+
+            enableSessionMapFocus(function() {
+                infoWindow.close();
+                if (path.length > 1) {
+                    map.fitBounds(bounds, 24);
+                } else {
+                    map.setCenter(path[0]);
+                    map.setZoom(15);
+                }
+            });
         }
 
         // Google calls this when it refuses the key (wrong key, billing off,
@@ -681,7 +713,16 @@
 
             sessionMapDrawn = true;
 
-            const map = L.map('sessionLocationMap');
+            // The page scrolls over the map; the wheel zooms it only while Ctrl / Cmd is held.
+            const map = L.map('sessionLocationMap', { scrollWheelZoom: false });
+            mapContainer.addEventListener('wheel', function(event) {
+                if (event.ctrlKey || event.metaKey) {
+                    event.preventDefault(); // not the browser's own page zoom
+                    map.scrollWheelZoom.enable();
+                } else {
+                    map.scrollWheelZoom.disable();
+                }
+            }, { capture: true, passive: false });
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors',
@@ -726,6 +767,11 @@
             }
 
             map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
+
+            enableSessionMapFocus(function() {
+                map.closePopup();
+                map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
+            });
         }
 
         function showToast(message, type = 'success') {

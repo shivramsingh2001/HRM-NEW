@@ -46,6 +46,26 @@ class AttendanceCalculator
     }
 
     /**
+     * Longest a single clock-in → clock-out may count, as a guard against bad
+     * data (a clock-out entered days later). 48 h, so a genuine long duty that
+     * ends the next morning (06:30 → 09:00 next day = 26.5 h) counts in full —
+     * the old 24 h clamp cut it short.
+     */
+    public const MAX_SESSION_SECONDS = 48 * 3600;
+
+    /**
+     * The clock-out of a day marked "clock-out is on the next day": on the
+     * day after $date even when its time is later than the clock-in (06:30 in
+     * → 09:00 out). Without the flag the usual rule applies (resolveClockOut).
+     */
+    public function nextDayClockOut(CarbonInterface $clockOut, string $date): Carbon
+    {
+        $out = Carbon::parse($clockOut);
+
+        return $out->toDateString() === Carbon::parse($date)->toDateString() ? $out->addDay() : $out;
+    }
+
+    /**
      * Whole seconds worked between two instants (never negative).
      */
     public function workedSeconds(CarbonInterface $in, CarbonInterface $out): int

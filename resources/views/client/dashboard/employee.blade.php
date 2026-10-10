@@ -202,6 +202,31 @@
         }
         .cal-legend span { display: inline-flex; align-items: center; gap: 3px; }
         .cal-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 3px; }
+
+        /* Attendance Attention — this month's days that need an action */
+        .attn-count { font-size: 10px; font-weight: 700; color: #fff; background: var(--primary); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+        .attn-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f2f4; }
+        .attn-row:last-child { border-bottom: none; }
+        .attn-date {
+            flex: none; width: 36px; text-align: center; border-radius: 8px; padding: 3px 0;
+            background: #EFF6FF; color: var(--primary); line-height: 1.1;
+        }
+        .attn-date .d { display: block; font-size: 13px; font-weight: 800; }
+        .attn-date .m { display: block; font-size: 8.5px; font-weight: 700; text-transform: uppercase; }
+        .attn-info { flex: 1; min-width: 0; }
+        .attn-info .t { font-size: 12px; font-weight: 600; color: var(--d-text); }
+        .attn-info .s { font-size: 10.5px; color: var(--d-text-soft); }
+        .attn-actions { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+        .attn-actions .btn { font-size: 10.5px; padding: 2px 7px; line-height: 1.5; }
+        .attn-ok { display: flex; align-items: center; gap: 8px; padding: 4px 0 8px; }
+        .attn-ok-icon {
+            flex: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            background: #EFF6FF; color: var(--primary); font-size: 15px;
+        }
+        .attn-stats { display: flex; gap: 6px; margin-bottom: 8px; }
+        .attn-stats > div { flex: 1; text-align: center; border: 1px solid var(--d-border); border-radius: 8px; padding: 4px 2px; }
+        .attn-stats .n { display: block; font-size: 13px; font-weight: 800; color: var(--primary); }
+        .attn-stats .l { display: block; font-size: 9.5px; color: var(--d-text-soft); }
     </style>
 @endsection
 
@@ -339,15 +364,80 @@
             </div>
         </div>
 
-        <!-- Attendance Overview / Today's Status / Recent Leave Applications -->
+        <!-- Attendance Attention / Today's Status / Recent Leave Applications -->
         <div class="row g-compact mb-2">
             <div class="col-xxl-4 col-md-6">
-                <x-ui.card class="stretch stretch-full h-100">
+                @php
+                    $attnItems = $attendance_attention ?? [];
+                    $attnTotal = $attendance_attention_total ?? count($attnItems);
+                @endphp
+                <x-ui.card :bodyClass="'p-0'" class="stretch stretch-full h-100" >
                     <div class="card-header">
-                        <h6 class="card-title mb-0">Attendance Overview</h6>
+                        <h6 class="card-title mb-0">Attendance Attention @if ($attnTotal > 0)<span class="attn-count">{{ $attnTotal }}</span>@endif</h6>
                         <span class="fs-11 text-muted">This Month</span>
                     </div>
-                    <div id="dash-attendance-trend-chart" style="height: 210px;"></div>
+                          
+                    @if (count($attnItems))
+                        <div class="p-3">
+                            @foreach ($attnItems as $item)
+                                @php $attnDay = \Carbon\Carbon::parse($item['date']); @endphp
+                                <div class="attn-row">
+                                    <div class="attn-date">
+                                        <span class="d">{{ $attnDay->format('d') }}</span>
+                                        <span class="m">{{ $attnDay->format('M') }}</span>
+                                    </div>
+                                    <div class="attn-info">
+                                        <div class="t">{{ $item['status'] }}</div>
+                                        <div class="s">{{ $attnDay->format('l') }}@if ($item['pending']) · {{ $item['pending'] }}@endif</div>
+                                    </div>
+                                    @unless ($item['pending'])
+                                        <div class="attn-actions">
+                                            @if ($item['regularize'] && $show_regularization)
+                                                <a href="{{ route('attendance-regularization.index', ['date' => $item['date']]) }}" class="btn btn-sm btn-primary">Regularize</a>
+                                            @endif
+                                            @if ($item['leave'])
+                                                <a href="{{ route('leave.apply', ['date' => $item['date']]) }}" class="btn btn-sm btn-outline-primary">Apply Leave</a>
+                                            @endif
+                                        </div>
+                                    @endunless
+                                </div>
+                            @endforeach
+                        </div>
+                        @if ($attnTotal > count($attnItems) && $show_attendance)
+                            <div class="text-center pt-1">
+                                <a href="{{ route('attendance.index') }}" class="fs-11">+{{ $attnTotal - count($attnItems) }} more · View attendance</a>
+                            </div>
+                        @endif
+                    @else
+                        <div class="attn-ok">
+                            <div class="attn-ok-icon"><i class="feather-check-circle"></i></div>
+                            <div>
+                                <div class="fw-semibold fs-12">Your attendance is on track</div>
+                                <div class="fs-11 text-muted">No absences or missed clock-outs this month.</div>
+                            </div>
+                        </div>
+                        <div class="attn-stats">
+                            <div><span class="n">{{ $monthly_attendance['present'] ?? 0 }}</span><span class="l">Present</span></div>
+                            <div><span class="n">{{ $monthly_attendance['leave_days'] ?? 0 }}</span><span class="l">Leave days</span></div>
+                            <div><span class="n">{{ $monthly_attendance['working_days'] ?? 0 }}</span><span class="l">Working days</span></div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <a href="{{ route('leave.apply') }}" class="qa-block">
+                                    <span class="qa-label">Plan a Leave</span>
+                                    <span class="qa-icon"><i class="feather-plus-circle"></i></span>
+                                </a>
+                            </div>
+                            @if ($show_regularization)
+                                <div class="col-6">
+                                    <a href="{{ route('attendance-regularization.index') }}" class="qa-block">
+                                        <span class="qa-label">Regularization</span>
+                                        <span class="qa-icon"><i class="feather-edit-3"></i></span>
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </x-ui.card>
             </div>
 
@@ -368,7 +458,7 @@
                     </div>
                     <div class="today-status-row">
                         <span class="text-muted"><i class="feather-log-out me-1"></i>Early Logout</span>
-                        <strong>{{ $today_attendance && $today_attendance->clock_out && \Carbon\Carbon::parse($today_attendance->clock_out)->format('H:i') < '18:00' ? 'Yes' : 'No' }}</strong>
+                        <strong>{{ $today_attendance && $today_attendance->clock_out && \Carbon\Carbon::parse($today_attendance->clock_out)->lt(\Carbon\Carbon::parse(substr((string) $today_attendance->date, 0, 10) . ' 18:00')) ? 'Yes' : 'No' }}</strong>
                     </div>
                 </x-ui.card>
             </div>
@@ -788,44 +878,6 @@
                 .catch(() => {});
         })();
 
-        (function () {
-            const colorPalette = ['#0D6EFD', '#0B5ED7', '#0D6EFD', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#0ea5e9'];
-
-            // Attendance Overview — cumulative Present/Absent/Leave line chart (this month)
-            var trendEl = document.getElementById('dash-attendance-trend-chart');
-            if (trendEl) {
-                var trendLabels = @json($attendance_trend_labels ?? []);
-                var trendPresent = @json($attendance_trend_present ?? []);
-                var trendAbsent = @json($attendance_trend_absent ?? []);
-                var trendLeave = @json($attendance_trend_leave ?? []);
-                try {
-                    new ApexCharts(trendEl, {
-                        series: [
-                            { name: 'Present', data: trendPresent },
-                            { name: 'Absent', data: trendAbsent },
-                            { name: 'Leave', data: trendLeave }
-                        ],
-                        chart: { type: 'line', height: 210, toolbar: { show: false }, fontFamily: 'inherit' },
-                        colors: ['#0D6EFD', '#93c5fd', '#0ea5e9'],
-                        stroke: { curve: 'smooth', width: 2 },
-                        markers: { size: 2 },
-                        dataLabels: { enabled: false },
-                        xaxis: {
-                            categories: trendLabels,
-                            tickAmount: 6,
-                            labels: { style: { fontSize: '10.5px' } },
-                            axisBorder: { show: false },
-                            axisTicks: { show: false }
-                        },
-                        yaxis: { labels: { style: { fontSize: '10.5px' } } },
-                        legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px', markers: { radius: 4 } },
-                        grid: { borderColor: '#eef1f7', strokeDashArray: 4 },
-                        tooltip: { shared: true }
-                    }).render();
-                } catch (e) { console.error(e); }
-            }
-
-        })();
 
         // Task Overview — "View as table" toggle (same helper as the Admin Dashboard)
         function toggleChartTable(btn, chartId, tableId) {

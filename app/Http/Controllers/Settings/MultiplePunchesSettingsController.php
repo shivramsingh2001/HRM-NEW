@@ -25,6 +25,9 @@ class MultiplePunchesSettingsController extends Controller
 
         DB::transaction(function () use ($request, $tenant) {
             $tenant->allow_multiple_punches = $request->boolean('allow_multiple_punches');
+            if ($request->filled('auto_clockout_hours')) {
+                $tenant->auto_clockout_hours = (int) $request->input('auto_clockout_hours');
+            }
             $tenant->save();
         });
 

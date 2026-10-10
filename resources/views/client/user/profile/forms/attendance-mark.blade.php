@@ -26,6 +26,12 @@
             <label class="form-label">Clock out <span class="text-danger" data-required-mark>*</span></label>
             <input type="time" name="clock_out" class="form-control" data-optional-for="present">
         </div>
+        <div class="col-12" data-for="present half_day">
+            <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" name="clock_out_next_day" value="1" id="p360ClockOutNextDay">
+                <label class="form-check-label" for="p360ClockOutNextDay">Clock-out is on the next day <span class="text-muted">(e.g. 06:30 → 09:00 next morning)</span></label>
+            </div>
+        </div>
         <div class="col-12" data-for="present">
             <div class="p360-note">Present: leave Clock out blank if the employee is still working (today only). The day stays open and the employee clocks out as usual.</div>
         </div>

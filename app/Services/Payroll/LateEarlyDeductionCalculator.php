@@ -43,7 +43,6 @@ class LateEarlyDeductionCalculator
      */
     public function calculate(User $employee, int $tenantId, string $yearMonth): array
     {
-        $policy = $this->policies->forUserMonth($tenantId, (int) $employee->id, $yearMonth);
         $excess = $this->latePolicy->excessCounts($employee->id, $tenantId, $yearMonth);
         $calendarDays = Carbon::createFromFormat('Y-m', $yearMonth)->daysInMonth;
 
@@ -51,12 +50,22 @@ class LateEarlyDeductionCalculator
         $divisor = $divisorMode === 'fixed_working_days' ? max(1, $fixedDays) : max(1, $calendarDays);
         $dailyRate = $basic / $divisor;
 
-        $late = $policy->lateDeductionEnabled
-            ? $this->amountForExcess($excess['lateExcess'], $dailyRate, $policy->lateDeductionMode, $policy->lateDeductionAmount, $policy->lateDeductionMultiplier)
-            : 0.0;
-        $early = $policy->earlyDeductionEnabled
-            ? $this->amountForExcess($excess['earlyExcess'], $dailyRate, $policy->earlyDeductionMode, $policy->earlyDeductionAmount, $policy->earlyDeductionMultiplier)
-            : 0.0;
+        // Each excess day is priced with the deduction rule in force ON that
+        // day — a change saved mid-month applies from its date.
+        $late = 0.0;
+        foreach ($excess['lateExcessDays'] as $day) {
+            if ($day->lateDeductionEnabled) {
+                $late += $this->amountForExcess(1, $dailyRate, $day->lateDeductionMode, $day->lateDeductionAmount, $day->lateDeductionMultiplier);
+            }
+        }
+        $early = 0.0;
+        foreach ($excess['earlyExcessDays'] as $day) {
+            if ($day->earlyDeductionEnabled) {
+                $early += $this->amountForExcess(1, $dailyRate, $day->earlyDeductionMode, $day->earlyDeductionAmount, $day->earlyDeductionMultiplier);
+            }
+        }
+        $late = round($late, 2);
+        $early = round($early, 2);
 
         $result = [
             'daily_rate' => round($dailyRate, 2),

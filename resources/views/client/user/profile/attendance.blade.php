@@ -46,7 +46,7 @@
                         @endif
                     </td>
                     <td>{{ $r && $r->clock_in ? \Carbon\Carbon::parse($r->clock_in)->format('h:i A') : '—' }}</td>
-                    <td>{{ $r && $r->clock_out ? \Carbon\Carbon::parse($r->clock_out)->format('h:i A') : '—' }}</td>
+                    <td>{{ $r ? clock_out_time($r->clock_out, $r->date ?? $r->clock_in) : '—' }}</td>
                     <td>{{ $r && $r->worked_hours ? round((float) $r->worked_hours, 2) : '—' }}</td>
                     <td>{{ $r && $r->late_minutes ? $r->late_minutes . 'm' : '' }}</td>
                     <td>{{ $r && $r->early_departure_minutes ? $r->early_departure_minutes . 'm' : '' }}</td>

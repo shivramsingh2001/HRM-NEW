@@ -11,6 +11,9 @@ use App\Models\User;
 use App\Models\Department;
 use App\Services\Shift\ShiftAssignmentService;
 use App\Services\Shift\ShiftAssignmentValidator;
+use App\Services\Shift\ShiftChangeGuard;
+use App\Services\Shift\ShiftChangeRecorder;
+use App\Services\Shift\ShiftMaterializer;
 use App\Services\Shift\ShiftOverlapGuard;
 use App\Support\ShiftWindow;
 use App\Support\WeekOffPredicate;
@@ -28,8 +31,44 @@ class ShiftController extends Controller
     public function __construct(
         private ShiftAssignmentService $shiftAssignmentService,
         private ShiftAssignmentValidator $shiftAssignmentValidator,
-        private ShiftOverlapGuard $overlapGuard
+        private ShiftOverlapGuard $overlapGuard,
+        private ShiftChangeRecorder $changeRecorder,
+        private ShiftChangeGuard $changeGuard
     ) {
+    }
+
+    /**
+     * Shift change log for assignShift(): its three paths (main / set /
+     * additional) each commit on their own, so the "before" snapshot is taken
+     * once up front and written by flushChangeLog() right before each commit.
+     */
+    private ?array $pendingChangeLog = null;
+
+    private function startChangeLog(int $tenantId, array $userIds, string $from, string $to, array $context): void
+    {
+        $this->pendingChangeLog = [$tenantId, $userIds, $from, $to, $context, $this->changeRecorder->snapshot($tenantId, $userIds, $from, $to)];
+    }
+
+    private function flushChangeLog(): void
+    {
+        if (! $this->pendingChangeLog) {
+            return;
+        }
+        [$tenantId, $userIds, $from, $to, $context, $before] = $this->pendingChangeLog;
+        $this->pendingChangeLog = null;
+        $this->changeRecorder->record($tenantId, $before, $this->changeRecorder->snapshot($tenantId, $userIds, $from, $to), $context);
+        $this->notifyRosterChange($tenantId);
+    }
+
+    /**
+     * Tell each affected employee once about the changes logged so far in
+     * this request (sent after commit; nothing is sent on rollback).
+     */
+    private function notifyRosterChange(int $tenantId): void
+    {
+        $rows = $this->changeRecorder->lastRows;
+        $this->changeRecorder->lastRows = [];
+        app(\App\Services\Shift\ShiftNotificationService::class)->rosterChanged($tenantId, $rows, Auth::id());
     }
 
     /**
@@ -387,7 +426,7 @@ class ShiftController extends Controller
 
             // Bulk maps — every shift a user works on a date (primary first,
             // then additional shifts by start time).
-            $assignments = UserShift::with('shift')
+            $assignments = UserShift::with(['shift', 'shiftAssignment:id,type,is_override,source,shift_request_id', 'shiftAssignment.shiftRequest:id,request_no'])
                 ->where('tenant_id', $tenantId)
                 ->whereIn('user_id', $userIds)
                 ->whereIn('date', $dateStrings)
@@ -429,6 +468,10 @@ class ShiftController extends Controller
                             'end' => $row->shift->end_time,
                             'shift_id' => $row->shift_id,
                             'status' => $row->status,
+                            // One-day exception: roster day edit, swap or approved change request.
+                            'changed' => $row->shiftAssignment?->is_override
+                                ? ['source' => $row->shiftAssignment->source, 'request_no' => $row->shiftAssignment->shiftRequest?->request_no]
+                                : null,
                             // 2nd+ shifts the same day (multi-shift).
                             'extra' => $dayRows->slice(1)->map(fn ($x) => [
                                 'name' => $x->shift->name,
@@ -461,7 +504,13 @@ class ShiftController extends Controller
 
             $weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+            // Swap / change modals: employees the viewer may change (a manager: own reportees).
+            $manageableUsers = Auth::user()->role === 'manager'
+                ? User::where('tenant_id', $tenantId)->where('status', 1)->managedBy(Auth::id())->orderBy('name')->get(['id', 'name', 'employee_id'])
+                : $allUsers;
+
             return view('client.shift.roster', [
+                'manageableUsers' => $manageableUsers,
                 'users' => $users,
                 'dates' => $dates,
                 'view' => $view,
@@ -658,6 +707,11 @@ class ShiftController extends Controller
             // rather than pushing an empty string all the way to the DB.
             $weekOffType = $request->week_off_type ?: null;
 
+            $logTo = $type === 'permanent'
+                ? max($startDate->toDateString(), Carbon::today()->addDays(ShiftMaterializer::PERMANENT_HORIZON_DAYS)->toDateString())
+                : $endDate->toDateString();
+            $this->startChangeLog((int) $tenantId, array_map('intval', $userIds), $startDate->toDateString(), $logTo, ['source' => 'roster_assign']);
+
             if (count($shiftIds) > 1) {
                 return $this->assignShiftSet($request, $userIds, $shiftIds, $type, $startDate, $endDate, (int) $tenantId, $weekOffType);
             }
@@ -675,6 +729,7 @@ class ShiftController extends Controller
                 'superseded' => $supersededCount,
             ] = $this->assignMainShift($request, $userIds, $shift, $type, $startDate, $endDate, (int) $tenantId, $weekOffType);
 
+            $this->flushChangeLog();
             DB::commit();
 
             if ($type === 'permanent') {
@@ -866,6 +921,7 @@ class ShiftController extends Controller
             }
         }
 
+        $this->flushChangeLog();
         DB::commit();
 
         $parts = [];
@@ -962,6 +1018,7 @@ class ShiftController extends Controller
             $assigned += $result['materialized']['assigned'];
         }
 
+        $this->flushChangeLog();
         DB::commit();
 
         $message = "Additional shift {$shift->name} added to {$assigned} day(s) across " . count($userIds) . ' employee(s). Their main shift is unchanged.';
@@ -1094,7 +1151,9 @@ class ShiftController extends Controller
             'user_shift_id' => 'required|exists:user_shifts,id',
             'shift_id' => 'required|exists:shifts,id',
             'status' => 'nullable|in:upcoming,ongoing,complete',
-            'reason' => 'nullable|string|max:500'
+            'reason' => 'required|string|max:500'
+        ], [
+            'reason.required' => 'Please enter the reason for changing this shift.',
         ]);
 
         if ($validator->fails()) {
@@ -1108,6 +1167,11 @@ class ShiftController extends Controller
             DB::beginTransaction();
 
             $userShift = UserShift::find($request->user_shift_id);
+            if (! $userShift) {
+                DB::rollBack();
+
+                return response()->json(['status' => false, 'message' => 'Shift assignment not found'], 404);
+            }
 
             if ($error = $this->overlapErrorFor($userShift, (int) $request->shift_id)) {
                 DB::rollBack();
@@ -1115,13 +1179,16 @@ class ShiftController extends Controller
                 return response()->json(['status' => false, 'message' => $error], 422);
             }
 
-            $userShift->shift_id = $request->shift_id;
+            $date = Carbon::parse($userShift->date)->toDateString();
+            if ((int) $userShift->shift_id !== (int) $request->shift_id
+                && ($error = $this->changeGuard->dateError((int) $userShift->tenant_id, (int) $userShift->user_id, $date, true))) {
+                DB::rollBack();
 
-            if ($request->has('status') && $request->status !== '') {
-                $userShift->status = $request->status;
+                return response()->json(['status' => false, 'message' => $error], 422);
             }
 
-            $userShift->save();
+            $userShift = $this->editDay($userShift, (int) $request->shift_id, $request->filled('status') ? $request->status : null, $request->reason, 'roster_edit');
+            $this->notifyRosterChange((int) $userShift->tenant_id);
 
             DB::commit();
 
@@ -1164,9 +1231,17 @@ class ShiftController extends Controller
         DB::beginTransaction();
 
         try {
-            $deleted = UserShift::whereIn('user_id', $request->user_ids)
-                ->whereBetween('date', [$request->start_date, $request->end_date])
-                ->delete();
+            $deleted = $this->changeRecorder->track(
+                (int) Auth::user()->tenant_id,
+                array_map('intval', $request->user_ids),
+                Carbon::parse($request->start_date)->toDateString(),
+                Carbon::parse($request->end_date)->toDateString(),
+                ['source' => 'roster_delete', 'reason' => $request->reason],
+                fn () => UserShift::whereIn('user_id', $request->user_ids)
+                    ->whereBetween('date', [$request->start_date, $request->end_date])
+                    ->delete()
+            );
+            $this->notifyRosterChange((int) Auth::user()->tenant_id);
 
             DB::commit();
 
@@ -1198,7 +1273,7 @@ class ShiftController extends Controller
                 'user_id' => 'nullable|exists:users,id',
                 'shift_id' => 'nullable|exists:shifts,id',
                 'status' => 'nullable|in:upcoming,ongoing,complete',
-                'type' => 'nullable|in:permanent,flexible',
+                'type' => 'nullable|in:permanent,flexible,rotating',
                 'search' => 'nullable|string|max:100'
             ]);
 
@@ -1288,7 +1363,8 @@ class ShiftController extends Controller
             'user_shifts' => 'required|array',
             'user_shifts.*.id' => 'required|exists:user_shifts,id',
             'user_shifts.*.shift_id' => 'required|exists:shifts,id',
-            'user_shifts.*.status' => 'required|in:upcoming,ongoing,complete'
+            'user_shifts.*.status' => 'required|in:upcoming,ongoing,complete',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -1309,12 +1385,16 @@ class ShiftController extends Controller
 
                     return response()->json(['status' => false, 'message' => $error], 422);
                 }
-                $userShift->update([
-                    'shift_id' => $item['shift_id'],
-                    'status' => $item['status']
-                ]);
+                if ((int) $userShift->shift_id !== (int) $item['shift_id']
+                    && ($error = $this->changeGuard->dateError((int) $userShift->tenant_id, (int) $userShift->user_id, Carbon::parse($userShift->date)->toDateString(), true, optional($userShift->user)->name))) {
+                    DB::rollBack();
+
+                    return response()->json(['status' => false, 'message' => $error], 422);
+                }
+                $this->editDay($userShift, (int) $item['shift_id'], $item['status'], $request->reason, 'bulk_edit');
                 $updated++;
             }
+            $this->notifyRosterChange((int) Auth::user()->tenant_id);
 
             DB::commit();
 
@@ -1428,6 +1508,9 @@ class ShiftController extends Controller
             $assigned = 0;
             $skipped = 0;
 
+            $logDates = collect($request->dates)->map(fn ($d) => Carbon::parse($d)->toDateString())->sort()->values();
+            $this->startChangeLog((int) $tenantId, array_map('intval', $request->user_ids), $logDates->first(), $logDates->last(), ['source' => 'bulk_assign']);
+
             foreach ($request->user_ids as $userId) {
                 $assignedDates = [];
 
@@ -1497,6 +1580,7 @@ class ShiftController extends Controller
                 }
             }
 
+            $this->flushChangeLog();
             DB::commit();
 
             return response()->json([
@@ -1545,6 +1629,59 @@ class ShiftController extends Controller
     }
 
     /**
+     * AJAX: the shift change log (shift_change_logs) for one employee — one
+     * day (roster cell "History") or a date range (History modal). Who
+     * changed what, when, why, from where, and the request behind it. A
+     * manager only sees their own reportees.
+     */
+    public function changeLog(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'date' => 'nullable|date',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $actor = Auth::user();
+        if ($actor->role === 'manager' && ! User::whereKey($request->user_id)->managedBy($actor->id)->exists()) {
+            return response()->json(['status' => false, 'message' => 'Not one of your team members.'], 403);
+        }
+
+        $logs = \App\Models\ShiftChangeLog::with(['fromShift:id,name,color_code', 'toShift:id,name,color_code', 'actor:id,name', 'shiftRequest:id,request_no'])
+            ->where('user_id', $request->user_id)
+            ->when($request->filled('date'), fn ($q) => $q->whereDate('date', $request->date))
+            ->when($request->filled('from'), fn ($q) => $q->whereDate('date', '>=', $request->from))
+            ->when($request->filled('to'), fn ($q) => $q->whereDate('date', '<=', $request->to))
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => $logs->map(fn ($l) => [
+                'date' => $l->date->format('d M Y'),
+                'from' => $l->fromShift?->name,
+                'to' => $l->toShift?->name,
+                'to_color' => $l->toShift?->color_code,
+                'is_additional' => $l->is_additional,
+                'change_type' => $l->change_type,
+                'source' => $l->sourceLabel(),
+                'reason' => $l->reason,
+                'actor' => $l->actor?->name ?? 'System',
+                'actor_role' => $l->actor_role,
+                'channel' => $l->channel,
+                'request_no' => $l->shiftRequest?->request_no,
+                'shift_request_id' => $l->shift_request_id,
+                'at' => $l->created_at?->format('d M Y, h:i A'),
+            ])->all(),
+        ]);
+    }
+
+    /**
      * AJAX: does this user (or set of users) already have an active Permanent
      * shift? Backs the "this will replace X" notice in the assign modal —
      * called before submit, not a validation gate.
@@ -1564,7 +1701,7 @@ class ShiftController extends Controller
         $conflicts = [];
 
         foreach ($request->user_ids as $userId) {
-            $active = $this->shiftAssignmentValidator->findActivePermanent($tenantId, $userId);
+            $active = $this->shiftAssignmentValidator->findActiveStanding($tenantId, $userId);
 
             if ($active) {
                 $conflicts[] = [
@@ -1594,7 +1731,7 @@ class ShiftController extends Controller
             return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $assignment = ShiftAssignment::where('type', 'permanent')->where('status', 'active')->find($id);
+        $assignment = ShiftAssignment::whereIn('type', ['permanent', 'rotating'])->where('status', 'active')->find($id);
 
         if (!$assignment) {
             return response()->json([
@@ -1606,7 +1743,11 @@ class ShiftController extends Controller
         try {
             $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date) : Carbon::today();
 
-            $this->shiftAssignmentService->endPermanent($assignment, $endDate, Auth::id(), $request->reason);
+            $from = $endDate->copy()->addDay()->toDateString();
+            $to = max($from, Carbon::today()->addDays(ShiftMaterializer::PERMANENT_HORIZON_DAYS)->toDateString());
+            $this->changeRecorder->track((int) $assignment->tenant_id, [(int) $assignment->user_id], $from, $to, ['source' => 'end_permanent', 'reason' => $request->reason],
+                fn () => $this->shiftAssignmentService->endPermanent($assignment, $endDate, Auth::id(), $request->reason));
+            $this->notifyRosterChange((int) $assignment->tenant_id);
 
             return response()->json([
                 'status' => true,
@@ -1637,7 +1778,9 @@ class ShiftController extends Controller
             }
 
             DB::beginTransaction();
-            $userShift->delete();
+            $date = Carbon::parse($userShift->date)->toDateString();
+            $this->changeRecorder->track((int) $userShift->tenant_id, [(int) $userShift->user_id], $date, $date, ['source' => 'roster_delete', 'reason' => request('reason')], fn () => $userShift->delete());
+            $this->notifyRosterChange((int) $userShift->tenant_id);
             DB::commit();
 
             return response()->json([
@@ -1653,6 +1796,38 @@ class ShiftController extends Controller
                 'message' => 'Failed to delete shift assignment'
             ], 500);
         }
+    }
+
+    /**
+     * Change one cached day (roster edit / bulk edit) and log it. A main-shift
+     * change goes through ShiftAssignmentService::applyDayOverride() so it
+     * survives a later rebuild of the cache (it used to be written straight
+     * into user_shifts and was silently lost on the next regenerate). A 2nd+
+     * (additional) shift row, or a status-only edit, is updated in place.
+     * Runs inside the caller's transaction.
+     */
+    private function editDay(UserShift $userShift, int $shiftId, ?string $status, ?string $reason, string $source): UserShift
+    {
+        $tenantId = (int) $userShift->tenant_id;
+        $userId = (int) $userShift->user_id;
+        $date = Carbon::parse($userShift->date)->toDateString();
+
+        return $this->changeRecorder->track($tenantId, [$userId], $date, $date, ['source' => $source, 'reason' => $reason], function () use ($userShift, $shiftId, $status, $reason, $tenantId, $userId, $date) {
+            if ($userShift->is_additional || (int) $userShift->shift_id === $shiftId) {
+                $userShift->shift_id = $shiftId;
+                if ($status) {
+                    $userShift->status = $status;
+                }
+                $userShift->save();
+
+                return $userShift;
+            }
+
+            $this->shiftAssignmentService->applyDayOverride($tenantId, $userId, Carbon::parse($date), $shiftId, (int) Auth::id(), 'day_override', $reason, null, $status);
+
+            return UserShift::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)
+                ->where('date', $date)->where('is_additional', 0)->first() ?? $userShift;
+        });
     }
 
     /**

@@ -121,7 +121,7 @@
                                                 </div>
                                                 <input type="date" name="start_date" id="start_date"
                                                     class="form-control @error('start_date') is-invalid @enderror"
-                                                    value="{{ old('start_date') }}" placeholder="Enter Start Date" required>
+                                                    value="{{ old('start_date', $prefillLeaveDate) }}" placeholder="Enter Start Date" required>
                                             </div>
                                             @error('start_date')
                                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -169,7 +169,7 @@
                                                 </div>
                                                 <input type="date" name="end_date" id="end_date"
                                                     class="form-control @error('end_date') is-invalid @enderror"
-                                                    value="{{ old('end_date') }}" placeholder="Enter End Date" required>
+                                                    value="{{ old('end_date', $prefillLeaveDate) }}" placeholder="Enter End Date" required>
                                             </div>
                                             @error('end_date')
                                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -358,8 +358,11 @@
                 $('#end_session').val('{{ old('end_session') }}');
             @endif
 
-            // Set min date to today
-            const today = new Date().toISOString().split('T')[0];
+            // Set min date to today — or to the past date passed in ?date= (the dashboard's
+            // "Apply Leave" button on an absent day), which the server already accepts.
+            const prefillLeaveDate = @json($prefillLeaveDate);
+            let today = new Date().toISOString().split('T')[0];
+            if (prefillLeaveDate && prefillLeaveDate < today) today = prefillLeaveDate;
             $('#start_date').attr('min', today);
             $('#end_date').attr('min', today);
 

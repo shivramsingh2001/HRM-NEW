@@ -167,6 +167,15 @@ class AttendancePunchService
             if (! $hasOpenSession) {
                 throw new NoOpenPunchSessionException();
             }
+            // A clock-out more than 48 h after the open clock-in (late offline
+            // sync, device replay) would make one day of 100+ hours in every
+            // report — the day has to be corrected by HR instead.
+            if ($latestActive->punched_at->diffInSeconds($input->punchedAt, false) > AttendanceCalculator::MAX_SESSION_SECONDS) {
+                throw new NoOpenPunchSessionException(
+                    'Your open clock-in from ' . $latestActive->punched_at->format('d M Y h:i A')
+                    . ' is more than 48 hours old — ask HR to correct that day (regularization), then clock in again.'
+                );
+            }
         }
 
         $outOfOrder = $latestActive && $input->punchedAt->lt($latestActive->punched_at);

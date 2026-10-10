@@ -90,6 +90,19 @@ class DashboardController extends Controller
             'announcements' => $on('announcements'),
         ];
 
+        // Money / assets / meetings cards: in the plan AND the viewer may open the module
+        // (same pairing as adminPendingApprovals()).
+        $viewer = Auth::user();
+        $rbac = app(RbacService::class);
+        $may = fn (string $module) => $rbac->can($viewer, $module, 'view');
+        $show += [
+            'payroll' => $on('payroll') && $may('payroll'),
+            'loans' => $on('loan_management') && $may('loans'),
+            'overtime' => $on('overtime') && $may('overtime'),
+            'assets' => $on('asset_management') && $may('assets'),
+            'meetings' => $on('meetings') && $may('meetings'),
+        ];
+
         // Employees (headcount is "now"; joinings follow the period)
         $activeEmployees = User::where('status', 1)->where('role', '!=', 'admin')->count();
         $inactiveEmployees = User::where('status', 0)->where('role', '!=', 'admin')->count();
@@ -161,6 +174,12 @@ class DashboardController extends Controller
             'absent_today' => $attendance['absent'],
             'on_leave_today' => $attendance['on_leave'],
             'pending_approvals' => $this->adminPendingApprovals($on),
+            // Payroll / loans / overtime follow the period's month (this month when no filter); assets / meetings are "now".
+            'payroll_snapshot' => $show['payroll'] ? $this->adminPayrollSnapshot(($applied ? $to : $today)->copy()->startOfMonth()) : null,
+            'loan_snapshot' => $show['loans'] ? $this->adminLoanSnapshot(($applied ? $to : $today)->copy()->startOfMonth()) : null,
+            'overtime_snapshot' => $show['overtime'] ? $this->adminOvertimeSnapshot(($applied ? $to : $today)->copy()->startOfMonth()) : null,
+            'asset_snapshot' => $show['assets'] ? $this->adminAssetSnapshot() : null,
+            'meeting_snapshot' => $show['meetings'] ? $this->adminMeetingSnapshot() : null,
             'department_distribution' => $departmentDistribution,
             'recent_announcements' => $recentAnnouncements,
             'recent_joinings' => $recentJoinings,
@@ -287,6 +306,30 @@ class DashboardController extends Controller
      * shown as absent. Late / early come from the shift-aware minutes stored on
      * the attendance row. Also returns the per-day series for the chart.
      */
+    /**
+     * Dashboard bucket for one clocked-in attendance row — the same reading as
+     * TeamController::persistedDayStatus(): a hand-marked row keeps its marked
+     * status, an automatic row its graded effective_status; a row still open
+     * (clocked in, no clock-out yet) is present.
+     */
+    private function dashboardDayBucket($a): string
+    {
+        if ($a->clock_in && ! $a->clock_out) {
+            return 'present';
+        }
+        $isManual = ($a->attendance_type === 'manual') || ! empty($a->marked_by);
+        $status = $isManual ? $a->attendance_status : ($a->effective_status ?: $a->attendance_status);
+
+        return match ($status) {
+            'half_day', 'first_half_leave', 'second_half_leave' => 'half_day',
+            'absent' => 'absent',
+            'on_leave' => 'on_leave',
+            'holiday' => 'holiday',
+            'weekoff' => 'week_off',
+            default => 'present',
+        };
+    }
+
     private function adminAttendanceBreakdown(Carbon $start, Carbon $end): array
     {
         $today = Carbon::today();
@@ -300,14 +343,17 @@ class DashboardController extends Controller
             ->mapWithKeys(fn ($u) => [(int) $u->id => $u->joined_on ? substr((string) $u->joined_on, 0, 10) : null]);
         $employeeIds = $employees->keys();
 
-        $counts = ['present' => 0, 'on_leave' => 0, 'holiday' => 0, 'week_off' => 0, 'absent' => 0];
+        $counts = ['present' => 0, 'half_day' => 0, 'on_leave' => 0, 'holiday' => 0, 'week_off' => 0, 'absent' => 0];
         $chart = ['present' => [], 'absent' => [], 'days' => [], 'average' => 0, 'totalPresent' => 0, 'totalAbsent' => 0];
         $holidayName = null;
 
         if ($start->lte($lastDay)) {
-            $present = Attendance::whereIn('user_id', $employeeIds)->whereBetween('date', [$from, $to])->whereNotNull('clock_in')
-                ->get(['user_id', 'date'])
-                ->mapWithKeys(fn ($a) => [$a->user_id . '|' . substr((string) $a->date, 0, 10) => true]);
+            // The day's graded status — the same one the Team page, reports and
+            // payroll use (Day Classification, late / early allowance, hand
+            // marking), not just "clocked in".
+            $dayStatus = Attendance::whereIn('user_id', $employeeIds)->whereBetween('date', [$from, $to])->whereNotNull('clock_in')
+                ->get(['user_id', 'date', 'clock_in', 'clock_out', 'attendance_status', 'effective_status', 'attendance_type', 'marked_by'])
+                ->mapWithKeys(fn ($a) => [$a->user_id . '|' . substr((string) $a->date, 0, 10) => $this->dashboardDayBucket($a)]);
 
             $leaves = Leave::where('status', 'approved')->whereIn('user_id', $employeeIds)
                 ->whereDate('start_date', '<=', $to)->whereDate('end_date', '>=', $from)
@@ -328,9 +374,17 @@ class DashboardController extends Controller
                     if ($joinedOn && $joinedOn > $d) {
                         continue; // not employed yet that day
                     }
-                    if (isset($present[$id . '|' . $d])) {
-                        $counts['present']++;
+                    $bucket = $dayStatus[$id . '|' . $d] ?? null;
+                    if ($bucket === 'present' || $bucket === 'half_day') {
+                        $counts[$bucket]++;
                         $dayPresent++;
+                    } elseif ($bucket === 'absent') {
+                        $counts['absent']++;
+                        $dayAbsent++;
+                    } elseif ($bucket === 'on_leave') {
+                        $counts['on_leave']++;
+                    } elseif ($bucket === 'holiday' || $bucket === 'week_off') {
+                        $counts[$bucket]++;
                     } elseif (($l = $leaves->get($id)) && $l->contains(fn ($x) => substr((string) $x->start_date, 0, 10) <= $d && substr((string) $x->end_date, 0, 10) >= $d)) {
                         $counts['on_leave']++;
                     } elseif ($holiday) {
@@ -368,8 +422,9 @@ class DashboardController extends Controller
 
         $chart['totalPresent'] = $counts['present'];
         $chart['totalAbsent'] = $counts['absent'];
-        $workingDays = $counts['present'] + $counts['on_leave'] + $counts['absent'];
-        $rate = $workingDays > 0 ? (int) round($counts['present'] / $workingDays * 100) : 0;
+        // A half day counts as half a present day in the rate.
+        $workingDays = $counts['present'] + $counts['half_day'] + $counts['on_leave'] + $counts['absent'];
+        $rate = $workingDays > 0 ? (int) round(($counts['present'] + 0.5 * $counts['half_day']) / $workingDays * 100) : 0;
         $chart['average'] = $rate;
 
         $inRange = fn () => Attendance::join('users', 'users.id', '=', 'attendances.user_id')
@@ -404,6 +459,131 @@ class DashboardController extends Controller
      * "Needs your action": pending items per module, only for modules the plan
      * includes and the viewer may open (same permission as the list page).
      */
+    /**
+     * Payroll card: payslips of one month by payment status + total net pay.
+     * Payroll usually lags, so a month with no payslips yet falls back to the
+     * latest month that has some (`fell_back`).
+     */
+    private function adminPayrollSnapshot(Carbon $month): array
+    {
+        $key = $month->format('Y-m');
+        $fellBack = false;
+
+        if (! MonthlyPayroll::where('payroll_month', $key)->exists()) {
+            $latest = MonthlyPayroll::max('payroll_month');
+            if (! $latest) {
+                return ['has' => false, 'month_label' => $month->format('M Y')];
+            }
+            $key = (string) $latest;
+            $fellBack = true;
+        }
+
+        $rows = MonthlyPayroll::where('payroll_month', $key)
+            ->selectRaw('payment_status, COUNT(*) as slips, SUM(net_payable) as total')
+            ->groupBy('payment_status')
+            ->get()
+            ->toBase() // plain collection: except() below is by status key, not by model id
+            ->keyBy('payment_status');
+        $slips = fn (string $status) => (int) ($rows[$status]->slips ?? 0);
+        $live = $rows->except('cancelled');
+
+        $withSlip = MonthlyPayroll::where('payroll_month', $key)->where('payment_status', '!=', 'cancelled')
+            ->distinct()->count('user_id');
+        $activeEmployees = User::where('status', 1)->where('role', '!=', 'admin')->count();
+
+        return [
+            'has' => true,
+            'fell_back' => $fellBack,
+            'month_label' => Carbon::parse(strlen($key) === 7 ? $key . '-01' : $key)->format('M Y'),
+            'net' => (float) $live->sum('total'),
+            'pending' => $slips('pending'),
+            'processed' => $slips('processed'),
+            'paid' => $slips('paid'),
+            'without' => max(0, $activeEmployees - $withSlip),
+        ];
+    }
+
+    /** Loans card: what is still owed, salary advances recovered from this month's salary, requests waiting. */
+    private function adminLoanSnapshot(Carbon $month): array
+    {
+        $active = \App\Models\Loan::where('status', 'active');
+        $advances = \App\Models\Loan::where('loan_kind', 'salary_advance')
+            ->where('advance_month', $month->format('Y-m'))
+            ->whereIn('status', ['approved', 'active']);
+
+        return [
+            'month_label' => $month->format('M Y'),
+            'active_count' => (clone $active)->count(),
+            'outstanding' => (float) (clone $active)->sum('remaining_amount'),
+            'advance_count' => (clone $advances)->count(),
+            'advance_amount' => (float) (clone $advances)->sum('amount'),
+            'pending' => \App\Models\Loan::where('status', 'pending')->count(),
+        ];
+    }
+
+    /** Overtime card: approved hours and pending requests in one month, and who did the most. */
+    private function adminOvertimeSnapshot(Carbon $month): array
+    {
+        $between = [$month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString()];
+        $hours = 'COALESCE(overtime_requests.approved_hours, overtime_requests.overtime_hours)';
+
+        $top = \App\Models\OvertimeRequest::join('users', 'users.id', '=', 'overtime_requests.user_id')
+            ->where('overtime_requests.status', 'approved')
+            ->whereBetween('overtime_requests.date', $between)
+            ->groupBy('users.id', 'users.name', 'users.employee_id')
+            ->selectRaw("users.id, users.name, users.employee_id, SUM({$hours}) as hours")
+            ->orderByDesc('hours')
+            ->limit(3)
+            ->get();
+
+        return [
+            'month_label' => $month->format('M Y'),
+            'approved_hours' => (float) \App\Models\OvertimeRequest::where('status', 'approved')
+                ->whereBetween('date', $between)->sum(DB::raw($hours)),
+            'approved_count' => \App\Models\OvertimeRequest::where('status', 'approved')->whereBetween('date', $between)->count(),
+            'pending' => \App\Models\OvertimeRequest::where('status', 'pending')->whereBetween('date', $between)->count(),
+            'top' => $top,
+        ];
+    }
+
+    /** Assets card: how many assets are in each state right now. */
+    private function adminAssetSnapshot(): array
+    {
+        $byStatus = \App\Models\Asset::selectRaw('status, COUNT(*) as c')->groupBy('status')->pluck('c', 'status');
+        $n = fn (string ...$statuses) => (int) collect($statuses)->sum(fn ($s) => $byStatus[$s] ?? 0);
+
+        return [
+            'total' => (int) $byStatus->except(['retired', 'disposed'])->sum(),
+            'assigned' => $n('assigned'),
+            'available' => $n('available'),
+            'pending_acceptance' => $n('pending_acceptance'),
+            'in_repair' => $n('in_repair'),
+            'damaged_lost' => $n('damaged', 'lost'),
+        ];
+    }
+
+    /** Meetings card: today's meetings (or the next few), and completed meetings whose minutes are not finalized. */
+    private function adminMeetingSnapshot(): array
+    {
+        $today = Carbon::today()->toDateString();
+        $columns = ['id', 'title', 'meeting_date', 'start_time', 'end_time', 'meeting_type', 'status'];
+
+        $todays = \App\Models\Meeting::whereDate('meeting_date', $today)->where('status', '!=', 'cancelled')
+            ->orderBy('start_time')->limit(5)->get($columns);
+        $upcoming = $todays->isEmpty()
+            ? \App\Models\Meeting::whereDate('meeting_date', '>', $today)->where('status', 'scheduled')
+                ->orderBy('meeting_date')->orderBy('start_time')->limit(3)->get($columns)
+            : collect();
+
+        return [
+            'today' => $todays,
+            'upcoming' => $upcoming,
+            'today_count' => \App\Models\Meeting::whereDate('meeting_date', $today)->where('status', '!=', 'cancelled')->count(),
+            'minutes_pending' => \App\Models\Meeting::where('status', 'completed')
+                ->where(fn ($q) => $q->whereNull('mom_status')->orWhere('mom_status', '!=', 'finalized'))->count(),
+        ];
+    }
+
     private function adminPendingApprovals(callable $on): array
     {
         $user = Auth::user();
@@ -702,6 +882,10 @@ class DashboardController extends Controller
             ->orderBy('users.name')
             ->get();
 
+        // Photos for the employee cells of the Recent Team Leaves / WFH / Regularizations cards
+        // (all team ids, so an inactive member's old request still gets their photo).
+        $teamProfileImages = UserBasicDetail::whereIn('user_id', $teamIds)->pluck('profile_image', 'user_id');
+
         // Recent team leaves
         $recentTeamLeaves = Leave::leftJoin('users', 'leaves.user_id', '=', 'users.id')
             ->leftJoin('leave_types', 'leaves.leave_type', '=', 'leave_types.id')
@@ -898,6 +1082,7 @@ class DashboardController extends Controller
             'recent_team_overtime' => $recentTeamOvertime,
             'recent_team_requests' => $recentTeamRequests,
             'recent_team_regularizations' => $recentTeamRegularizations,
+            'team_profile_images' => $teamProfileImages,
             'team_kpi_avg' => $teamKpiAvg,
             'team_top_performer' => $teamTopPerformer,
             'upcoming_holidays' => $upcomingHolidays,
@@ -1140,7 +1325,13 @@ class DashboardController extends Controller
         // Calculate absent days (working days - present - leave days)
         $absentDays = $workingDays - $monthlyAttendance - $leaveDays;
 
-        // ============ ATTENDANCE OVERVIEW TREND (cumulative Present/Absent/Leave, this month so far) ============
+        // ============ ATTENDANCE ATTENTION (this month's days that need an action) ============
+        // Past working days of this month (today excluded — the day is still running):
+        //  - no clock-in and no approved leave  -> Absent      (Regularize / Apply Leave)
+        //  - clocked in, never clocked out      -> Missed clock-out (Regularize)
+        //  - marked half day / late             -> Half Day / Late  (Regularize, + Apply Leave for half day)
+        // A day already covered by a pending leave or pending regularization shows that
+        // instead of the buttons. Newest first; the card lists up to 5.
         $monthAttendanceRows = Attendance::where('user_id', $user->id)
             ->whereMonth('date', $month->month)
             ->whereYear('date', $month->year)
@@ -1148,60 +1339,79 @@ class DashboardController extends Controller
             ->get()
             ->keyBy(fn($a) => Carbon::parse($a->date)->format('Y-m-d'));
 
-        $attendanceTrendLabels = [];
-        $attendanceTrendPresent = [];
-        $attendanceTrendAbsent = [];
-        $attendanceTrendLeave = [];
-        $cumPresent = 0;
-        $cumAbsent = 0;
-        $cumLeave = 0;
-        $trendDate = $startOfMonth->copy();
-        while ($trendDate <= $today) {
-            $dateString = $trendDate->format('Y-m-d');
-            $dayName = $trendDate->format('l');
+        $pendingLeaves = Leave::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->where('start_date', '<=', $today->format('Y-m-d'))
+            ->whereRaw('COALESCE(end_date, start_date) >= ?', [$startOfMonth->format('Y-m-d')])
+            ->get(['start_date', 'end_date']);
 
-            $isHolidayDay = false;
+        $pendingRegularizationDates = AttendanceRegularization::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->whereBetween('date', [$startOfMonth->format('Y-m-d'), $today->format('Y-m-d')])
+            ->pluck('date')
+            ->map(fn($d) => Carbon::parse($d)->format('Y-m-d'))
+            ->flip();
+
+        $attentionItems = [];
+        $attentionDate = $today->copy()->subDay();
+        while ($attentionDate >= $startOfMonth) {
+            $dateString = $attentionDate->format('Y-m-d');
+            $dayName = $attentionDate->format('l');
+
+            $isOffDay = false;
             foreach ($holidays as $holiday) {
-                if ($trendDate->between($holiday->start_date, $holiday->end_date)) {
-                    $isHolidayDay = true;
+                if ($attentionDate->between($holiday->start_date, $holiday->end_date)) {
+                    $isOffDay = true;
                     break;
                 }
             }
-
-            $isWeekoffDay = false;
-            foreach ($weekoffs as $weekoff) {
-                if ($weekoff->off_type == 'date_based' && $trendDate->between($weekoff->start_date, $weekoff->end_date)) {
-                    $isWeekoffDay = true;
-                    break;
-                } elseif ($weekoff->off_type == 'day_based' && $weekoff->day_name == $dayName) {
-                    $isWeekoffDay = true;
+            foreach ($isOffDay ? [] : $weekoffs as $weekoff) {
+                if (($weekoff->off_type == 'date_based' && $attentionDate->between($weekoff->start_date, $weekoff->end_date))
+                    || ($weekoff->off_type == 'day_based' && $weekoff->day_name == $dayName)) {
+                    $isOffDay = true;
                     break;
                 }
             }
 
             $isLeaveDay = false;
             foreach ($approvedLeaves as $leave) {
-                if ($trendDate->between($leave->start_date, $leave->end_date)) {
+                if ($attentionDate->between($leave->start_date, $leave->end_date ?? $leave->start_date)) {
                     $isLeaveDay = true;
                     break;
                 }
             }
 
-            if ($monthAttendanceRows->has($dateString)) {
-                $cumPresent++;
-            } elseif ($isLeaveDay) {
-                $cumLeave++;
-            } elseif (!$isHolidayDay && !$isWeekoffDay) {
-                $cumAbsent++;
+            $row = $monthAttendanceRows->get($dateString);
+            $issue = null;
+            if ($row) {
+                if (!$row->clock_out) {
+                    $issue = ['status' => 'Missed clock-out', 'regularize' => true, 'leave' => false];
+                } elseif ($row->attendance_status === 'half_day') {
+                    $issue = ['status' => 'Half day', 'regularize' => true, 'leave' => true];
+                } elseif ($row->attendance_status === 'late') {
+                    $issue = ['status' => 'Late check-in', 'regularize' => true, 'leave' => false];
+                }
+            } elseif (!$isOffDay && !$isLeaveDay) {
+                $issue = ['status' => 'Absent', 'regularize' => true, 'leave' => true];
             }
 
-            $attendanceTrendLabels[] = $trendDate->day;
-            $attendanceTrendPresent[] = $cumPresent;
-            $attendanceTrendAbsent[] = $cumAbsent;
-            $attendanceTrendLeave[] = $cumLeave;
+            if ($issue) {
+                $issue['date'] = $dateString;
+                $issue['pending'] = null;
+                if (isset($pendingRegularizationDates[$dateString])) {
+                    $issue['pending'] = 'Regularization pending';
+                } elseif ($issue['leave'] && $pendingLeaves->contains(
+                    fn($l) => $attentionDate->between($l->start_date, $l->end_date ?? $l->start_date)
+                )) {
+                    $issue['pending'] = 'Leave pending';
+                }
+                $attentionItems[] = $issue;
+            }
 
-            $trendDate->addDay();
+            $attentionDate->subDay();
         }
+        $attentionTotal = count($attentionItems);
+        $attentionItems = array_slice($attentionItems, 0, 5);
 
         // Check if today is a holiday
         $isTodayHoliday = false;
@@ -1593,10 +1803,8 @@ class DashboardController extends Controller
             'pending_leave_count' => $pendingLeaveCount,
             'pending_approvals_count' => $pendingApprovalsCount,
             'payroll_breakdown' => $payrollBreakdown,
-            'attendance_trend_labels' => $attendanceTrendLabels,
-            'attendance_trend_present' => $attendanceTrendPresent,
-            'attendance_trend_absent' => $attendanceTrendAbsent,
-            'attendance_trend_leave' => $attendanceTrendLeave,
+            'attendance_attention' => $attentionItems,
+            'attendance_attention_total' => $attentionTotal,
             'calendar_status_map' => $calendarStatusMap,
             'wfh_days_this_month' => $wfhDaysThisMonth,
             'travel_days_this_month' => $travelDaysThisMonth,

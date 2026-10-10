@@ -19,25 +19,18 @@ class EarlyLeavingPolicySettingsController extends Controller
     public function update(UpdateEarlyLeavingPolicySettingsRequest $request, PolicyResolver $resolver)
     {
         $tenantId = (int) Auth::user()->tenant_id;
-        $effectiveFrom = now()->format('Y-m-d');
-        $current = $resolver->forTenantDate($tenantId, $effectiveFrom);
         $data = $request->validated();
 
-        AttendancePolicy::updateOrCreate(
-            ['tenant_id' => $tenantId, 'effective_from' => $effectiveFrom],
-            array_merge($current->toPersistableArray(), [
+        // Applies from today (or the chosen "Apply from" day) — saved days are re-graded at once.
+        $saved = app(\App\Services\Attendance\AttendancePolicyWriter::class)->save($tenantId, [
                 'monthly_early_allowance' => $data['monthly_early_allowance'],
                 'early_attendance_action' => $data['early_attendance_action'],
                 'early_deduction_enabled' => $data['early_deduction_enabled'],
                 'early_deduction_mode' => $data['early_deduction_mode'] ?? 'custom_multiplier',
                 'early_deduction_amount' => $data['early_deduction_amount'] ?? null,
                 'early_deduction_multiplier' => $data['early_deduction_multiplier'] ?? 1.00,
-                'created_by' => Auth::id(),
-            ])
-        );
+            ], $data['apply_from'] ?? null, Auth::id());
 
-        $resolver->forget();
-
-        return back()->with('success', 'Early leaving rules updated.');
+        return back()->with('success', 'Early leaving rules updated' . \App\Services\Attendance\AttendancePolicyWriter::summary($saved));
     }
 }

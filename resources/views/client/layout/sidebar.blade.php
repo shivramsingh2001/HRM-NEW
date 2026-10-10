@@ -108,6 +108,12 @@
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.roster') }}">
                                         Shift Roster</a>
                                 </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.requests.index') }}">
+                                        Shift Requests</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.rotations.index') }}">
+                                        Rotation Patterns</a>
+                                </li>
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.index') }}">
                                         Manage Shifts</a>
                                 </li>
@@ -431,6 +437,29 @@
                     @endif
                 @endfeature
 
+                {{-- Shift swaps / change requests (managers also get the team roster) --}}
+                @if (in_array($role, ['manager', 'employee']) && optional($currentTenant)->custom_shifts_enabled && app(\App\Services\FeatureService::class)->enabledForCurrentTenant('custom_shift'))
+                    @if ($role === 'manager')
+                        <li class="nxl-item nxl-hasmenu">
+                            <a href="#" class="nxl-link">
+                                <span class="nxl-micon"><i class="feather-sunrise"></i></span>
+                                <span class="nxl-mtext">Shifts</span><span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.requests.index') }}">Shift Requests</a></li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.roster') }}">Team Roster</a></li>
+                            </ul>
+                        </li>
+                    @else
+                        <li class="nxl-item">
+                            <a href="{{ route('shift.requests.index') }}" class="nxl-link">
+                                <span class="nxl-micon"><i class="feather-repeat"></i></span>
+                                <span class="nxl-mtext">Shift Requests</span><span class="nxl-arrow"></span>
+                            </a>
+                        </li>
+                    @endif
+                @endif
+
                 @if ((app(\App\Services\FeatureService::class)->enabledForCurrentTenant('task_single') || app(\App\Services\FeatureService::class)->enabledForCurrentTenant('task_group')) && !in_array($role, ['admin']))
                     <li class="nxl-item">
                         <a href="{{ route('task.assigned-to-me') }}" class="nxl-link">
@@ -636,6 +665,12 @@
                             <ul class="nxl-submenu">
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.roster') }}">
                                         Shift Roster</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.requests.index') }}">
+                                        Shift Requests</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.rotations.index') }}">
+                                        Rotation Patterns</a>
                                 </li>
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.index') }}">
                                         Manage Shifts</a>

@@ -29,8 +29,9 @@ class LatePolicyService
      */
     public function recalculateMonth(int $userId, int $tenantId, string $yearMonth): void
     {
-        // Anchor to the policy in force on the 1st of the month so a later-dated
-        // policy change never retroactively re-grades a closed month.
+        // Each day is graded with the policy in force on that day (classifyRows),
+        // so a policy change applies from its effective date onward and never
+        // re-grades days before it. The month policy is only a fallback.
         $policy = $this->policies->forUserMonth($tenantId, $userId, $yearMonth);
         $rows = $this->monthRows($tenantId, $userId, $yearMonth);
 
@@ -47,7 +48,11 @@ class LatePolicyService
      * payroll deduction and the attendance-status action stay fully
      * independent by construction.
      *
-     * @return array{lateSeen:int, earlySeen:int, lateExcess:int, earlyExcess:int}
+     * Each excess day is judged — and later priced by the payroll deduction —
+     * with the policy in force on that day (`lateExcessDays` / `earlyExcessDays`
+     * hold those day policies), so a rule change mid-month applies from its date.
+     *
+     * @return array{lateSeen:int, earlySeen:int, lateExcess:int, earlyExcess:int, lateExcessDays:array, earlyExcessDays:array}
      */
     public function excessCounts(int $userId, int $tenantId, string $yearMonth): array
     {
@@ -57,25 +62,34 @@ class LatePolicyService
 
         $lateSeen = 0;
         $earlySeen = 0;
-        $lateExcess = 0;
-        $earlyExcess = 0;
+        $lateExcessDays = [];
+        $earlyExcessDays = [];
 
         foreach ($classified as $c) {
+            $day = $c['policy'];
+            $date = substr((string) $c['row']->date, 0, 10);
             if ($c['is_late']) {
                 $lateSeen++;
-                if ($lateSeen > $policy->monthlyLateAllowance) {
-                    $lateExcess++;
+                if ($lateSeen > $day->monthlyLateAllowance) {
+                    $lateExcessDays[$date] = $day;
                 }
             }
             if ($c['is_early']) {
                 $earlySeen++;
-                if ($earlySeen > $policy->monthlyEarlyAllowance) {
-                    $earlyExcess++;
+                if ($earlySeen > $day->monthlyEarlyAllowance) {
+                    $earlyExcessDays[$date] = $day;
                 }
             }
         }
 
-        return compact('lateSeen', 'earlySeen', 'lateExcess', 'earlyExcess');
+        return [
+            'lateSeen' => $lateSeen,
+            'earlySeen' => $earlySeen,
+            'lateExcess' => count($lateExcessDays),
+            'earlyExcess' => count($earlyExcessDays),
+            'lateExcessDays' => $lateExcessDays,
+            'earlyExcessDays' => $earlyExcessDays,
+        ];
     }
 
     /**
@@ -118,14 +132,22 @@ class LatePolicyService
             ->pluck('grace_minutes', 'id');
 
         return $rows->mapWithKeys(function ($row) use ($policy, $shiftGrace) {
-            [$base, $fraction] = $this->baseStatus($row, $policy);
+            // Grading a single day (Day Classification on/off, present / half-day
+            // ratios) follows the policy in force ON that day, so switching Day
+            // Classification off mid-month applies from that date. The monthly
+            // late / early allowance below stays anchored to the month's policy.
+            // Late Arrival / Early Leaving rules (grace, allowance, action,
+            // payroll deduction) likewise come from the day's own policy, so
+            // a change saved on the 9th applies from the 9th — not next month.
+            $dayPolicy = $this->policies->forUserDate((int) $row->tenant_id, (int) $row->user_id, substr((string) $row->date, 0, 10));
+            [$base, $fraction] = $this->baseStatus($row, $dayPolicy);
 
             // A row baseStatus() already resolved to something other than
             // present/late/overtime (manual, leave, holiday, weekoff,
             // absent, half_day) never gets late/early evaluated — matches
             // today's exact pass-through behaviour.
             $isPassthrough = ! in_array($base, ['present', 'late', 'overtime'], true);
-            $grace = $isPassthrough ? null : $policy->graceMinutesFor($shiftGrace[$row->shift_id] ?? null);
+            $grace = $isPassthrough ? null : $dayPolicy->graceMinutesFor($shiftGrace[$row->shift_id] ?? null);
 
             $isLate = ! $isPassthrough && (($base === 'late') || ((int) ($row->late_minutes ?? 0)) > $grace);
             $isEarly = ! $isPassthrough && ((int) ($row->early_departure_minutes ?? 0)) > $grace;
@@ -134,6 +156,7 @@ class LatePolicyService
                 'row' => $row,
                 'base' => $base,
                 'fraction' => $fraction,
+                'policy' => $dayPolicy,
                 'is_late' => $isLate && ! $row->is_regularized,
                 'is_early' => $isEarly && ! $row->is_regularized,
             ]];
@@ -154,6 +177,8 @@ class LatePolicyService
             $effective = $c['base'];
             $fraction = $c['fraction'];
             $note = null;
+            // The day's own rules; the running counts ($lateSeen / $earlySeen) stay monthly.
+            $policy = $c['policy'];
 
             // A regularized row is no longer late/early — it does not
             // consume either allowance and is never downgraded (already
@@ -249,7 +274,7 @@ class LatePolicyService
         }
 
         $seconds = $this->calc->workedSeconds(Carbon::parse($row->clock_in), Carbon::parse($row->clock_out));
-        $seconds = min($seconds, 24 * 3600);
+        $seconds = min($seconds, AttendanceCalculator::MAX_SESSION_SECONDS);
         // Multi-shift day: the primary shift alone decides present/half/absent.
         $seconds = $this->calc->primaryWorkedSeconds($row, $seconds);
         $hours = $seconds / 3600;

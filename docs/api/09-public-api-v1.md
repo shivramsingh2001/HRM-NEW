@@ -235,6 +235,7 @@ curl -G https://vpshrms.shurttech.com/api/v1/attendance/summary \
 | `status` | string | **Yes** | One of: `present`, `absent`, `half_day`, `on_leave`, `first_half_leave`, `second_half_leave`, `holiday`, `weekoff` (`AttendanceStatus::markable()` — a subset of the full status enum; `late`/`early_departure`/`overtime` are computed, not hand-set). |
 | `clock_in` | string (`H:i`) | No | |
 | `clock_out` | string (`H:i`) | No | |
+| `clock_out_next_day` | boolean | No | `true` = `clock_out` is on the day after `date` (e.g. `06:30` → `09:00` next morning = 26.5 h). Added 2026-10-09. |
 | `leave_type_id` | integer | No | Relevant when `status` is a leave kind. |
 | `remarks` | string | No | Max 500 chars. |
 

@@ -214,7 +214,7 @@ class MultiShiftPayrollTest extends TestCase
         $data = ['request_type' => 'both', 'date' => $this->day, 'in_time' => '22:00', 'out_time' => '06:00', 'reason' => 'Forgot to punch out'];
 
         $this->actingAs($this->employee)->postJson(route('attendance-regularization.store'), $data)
-            ->assertStatus(422)->assertJsonPath('errors.out_time.0', 'Out time must be after in time');
+            ->assertStatus(422)->assertJsonPath('errors.out_time.0', fn ($m) => str_starts_with($m, 'Out time must be after in time'));
 
         UserShift::withoutGlobalScopes()->where('user_id', $this->employee->id)->delete();
         $this->onDay($this->shift('Night', '22:00', '06:00'), $this->day);

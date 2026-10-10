@@ -59,6 +59,21 @@ class ShiftController extends Controller
             
             // Combine and format the results
             $allShifts = $this->combineShiftData($data, $startDate, $endDate);
+
+            // A pending swap / change request on a day (mobile shows "request pending").
+            $pending = \App\Models\ShiftRequestItem::query()
+                ->join('shift_requests', 'shift_requests.id', '=', 'shift_request_items.shift_request_id')
+                ->where('shift_request_items.user_id', $user->id)
+                ->whereBetween('shift_request_items.date', [$startDate->toDateString(), $endDate->toDateString()])
+                ->whereIn('shift_requests.status', \App\Models\ShiftRequest::PENDING)
+                ->get(['shift_request_items.date', 'shift_requests.id', 'shift_requests.request_no', 'shift_requests.type', 'shift_requests.status'])
+                ->keyBy(fn ($r) => Carbon::parse($r->date)->toDateString());
+            $allShifts = $allShifts->map(function ($item) use ($pending) {
+                $p = $pending->get($item['date']);
+                $item['pending_request'] = $p ? ['id' => $p->id, 'request_no' => $p->request_no, 'type' => $p->type, 'status' => $p->status] : null;
+
+                return $item;
+            });
             
             // Generate summary statistics
             $summary = $this->generateSummary($allShifts);
@@ -214,7 +229,7 @@ class ShiftController extends Controller
             }
         } else {
             // Get assigned shifts with eager loading
-            $shifts = UserShift::with('shift')
+            $shifts = UserShift::with(['shift', 'shiftAssignment:id,is_override,source,shift_request_id', 'shiftAssignment.shiftRequest:id,request_no'])
                 ->where('user_id', $userId)
                 ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
                 ->orderBy('is_additional')
@@ -241,7 +256,13 @@ class ShiftController extends Controller
                     'end_time' => $endTime,
                     'status' => $userShift->status,
                     'type' => 'Shift',
-                    'color_code' => $userShift->shift->color_code ?? '#3b82f6'
+                    'color_code' => $userShift->shift->color_code ?? '#3b82f6',
+                    // Changed for this day only (swap / approved change request / roster edit).
+                    'changed' => $userShift->shiftAssignment?->is_override ? [
+                        'source' => $userShift->shiftAssignment->source,
+                        'shift_request_id' => $userShift->shiftAssignment->shift_request_id,
+                        'request_no' => $userShift->shiftAssignment->shiftRequest?->request_no,
+                    ] : null,
                 ];
             })->groupBy('date')
                 // Primary shift stays the day's item; 2nd+ shifts ride along.

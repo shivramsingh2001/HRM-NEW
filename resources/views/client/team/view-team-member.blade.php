@@ -1186,6 +1186,13 @@
                                         Clock out only
                                     </label>
                                 </div>
+                                <!-- The clock-out falls on the next calendar day (e.g. 06:30 → 09:00 next morning) -->
+                                <div class="form-check mb-0" title="The employee left the next day — e.g. clock in 06:30, clock out 09:00 the next morning">
+                                    <input class="form-check-input" type="checkbox" name="clock_out_next_day" value="1" id="clockOutNextDay">
+                                    <label class="form-check-label" for="clockOutNextDay" style="font-size: 12.5px;">
+                                        Clock-out is on the next day
+                                    </label>
+                                </div>
                             </div>
                         </div>
 

@@ -43,6 +43,8 @@ class ApprovalController extends Controller
                 'expense' => ['expense_management', 'expenses', fn ($ids) => $this->expenses($tenantId, $ids)],
                 'loan' => ['loan_management', 'loans', fn ($ids) => $this->loans($tenantId, $ids)],
                 'offboarding' => ['offboarding', 'offboarding', fn ($ids) => $this->offboarding($tenantId, $ids)],
+                // Shift swaps / change requests have no RBAC module of their own — attendance approval scope.
+                'shift_request' => ['custom_shift', 'attendance', fn ($ids) => $this->shiftRequests($tenantId, $ids)],
             ];
             if ($request->filled('module')) {
                 if (! isset($modules[$request->module])) {
@@ -92,6 +94,25 @@ class ApprovalController extends Controller
     private function emp($row): array
     {
         return ['id' => $row->user_id, 'name' => $row->employee_name, 'employee_id' => $row->employee_code];
+    }
+
+    private function shiftRequests(int $tenantId, ?array $ids)
+    {
+        $q = DB::table('shift_requests as s')->join('users as u', 'u.id', '=', 's.requester_id')
+            ->leftJoin('users as c', 'c.id', '=', 's.counterpart_id')
+            ->where('s.tenant_id', $tenantId)->where('s.status', 'pending_approval')
+            ->select(['s.id', 's.request_no', 's.type', 's.requester_id as user_id', 'u.name as employee_name', 'u.employee_id as employee_code',
+                'c.name as counterpart_name', 's.reason', 's.expires_at', 's.created_at']);
+        $rows = $this->scoped($q, 's.requester_id', $ids)->orderBy('s.id')->get();
+        $dates = DB::table('shift_request_items')->whereIn('shift_request_id', $rows->pluck('id')->all() ?: [0])
+            ->selectRaw('shift_request_id, MIN(date) as first_date, MAX(date) as last_date')->groupBy('shift_request_id')->get()->keyBy('shift_request_id');
+
+        return $rows->map(fn ($r) => [
+            'id' => $r->id, 'employee' => $this->emp($r), 'request_no' => $r->request_no,
+            'type' => $r->type === 'swap' ? 'Shift swap' : 'Shift change', 'swap_with' => $r->counterpart_name,
+            'from' => $dates[$r->id]->first_date ?? null, 'to' => $dates[$r->id]->last_date ?? null,
+            'reason' => $r->reason, 'decide_by' => $r->expires_at, 'applied_at' => $r->created_at,
+        ]);
     }
 
     private function leaves(int $tenantId, ?array $ids)

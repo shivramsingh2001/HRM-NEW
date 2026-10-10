@@ -39,7 +39,13 @@ class AutoClockOutCommand extends Command
 
     public function handle(): int
     {
+        // --hours is the fallback; each company's own limit (Company Policies →
+        // Multiple Punches, tenants.auto_clockout_hours) wins — so a company with
+        // long duties (06:30 → 09:00 next morning) can let a day run past 24 h.
         $maxHours = max(1, (int) $this->option('hours'));
+        $defaultHours = $maxHours;
+        $companyHours = DB::table('tenants')->pluck('auto_clockout_hours', 'id');
+        $hoursFor = fn ($tenantId) => max(1, (int) ($companyHours[$tenantId] ?? $defaultHours) ?: $defaultHours);
         $isDryRun = (bool) $this->option('dry-run');
         $specificUserId = $this->option('user-id');
         $now = Carbon::now();
@@ -58,10 +64,10 @@ class AutoClockOutCommand extends Command
             ->when($specificUserId, fn ($q) => $q->where('user_id', $specificUserId))
             ->get();
 
-        $due = $records->filter(function ($a) use ($maxHours, $now) {
+        $due = $records->filter(function ($a) use ($hoursFor, $now) {
             try {
                 $clockIn = Carbon::parse($a->clock_in);
-                return $now->getTimestamp() - $clockIn->getTimestamp() >= $maxHours * 3600;
+                return $now->getTimestamp() - $clockIn->getTimestamp() >= $hoursFor($a->tenant_id) * 3600;
             } catch (\Throwable $e) {
                 return false;
             }
@@ -82,6 +88,7 @@ class AutoClockOutCommand extends Command
 
         foreach ($due as $attendance) {
             try {
+                $maxHours = $hoursFor($attendance->tenant_id);
                 // The open session's own clock-in punch (punch pipeline days):
                 // with several sessions/shifts in a day, the cap and the shift
                 // end are measured from the session still open, not the day's

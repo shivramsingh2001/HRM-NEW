@@ -1220,7 +1220,7 @@ class TeamController extends Controller
                     $clockInTime = Carbon::parse($record->clock_in)->format('h:i A');
                 }
                 if ($record->clock_out) {
-                    $clockOutTime = Carbon::parse($record->clock_out)->format('h:i A');
+                    $clockOutTime = clock_out_time($record->clock_out, $record->date ?? $record->clock_in);
                 }
                 if ($record->total_hours) {
                     $totalHours = $record->total_hours;
@@ -1303,7 +1303,7 @@ class TeamController extends Controller
                     'date' => Carbon::parse($record->date)->format('d M, Y'),
                     'day_name' => $record->day_name,
                     'clock_in' => $record->clock_in ? Carbon::parse($record->clock_in)->format('h:i A') : '--:--',
-                    'clock_out' => $record->clock_out ? Carbon::parse($record->clock_out)->format('h:i A') : '--:--',
+                    'clock_out' => clock_out_time($record->clock_out, $record->date ?? $record->clock_in, 'h:i A', '--:--'),
                     'total_hours' => $record->total_hours ? $record->total_hours . 'h' : '--',
                     'day_status' => $record->day_status,
                     'badge_class' => 'badge-' . strtolower(str_replace(' ', '-', $record->day_status))
@@ -2494,7 +2494,7 @@ class TeamController extends Controller
                     : '—';
                 
                 $clockOut = $attendance && $attendance->clock_out 
-                    ? Carbon::parse($attendance->clock_out)->format('h:i A') 
+                    ? clock_out_time($attendance->clock_out, $attendance->date)
                     : '—';
                 
                 $totalHours = $attendance && $attendance->total_hours 
@@ -3230,6 +3230,7 @@ class TeamController extends Controller
                 'clock_in_only' => ! $request->filled('clock_out'),
                 // Present + clock-out only = close the employee's own open clock-in.
                 'clock_out_only' => $request->clockOutOnly(),
+                'clock_out_next_day' => $request->boolean('clock_out_next_day'),
                 'leave_type_id' => $request->input('leave_type_id'),
                 'remarks' => $request->input('remarks'),
             ], $actor);

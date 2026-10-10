@@ -22,13 +22,10 @@ class LatePolicySettingsController extends Controller
     public function update(UpdateLatePolicySettingsRequest $request, PolicyResolver $resolver)
     {
         $tenantId = (int) Auth::user()->tenant_id;
-        $effectiveFrom = now()->format('Y-m-d');
-        $current = $resolver->forTenantDate($tenantId, $effectiveFrom);
         $data = $request->validated();
 
-        AttendancePolicy::updateOrCreate(
-            ['tenant_id' => $tenantId, 'effective_from' => $effectiveFrom],
-            array_merge($current->toPersistableArray(), [
+        // Applies from today (or the chosen "Apply from" day) — saved days are re-graded at once.
+        $saved = app(\App\Services\Attendance\AttendancePolicyWriter::class)->save($tenantId, [
                 'grace_mode' => $data['grace_mode'],
                 'fixed_grace_minutes' => $data['fixed_grace_minutes'] ?? 0,
                 'monthly_late_allowance' => $data['monthly_late_allowance'],
@@ -40,12 +37,8 @@ class LatePolicySettingsController extends Controller
                 'late_deduction_mode' => $data['late_deduction_mode'] ?? 'custom_multiplier',
                 'late_deduction_amount' => $data['late_deduction_amount'] ?? null,
                 'late_deduction_multiplier' => $data['late_deduction_multiplier'] ?? 1.00,
-                'created_by' => Auth::id(),
-            ])
-        );
+            ], $data['apply_from'] ?? null, Auth::id());
 
-        $resolver->forget();
-
-        return back()->with('success', 'Late arrival rules updated.');
+        return back()->with('success', 'Late arrival rules updated' . \App\Services\Attendance\AttendancePolicyWriter::summary($saved));
     }
 }

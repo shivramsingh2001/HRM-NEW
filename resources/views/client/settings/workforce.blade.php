@@ -335,6 +335,10 @@
                                 <span class="info-row__label">Multiple punches</span>
                                 <span class="info-row__value">{{ $tenant->allow_multiple_punches ? 'Enabled' : 'Disabled' }}</span>
                             </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Auto clock-out after</span>
+                                <span class="info-row__value">{{ (int) ($tenant->auto_clockout_hours ?? 15) }} h</span>
+                            </div>
                         </div>
 
                         <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#multiplePunchesModal">
@@ -517,21 +521,20 @@
                         <h5 class="wf-card__title">
                             <i class="feather-activity"></i>
                             Working-time thresholds
-                            <span class="text-muted" style="font-size:11px; font-weight:400;">(advisory)</span>
                         </h5>
                         <p class="wf-card__desc">
-                            Not enforced yet &mdash; reserved for compliance alerts.
+                            Rest and daily-hours limits for shift swaps &amp; changes, and the sandwich-leave rule for payroll.
                         </p>
                     </div>
                     <div class="wf-card__body">
                         <div class="info-list">
                             <div class="info-row">
                                 <span class="info-row__label">Min rest hours</span>
-                                <span class="info-row__value">{{ $policy->minRestHours ?? '—' }}</span>
+                                <span class="info-row__value">{{ $policy->minRestHours ? $policy->minRestHours . ' h' : 'No minimum' }}</span>
                             </div>
                             <div class="info-row">
                                 <span class="info-row__label">Max daily hours</span>
-                                <span class="info-row__value">{{ $policy->maxDailyHours ?? '—' }}</span>
+                                <span class="info-row__value">{{ $policy->maxDailyHours ? $policy->maxDailyHours . ' h' : 'No limit' }}</span>
                             </div>
                             <div class="info-row">
                                 <span class="info-row__label">Sandwich-leave rule</span>
@@ -729,6 +732,50 @@
             </div>
             @endif
             @endfeature
+
+            @if ($showShiftRequests)
+            <div class="col-md-4" id="shift-requests">
+                <div class="wf-card">
+                    <div class="wf-card__head">
+                        <h5 class="wf-card__title">
+                            <i class="feather-repeat"></i>
+                            Shift Requests
+                        </h5>
+                        <p class="wf-card__desc">
+                            Employee shift swaps and shift change requests — who may ask, how early, and who approves.
+                        </p>
+                    </div>
+                    <div class="wf-card__body">
+                        <div class="info-list">
+                            <div class="info-row">
+                                <span class="info-row__label">Swaps / changes</span>
+                                <span class="info-row__value">{{ $shiftRequests->swap_enabled ? 'On' : 'Off' }} / {{ $shiftRequests->change_enabled ? 'On' : 'Off' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Approval</span>
+                                <span class="info-row__value">{{ $shiftRequests->requires_approval ? 'Manager / HR' : 'Not needed' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Notice · rest</span>
+                                <span class="info-row__value" title="Rest comes from Working-time thresholds">{{ $shiftRequests->min_notice_hours }} h · {{ $policy->minRestHours ? rtrim(rtrim(number_format((float) $policy->minRestHours, 2), '0'), '.') . ' h' : 'no minimum' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Limit per month</span>
+                                <span class="info-row__value">{{ $shiftRequests->max_requests_per_month ?: 'No limit' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Swap with</span>
+                                <span class="info-row__value">{{ $shiftRequests->same_department_only ? 'Same department' : 'Anyone' }}{{ $shiftRequests->same_branch_only ? ', same branch' : '' }}</span>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#shiftRequestsModal">
+                            <i class="feather-edit-2"></i> Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
 
     </div>
@@ -852,6 +899,58 @@
             </form>
         </x-ui.modal>
         @endfeature
+
+        {{-- Shift Requests policy --}}
+        @if ($showShiftRequests)
+        <x-ui.modal id="shiftRequestsModal" title="Shift Requests" size="md">
+            <form action="{{ route('shift-request-settings.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+                @foreach ([
+                    'swap_enabled' => ['Employees can swap shifts with a colleague', 'The colleague accepts first, then it goes for approval.'],
+                    'change_enabled' => ['Employees can request a different shift', 'For specific dates, e.g. evening instead of morning.'],
+                    'requires_approval' => ['Needs approval by the reporting manager / HR', 'Off — an accepted swap or a change request is applied at once. A workflow set up in Settings → Approvals ("shift_request") is used when present.'],
+                    'same_department_only' => ['Swap only within the same department', null],
+                    'same_branch_only' => ['Swap only within the same branch', null],
+                    'notify_on_roster_change' => ['Notify employees when their roster changes', 'One message per change (assign, edit, swap) for today and later days.'],
+                ] as $key => [$label, $hint])
+                    <div class="form-check form-switch {{ $loop->first ? '' : 'mt-2' }}">
+                        <input class="form-check-input" type="checkbox" role="switch" id="sr_{{ $key }}" name="{{ $key }}" value="1" @checked($shiftRequests->{$key})>
+                        <label class="form-check-label field-label mb-0" for="sr_{{ $key }}">{{ $label }}</label>
+                    </div>
+                    @if ($hint)<div class="field-hint">{{ $hint }}</div>@endif
+                @endforeach
+
+                <div class="row g-2 mt-2">
+                    <div class="col-6">
+                        <label class="field-label">Minimum notice (hours)</label>
+                        <input type="number" min="0" max="720" class="field-input" name="min_notice_hours" value="{{ old('min_notice_hours', $shiftRequests->min_notice_hours) }}" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Requests per employee per month</label>
+                        <input type="number" min="0" max="100" class="field-input" name="max_requests_per_month" value="{{ old('max_requests_per_month', $shiftRequests->max_requests_per_month) }}" required>
+                        <div class="field-hint">0 = no limit.</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Colleague must answer within (hours)</label>
+                        <input type="number" min="1" max="168" class="field-input" name="peer_response_hours" value="{{ old('peer_response_hours', $shiftRequests->peer_response_hours) }}" required>
+                    </div>
+                </div>
+                <div class="field-hint mt-2">
+                    Minimum rest between shifts and maximum hours a day come from the <strong>Working-time thresholds</strong> card:
+                    an employee request that breaks them is refused; for admin / manager direct changes it is only a warning.
+                    A request not decided before its first shift starts expires automatically.
+                </div>
+                @foreach (['min_notice_hours', 'max_requests_per_month', 'peer_response_hours'] as $f)
+                    @error($f)<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                @endforeach
+
+                <div class="mt-3">
+                    <button type="submit" class="btn-save"><i class="feather-check"></i> Save</button>
+                </div>
+            </form>
+        </x-ui.modal>
+        @endif
 
         {{-- Overtime: switch + mode --}}
         @feature('overtime')
@@ -1015,6 +1114,15 @@
                     time between sessions is treated as a break.
                 </div>
 
+                <label class="field-label mt-3">Auto clock-out after (hours)</label>
+                <input type="number" min="4" max="48" step="1" class="field-input" name="auto_clockout_hours"
+                       value="{{ old('auto_clockout_hours', (int) ($tenant->auto_clockout_hours ?? 15)) }}">
+                <div class="field-hint">
+                    A clock-in left open this long is closed automatically (at the shift end when that is earlier).
+                    Raise it when employees work long duties that end the next morning — e.g. 06:30 → 09:00 next day is 26.5 h, so use 28 or more.
+                </div>
+                @error('auto_clockout_hours')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+
                 <div class="mt-3">
                     <button type="submit" class="btn-save">
                         <i class="feather-check"></i> Save
@@ -1076,6 +1184,8 @@
                     </div>
                 </div>
                 </div>
+
+                @include('client.settings.partials.apply-from')
 
                 <div class="mt-3">
                     <button type="submit" class="btn-save">
@@ -1158,6 +1268,8 @@
                     </div>
                 </div>
 
+                @include('client.settings.partials.apply-from')
+
                 <div class="mt-3">
                     <button type="submit" class="btn-save">
                         <i class="feather-check"></i> Save Late Arrival Rules
@@ -1223,6 +1335,8 @@
                     </div>
                 </div>
 
+                @include('client.settings.partials.apply-from')
+
                 <div class="mt-3">
                     <button type="submit" class="btn-save">
                         <i class="feather-check"></i> Save Early Leaving Rules
@@ -1243,14 +1357,20 @@
                         <input type="number" step="0.5" min="0" max="24" class="field-input"
                                name="min_rest_hours"
                                value="{{ old('min_rest_hours', $policy->minRestHours) }}">
+                        <div class="field-hint">Between two shifts. Empty = no minimum.</div>
                     </div>
                     <div class="col-6">
                         <label class="field-label">Max daily hours</label>
                         <input type="number" step="0.5" min="0" max="24" class="field-input"
                                name="max_daily_hours"
                                value="{{ old('max_daily_hours', $policy->maxDailyHours) }}">
+                        <div class="field-hint">Scheduled shift hours in a day. Empty = no limit.</div>
                     </div>
                     <div class="col-12">
+                        <div class="field-hint">
+                            Checked on every shift swap / change: an employee request that breaks them is refused;
+                            an admin / manager direct swap or change shows a warning.
+                        </div>
                         <div class="form-check form-switch mt-2">
                             <input class="form-check-input" type="checkbox" role="switch"
                                    id="sandwich_leave" name="sandwich_leave" value="1"
@@ -1258,6 +1378,10 @@
                             <label class="form-check-label field-label mb-0" for="sandwich_leave">
                                 Sandwich-leave rule
                             </label>
+                        </div>
+                        <div class="field-hint">
+                            On — a week-off / holiday (or a run of them) is paid only if the employee worked or was on paid
+                            leave on the working day just before or just after it. Applied by both payroll engines.
                         </div>
                     </div>
                 </div>

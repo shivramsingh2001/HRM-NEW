@@ -22,59 +22,16 @@ use App\Traits\AuthorizesByScope;
 class PerformanceController extends Controller
 {
     use AuthorizesByScope;
+    use \App\Http\Controllers\Concerns\FiltersReportEmployees;
 
     /**
      * My Performance Dashboard (Employee self-view)
      */
-    public function myPerformance(Request $request)
+    public function myPerformance(Request $request, PerformanceRollupService $rollup)
     {
-        $user = auth()->user();
-        $month = $request->get('month', now()->subMonth()->format('Y-m'));
-        $reportingMonth = $month . '-01';
-
-        $currentDate = Carbon::parse($month . '-01');
-        $prevMonth = $currentDate->copy()->subMonth()->format('Y-m');
-        $nextMonth = $currentDate->copy()->addMonth()->format('Y-m');
-
-        $currentMonth = now()->format('Y-m');
-        if ($nextMonth > $currentMonth) {
-            $nextMonth = null;
-        }
-
-        $prevReportingMonth = $prevMonth . '-01';
-
-        $kpiScore = EmployeeKpiScore::where('user_id', $user->id)
-            ->where('reporting_month', $reportingMonth)
-            ->first();
-
-        if (!$kpiScore) {
-            $kpiScore = EmployeeKpiScore::where('user_id', $user->id)
-                ->orderBy('reporting_month', 'desc')
-                ->first();
-        }
-
-        $prevKpiScore = EmployeeKpiScore::where('user_id', $user->id)
-            ->where('reporting_month', $prevReportingMonth)
-            ->first();
-        $prevOverallScore = $prevKpiScore->overall_score ?? null;
-
-        $history = EmployeeKpiScore::where('user_id', $user->id)
-            ->orderBy('reporting_month', 'desc')
-            ->take(6)
-            ->get();
-
-        [$dailyPerformance, $weeklyPerformance] = $this->periodBreakdown($user->id, (int) $user->tenant_id, $month);
-
-        return view('client.performance.my-dashboard', compact(
-            'kpiScore',
-            'history',
-            'month',
-            'prevMonth',
-            'nextMonth',
-            'prevOverallScore',
-            'dailyPerformance',
-            'weeklyPerformance'
-        ));
+        // Exactly the Employee Performance Report (individualReport), for the
+        // signed-in employee — one page, one set of numbers for both.
+        return $this->individualReport(auth()->id(), $request, $rollup, true);
     }
 
     /**
@@ -137,7 +94,7 @@ class PerformanceController extends Controller
     /**
      * Individual Employee Report (For HR/Managers)
      */
-    public function individualReport($userId, Request $request, PerformanceRollupService $rollup)
+    public function individualReport($userId, Request $request, PerformanceRollupService $rollup, bool $selfView = false)
     {
         $employee = User::findOrFail($userId);
         $month = $request->get('month', now()->subMonth()->format('Y-m'));
@@ -293,7 +250,8 @@ class PerformanceController extends Controller
             'profile',
             'weights',
             'companyRank',
-            'departmentRank'
+            'departmentRank',
+            'selfView'
         ));
     }
 
@@ -353,7 +311,6 @@ class PerformanceController extends Controller
         }
 
         $month = $request->get('month', now()->subMonth()->format('Y-m'));
-        $departmentId = $request->get('department_id');
         $reportingMonth = $month . '-01';
 
         $currentDate = Carbon::parse($month . '-01');
@@ -369,10 +326,14 @@ class PerformanceController extends Controller
             ->where('reporting_month', $reportingMonth)
             ->where('tenant_id', $user->tenant_id);
 
-        if ($departmentId) {
-            $query->whereHas('user.jobDetails', function ($q) use ($departmentId) {
-                $q->where('department', $departmentId);
-            });
+        // Branch / Department / Designation — same filters (and params) as the reports.
+        $query->whereHas('user', fn ($q) => $this->applyReportEmployeeFiltersToUsers($q, $request));
+
+        if ($search = trim((string) $request->get('search'))) {
+            $query->whereHas('user', fn ($q) => $q->where(fn ($w) => $w
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('employee_id', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")));
         }
 
         if ($request->get('employee_id')) {

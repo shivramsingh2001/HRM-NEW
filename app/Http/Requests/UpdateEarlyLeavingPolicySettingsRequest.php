@@ -15,6 +15,8 @@ class UpdateEarlyLeavingPolicySettingsRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // Optional: make the change count from an earlier day (saved days are re-graded).
+            'apply_from' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:' . now()->subYear()->toDateString()],
             'monthly_early_allowance' => ['required', 'integer', 'min:0', 'max:31'],
             'early_attendance_action' => ['required', 'in:none,half_day,absent'],
             'early_deduction_enabled' => ['nullable', 'boolean'],

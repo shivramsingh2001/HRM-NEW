@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  */
 class ApprovalWorkflowController extends Controller
 {
-    private const TYPES = ['regularization', 'overtime', 'leave', 'manual_attendance', 'offboarding', 'offboarding_termination'];
+    private const TYPES = ['regularization', 'overtime', 'leave', 'manual_attendance', 'offboarding', 'offboarding_termination', 'shift_request'];
 
     public function index()
     {

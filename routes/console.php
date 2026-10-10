@@ -23,6 +23,14 @@ Schedule::command('shift:roll-permanent-horizon')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/shift-roll-permanent-horizon.log'));
 
+// Shift swap / change requests: expire the ones whose colleague didn't answer
+// in time or whose first shift started without a decision.
+Schedule::command('shift-requests:expire')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/shift-requests-expire.log'));
+
 // Alert HR/manager when an employee misses check-in past the grace period.
 // Dedupe is persisted on user_shifts.missed_checkin_notified; FirebaseService
 // degrades gracefully when credentials are absent.

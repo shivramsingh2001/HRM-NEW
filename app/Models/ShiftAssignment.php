@@ -13,8 +13,10 @@ class ShiftAssignment extends Model
 
     protected $casts = [
         'is_additional' => 'boolean',
+        'is_override' => 'boolean',
         'start_date' => 'date',
         'end_date' => 'date',
+        'rotation_anchor_date' => 'date',
         'ended_at' => 'datetime',
         'week_off_days' => 'array',
         'week_off_dates' => 'array',
@@ -46,6 +48,16 @@ class ShiftAssignment extends Model
     public function supersededBy()
     {
         return $this->belongsTo(self::class, 'superseded_by_id');
+    }
+
+    public function shiftRequest()
+    {
+        return $this->belongsTo(ShiftRequest::class, 'shift_request_id');
+    }
+
+    public function rotationPattern()
+    {
+        return $this->belongsTo(ShiftRotationPattern::class, 'rotation_pattern_id');
     }
 
     public function scopeActive($query)

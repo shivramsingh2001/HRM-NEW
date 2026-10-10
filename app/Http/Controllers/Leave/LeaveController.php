@@ -171,6 +171,11 @@ class LeaveController extends Controller
         foreach ($data['leaveTypes'] as $type) {
             $type->available_balance = isset($balances[$type->id]) ? (float) $balances[$type->id]->balance : 0;
         }
+
+        // ?date=YYYY-MM-DD pre-fills the dates (the Employee Dashboard's "Apply Leave" on an absent day).
+        $date = (string) request()->query('date', '');
+        $data['prefillLeaveDate'] = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && strtotime($date) ? $date : null;
+
         return view('client.leave.apply-leave', $data);
     }
 

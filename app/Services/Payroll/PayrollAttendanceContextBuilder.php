@@ -47,7 +47,8 @@ class PayrollAttendanceContextBuilder
                 $dayOverrides,
                 array_flip(['present_days', 'paid_leave_days', 'week_offs', 'holidays'])
             ));
-            $days['payable_days'] = $days['present_days'] + $days['paid_leave_days'] + $days['week_offs'] + $days['holidays'];
+            // A worked holiday / week-off is inside present_days AND holidays / week_offs — paid once.
+            $days['payable_days'] = max(0, $days['present_days'] - ($days['worked_off_day_credit'] ?? 0)) + $days['paid_leave_days'] + $days['week_offs'] + $days['holidays'];
         }
 
         $overtime = $this->approvedOvertimeHours($userId, $tenantId, $start->toDateString(), $end->toDateString());

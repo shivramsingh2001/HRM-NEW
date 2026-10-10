@@ -30,6 +30,7 @@ class AttendanceDomainEvent
         'payroll_revision.decided',
         'payroll_bonus.decided',
         'payroll_run.decided',
+        'shift_request.decided',
         'attendance.month_finalised',
         'attendance.anomaly_detected',
         'field_tracking.seat_assigned',

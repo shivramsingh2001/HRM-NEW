@@ -225,130 +225,133 @@
             font-weight: 600;
         }
 
-        /* FullCalendar */
+        /* FullCalendar — same look as the employee's Attendance page calendar */
         #attendanceCalendar {
             max-width: 100%;
             margin: 0 auto;
             background: white;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid #eef2f7;
         }
 
-        .fc {
-            font-size: 13px;
-        }
+        #attendanceCalendar .fc-toolbar.fc-header-toolbar { margin-bottom: 0 !important; }
 
-        .fc .fc-col-header-cell {
+        #attendanceCalendar .fc-col-header-cell {
             background: #f8fafd;
             border-bottom: 2px solid #eef2f7;
             padding: 8px 0;
         }
 
-        .fc .fc-toolbar {
-            padding: 10px 14px;
-            margin-bottom: 0 !important;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
-            color: white;
-            border-radius: 10px 12px 0 0;
+        #attendanceCalendar .fc-col-header-cell-cushion {
+            color: #4a5568;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-decoration: none;
         }
 
-        .fc .fc-toolbar-title {
-            font-size: 13px !important;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .fc .fc-button {
-            padding: 4px 10px !important;
-            font-size: 11.5px !important;
-            background-color: var(--primary-mid) !important;
-            border-color: var(--primary-mid) !important;
-        }
-
-        .fc .fc-button:hover {
-            background-color: var(--primary-dark) !important;
-            border-color: var(--primary-dark) !important;
-        }
-
-        .fc .fc-day-today {
-            background-color: var(--primary-light) !important;
-        }
-
-        .fc-daygrid-event {
-            border-radius: 4px;
-            border: 1px solid !important;
-            padding: 2px 6px !important;
-            font-size: 11px !important;
-            font-weight: 600;
-            margin: 1px 0;
-        }
-
-        /* Calendar Controls */
-        .calendar-controls {
-            background: #f8fafc;
-            padding: 8px 10px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            margin-bottom: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .calendar-view-options {
-            display: flex;
-            gap: 6px;
-        }
-
-        .calendar-view-btn {
-            padding: 4px 10px;
-            border: 1px solid var(--border);
-            background: white;
-            border-radius: 6px;
-            font-size: 11.5px;
-            font-weight: 500;
-            color: #64748b;
+        #attendanceCalendar .fc-daygrid-day {
+            border: 1px solid #dee2e6;
             transition: all 0.2s ease;
+        }
+
+        #attendanceCalendar .fc-daygrid-day:hover { background: #f9fafb; }
+
+        #attendanceCalendar .fc-daygrid-day.fc-day-today {
+            background: rgba(13, 110, 253, 0.1) !important;
+            position: relative;
+        }
+
+        #attendanceCalendar .fc-daygrid-day.fc-day-today::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 6px;
+            height: 6px;
+            background: #0D6EFD;
+            border-radius: 50%;
+        }
+
+        #attendanceCalendar .fc-daygrid-day-number {
+            color: #2d3748;
+            font-weight: 600;
+            padding: 10px;
+            font-size: 0.9rem;
+            text-decoration: none;
+        }
+
+        #attendanceCalendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+            color: #0D6EFD;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        #attendanceCalendar .fc-event {
+            border: none !important;
+            border-radius: 6px;
+            font-size: 0.6rem;
+            font-weight: 500;
+            padding: 6px 8px;
+            margin: 2px 0;
             cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
 
-        .calendar-view-btn:hover {
-            border-color: var(--primary-mid);
-            color: var(--primary-mid);
+        #attendanceCalendar .fc-daygrid-event-harness {
+            padding: 0px 5px;
         }
 
-        .calendar-view-btn.active {
-            background: var(--primary-mid);
-            border-color: var(--primary-mid);
-            color: white;
+        #attendanceCalendar .fc-event:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
         }
+
+        /* Header row above the calendar: Prev / Next / Today · month · view */
+        .cal-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        .cal-head-month { margin: 0; font-size: 1.15rem; font-weight: 700; color: #0D6EFD; text-transform: uppercase; letter-spacing: 1px; }
+        .cal-head .custom-dropdown .dropdown-toggle {
+            background: white;
+            border: 1px solid #eef2f7;
+            color: #4a5568;
+            font-weight: 400;
+            font-size: 12.5px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .cal-head .custom-dropdown .dropdown-toggle:hover { background: #f9fafb; border-color: #0D6EFD; }
+        .cal-head .custom-dropdown .dropdown-menu { border: 2px solid #eef2f7; border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); margin-top: 8px; }
+        .cal-head .custom-dropdown .dropdown-item { font-size: 12.5px; }
+        .cal-head .custom-dropdown .dropdown-item:hover { background: #0D6EFD; color: white; }
 
         /* Calendar Legend */
         .calendar-legend {
             display: flex;
+            justify-content: center;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 15px;
-            padding: 12px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             font-size: 12px;
-            color: #475569;
+            font-weight: 500;
+            color: #6c757d;
         }
 
         .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
-            border: 1px solid transparent;
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
         }
 
         /* Loading state */
@@ -399,16 +402,8 @@
                 height: 400px;
             }
 
-            .calendar-controls {
-                flex-direction: column;
-            }
-            
-            .calendar-legend {
-                display: flex;
-                flex-direction: column;
-                flex-wrap: wrap;
-                margin-top: 150px;
-            }
+            .cal-head { justify-content: center; }
+            .calendar-legend { gap: 0.75rem 1rem; }
 
         }
     </style>
@@ -661,59 +656,47 @@
                 data-onboard-date="{{ $userCreatedDate ?? date('Y-m-d') }}">
                 <!-- Calendar View -->
                 <div class="attendance-section active" id="calendarView">
-                    <div class="text-muted fs-12 mb-2">
-                        <i class="feather-calendar me-1"></i>
-                        Showing: <span id="currentMonthDisplay">{{ date('F Y', strtotime($selectedMonth)) }}</span>
-                    </div>
-
-                    <!-- Calendar Controls -->
-                    <div class="calendar-controls">
-                        <div class="calendar-view-options">
-                            <button class="calendar-view-btn active" onclick="changeCalendarView('dayGridMonth')">
-                                <i class="feather-grid"></i> Month
+                    <!-- Calendar header: Prev / Next / Today · month · view (same as the employee's Attendance page) -->
+                    <div class="cal-head">
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm cal-nav-btn" onclick="calendarPrev()">
+                                <i class="feather-chevron-left"></i> Prev
                             </button>
-                            <button class="calendar-view-btn" onclick="changeCalendarView('timeGridWeek')">
-                                <i class="feather-calendar"></i> Week
+                            <button type="button" class="btn btn-outline-primary btn-sm cal-nav-btn" onclick="calendarNext()">
+                                Next <i class="feather-chevron-right"></i>
                             </button>
-                            <button class="calendar-view-btn" onclick="changeCalendarView('timeGridDay')">
-                                <i class="feather-sun"></i> Day
+                            <button type="button" class="btn btn-primary btn-sm cal-nav-btn" onclick="calendarToday()">
+                                <i class="feather-clock me-1"></i> Today
                             </button>
-                            <button class="calendar-view-btn" onclick="changeCalendarView('listMonth')">
-                                <i class="feather-list"></i> List
+                        </div>
+                        <h3 class="cal-head-month" id="currentMonthDisplay">{{ date('F Y', strtotime($selectedMonth)) }}</h3>
+                        <div class="custom-dropdown">
+                            <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="feather-grid me-2"></i>
+                                <span id="currentCalendarView">Month View</span>
                             </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="changeCalendarView('dayGridMonth')"><i class="feather-calendar me-2"></i> Month View</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="changeCalendarView('timeGridWeek')"><i class="feather-calendar me-2"></i> Week View</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="changeCalendarView('timeGridDay')"><i class="feather-calendar me-2"></i> Day View</a></li>
+                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="changeCalendarView('listMonth')"><i class="feather-list me-2"></i> List View</a></li>
+                            </ul>
                         </div>
                     </div>
 
                     <!-- FullCalendar Container -->
                     <div id="attendanceCalendar" class="d-block"></div>
 
-                    <!-- Legend -->
+                    <!-- Legend (single-blue theme, as on the Attendance page: only Absent is darker) -->
                     <div class="calendar-legend">
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #0D6EFD; border-color: #0B5ED7;"></div><span>Present</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #0D6EFD; border-color: #1e293b;"></div><span>Absent</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #dbeafe; border-color: #93c5fd;"></div><span>Leave</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #bfdbfe; border-color: #93c5fd;"></div><span>Holiday</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #eff6ff; border-color: #dbeafe;"></div><span>Week Off</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #93c5fd; border-color: #60a5fa;"></div><span>Checked In Only</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #f8fafc; border-color: #cbd5e1;"></div><span>Upcoming</span>
-                        </div>
-                        <!--<div class="legend-item">-->
-                        <!--    <div class="legend-color" style="background: rgba(255,255,255,0.3);"></div><span>Has Tasks</span>-->
-                        <!--</div>-->
+                        @foreach (['Absent' => '#172554', 'Present' => '#0D6EFD', 'Checked In Only' => '#0D6EFD', 'Holiday' => '#0D6EFD', 'Leave' => '#0D6EFD', 'Week Off' => '#0D6EFD', 'Upcoming' => '#0D6EFD'] as $legendLabel => $legendColor)
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: {{ $legendColor }};"></div><span>{{ $legendLabel }}</span>
+                            </div>
+                        @endforeach
                     </div>
+
+
                 </div>
 
                 <!-- Table View -->
@@ -745,7 +728,7 @@
                                         </td>
                                         <td>
                                             @if ($record->clock_out)
-                                                {{ \Carbon\Carbon::parse($record->clock_out)->format('h:i A') }}
+                                                {{ clock_out_time($record->clock_out, $record->date ?? $record->clock_in) }}
                                             @else
                                                 <span class="text-muted">--:--</span>
                                             @endif
@@ -949,6 +932,16 @@
 
         let calendar = null;
 
+        // Same colours as the employee's Attendance page: every status is the
+        // primary blue with white text, only Absent is the dark navy.
+        function calendarEventColor(status) {
+            return String(status || '').toLowerCase() === 'absent' ? '#172554' : '#0D6EFD';
+        }
+
+        function calendarPrev() { if (calendar) calendar.prev(); }
+        function calendarNext() { if (calendar) calendar.next(); }
+        function calendarToday() { if (calendar) calendar.today(); }
+
         function initializeCalendar() {
             if (calendar) {
                 calendar.destroy();
@@ -1046,6 +1039,9 @@
                 }
                 if (record.clock_out) {
                     clockOutTime = moment(record.clock_out).format('hh:mm A');
+                    // Clock-out on a later day than the attendance date (e.g. 06:30 → 09:00 next morning).
+                    const outDays = moment(record.clock_out).startOf('day').diff(moment(record.date || record.clock_in).startOf('day'), 'days');
+                    if (outDays > 0) clockOutTime += ' (+' + outDays + ' day' + (outDays > 1 ? 's' : '') + ')';
                 }
                 if (record.total_hours) {
                     totalHours = record.total_hours;
@@ -1056,9 +1052,9 @@
                     title: title,
                     start: dateStr,
                     allDay: true,
-                    backgroundColor: bgColor,
-                    borderColor: borderColor,
-                    textColor: textColor,
+                    backgroundColor: calendarEventColor(status),
+                    borderColor: calendarEventColor(status),
+                    textColor: '#ffffff',
                     extendedProps: {
                         date: dateStr,
                         day_name: record.day_name,
@@ -1082,11 +1078,8 @@
             calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 initialDate: initialDate,
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: ''
-                },
+                // The page's own header row (Prev / Next / Today · month · view) replaces the toolbar.
+                headerToolbar: { left: '', center: '', right: '' },
                 themeSystem: 'standard',
                 events: events,
                 datesSet: function(info) {
@@ -1131,8 +1124,11 @@
                 },
                 eventDisplay: 'block',
                 dayMaxEvents: 3,
-                height: 'auto',
-                contentHeight: 400
+                height: 580,
+                contentHeight: 'auto',
+                dayCellContent: function(arg) {
+                    return { html: '<div class="fc-daygrid-day-number">' + arg.dayNumberText + '</div>' };
+                }
             });
 
             calendar.render();
@@ -1148,8 +1144,8 @@
         }
 
         function updateCalendarViewButtons(viewType) {
-            $('.calendar-view-btn').removeClass('active');
-            $(`.calendar-view-btn[onclick*="${viewType}"]`).addClass('active');
+            const names = { dayGridMonth: 'Month View', timeGridWeek: 'Week View', timeGridDay: 'Day View', listMonth: 'List View' };
+            $('#currentCalendarView').text(names[viewType] || viewType);
         }
 
         function updateAttendanceStats(selectedMonth, encryptedId) {
@@ -1165,7 +1161,7 @@
                 type: 'GET',
                 data: { month: selectedMonth, _token: '{{ csrf_token() }}' },
                 beforeSend: function() {
-                    $('.fc-prev-button, .fc-next-button, .fc-today-button').prop('disabled', true);
+                    $('.cal-nav-btn').prop('disabled', true);
                 },
                 success: function(response) {
                     if (response.status) {
@@ -1192,7 +1188,7 @@
                     $('#calendarView').removeClass('opacity-50');
                     $('#tableView').removeClass('opacity-50');
                     $('.member-stats-grid').removeClass('opacity-50');
-                    $('.fc-prev-button, .fc-next-button, .fc-today-button').prop('disabled', false);
+                    $('.cal-nav-btn').prop('disabled', false);
                 }
             });
         }
@@ -1261,9 +1257,9 @@
                             title: eventTitle,
                             start: event.start,
                             allDay: true,
-                            backgroundColor: event.bgColor,
-                            borderColor: event.borderColor,
-                            textColor: event.color || '#1a2236',
+                            backgroundColor: calendarEventColor(event.day_status),
+                            borderColor: calendarEventColor(event.day_status),
+                            textColor: '#ffffff',
                             extendedProps: {
                                 date: event.start,
                                 day_name: event.day_status,

@@ -2740,6 +2740,55 @@ class AttendanceReportController extends Controller
     /**
      * Display employee-wise detailed attendance report
      */
+    /**
+     * CSV of the Employee Wise Attendance / Monthly Summary page with the same
+     * filters (month, employee_id, search, department, branch …): one line per
+     * employee per day, then a totals line per employee. Built from the page's
+     * own data (employeeWiseAttendance) so the file always matches the screen.
+     * The routes report.attendance.detailed.export / monthly.summary.export
+     * pointed at this method but it did not exist (every export was a 500).
+     * Hours are H:MM and never wrap at 24 h; a next-day clock-out is marked "(+1 day)".
+     */
+    public function employeeWisExportReport(Request $request)
+    {
+        $page = $this->employeeWiseAttendance($request);
+        if (! $page instanceof \Illuminate\View\View) {
+            return $page; // redirect with an error (no tenant, bad month …)
+        }
+
+        $data = $page->getData();
+        $groups = $data['employee']
+            ? [['employee' => $data['employee'], 'dailyData' => $data['dailyData'], 'summary' => $data['summary']]]
+            : $data['employeeData'];
+        $monthStart = Carbon::parse($data['monthStart']);
+        $filename = 'employee_wise_attendance_' . $data['selectedMonth'] . ($data['employee'] ? '_' . ($data['employee']->employee_id ?: $data['employee']->id) : '') . '.csv';
+
+        return response()->streamDownload(function () use ($groups, $monthStart) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Employee', 'Employee ID', 'Date', 'Day', 'Status', 'In', 'Out', 'Shift From', 'Shift To', 'Working', 'Short Hours', 'OT']);
+            foreach ($groups as $g) {
+                $emp = $g['employee'];
+                foreach ($g['dailyData'] as $day => $d) {
+                    $date = $monthStart->copy()->day((int) $day);
+                    fputcsv($out, [
+                        $emp->name, $emp->employee_id, $date->format('Y-m-d'), $date->format('D'), $d['status'],
+                        $d['in_time'], $d['out_time'], $d['shift_from'], $d['shift_to'], $d['working'], $d['short_hrs'], $d['ot_times'],
+                    ]);
+                }
+                $s = $g['summary'];
+                fputcsv($out, [
+                    $emp->name, $emp->employee_id, 'TOTAL', '',
+                    'P ' . ($s['present'] ?? 0) . ' / A ' . ($s['absent'] ?? 0) . ' / HD ' . ($s['halfday'] ?? 0) . ' / WO ' . ($s['weekoff'] ?? 0) . ' / H ' . ($s['holiday'] ?? 0) . ' / L ' . ($s['paid_days'] ?? 0),
+                    '', '', '', '',
+                    $this->minutesToTime((int) ($s['work_hours'] ?? 0)),
+                    $this->minutesToTime((int) ($s['short_hours'] ?? 0)),
+                    $this->minutesToTime((int) ($s['ot_hours'] ?? 0)),
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     public function employeeWiseAttendance(Request $request)
     {
         try {
@@ -2956,7 +3005,7 @@ class AttendanceReportController extends Controller
 
                     if ($attendance) {
                         $dayData['in_time'] = $attendance->clock_in ? Carbon::parse($attendance->clock_in)->format('h:i A') : '--';
-                        $dayData['out_time'] = $attendance->clock_out ? Carbon::parse($attendance->clock_out)->format('h:i A') : '--';
+                        $dayData['out_time'] = clock_out_time($attendance->clock_out, $attendance->date, 'h:i A', '--');
 
                         if ($attendance->scheduled_shift_start) {
                             $dayData['shift_from'] = Carbon::parse($attendance->scheduled_shift_start)->format('h:i A');

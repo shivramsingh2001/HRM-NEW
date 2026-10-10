@@ -21,7 +21,7 @@ class RegularizationShiftCheck
     /**
      * @return array{user_shift_id: ?int, field: ?string, error: ?string}
      */
-    public function check(int $userId, int $tenantId, string $date, $userShiftId, ?string $inTime, ?string $outTime): array
+    public function check(int $userId, int $tenantId, string $date, $userShiftId, ?string $inTime, ?string $outTime, bool $outNextDay = false): array
     {
         $userShiftId = filled($userShiftId) ? (int) $userShiftId : null;
         $shift = null;
@@ -43,10 +43,11 @@ class RegularizationShiftCheck
             $shift = $this->shifts->forUserDate($userId, $tenantId, $date);
         }
 
-        if (filled($inTime) && filled($outTime)
+        // "Out time is on the next day" ticked: any out time is valid (06:30 → 09:00 next morning).
+        if (filled($inTime) && filled($outTime) && ! $outNextDay
             && ShiftWindow::toMinutes($outTime) <= ShiftWindow::toMinutes($inTime)
             && !($shift && ShiftWindow::isOvernight($shift))) {
-            return ['user_shift_id' => $userShiftId, 'field' => 'out_time', 'error' => 'Out time must be after in time'];
+            return ['user_shift_id' => $userShiftId, 'field' => 'out_time', 'error' => 'Out time must be after in time — tick "Out time is on the next day" if the employee left the next morning.'];
         }
 
         return ['user_shift_id' => $userShiftId, 'field' => null, 'error' => null];

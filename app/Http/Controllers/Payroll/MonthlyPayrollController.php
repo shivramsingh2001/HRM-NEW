@@ -1174,72 +1174,28 @@ class MonthlyPayrollController extends Controller
         // time, with the failure only visible as a per-employee error
         // message an admin could easily miss.
         // ------------------------------------------------------------------
-        $yearMonthForPolicy = Carbon::parse($startDate)->format('Y-m');
-        $sandwichEnabled = app(\App\Services\Attendance\PolicyResolver::class)
-            ->forUserMonth((int) $tenantId, (int) $userId, $yearMonthForPolicy)
-            ->sandwichLeave;
-
-        // 'paid_leave' counts as "worked" for this boundary check — the
-        // sandwich rule is meant to penalize unexplained absence flanking a
-        // weekoff/holiday, not compensated leave the employee was actually
-        // approved and paid for.
-        $workedDates = array_keys(
-            array_filter($allDates, fn($t) => $t === 'present' || $t === 'half_day' || $t === 'paid_leave')
+        // Shared with the dynamic engine (PayrollDaysService) — see
+        // App\Services\Attendance\SandwichRule. Paid leave counts as "worked"
+        // next to a run of days off; the rule is read for the day it applies to.
+        $policies = app(\App\Services\Attendance\PolicyResolver::class);
+        $sandwichEnabled = $policies->forUserDate((int) $tenantId, (int) $userId, Carbon::parse($startDate)->toDateString())->sandwichLeave;
+        $offDayPay = \App\Services\Attendance\SandwichRule::offDayPay(
+            $allDates,
+            fn (string $date) => $policies->forUserDate((int) $tenantId, (int) $userId, $date)->sandwichLeave
         );
-        $workedFlip = array_flip($workedDates);
-     
-        $nonWorkingTypes = ['holiday', 'weekoff'];
-        $groups          = [];
-        $currentGroup    = null;
-        $sortedDates     = array_keys($allDates);
-     
-        foreach ($sortedDates as $date) {
-            $type = $allDates[$date];
-            if (in_array($type, $nonWorkingTypes)) {
-                if ($currentGroup === null) {
-                    $currentGroup = ['dates' => [], 'types' => []];
-                }
-                $currentGroup['dates'][] = $date;
-                $currentGroup['types'][] = $type;
-            } else {
-                if ($currentGroup !== null) {
-                    $groups[]     = $currentGroup;
-                    $currentGroup = null;
-                }
-            }
-        }
-        if ($currentGroup !== null) {
-            $groups[] = $currentGroup;
-        }
-     
+
         $paidHolidayDates = [];
         $paidWeekoffDates = [];
-     
-        foreach ($groups as $group) {
-            $firstDate = $group['dates'][0];
-            $lastDate  = $group['dates'][count($group['dates']) - 1];
-     
-            $prevBoundary = Carbon::parse($firstDate)->subDay()->format('Y-m-d');
-            $nextBoundary = Carbon::parse($lastDate)->addDay()->format('Y-m-d');
-     
-            $prevWorked = isset($workedFlip[$prevBoundary]);
-            $nextWorked = isset($workedFlip[$nextBoundary]);
-     
-            $isPaid = !$sandwichEnabled ? true : ($prevWorked || $nextWorked);
-     
-            if ($isPaid) {
-                foreach ($group['dates'] as $i => $date) {
-                    $group['types'][$i] === 'holiday'
-                        ? $paidHolidayDates[] = $date
-                        : $paidWeekoffDates[] = $date;
-                }
+        foreach ($offDayPay as $date => $paid) {
+            if ($paid) {
+                $allDates[$date] === 'holiday' ? $paidHolidayDates[] = $date : $paidWeekoffDates[] = $date;
             }
         }
-     
+
         Log::channel('daily')->info('Sandwich Rule Result', [
             'user_id'            => $userId,
             'sandwich_enabled'   => $sandwichEnabled,
-            'groups_evaluated'   => count($groups),
+            'groups_evaluated'   => count($offDayPay),
             'paid_holidays'      => count($paidHolidayDates),
             'paid_weekoffs'      => count($paidWeekoffDates),
             'paid_holiday_dates' => $paidHolidayDates,

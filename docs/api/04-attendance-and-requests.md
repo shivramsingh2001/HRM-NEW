@@ -415,6 +415,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track-batch \
 | `request_type` | string | Yes | One of `in_time,out_time,both,full_day,wfh_not_marked,technical_issue`. |
 | `in_time` | string `H:i` | Conditional | Required if `request_type` is `in_time` or `both`. |
 | `out_time` | string `H:i` | Conditional | Required if `request_type` is `out_time` or `both`. Must be after `in_time` — **except** for an overnight (night) shift, where an earlier out time means the next morning (e.g. in `22:00`, out `06:00`). |
+| `out_next_day` | boolean | No | `1` = the out time is on the **day after** `date` (e.g. in `06:30`, out `09:00` the next morning = 26.5 h). With it, any out time is accepted. Default `0`. |
 | `user_shift_id` | integer | No | Added 2026-10-02. Which of the day's shifts the request corrects — a `user_shift_id` from `GET /api/user/attendance/today` → `shifts`. Omit for the main shift. Must be one of the employee's shifts on `date`. |
 | `reason` | string | Yes | Max 500 chars. |
 | `file` | file | No | `jpg,jpeg,png,pdf,doc,docx`, max 2048 KB. |

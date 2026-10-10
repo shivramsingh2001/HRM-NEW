@@ -324,12 +324,18 @@ class ShiftMaterializer
             ->where(function ($q) use ($fromDate) {
                 $q->whereNull('end_date')->orWhere('end_date', '>=', $fromDate->toDateString());
             })
-            ->orderByRaw("FIELD(type, 'permanent', 'flexible')") // permanent first, flexible overwrites second
+            // permanent / rotating first, flexible overwrites second, one-day
+            // overrides (roster day edits, swaps, approved change requests) last.
+            ->orderByRaw("FIELD(type, 'permanent', 'rotating', 'flexible')")
+            ->orderBy('is_override')
+            ->orderBy('id')
             ->get();
 
         foreach ($stillActive as $assignment) {
             if ($assignment->type === 'permanent') {
                 $this->materializePermanentHorizon($assignment, $fromDate->copy(), $horizonEnd->copy());
+            } elseif ($assignment->type === 'rotating') {
+                $this->materializeRotatingHorizon($assignment, $fromDate->copy(), $horizonEnd->copy());
             } else {
                 $rangeStart = $assignment->start_date->gt($fromDate) ? $assignment->start_date->copy() : $fromDate->copy();
                 $rangeEnd = $assignment->end_date && $assignment->end_date->lt($horizonEnd)
@@ -357,7 +363,7 @@ class ShiftMaterializer
         foreach ($tenantIds as $tenantId) {
             $assignments = ShiftAssignment::withoutGlobalScopes()
                 ->where('tenant_id', $tenantId)
-                ->where('type', 'permanent')
+                ->whereIn('type', ['permanent', 'rotating'])
                 ->where('status', 'active')
                 ->get();
 
@@ -369,7 +375,9 @@ class ShiftMaterializer
 
             foreach ($assignments as $assignment) {
                 $totals['assignments']++;
-                $result = $this->materializePermanentHorizon($assignment);
+                $result = $assignment->type === 'rotating'
+                    ? $this->materializeRotatingHorizon($assignment)
+                    : $this->materializePermanentHorizon($assignment);
                 $totals['rows'] += $result['assigned'];
             }
         }
@@ -441,6 +449,225 @@ class ShiftMaterializer
         }
 
         return $result;
+    }
+
+    /**
+     * Rotating pattern (e.g. 7×Morning, 7×Evening, 7×Night, or 4 on / 3 off):
+     * like a Permanent assignment it is open-ended and cached to the rolling
+     * horizon; each day's shift is the pattern step for
+     * (date − rotation_anchor_date) mod cycle. A pattern day off is written as
+     * a one-day date_based week-off tagged with this assignment, so attendance
+     * and payroll treat it as a week-off. Days owned by a Flexible assignment
+     * or a one-day override, and hand-entered week-offs, are left alone.
+     */
+    public function materializeRotatingHorizon(ShiftAssignment $assignment, ?Carbon $from = null, ?Carbon $to = null): array
+    {
+        $today = Carbon::today();
+        $horizonEnd = Carbon::today()->addDays(self::PERMANENT_HORIZON_DAYS);
+        $from ??= $assignment->start_date->gt($today) ? $assignment->start_date->copy() : $today->copy();
+        if ($from->lt($assignment->start_date)) {
+            $from = $assignment->start_date->copy();
+        }
+        if (! $to) {
+            $to = $assignment->end_date && $assignment->end_date->lt($horizonEnd) ? $assignment->end_date->copy() : $horizonEnd->copy();
+        }
+        $result = ['assigned' => 0, 'days_off' => 0, 'skipped_flexible_owned' => 0];
+
+        $pattern = \App\Models\ShiftRotationPattern::withoutGlobalScopes()->with('steps')->find($assignment->rotation_pattern_id);
+        if (! $pattern || $from->gt($to)) {
+            return $result;
+        }
+        $map = $pattern->stepMap();
+        $cycle = count($map);
+        $anchor = ($assignment->rotation_anchor_date ?? $assignment->start_date)->copy();
+        $tenantId = (int) $assignment->tenant_id;
+        $userId = (int) $assignment->user_id;
+
+        $manualWeekoffs = UserWeekoffs::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)
+            ->where('status', 1)->whereNull('shift_assignment_id')->get();
+        $flexible = ShiftAssignment::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)
+            ->where('type', 'flexible')->where('is_additional', 0)->where('status', 'active')
+            ->where('start_date', '<=', $to->toDateString())
+            ->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $from->toDateString()))
+            ->get();
+        $rows = UserShift::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])->where('is_additional', 0)
+            ->get()->keyBy(fn ($r) => substr((string) $r->date, 0, 10));
+        $offRows = UserWeekoffs::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)
+            ->where('shift_assignment_id', $assignment->id)
+            ->whereBetween('start_date', [$from->toDateString(), $to->toDateString()])
+            ->get()->keyBy(fn ($w) => Carbon::parse($w->start_date)->toDateString());
+
+        for ($d = $from->copy(); $d->lte($to); $d->addDay()) {
+            $ds = $d->toDateString();
+            $off = $offRows->get($ds);
+
+            if ($this->dateOwnedByFlexible($flexible, $ds)) {
+                $off?->delete();
+                $result['skipped_flexible_owned']++;
+                continue;
+            }
+            if (WeekOffPredicate::isWeekOff($manualWeekoffs, $d)) {
+                continue;
+            }
+
+            $shiftId = $map[\App\Models\ShiftRotationPattern::cycleIndex($anchor, $d, $cycle)];
+            $row = $rows->get($ds);
+
+            if ($shiftId === null) {
+                // Pattern day off: no shift that day, a week-off instead.
+                if ($row) {
+                    $row->delete();
+                }
+                if (! $off) {
+                    UserWeekoffs::withoutGlobalScopes()->create([
+                        'tenant_id' => $tenantId,
+                        'user_id' => $userId,
+                        'shift_assignment_id' => $assignment->id,
+                        'off_type' => 'date_based',
+                        'start_date' => $ds,
+                        'end_date' => $ds,
+                        'description' => 'Rotation day off',
+                        'status' => 1,
+                        'created_by' => $assignment->created_by,
+                    ]);
+                }
+                $result['days_off']++;
+                continue;
+            }
+
+            $off?->delete();
+            $values = ['shift_id' => $shiftId, 'shift_assignment_id' => $assignment->id, 'status' => 'upcoming'];
+            if ($row) {
+                $row->update($values);
+            } else {
+                UserShift::create($values + ['tenant_id' => $tenantId, 'user_id' => $userId, 'date' => $ds, 'created_by' => $assignment->created_by]);
+            }
+            $result['assigned']++;
+        }
+
+        return $result;
+    }
+
+    /** Remove the pattern days off a rotating assignment generated from $from on (rotation ended / replaced). */
+    public function clearRotationDaysOff(ShiftAssignment $assignment, Carbon $from): int
+    {
+        return UserWeekoffs::withoutGlobalScopes()
+            ->where('tenant_id', $assignment->tenant_id)
+            ->where('shift_assignment_id', $assignment->id)
+            ->where('start_date', '>=', $from->toDateString())
+            ->delete();
+    }
+
+    /** The shift a rotating assignment gives on $date (null = pattern day off). */
+    public function rotationShiftOn(ShiftAssignment $assignment, string $date): ?int
+    {
+        $pattern = \App\Models\ShiftRotationPattern::withoutGlobalScopes()->with('steps')->find($assignment->rotation_pattern_id);
+        if (! $pattern) {
+            return null;
+        }
+        $map = $pattern->stepMap();
+
+        return $map[\App\Models\ShiftRotationPattern::cycleIndex(($assignment->rotation_anchor_date ?? $assignment->start_date)->copy(), Carbon::parse($date), count($map))];
+    }
+
+    /**
+     * Write a one-day override assignment's primary row for $date (update the
+     * day's primary row in place, or create it). Unlike materializeFlexible it
+     * does not skip week-offs or ask about existing rows — the caller has
+     * already decided this day changes. $status null keeps a past row's status
+     * and marks today / future rows 'upcoming'.
+     */
+    public function writeDay(ShiftAssignment $assignment, string $date, ?string $status = null, ?int $shiftId = null): UserShift
+    {
+        $row = UserShift::withoutGlobalScopes()
+            ->where('tenant_id', $assignment->tenant_id)
+            ->where('user_id', $assignment->user_id)
+            ->where('date', $date)
+            ->where('is_additional', 0)
+            ->first();
+
+        $future = $date >= Carbon::today()->toDateString();
+        $values = [
+            'shift_id' => $shiftId ?? $assignment->shift_id,
+            'shift_assignment_id' => $assignment->id,
+            'status' => $status ?? ($future || ! $row ? 'upcoming' : $row->status),
+        ];
+        if ($future) {
+            // A changed future shift gets its own missed check-in alert.
+            $values['missed_checkin_notified'] = 0;
+        }
+
+        if ($row) {
+            $row->update($values);
+
+            return $row;
+        }
+
+        return UserShift::create($values + [
+            'tenant_id' => $assignment->tenant_id,
+            'user_id' => $assignment->user_id,
+            'date' => $date,
+            'created_by' => $assignment->created_by,
+        ]);
+    }
+
+    /**
+     * Rebuild ONE day's primary row from whichever active assignment wins it
+     * now: the newest one-day override, else the newest Flexible covering the
+     * day (not on a week-off), else the active Permanent (not on a week-off).
+     * Used when an override is cancelled (request reverted). When nothing wins
+     * and $fallbackShiftId is given (the day had a hand-made row with no
+     * assignment before the override), that shift is put back as such a row.
+     */
+    public function rebuildDate(int $tenantId, int $userId, string $date, ?int $fallbackShiftId = null): ?UserShift
+    {
+        UserShift::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->where('date', $date)
+            ->where('is_additional', 0)
+            ->delete();
+
+        $covering = ShiftAssignment::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->where('is_additional', 0)
+            ->where('status', 'active')
+            ->where('start_date', '<=', $date)
+            ->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $date))
+            ->orderByDesc('id')
+            ->get();
+
+        $isWeekOff = WeekOffPredicate::isWeekOff(
+            UserWeekoffs::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)->where('status', 1)->get(),
+            Carbon::parse($date)
+        );
+
+        $winner = $covering->firstWhere('is_override', true)
+            ?? ($isWeekOff ? null : ($covering->first(fn ($a) => $a->type === 'flexible' && ! $a->is_override)
+                ?? $covering->first(fn ($a) => in_array($a->type, ['permanent', 'rotating'], true))));
+
+        if ($winner && $winner->type === 'rotating') {
+            $shiftId = $this->rotationShiftOn($winner, $date);
+
+            return $shiftId ? $this->writeDay($winner, $date, null, $shiftId) : null;
+        }
+        if ($winner) {
+            return $this->writeDay($winner, $date);
+        }
+
+        if ($fallbackShiftId) {
+            return UserShift::create([
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'shift_id' => $fallbackShiftId,
+                'date' => $date,
+                'status' => 'upcoming',
+            ]);
+        }
+
+        return null;
     }
 
     private function dateOwnedByFlexible($flexibleAssignments, string $dateString): bool
