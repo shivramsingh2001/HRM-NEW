@@ -65,7 +65,7 @@ class ExpenseMigrateUploads extends Command
                 continue;
             }
 
-            $target = 'expense/' . ($row->tenant_id ?: 0) . '/' . date('Y') . '/' . Str::uuid() . '.' . $ext;
+            $target = 'upload_new/expense/' . ($row->tenant_id ?: 0) . '/' . date('Y') . '/' . Str::uuid() . '.' . $ext;
 
             if ($dryRun) {
                 $this->line("#{$row->id}: would move {$row->file} -> {$target}");

@@ -13,7 +13,7 @@ logos goes through **one** service:
 | Helpers | `app/Helpers/file_storage.php` — `file_storage()`, `file_url($path, $module)` (composer `files` autoload) |
 | Config | `config/file_storage.php` (disk, TTLs, module registry, legacy roots) |
 | Disks | `config/filesystems.php` → `gcs` (Google Cloud Storage) and `uploads` (local `public/`) |
-| Safety-net route | `GET /uploads/{path}` → `FileController@uploads` (auth) |
+| Safety-net route | `GET /uploads/{path}` → `FileController@uploads`, `GET /upload_new/{path}` → `FileController@uploadNew` (auth) |
 | Migration | `php artisan files:migrate-to-cloud` (`app/Console/Commands/MigrateFilesToCloud.php`) |
 | Tests | `tests/Feature/Storage/FileStorageServiceTest.php` |
 
@@ -130,20 +130,24 @@ file_storage()->dataUri($company->logo, 'tenant_logo'); // dompdf (cannot fetch 
 
 ## Modules
 
+Every new upload goes under `upload_new/` (since 2026-10-11): `upload_new/<module folder>/<uuid>.<ext>`,
+e.g. `upload_new/expense/{tenant}/{year}/<uuid>.pdf`. Paths saved before that (`uploads/…`, `expense/…`)
+stay in the DB unchanged and keep resolving (see below). The `uploads` local disk accepts both prefixes.
+
 | Key | Folder | Types | Max | Used by |
 |---|---|---|---|---|
-| `profile_photo` (public) | `uploads/users/{tenant}/profile` | jpg jpeg png webp | 2 MB | User wizard/update, API profile |
-| `employee_document` | `uploads/users/{tenant}/{user}/documents` | pdf jpg jpeg png doc docx | 5 MB | Employee documents |
-| `announcement_image` (public) / `announcement_file` | `uploads/announcement/{tenant}/image` · `/file` | images · pdf/doc/docx/txt/xls/xlsx/img | 2 / 5 MB | Announcements (web + API) |
-| `leave` | `uploads/leave/{tenant}` | pdf, images, doc/docx | 10 MB | Leave (web + API) |
-| `loan` | `uploads/loan/{tenant}` | pdf, images, doc/docx | 10 MB | API loan request |
-| `request` | `uploads/requests/{tenant}` | jpg jpeg png pdf doc docx | 5 MB | Requests (web + API) |
-| `regularization` | `uploads/regularizations/{tenant}` | jpg jpeg png pdf doc docx | 2 MB | Regularization (web + API) |
-| `task_document` / `task_voice` / `task_attachment` | `uploads/task/{tenant}/document` · `/voice` · `/attachments` | office/pdf/images · audio | 5 / 20 / 10 MB | Tasks (web + API), MoM |
-| `project_attachment` / `asset_attachment` | `uploads/projects|assets/{tenant}/{id}/attachments` | office/pdf/images/zip | 10 MB | Projects, Assets |
-| `candidate_resume` / `candidate_document` | `uploads/candidate_resumes/{tenant}` · `uploads/candidate_documents/{tenant}/{id}` | pdf/doc(x) · +images | 5 MB | Recruitment, Onboarding |
-| `expense` (local fallback = private `local` disk) | `expense/{tenant}/{year}` | jpg jpeg png pdf | 5 MB | `ExpenseAttachmentService` (signed routes unchanged) |
-| `tenant_logo` (public) | `uploads/tenants/logos` | jpg jpeg png webp | 2 MB | hrm-superadmin; payslip PDF + emails in the app |
+| `profile_photo` (public) | `upload_new/users/{tenant}/profile` | jpg jpeg png webp | 2 MB | User wizard/update, API profile |
+| `employee_document` | `upload_new/users/{tenant}/{user}/documents` | pdf jpg jpeg png doc docx | 5 MB | Employee documents |
+| `announcement_image` (public) / `announcement_file` | `upload_new/announcement/{tenant}/image` · `/file` | images · pdf/doc/docx/txt/xls/xlsx/img | 2 / 5 MB | Announcements (web + API) |
+| `leave` | `upload_new/leave/{tenant}` | pdf, images, doc/docx | 10 MB | Leave (web + API) |
+| `loan` | `upload_new/loan/{tenant}` | pdf, images, doc/docx | 10 MB | API loan request |
+| `request` | `upload_new/requests/{tenant}` | jpg jpeg png pdf doc docx | 5 MB | Requests (web + API) |
+| `regularization` | `upload_new/regularizations/{tenant}` | jpg jpeg png pdf doc docx | 2 MB | Regularization (web + API) |
+| `task_document` / `task_voice` / `task_attachment` | `upload_new/task/{tenant}/document` · `/voice` · `/attachments` | office/pdf/images · audio | 5 / 20 / 10 MB | Tasks (web + API), MoM |
+| `project_attachment` / `asset_attachment` | `upload_new/projects|assets/{tenant}/{id}/attachments` | office/pdf/images/zip | 10 MB | Projects, Assets |
+| `candidate_resume` / `candidate_document` | `upload_new/candidate_resumes/{tenant}` · `upload_new/candidate_documents/{tenant}/{id}` | pdf/doc(x) · +images | 5 MB | Recruitment, Onboarding |
+| `expense` (local fallback = private `local` disk) | `upload_new/expense/{tenant}/{year}` | jpg jpeg png pdf | 5 MB | `ExpenseAttachmentService` (signed routes unchanged) |
+| `tenant_logo` (public) | `upload_new/tenants/logos` | jpg jpeg png webp | 2 MB | hrm-superadmin; payslip PDF + emails in the app |
 
 ## How old paths keep working
 
@@ -154,7 +158,7 @@ file_storage()->dataUri($company->logo, 'tenant_logo'); // dompdf (cannot fetch 
   so a file is served locally until it is migrated, then from the bucket — same path either way.
 - `files:migrate-to-cloud` copies files to the bucket **under the same key**.
 - Links still built from a raw path (`asset($path)`, `'/' + path` in JS) hit
-  `GET /uploads/{path}` once the local file is gone; for a logged-in user it 302-redirects to a
+  `GET /uploads/{path}` (or `GET /upload_new/{path}` for new files) once the local file is gone; for a logged-in user it 302-redirects to a
   signed URL. New code should use `file_url()` instead.
-- `ExpenseAttachmentService` keeps its own legacy-path rules (`isLegacy()`,
+- `ExpenseAttachmentService` keeps its own legacy-path rules (`isLegacy()`: private = `(upload_new/)?expense/{tenant}/{year}/<file>`,
   `expense:migrate-uploads`) and signed `expense.file` / `expense.attachment` routes.

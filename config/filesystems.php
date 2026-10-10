@@ -48,8 +48,8 @@ return [
         ],
 
         // Local fallback for App\Services\Storage\FileStorageService (config/file_storage.php).
-        // Root is public/ because every path it writes starts with "uploads/" — the same
-        // layout the app used before the service existed.
+        // Root is public/ because every path it writes starts with "upload_new/" (files saved
+        // before 2026-10-11: "uploads/"), so new and old files sit side by side under public/.
         'uploads' => [
             'driver' => 'local',
             'root' => public_path(),

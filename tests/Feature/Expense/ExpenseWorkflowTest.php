@@ -243,11 +243,11 @@ class ExpenseWorkflowTest extends TestCase
         $e = $this->svc()->submit($this->alice, $this->data(), [$this->png('a.png'), $this->png('b.png'), $this->png('c.png')]);
 
         $this->assertNotNull($e->file);
-        $this->assertStringStartsWith("expense/{$this->tenantId}/", $e->file);
+        $this->assertStringStartsWith("upload_new/expense/{$this->tenantId}/", $e->file);
         $extras = ExpenseAttachment::where('expense_id', $e->id)->orderBy('id')->get();
         $this->assertCount(2, $extras);
         foreach ($extras as $a) {
-            $this->assertStringStartsWith("expense/{$this->tenantId}/", $a->file_path);
+            $this->assertStringStartsWith("upload_new/expense/{$this->tenantId}/", $a->file_path);
             Storage::disk('local')->assertExists($a->file_path);
         }
 

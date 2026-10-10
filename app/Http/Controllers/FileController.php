@@ -21,8 +21,17 @@ class FileController extends Controller
 
     public function uploads(string $path)
     {
-        $stored = 'uploads/' . $path;
+        return $this->redirectToSigned('uploads/' . $path);
+    }
 
+    /** Same safety net for files stored under upload_new/ (all uploads since 2026-10-11). */
+    public function uploadNew(string $path)
+    {
+        return $this->redirectToSigned('upload_new/' . $path);
+    }
+
+    private function redirectToSigned(string $stored)
+    {
         // On the local disk a missing static file is simply missing.
         abort_unless($this->files->isCloud(), 404);
 

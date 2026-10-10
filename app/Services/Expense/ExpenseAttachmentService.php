@@ -87,14 +87,15 @@ class ExpenseAttachmentService
 
     /**
      * A path is "private" only when it matches the layout store() produces
-     * (`expense/<tenantId>/<year>/<uuid>.<ext>`). Everything else is a legacy
+     * (`upload_new/expense/<tenantId>/<year>/<uuid>.<ext>`, or `expense/…` for files
+     * stored before 2026-10-11). Everything else is a legacy
      * public-relative path. The old code wrote several shapes over time —
      * `uploads/expense/file/…`, `expenses/2026/05/…`, `expenses/…` — so legacy
      * must be "anything that is not private", not one specific prefix.
      */
     public function isLegacy(string $path): bool
     {
-        return ! preg_match('#^expense/\d+/\d{4}/[^/]+$#', $path);
+        return ! preg_match('#^(upload_new/)?expense/\d+/\d{4}/[^/]+$#', $path);
     }
 
     /**

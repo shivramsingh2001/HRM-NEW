@@ -117,6 +117,10 @@ Route::get('/uploads/{path}', [\App\Http\Controllers\FileController::class, 'upl
     ->where('path', '.*')
     ->middleware('auth')
     ->name('files.uploads');
+Route::get('/upload_new/{path}', [\App\Http\Controllers\FileController::class, 'uploadNew'])
+    ->where('path', '.*')
+    ->middleware('auth')
+    ->name('files.upload_new');
 
 Route::group(['middleware' => ['tenant']], function () {
       // {company} = tenant code (tenants.subdomain); resolved + removed by TenantMiddleware

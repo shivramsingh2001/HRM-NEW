@@ -58,89 +58,92 @@ return [
     |   local_disk disk to use when FILE_STORAGE_DISK is not a cloud disk.
     |
     | ext/max mirror what each controller validated before this service existed.
+    |
+    | New uploads go under upload_new/ (since 2026-10-11). Paths saved earlier
+    | (uploads/..., expense/...) stay in the DB as they are and keep resolving.
     */
     'modules' => [
         'profile_photo' => [
-            'folder' => 'uploads/users/{tenant}/profile',
+            'folder' => 'upload_new/users/{tenant}/profile',
             'ext' => ['jpg', 'jpeg', 'png', 'webp'],
             'max' => 2048,
             'public' => true,
         ],
         'employee_document' => [
-            'folder' => 'uploads/users/{tenant}/{user}/documents',
+            'folder' => 'upload_new/users/{tenant}/{user}/documents',
             'ext' => ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'],
             'max' => 5120,
         ],
         'announcement_image' => [
-            'folder' => 'uploads/announcement/{tenant}/image',
+            'folder' => 'upload_new/announcement/{tenant}/image',
             'ext' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
             'max' => 2048,
             'public' => true,
         ],
         'announcement_file' => [
-            'folder' => 'uploads/announcement/{tenant}/file',
+            'folder' => 'upload_new/announcement/{tenant}/file',
             'ext' => ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'],
             'max' => 5120,
         ],
         'leave' => [
-            'folder' => 'uploads/leave/{tenant}',
+            'folder' => 'upload_new/leave/{tenant}',
             'ext' => ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'doc', 'docx'],
             'max' => 10240,
         ],
         'loan' => [
-            'folder' => 'uploads/loan/{tenant}',
+            'folder' => 'upload_new/loan/{tenant}',
             'ext' => ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'doc', 'docx'],
             'max' => 10240,
         ],
         'request' => [
-            'folder' => 'uploads/requests/{tenant}',
+            'folder' => 'upload_new/requests/{tenant}',
             'ext' => ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
             'max' => 5120,
         ],
         'regularization' => [
-            'folder' => 'uploads/regularizations/{tenant}',
+            'folder' => 'upload_new/regularizations/{tenant}',
             'ext' => ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
             'max' => 2048,
         ],
         'task_document' => [
-            'folder' => 'uploads/task/{tenant}/document',
+            'folder' => 'upload_new/task/{tenant}/document',
             'ext' => ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx'],
             'max' => 5120,
         ],
         'task_voice' => [
-            'folder' => 'uploads/task/{tenant}/voice',
+            'folder' => 'upload_new/task/{tenant}/voice',
             'ext' => ['mp3', 'm4a', 'mp4', 'aac', 'wav', 'ogg', 'oga', 'opus', 'webm', 'weba', '3gp', 'amr'],
             'max' => 20480,
         ],
         'task_attachment' => [
-            'folder' => 'uploads/task/{tenant}/attachments',
+            'folder' => 'upload_new/task/{tenant}/attachments',
             'ext' => ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx'],
             'max' => 10240,
         ],
         'project_attachment' => [
-            'folder' => 'uploads/projects/{tenant}/{id}/attachments',
+            'folder' => 'upload_new/projects/{tenant}/{id}/attachments',
             'ext' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'txt', 'zip'],
             'max' => 10240,
         ],
         'asset_attachment' => [
-            'folder' => 'uploads/assets/{tenant}/{id}/attachments',
+            'folder' => 'upload_new/assets/{tenant}/{id}/attachments',
             'ext' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip'],
             'max' => 10240,
         ],
         'candidate_resume' => [
-            'folder' => 'uploads/candidate_resumes/{tenant}',
+            'folder' => 'upload_new/candidate_resumes/{tenant}',
             'ext' => ['pdf', 'doc', 'docx'],
             'max' => 5120,
         ],
         'candidate_document' => [
-            'folder' => 'uploads/candidate_documents/{tenant}/{id}',
+            'folder' => 'upload_new/candidate_documents/{tenant}/{id}',
             'ext' => ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'],
             'max' => 5120,
         ],
         // Expense receipts stay PRIVATE on the local disk when not on the cloud
         // (served only through the signed expense.file / expense.attachment routes).
         'expense' => [
-            'folder' => 'expense/{tenant}/{year}',
+            'folder' => 'upload_new/expense/{tenant}/{year}',
             'ext' => ['jpg', 'jpeg', 'png', 'pdf'],
             'max' => 5120,
             'local_disk' => 'local',
@@ -148,7 +151,7 @@ return [
         // Written by hrm-superadmin (same bucket). No {tenant}: a logo is uploaded
         // while provisioning, before the tenant row exists.
         'tenant_logo' => [
-            'folder' => 'uploads/tenants/logos',
+            'folder' => 'upload_new/tenants/logos',
             'ext' => ['jpg', 'jpeg', 'png', 'webp'],
             'max' => 2048,
             'public' => true,
@@ -163,8 +166,8 @@ return [
     | 'url' => null means the root is private (streamed only, never linked).
     */
     'legacy_roots' => [
-        ['root' => public_path(), 'url' => '', 'prefixes' => ['uploads/']],
+        ['root' => public_path(), 'url' => '', 'prefixes' => ['uploads/', 'upload_new/']],
         ['root' => storage_path('app/public'), 'url' => 'storage/', 'prefixes' => ['attendance_files/', 'tenant-logos/']],
-        ['root' => storage_path('app/private'), 'url' => null, 'prefixes' => ['expense/']],
+        ['root' => storage_path('app/private'), 'url' => null, 'prefixes' => ['expense/', 'upload_new/expense/']],
     ],
 ];

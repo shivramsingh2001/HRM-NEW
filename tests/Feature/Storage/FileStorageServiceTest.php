@@ -58,7 +58,7 @@ class FileStorageServiceTest extends TestCase
     {
         $stored = $this->files->upload($this->pdf('My Report (final).pdf'), 'leave', ['tenant' => 7]);
 
-        $this->assertMatchesRegularExpression('#^uploads/leave/7/[0-9a-f\-]{36}\.pdf$#', $stored->path);
+        $this->assertMatchesRegularExpression('#^upload_new/leave/7/[0-9a-f\-]{36}\.pdf$#', $stored->path);
         $this->assertSame('My Report (final).pdf', $stored->originalName);
         $this->assertSame('pdf', $stored->extension);
         $this->assertSame('gcs', $stored->disk);
@@ -195,7 +195,7 @@ class FileStorageServiceTest extends TestCase
     public function test_store_contents_and_map_urls(): void
     {
         $voice = $this->files->storeContents("RIFF....WAVEfmt ", 'task_voice', 'wav', ['tenant' => 2]);
-        $this->assertMatchesRegularExpression('#^uploads/task/2/voice/[0-9a-f\-]{36}\.wav$#', $voice->path);
+        $this->assertMatchesRegularExpression('#^upload_new/task/2/voice/[0-9a-f\-]{36}\.wav$#', $voice->path);
 
         $rows = collect([(object) ['file_url' => $voice->path], (object) ['file_url' => null]]);
         $this->files->mapUrls($rows, ['file_url' => 'task_voice']);

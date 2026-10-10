@@ -143,7 +143,7 @@ class ExpensePhase1HardeningTest extends TestCase
 
         $expense = Expense::where('user_id', $this->alice->id)->latest('id')->firstOrFail();
 
-        $this->assertStringStartsWith("expense/{$this->tenantId}/", $expense->file);
+        $this->assertStringStartsWith("upload_new/expense/{$this->tenantId}/", $expense->file);
         $this->assertStringEndsWith('.png', $expense->file);
         $this->assertStringNotContainsString('html', $expense->file);
         $this->assertStringNotContainsString('receipt', $expense->file);
@@ -172,6 +172,7 @@ class ExpensePhase1HardeningTest extends TestCase
             $this->assertStringNotContainsString('signature=', $svc->url($legacy, 5));
         }
         $this->assertFalse($svc->isLegacy('expense/7/2026/9b1f.pdf'));
+        $this->assertFalse($svc->isLegacy('upload_new/expense/7/2026/9b1f.pdf'));
         $this->assertNull($svc->url(null, 5));
     }
 
