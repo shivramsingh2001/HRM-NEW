@@ -116,6 +116,13 @@ class NextDayClockOutTest extends TestCase
         $row = $this->row();
         $this->assertSame($this->nextDay('09:00:00'), $row->clock_out);
         $this->assertSame(26.5, (float) $row->worked_hours);
+
+        // The mobile list shows the flag (it used to crash: the row was read as an HTTP request).
+        $this->withoutMiddleware([\App\Http\Middleware\EnsureFeatureEnabled::class]);
+        $list = $this->actingAs($this->employee, 'api')->getJson('/api/user/attendance/view-regularization')->assertOk();
+        $mine = collect($list->json('data.regularizations') ?? $list->json('data.data') ?? $list->json('data'))->firstWhere('id', $reg->id);
+        $this->assertNotNull($mine, 'regularization listed: ' . substr($list->getContent(), 0, 300));
+        $this->assertTrue($mine['out_next_day']);
     }
 
     public function test_auto_clock_out_uses_the_company_limit(): void
@@ -148,7 +155,11 @@ class NextDayClockOutTest extends TestCase
                 ->assertOk()->streamedContent();
             $this->assertStringContainsString('26:30:00', $csv);
             $this->assertStringContainsString('09:00 AM (+1 day)', $csv);
-            $this->actingAs($this->admin)->get(route('report.attendance.monthly.summary.export', ['month' => $month, 'search' => $this->employee->name]))->assertOk();
+            // All-employees mode: one status per day (it used to crash while streaming).
+            $summary = $this->actingAs($this->admin)->get(route('report.attendance.monthly.summary.export', ['month' => $month, 'search' => $this->employee->name]))
+                ->assertOk()->streamedContent();
+            $this->assertStringContainsString(','. $this->employee->employee_id . ',' . $this->date . ',', $summary);
+            $this->assertStringContainsString(',TOTAL,', $summary);
 
             // Clock In/Out Log export carries the punch's own date.
             $res = $this->actingAs($this->admin)->get(route('report.attendance.punches.export', ['start_date' => $this->date, 'end_date' => $this->date, 'search' => $this->employee->name]))->assertOk();

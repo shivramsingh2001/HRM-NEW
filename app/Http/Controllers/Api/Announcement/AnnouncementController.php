@@ -52,6 +52,7 @@ class AnnouncementController extends Controller
                 'data' => $announcements
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An error occured. Please try again later." . $e->getMessage(),
@@ -97,6 +98,7 @@ class AnnouncementController extends Controller
                 'data' => $announcements
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An error occured. Please try again later." ,
@@ -164,6 +166,7 @@ class AnnouncementController extends Controller
             ], 200);
 
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -212,6 +215,7 @@ class AnnouncementController extends Controller
                 ],
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to acknowledge announcement',

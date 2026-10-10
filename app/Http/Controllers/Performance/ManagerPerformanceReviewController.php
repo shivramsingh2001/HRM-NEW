@@ -215,6 +215,7 @@ class ManagerPerformanceReviewController extends Controller
 
             return response()->json(['success' => true, 'message' => $message]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -313,6 +314,7 @@ class ManagerPerformanceReviewController extends Controller
 
             return response()->json(['success' => true, 'message' => $message]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }

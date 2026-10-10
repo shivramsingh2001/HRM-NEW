@@ -94,6 +94,7 @@ class JobOpeningController extends Controller
             $jobOpening = JobOpening::findOrFail($id);
             return response()->json(['success' => true, 'data' => $jobOpening]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Job opening not found'], 404);
         }
     }
@@ -239,6 +240,7 @@ class JobOpeningController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withInput()->withErrors($e->errors());
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return back()
@@ -312,6 +314,7 @@ class JobOpeningController extends Controller
                 ->route('job-openings.index')
                 ->with('success', 'Job opening published successfully!');
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return back()

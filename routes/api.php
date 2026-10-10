@@ -129,11 +129,11 @@ Route::middleware('tenant')->group(function () {
 
         //Attendance
         Route::middleware('feature:attendance')->group(function () {
-            Route::post('/user/attendance/clock-in', [AttendanceController::class, 'clockIn']);
-            Route::post('/user/attendance/clock-out', [AttendanceController::class, 'clockOut']);
+            Route::post('/user/attendance/clock-in', [\App\Http\Controllers\Api\Attendance\ClockController::class, 'clockIn']);
+            Route::post('/user/attendance/clock-out', [\App\Http\Controllers\Api\Attendance\ClockController::class, 'clockOut']);
             Route::get('/user/attendance/history', [AttendanceController::class, 'history']);
             Route::get('/user/attendance/today', [AttendanceController::class, 'getAttendance']);
-            Route::get('/user/attendance/today-locations', [AttendanceController::class, 'todayLocations']);
+            Route::get('/user/attendance/today-locations', [\App\Http\Controllers\Api\Attendance\AttendanceTrackController::class, 'todayLocations']);
             Route::get('/user/attendance/punches', [AttendanceController::class, 'punchHistory']);
             Route::get('/user/attendance/current-session', [AttendanceController::class, 'currentSession']);
         });
@@ -141,15 +141,15 @@ Route::middleware('tenant')->group(function () {
         // Location pings stay ungated: the tracking controllers already accept/skip per the
         // employee's own tracking switch, and a 403 here would make the app's background
         // sender retry forever.
-        Route::post('/user/attendance/track', [AttendanceController::class, 'trackLocation'])->middleware('throttle:location-ingest');
-        Route::post('/user/attendance/track-batch', [AttendanceController::class, 'trackBatch'])->middleware('throttle:location-ingest');
+        Route::post('/user/attendance/track', [\App\Http\Controllers\Api\Attendance\AttendanceTrackController::class, 'trackLocation'])->middleware('throttle:location-ingest');
+        Route::post('/user/attendance/track-batch', [\App\Http\Controllers\Api\Attendance\AttendanceTrackController::class, 'trackBatch'])->middleware('throttle:location-ingest');
         Route::post('/location/status', [LocationTrackingController::class, 'locationStatus']);
 
         Route::middleware('feature:regularization')->group(function () {
-            Route::post('/user/attendance/regularization', [AttendanceController::class, 'regularizationStore']);
-            Route::get('/user/attendance/view-regularization', [AttendanceController::class, 'getMyRegularizations']);
-            Route::get('/manager/attendance/view-regularization', [AttendanceController::class, 'getReporteesRegularizations']);
-            Route::post('/manager/attendance/update-regularization-approval', [AttendanceController::class, 'regularizationApproval']);
+            Route::post('/user/attendance/regularization', [\App\Http\Controllers\Api\Attendance\MobileRegularizationController::class, 'regularizationStore']);
+            Route::get('/user/attendance/view-regularization', [\App\Http\Controllers\Api\Attendance\MobileRegularizationController::class, 'getMyRegularizations']);
+            Route::get('/manager/attendance/view-regularization', [\App\Http\Controllers\Api\Attendance\MobileRegularizationController::class, 'getReporteesRegularizations']);
+            Route::post('/manager/attendance/update-regularization-approval', [\App\Http\Controllers\Api\Attendance\MobileRegularizationController::class, 'regularizationApproval']);
         });
 
         //Performance (employee self-service — no team/manager endpoints here)

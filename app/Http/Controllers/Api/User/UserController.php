@@ -167,6 +167,7 @@ class UserController extends Controller
                 'data' => $responseData,
             ], 200);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong',
@@ -949,6 +950,7 @@ class UserController extends Controller
                 'message' => $e->getMessage(),
             ], $e->httpStatus() === 422 ? 200 : 500);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -970,6 +972,7 @@ class UserController extends Controller
                 'data' => $countries
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve countries. Please try again.',
@@ -1002,6 +1005,7 @@ class UserController extends Controller
                 'data' => $states
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve states. Please try again.',
@@ -1034,6 +1038,7 @@ class UserController extends Controller
                 'data' => $cities
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve cities. Please try again.',
@@ -1222,6 +1227,7 @@ class UserController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch location tracks: ' . $e->getMessage(),
@@ -1366,6 +1372,7 @@ class UserController extends Controller
                 'data' => $responseData,
             ], 200);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong',

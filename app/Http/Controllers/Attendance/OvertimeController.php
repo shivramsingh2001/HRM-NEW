@@ -214,6 +214,7 @@ class OvertimeController extends Controller
         try {
             app(\App\Services\OvertimeNotificationService::class)->notifyOvertimeApproved($overtimeRequest->fresh('user'), 'Recorded by ' . auth()->user()->name);
         } catch (\Throwable $e) {
+            report($e);
             // never block on notification
         }
 
@@ -541,6 +542,7 @@ class OvertimeController extends Controller
                     ? 'Attendance shows ' . round($m['minutes'] / 60, 2) . ' h after ' . $m['starts_at']->format('H:i') . ' (clock-out ' . $m['clock_out']->format('H:i') . ')'
                     : 'Attendance shows no overtime (' . ($m['reason'] ?? 'none') . ')';
             } catch (\Throwable $e) {
+                report($e);
                 $request->attendance_overtime = null;
             }
 
@@ -549,6 +551,7 @@ class OvertimeController extends Controller
                 'data' => $request
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()

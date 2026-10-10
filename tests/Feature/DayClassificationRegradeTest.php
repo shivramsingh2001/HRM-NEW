@@ -114,8 +114,8 @@ class DayClassificationRegradeTest extends TestCase
         $html = $this->actingAs($this->admin)->get('/dashboard')->assertOk()->getContent();
         $this->assertStringContainsString('Half day', $html);
 
-        $breakdown = (new \ReflectionMethod(\App\Http\Controllers\Dashboard\DashboardController::class, 'dashboardDayBucket'));
-        $bucket = $breakdown->invoke(app(\App\Http\Controllers\Dashboard\DashboardController::class), DB::table('attendances')->where('id', $id)->first());
+        $breakdown = (new \ReflectionMethod(\App\Services\Dashboard\AdminDashboard::class, 'dashboardDayBucket'));
+        $bucket = $breakdown->invoke(app(\App\Services\Dashboard\AdminDashboard::class), DB::table('attendances')->where('id', $id)->first());
         $this->assertSame('absent', $bucket);
     }
 }

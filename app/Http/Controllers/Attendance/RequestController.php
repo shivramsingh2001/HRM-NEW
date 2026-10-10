@@ -116,6 +116,7 @@ class RequestController extends Controller
                 'cancelledDays'
             ));
         } catch (\Exception $e) {
+            report($e);
             return redirect()->back()->with('error', 'Failed to load requests: ' . $e->getMessage());
         }
     }
@@ -224,6 +225,7 @@ class RequestController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -336,6 +338,7 @@ class RequestController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -398,6 +401,7 @@ class RequestController extends Controller
                 'message' => 'Request cancelled successfully.'
             ]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -442,6 +446,7 @@ class RequestController extends Controller
                 'message' => 'Attachment deleted successfully.'
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete attachment: ' . $e->getMessage()
@@ -485,6 +490,7 @@ class RequestController extends Controller
                 'data' => $stats
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -561,6 +567,7 @@ class RequestController extends Controller
                 ->header('Content-Type', 'text/csv')
                 ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
         } catch (\Exception $e) {
+            report($e);
             return redirect()->back()->with('error', 'Failed to export data: ' . $e->getMessage());
         }
     }
@@ -658,6 +665,7 @@ class RequestController extends Controller
                 'cancelledDays'
             ));
         } catch (\Exception $e) {
+            report($e);
          
             return redirect()->back()->with('error', 'Failed to load requests: ' . $e->getMessage());
         }
@@ -688,6 +696,7 @@ class RequestController extends Controller
 
             return view('client.request.manager-request-detail', compact('request'));
         } catch (\Exception $e) {
+            report($e);
             return redirect()->route('manager.requests')
                 ->with('error', 'Request not found or access denied.');
         }
@@ -761,6 +770,7 @@ class RequestController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -836,6 +846,7 @@ class RequestController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -914,6 +925,7 @@ class RequestController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -1003,6 +1015,7 @@ class RequestController extends Controller
                 ->header('Content-Type', 'text/csv; charset=utf-8')
                 ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
         } catch (\Exception $e) {
+            report($e);
             return redirect()->back()->with('error', 'Failed to export data: ' . $e->getMessage());
         }
     }
@@ -1035,6 +1048,7 @@ class RequestController extends Controller
                 'data' => $stats
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()

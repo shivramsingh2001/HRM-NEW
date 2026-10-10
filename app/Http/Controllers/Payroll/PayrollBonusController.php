@@ -118,6 +118,7 @@ class PayrollBonusController extends Controller
 
             return response()->json(['success' => true, 'message' => $message]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([
@@ -169,6 +170,7 @@ class PayrollBonusController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Bonus updated successfully.']);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([

@@ -845,6 +845,7 @@ class MeetingController extends Controller
                 ]
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'

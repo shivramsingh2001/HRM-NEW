@@ -1,0 +1,13 @@
+# Larastan (code-quality plan, Phase 0). Level 5 on app/; the baseline holds every
+# error that existed when this was introduced, so only NEW code must be clean.
+# Shrink the baseline as code is fixed:  vendor/bin/phpstan analyse --generate-baseline
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - app/
+    tmpDir: storage/framework/cache/phpstan
+    reportUnmatchedIgnoredErrors: false

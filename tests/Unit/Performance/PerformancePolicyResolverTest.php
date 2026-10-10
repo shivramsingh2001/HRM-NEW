@@ -11,6 +11,7 @@ use Tests\TestCase;
  * but only ever touches a synthetic tenant_id that cannot collide with real
  * tenants, and cleans up everything it creates.
  */
+#[\PHPUnit\Framework\Attributes\Group('database')] // needs the real MySQL tables — not run in CI
 class PerformancePolicyResolverTest extends TestCase
 {
     private const FAKE_TENANT_ID = 999999;

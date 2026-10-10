@@ -83,6 +83,7 @@ class AttendanceController extends Controller
             $parsed = \Carbon\Carbon::createFromFormat('Y-m-d', $value);
             return ($parsed && $parsed->format('Y-m-d') === $value) ? $value : $default;
         } catch (\Throwable $e) {
+            report($e);
             return $default;
         }
     }

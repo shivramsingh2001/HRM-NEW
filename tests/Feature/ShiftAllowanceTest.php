@@ -145,8 +145,7 @@ class ShiftAllowanceTest extends TestCase
         DB::table('monthly_payrolls')->where('user_id', $employee->id)->where('payroll_month', $this->month)->delete();
 
         $this->actingAs($this->admin)->withSession(['tenant_id' => $this->tenantId]);
-        $controller = app(\App\Http\Controllers\Payroll\MonthlyPayrollController::class);
-        $slip = (new \ReflectionMethod($controller, 'processEmployeeMonthlyPayroll'))->invoke($controller, $employee, $this->month,
+        $slip = app(\App\Services\Payroll\PayrollRunService::class)->processLegacy($employee, $this->tenantId, $this->month,
             $month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString(), true, false);
 
         $this->assertEquals(180, (float) $slip->shift_allowance_amount);

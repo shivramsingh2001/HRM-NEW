@@ -107,6 +107,7 @@ class EmployeeProfileController extends Controller
         try {
             $id = decrypt($encryptedId);
         } catch (\Throwable $e) {
+            report($e);
             abort(404);
         }
 

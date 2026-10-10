@@ -159,8 +159,7 @@ class MultiShiftPayrollTest extends TestCase
         $this->assertSame(8.0, (float) $context['extra_shift_overtime_hours']);
         $this->assertGreaterThanOrEqual(8.0, (float) $context['approved_overtime_hours']);
 
-        $controller = app(\App\Http\Controllers\Payroll\MonthlyPayrollController::class);
-        $legacy = (new \ReflectionMethod($controller, 'getApprovedOvertimeHours'))->invoke($controller, $this->employee->id, $ym, $this->tenantId);
+        $legacy = app(\App\Services\Payroll\Legacy\LegacyPayrollCalculator::class)->getApprovedOvertimeHours($this->employee->id, $ym, $this->tenantId);
         $this->assertSame(8.0, (float) $legacy['extra_shift_hours']);
         $this->assertContains('Additional shift (automatic overtime)', array_column($legacy['details'], 'reason'));
     }

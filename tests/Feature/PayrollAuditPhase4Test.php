@@ -182,7 +182,7 @@ class PayrollAuditPhase4Test extends TestCase
         $previouslyBound = app()->bound('current_tenant') ? app('current_tenant') : null;
         app()->instance('current_tenant', \App\Models\Tenant::withoutGlobalScopes()->find($tenantId));
 
-        $controller = app(\App\Http\Controllers\Payroll\MonthlyPayrollController::class);
+        $controller = app(\App\Services\Payroll\PayslipWriter::class);
         $ref = new ReflectionMethod($controller, 'savePayrollComponents');
         $ref->setAccessible(true);
         try {

@@ -31,6 +31,44 @@ Reference for how this codebase is actually built — not idealized Laravel conv
 | `Support/`, `Helpers/`, `Channels/` | Misc utility classes and a custom notification channel (FCM). |
 | `Console/Commands/` | Artisan commands — check here before writing a new scheduled/manual command, some domains already have maintenance commands (e.g. attendance summary rebuild). |
 
+## Code-quality tooling (added 2026-10-10)
+
+Introduced by the code-quality plan (Phase 0). All of it runs locally and in CI (`.github/workflows/ci.yml`, every push to `main` and every PR).
+
+| Tool | What it enforces | How to work with it |
+|---|---|---|
+| **Pint** (`pint.json`, Laravel preset) | Code style | CI checks only files **added** by the push/PR, so legacy files are never reformatted wholesale. Format new files with `vendor/bin/pint <files>`. |
+| **Larastan** (`phpstan.neon`, level 5, `app/`) | Static analysis — wrong types, undefined classes / methods / properties | `phpstan-baseline.neon` holds the errors that existed when it was introduced (2,741 after Phase 5 — `User` columns declared); only **new** errors fail. When you fix or move legacy code, regenerate it: `vendor/bin/phpstan analyse --generate-baseline --memory-limit=3G` (check the new errors are only relocated ones first). |
+| **`tests/Feature/ControllerSizeGuardTest`** | Controllers ≤ 600 lines, methods ≤ 80 lines | Controllers already over budget are in its `BASELINE` (file → [lines, longest method]) and may only shrink; the test tells you the new numbers to write when one shrinks and fails if a new/edited controller goes over. Split work into services instead of raising a budget. |
+| **`tests/Feature/TenantScopeGuardTest`** | Every `withoutGlobalScope()` re-applies a tenant filter | `KNOWN_DEBT` (file → count) lists the 7 unguarded bypasses that existed when CI started; counts may only go down. |
+| **`tests/Feature/ConventionGuardTest`** | The coding conventions below (swallowed exceptions, `Validator::make` in controllers, raw SQL in controllers) | Zero swallowed generic exceptions; the other two are shrink-only per-file baselines. |
+| **CI test step** | `tests/Unit` + the three guards, on SQLite, `--exclude-group database` | Feature tests need the shared dev MySQL data and are run locally. Tag a Unit test that needs real tables with `#[Group('database')]`. |
+
+**Golden-master snapshots** — the safety net for refactoring without behaviour change (read-only; every run is rolled back; output in `storage/app/*-snapshots/`, git-ignored):
+- `php artisan payroll:snapshot --label=before [--tenants=7,8,10] [--months=Y-m,…]` → refactor → `--label=after` → `php artisan payroll:snapshot-compare before after` ("Identical" = same payslip columns, line items, loan ledger, Edit Payroll numbers / saves / preview for both engines).
+- `php artisan reports:snapshot --label=before [--tenant=7] [--month=Y-m]` → refactor → `--label=after --compare=before` (every attendance report page + CSV export and every Team page / JSON endpoint, as the admin and as a manager; view data normalised, encrypted ids masked).
+
+- `php artisan dashboard:snapshot --label=before [--tenants=7,8,10]` → refactor → `--label=after --compare=before` (every dashboard's view data: admin with all period filters, managers, employees). Dashboard data depends on today's date — take both snapshots on the same day.
+
+- `php artisan routes:snapshot --label=before [--tenant=7]` → refactor → `--label=after --compare=before` (read endpoints of the employee, shift and mobile-attendance controllers: web pages as the admin, mobile API as an employee and a manager). Their write endpoints are covered by the feature tests — record the test results before and diff them after.
+
+Take the `before` snapshot **before** touching the code; run it twice first to confirm it is repeatable.
+
+## Coding conventions (code-quality plan Phase 5, 2026-10-10)
+
+For **new and changed code**. Legacy code is paid down over time; the guard tests make sure nothing gets worse (all are static scans that run in CI).
+
+| # | Rule | Enforced by |
+|---|---|---|
+| 1 | **Thin controllers.** A controller validates, calls a service, turns the result into a response. Business logic, queries and persistence live in `app/Services/<Domain>/` (e.g. `Services\Payroll\PayrollRunService`, `Services\Dashboard\AdminDashboard`). One controller per screen / report, not per module. | `ControllerSizeGuardTest` (≤ 600 lines, methods ≤ 80) |
+| 2 | **Validation in a FormRequest** (`app/Http/Requests/<Domain>/`), not `Validator::make()` / `$request->validate()` in the controller. If the screen expects a non-standard error body, override `failedValidation()` to keep it; checks that must run before validation go in `prepareForValidation()`. Worked example: `Requests\Shift\StoreShiftRequest` / `UpdateShiftRequest` (`ShiftDefinitionRequest`). | `ConventionGuardTest::test_validator_make_in_controllers_only_shrinks` |
+| 3 | **Never swallow an exception.** A `catch (Exception|Throwable …)` must `report($e)` (or log / rethrow) even when the response is a friendly message. Expected, user-facing failures get their own exception class (`PayrollEditException`, `PayrollRunException`, `ShiftRequestException`, `ExpenseException` …) caught by type. | `ConventionGuardTest::test_no_controller_swallows_a_generic_exception` (zero allowed) |
+| 4 | **No hand-written SQL in controllers.** Queries go in a service / query class and always carry an explicit `tenant_id`; prefer the query builder. | `ConventionGuardTest::test_raw_sql_in_controllers_only_shrinks`, `TenantScopeGuardTest` |
+| 5 | **Refactor with a safety net.** Moving code must not change behaviour: take a `before` snapshot (`payroll:snapshot`, `reports:snapshot`, `dashboard:snapshot`, `routes:snapshot`), record the relevant feature-test results, refactor, compare both. Bug fixes go in a separate step. | Review |
+| 6 | **Types and model columns.** New methods declare parameter and return types. Declare a model's commonly used columns with `@property` (adding six to `User` removed 428 Larastan errors). Larastan stays at level 5 for now — level 6 would add 4,085 errors, almost all missing types in legacy code; revisit once models are documented. | Larastan in CI |
+
+When a guard test fails because something got *better*, it prints the new number to write into its baseline — lower it in the same change.
+
 ## Multi-tenancy pattern
 
 Single database, `tenant_id` column on almost every table. Two pieces:
@@ -48,7 +86,7 @@ The **Tier 2 public API** (`/api/v1/*`, `ResolveApiClient` middleware) resolves 
 
 ## Controller patterns
 
-Controllers are **fat** — most business logic, validation, and persistence lives directly in the controller method, not delegated to services/models, though newer/sensitive modules (auth, payroll, RBAC, API v1) do use a service layer. Two representative examples:
+Controllers are **fat** (being reduced module by module — see Code-quality tooling above; payroll was split into `app/Services/Payroll/*` the dashboards into `app/Services/Dashboard/*`, and the attendance reports / Team pages into one controller per report on 2026-10-10) — most business logic, validation, and persistence lives directly in the controller method, not delegated to services/models, though newer/sensitive modules (auth, payroll, RBAC, API v1) do use a service layer. Two representative examples:
 
 - **`app/Http/Controllers/Department/DepartmentController.php`** — typical CRUD web controller. `index()` builds a raw query with `DB::raw`/`leftJoin`/`groupBy` directly in the controller and returns a Blade view (`view('client.department.department', $data)`); `store()`/`update()` validate inline with `$request->validate([...])` (including a scoped-unique rule via `Rule::unique(...)->where(fn ($q) => $q->where('tenant_id', ...))`), touch the Eloquent model directly, and return `response()->json(['success' => bool, 'message' => string], $code)` — **not** Blade redirects, even though the page itself is server-rendered (forms submit via AJAX). Every mutating action is wrapped in `try { } catch (Exception $e) { return response()->json(['success' => false, ...], 500); }`.
 - **`app/Http/Controllers/Api/Auth/AuthController.php`** — legacy/mobile JSON API controller. Constructor-injects services (`AuthService`, `LoginAttemptService`, `AuthAuditService`) rather than calling models directly for the core login flow; other actions (`face_register`, `changePassword`, `forgotPassword`, `resetPassword`, `otp`, `login_otp`) still query models inline. Validation via `Validator::make()` (not FormRequests). Response convention here: **always `200`** on validation/business failure with `{success: false, message: ...}` (only real server errors use `500`) — this is deliberate for the mobile client, don't "fix" it to use 4xx. JWT issued via `auth('api')->login($user)`; single-device-login enforced by overwriting `users.last_login_token` and comparing it to the `Device-Token` header (`CheckSingleDeviceLogin` middleware) on subsequent requests.

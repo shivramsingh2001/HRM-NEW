@@ -86,6 +86,7 @@ class AnnouncementController extends Controller
             ));
             
         } catch (Exception $e) {
+            report($e);
             
             return redirect()->back()->with('error', 'Failed to load announcements. Please try again.');
         }

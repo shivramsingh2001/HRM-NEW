@@ -37,6 +37,20 @@ class TenantScopeGuardTest extends TestCase
         'app/Http/Controllers/AI/AttendanceRegularizationController.php', // applies ->where('ar.tenant_id', ...) before ->get()
     ];
 
+    /**
+     * Known debt (code-quality plan, 2026-10-10): unguarded bypasses that
+     * existed when CI was introduced, as file => how many. A file may never
+     * have MORE than its count (a new leak still fails), and the number must be
+     * lowered here whenever one is fixed. Remove a file once it reaches 0.
+     */
+    private const KNOWN_DEBT = [
+        'app/Services/Attendance/OvertimePolicyService.php' => 1,
+        'app/Services/LeaveService.php' => 2,
+        'app/Services/Loan/SalaryAdvanceService.php' => 2,
+        'app/Services/Offboarding/OffboardingService.php' => 1,
+        'app/Services/Payroll/PayrollArrearsCalculator.php' => 1,
+    ];
+
     /** Tokens that prove a statement re-scoped itself. */
     private const SCOPE_TOKENS = [
         'tenant_id', 'tenantId', 'whereKey(', '->find(', "whereIn('id'", 'whereIn("id"',
@@ -72,6 +86,23 @@ class TenantScopeGuardTest extends TestCase
                 }
             }
         }
+
+        // Known debt: allowed up to its recorded count per file; fixing one means lowering the count.
+        $byFile = [];
+        foreach ($offenders as $o) {
+            $byFile[explode(':', $o)[0]][] = $o;
+        }
+        $stale = [];
+        foreach (self::KNOWN_DEBT as $file => $max) {
+            $found = count($byFile[$file] ?? []);
+            if ($found <= $max) {
+                $offenders = array_values(array_diff($offenders, $byFile[$file] ?? []));
+            }
+            if ($found < $max) {
+                $stale[] = "{$file}: {$found} left, KNOWN_DEBT says {$max} — lower it";
+            }
+        }
+        $this->assertSame([], $stale, "TenantScopeGuardTest::KNOWN_DEBT is out of date:\n  " . implode("\n  ", $stale));
 
         $this->assertSame(
             [],

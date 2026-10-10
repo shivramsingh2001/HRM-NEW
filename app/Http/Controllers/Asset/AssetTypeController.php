@@ -43,6 +43,7 @@ class AssetTypeController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Type created successfully.', 'data' => $type]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -73,6 +74,7 @@ class AssetTypeController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Type updated successfully.']);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -95,6 +97,7 @@ class AssetTypeController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Type deleted successfully.']);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }

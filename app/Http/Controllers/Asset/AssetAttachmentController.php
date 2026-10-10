@@ -44,6 +44,7 @@ class AssetAttachmentController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to upload file.'], 500);
         }
     }
@@ -59,6 +60,7 @@ class AssetAttachmentController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Attachment deleted.']);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to delete attachment.'], 500);
         }
     }

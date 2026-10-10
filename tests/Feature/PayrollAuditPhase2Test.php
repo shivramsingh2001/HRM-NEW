@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Payroll\MonthlyPayrollController;
+use App\Services\Payroll\Legacy\LegacyPayrollCalculator;
 use App\Models\LeaveType;
 use App\Models\PayrollComponentMaster;
 use App\Models\PayrollEmployeeStructure;
@@ -242,12 +242,12 @@ class PayrollAuditPhase2Test extends TestCase
     public function test_attendance_status_uses_the_tenants_resolved_policy_not_hardcoded_thresholds(): void
     {
         [, , $tenantId] = $this->tenantFixture();
-        $controller = app(MonthlyPayrollController::class);
+        $controller = app(LegacyPayrollCalculator::class);
         $today = '2031-06-02';
         $this->pinPolicy($tenantId, '2031-06-01');
 
         $call = fn ($hours, $attendance = null) => $this->callPrivate(
-            $controller, MonthlyPayrollController::class, 'getAttendanceStatusByShift',
+            $controller, LegacyPayrollCalculator::class, 'getAttendanceStatusByShift',
             [$hours, $attendance, $tenantId, $today]
         );
 
@@ -282,11 +282,11 @@ class PayrollAuditPhase2Test extends TestCase
             'created_at' => now(), 'updated_at' => now(),
         ]);
 
-        $controller = app(MonthlyPayrollController::class);
+        $controller = app(LegacyPayrollCalculator::class);
 
         // stdHoursPerDay=9 (tenant's configured working hours) -> 1h overtime, not 2h (would be the old hardcoded-8 result).
         $result = $this->callPrivate(
-            $controller, MonthlyPayrollController::class, 'calculateAttendanceSummary',
+            $controller, LegacyPayrollCalculator::class, 'calculateAttendanceSummary',
             [$user->id, $date, $date, $tenantId, 9.0]
         );
 
@@ -310,7 +310,7 @@ class PayrollAuditPhase2Test extends TestCase
             ->where('tenant_id', $tenantId)->where('is_unpaid', false)->value('id');
         $this->assertNotNull($paidLeaveTypeId, 'fixture tenant must have a paid leave type configured');
 
-        $controller = app(MonthlyPayrollController::class);
+        $controller = app(LegacyPayrollCalculator::class);
 
         // Week A: Fri/Mon on approved paid leave, flanking a Sat/Sun weekoff -- should be paid.
         $fridayA = Carbon::parse('2031-01-03'); // a Friday
@@ -325,7 +325,7 @@ class PayrollAuditPhase2Test extends TestCase
         }
 
         $resultPaid = $this->callPrivate(
-            $controller, MonthlyPayrollController::class, 'calculateDayBreakdownWithPriority',
+            $controller, LegacyPayrollCalculator::class, 'calculateDayBreakdownWithPriority',
             [
                 $user->id, $fridayA->toDateString(), $fridayA->copy()->addDays(3)->toDateString(),
                 [], [$fridayA->copy()->addDay()->toDateString(), $fridayA->copy()->addDays(2)->toDateString()],
@@ -337,7 +337,7 @@ class PayrollAuditPhase2Test extends TestCase
         // Week B (no leave inserted -- flanking days are plain absence): weekoff must stay unpaid (regression check).
         $fridayB = $fridayA->copy()->addWeek();
         $resultUnpaid = $this->callPrivate(
-            $controller, MonthlyPayrollController::class, 'calculateDayBreakdownWithPriority',
+            $controller, LegacyPayrollCalculator::class, 'calculateDayBreakdownWithPriority',
             [
                 $user->id, $fridayB->toDateString(), $fridayB->copy()->addDays(3)->toDateString(),
                 [], [$fridayB->copy()->addDay()->toDateString(), $fridayB->copy()->addDays(2)->toDateString()],
@@ -353,8 +353,8 @@ class PayrollAuditPhase2Test extends TestCase
 
     public function test_overtime_hourly_rate_respects_the_divisor_mode(): void
     {
-        $controller = app(MonthlyPayrollController::class);
-        $call = fn (...$args) => $this->callPrivate($controller, MonthlyPayrollController::class, 'overtimeHourlyRate', $args);
+        $controller = app(LegacyPayrollCalculator::class);
+        $call = fn (...$args) => $this->callPrivate($controller, LegacyPayrollCalculator::class, 'overtimeHourlyRate', $args);
 
         $default = $call(26000.0, 'day_based', 8.0, 30, 22.0);
         $this->assertEqualsWithDelta(26000 / 30 / 8, $default, 0.001, 'default mode must be unchanged from the original calendar-days behavior');

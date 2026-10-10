@@ -19,6 +19,7 @@ class HolidayController extends Controller
             try {
                 $year = \Carbon\Carbon::parse($request->input('start_date'))->year;
             } catch (\Throwable $e) {
+                report($e);
                 return; // start_date has its own rule
             }
             $exists = \Illuminate\Support\Facades\DB::table('holidays')
@@ -63,6 +64,7 @@ class HolidayController extends Controller
                 'message' => 'Holiday created successfully!',
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong. Please try again later.',
@@ -95,6 +97,7 @@ class HolidayController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json(['success' => false, 'message' => 'Holiday not found.'], 404);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -121,6 +124,7 @@ class HolidayController extends Controller
                 'message' => 'Status updated successfully.',
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong. Please try again later.',

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Attendance;
 
-use App\Http\Controllers\Api\Attendance\AttendanceController;
+use App\Http\Controllers\Api\Attendance\ClockController;
 use App\Models\Attendance;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceTrackingPoint;
@@ -79,7 +79,7 @@ class MobileClockInOutControllerTest extends TestCase
 
     public function test_full_clock_in_then_clock_out_cycle_via_the_real_controller(): void
     {
-        $controller = app(AttendanceController::class);
+        $controller = app(ClockController::class);
 
         Carbon::setTestNow(Carbon::parse($this->date . ' 09:00:00'));
         $inResponse = $controller->clockIn(Request::create('/x', 'POST', [

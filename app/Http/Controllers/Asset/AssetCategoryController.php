@@ -43,6 +43,7 @@ class AssetCategoryController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Category created successfully.', 'data' => $category]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -71,6 +72,7 @@ class AssetCategoryController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Category updated successfully.']);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -93,6 +95,7 @@ class AssetCategoryController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Category deleted successfully.']);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }

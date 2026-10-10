@@ -110,6 +110,7 @@ class AuthController extends Controller
             ],200);
 
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occured.Please try again later.'
@@ -159,6 +160,7 @@ class AuthController extends Controller
             ], 200);
     
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -224,6 +226,7 @@ class AuthController extends Controller
             ], 200);
 
         } catch (Exception $e) {
+            report($e);
     
             return response()->json([
                 'success' => false,
@@ -330,6 +333,7 @@ class AuthController extends Controller
             ], 200);
     
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -383,6 +387,7 @@ class AuthController extends Controller
             ], 200);
     
         } catch (Exception $e) {
+            report($e);
           
             return response()->json([
                 'success' => false,
@@ -413,6 +418,7 @@ class AuthController extends Controller
             ], 200);
     
         } catch (Exception $e) {
+            report($e);
             
             return response()->json([
                 'success' => false,
@@ -502,6 +508,7 @@ class AuthController extends Controller
                 ], 200);
             }
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while sending OTP.',
@@ -616,6 +623,7 @@ class AuthController extends Controller
                 ]
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Login failed due to server error.'.$e->getMessage(),

@@ -364,6 +364,7 @@ class TaskController extends Controller
                 'authUser'
             ));
         } catch (Exception $e) {
+            report($e);
             return redirect()->back()
                 ->with('error', 'An error occurred. Please try again later.');
         }
@@ -738,6 +739,7 @@ class TaskController extends Controller
                 throw $e;
             }
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while deleting the task. Please try again later.'
@@ -965,6 +967,7 @@ class TaskController extends Controller
                 ],
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Error updating tasks: ' . $e->getMessage()
@@ -1273,6 +1276,7 @@ class TaskController extends Controller
                 'message' => $message,
             ], 200);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,

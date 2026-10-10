@@ -42,6 +42,7 @@ class RequestController extends Controller
                 'data' => $requestTypes
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occured. Please try again later.'
@@ -152,6 +153,7 @@ class RequestController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
 
@@ -264,6 +266,7 @@ class RequestController extends Controller
                 'message' => 'Request updated successfully.'
             ], 200);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -327,6 +330,7 @@ class RequestController extends Controller
                 'message' => 'Request cancelled successfully.'
             ], 200);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -391,6 +395,7 @@ class RequestController extends Controller
             ], 200);
             
         } catch (Exception $e) {
+            report($e);
            
             return response()->json([
                 'success' => false,
@@ -541,6 +546,7 @@ class RequestController extends Controller
             ], 200);
             
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -630,6 +636,7 @@ class RequestController extends Controller
                 'message' => 'Request ' . $request->status . ' successfully.'
             ]);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -767,6 +774,7 @@ public function show(Request $request, $id)
         ], 200);
 
     } catch (Exception $e) {
+        report($e);
         return response()->json([
             'success' => false,
             'message' => 'An error occurred while fetching request details. Please try again later.'.$e->getMessage()

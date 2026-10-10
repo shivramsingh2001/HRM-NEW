@@ -31,6 +31,7 @@ class LoanController extends Controller
                 'data' => $data
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An error occured. Please try again later.",
@@ -112,6 +113,7 @@ class LoanController extends Controller
                 ]
             ], 200);
         } catch (Exception $e) {
+            report($e);
 
             return response()->json([
                 'success' => false,
@@ -211,6 +213,7 @@ class LoanController extends Controller
                 'data' => $statistics
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch statistics'
@@ -410,6 +413,7 @@ class LoanController extends Controller
                 'message' => $message,
             ], 200);
         } catch (Exception $e) {
+            report($e);
             DB::rollback();
             return response()->json([
                 'success' => false,

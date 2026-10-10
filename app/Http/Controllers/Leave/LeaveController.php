@@ -149,6 +149,7 @@ class LeaveController extends Controller
 
             return view('client.leave.leave', $data);
         } catch (Exception $e) {
+            report($e);
             return back()->withErrors([
                 'success' => false,
                 'message' => "An error occurred. Please try again later." . $e->getMessage(),
@@ -271,6 +272,7 @@ class LeaveController extends Controller
             try {
                 app(\App\Services\LeaveNotificationService::class)->notifyLeaveSubmitted($leave->fresh());
             } catch (\Throwable $e) {
+                report($e);
                 // never block on notification
             }
 
@@ -278,6 +280,7 @@ class LeaveController extends Controller
                 ->route('leave.view')
                 ->with('success', 'Leave request submitted successfully');
         } catch (Exception $e) {
+            report($e);
             return back()
                 ->withInput()
                 ->with('error', 'Something went wrong. Please try again.' . $e->getMessage());
@@ -308,6 +311,7 @@ class LeaveController extends Controller
             $data['leaveTypes'] = LeaveType::all();
             return view('client.leave.update-leave', $data);
         } catch (Exception $e) {
+            report($e);
             return back()->withErrors('error', 'Something went wrong. ' . $e->getMessage());
         }
     }
@@ -414,6 +418,7 @@ class LeaveController extends Controller
                 ->route('leave.view')
                 ->with('success', 'Leave request updated successfully.');
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return back()
                 ->withErrors('error', 'Failed to update leave. Please try again.')
@@ -447,6 +452,7 @@ class LeaveController extends Controller
 
             return back()->with('success', 'Leave request deleted successfully.');
         } catch (Exception $e) {
+            report($e);
             return back()->withErrors([
                 'error' => 'Something went wrong. ' . $e->getMessage()
             ]);
@@ -656,6 +662,7 @@ class LeaveController extends Controller
                         app(\App\Services\LeaveNotificationService::class)->notifyLeaveCancelled($leaveWithUser, $request->remarks);
                     }
                 } catch (\Throwable $e) {
+                    report($e);
                     // never block on notification
                 }
 
@@ -729,11 +736,13 @@ class LeaveController extends Controller
                         : app(\App\Services\LeaveNotificationService::class)->notifyLeaveRejected($leaveWithUser, $request->remarks);
                 }
             } catch (\Throwable $e) {
+                report($e);
                 // never block on notification
             }
 
             return response()->json($result);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,

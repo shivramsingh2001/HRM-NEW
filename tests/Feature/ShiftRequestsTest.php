@@ -614,14 +614,13 @@ class ShiftRequestsTest extends TestCase
 
         // Admin "Needs your action": the pending change request.
         $this->actingAs($this->admin);
-        $dash = app(\App\Http\Controllers\Dashboard\DashboardController::class);
-        $items = collect((new \ReflectionMethod($dash, 'adminPendingApprovals'))->invoke($dash, fn () => true))->keyBy('key');
+        $items = collect(app(\App\Services\Dashboard\Cards\PendingApprovalsCard::class)->build(fn () => true))->keyBy('key');
         $this->assertGreaterThanOrEqual(1, $items['shift_request']['count']);
         $this->assertStringContainsString('tab=approvals', $items['shift_request']['url']);
 
         // Manager: only once the requester reports to them.
         $this->actingAs($this->manager);
-        $data = fn () => (new \ReflectionMethod($dash, 'managerDashboard'))->invoke($dash)->getData();
+        $data = fn () => app(\App\Services\Dashboard\ManagerDashboard::class)->build();
         $this->assertSame(0, $data()['pending_shift_requests']);
         DB::table('user_reporting_heads')->insert(['tenant_id' => $this->tenantId, 'user_id' => $this->a->id, 'reporting_head_id' => $this->manager->id, 'is_primary' => 1, 'created_at' => now(), 'updated_at' => now()]);
         $d = $data();

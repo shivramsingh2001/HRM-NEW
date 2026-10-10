@@ -107,6 +107,7 @@ class PayrollStructureController extends Controller
                 'message' => 'Payroll structure created successfully.',
             ]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([
@@ -148,6 +149,7 @@ class PayrollStructureController extends Controller
                 'message' => 'Payroll structure updated successfully.',
             ]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([

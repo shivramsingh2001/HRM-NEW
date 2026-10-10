@@ -59,6 +59,7 @@ class LeaveController extends Controller
                 'data' => $leaveTypes
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An error occured. Please try again later." ,
@@ -120,6 +121,7 @@ class LeaveController extends Controller
                 ]
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An error occured. Please try again later.".$e->getMessage(),
@@ -250,6 +252,7 @@ class LeaveController extends Controller
             ], 200);
 
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -314,6 +317,7 @@ class LeaveController extends Controller
             ], 200);
             
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.',
@@ -502,6 +506,7 @@ class LeaveController extends Controller
             ], 200);
     
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.',

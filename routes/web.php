@@ -164,22 +164,22 @@ Route::group(['middleware' => ['tenant']], function () {
 
         Route::post('/impersonate/end', [\App\Http\Controllers\Impersonation\ImpersonationController::class, 'end'])->name('impersonate.end');
         Route::middleware(['auth', 'role:admin'])->group(function () {
-            Route::get('/admin/dashboard', [DashboardController::class, 'adminDashboard'])->name('dashboard.admin');
+            Route::get('/admin/dashboard', [DashboardController::class, 'roleDashboard'])->name('dashboard.admin');
         });
 
         // HR Dashboard - Only hr can access
         Route::middleware(['auth', 'role:hr'])->group(function () {
-            Route::get('/hr/dashboard', [DashboardController::class, 'hrDashboard'])->name('dashboard.hr');
+            Route::get('/hr/dashboard', [DashboardController::class, 'roleDashboard'])->name('dashboard.hr');
         });
 
         // Manager Dashboard - Only manager can access
         Route::middleware(['auth', 'role:manager'])->group(function () {
-            Route::get('/manager/dashboard', [DashboardController::class, 'managerDashboard'])->name('dashboard.manager');
+            Route::get('/manager/dashboard', [DashboardController::class, 'roleDashboard'])->name('dashboard.manager');
         });
 
         // Employee Dashboard - Only employee can access
         Route::middleware(['auth', 'role:employee'])->group(function () {
-            Route::get('/employee/dashboard', [DashboardController::class, 'employeeDashboard'])->name('dashboard.employee');
+            Route::get('/employee/dashboard', [DashboardController::class, 'roleDashboard'])->name('dashboard.employee');
         });
         //Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -236,14 +236,14 @@ Route::group(['middleware' => ['tenant']], function () {
         //Employee Route
         Route::prefix('employee')->name('employee.')->group(function () {
             Route::get('/', [UserController::class, 'index'])->name('index');
-            Route::get('/create', [UserController::class, 'create'])->name('create');
-            Route::post('/import', [UserController::class, 'importEmployees'])->name('import')->middleware('role:admin,hr');
-            Route::get('/import/template', [UserController::class, 'importTemplate'])->name('import.template')->middleware('role:admin,hr');
+            Route::get('/create', [\App\Http\Controllers\User\EmployeeCreateController::class, 'create'])->name('create');
+            Route::post('/import', [\App\Http\Controllers\User\EmployeeImportController::class, 'importEmployees'])->name('import')->middleware('role:admin,hr');
+            Route::get('/import/template', [\App\Http\Controllers\User\EmployeeImportController::class, 'importTemplate'])->name('import.template')->middleware('role:admin,hr');
             Route::post('/store', [UserController::class, 'store'])->name('store.step');
-            Route::post('/save-step', [UserController::class, 'saveStep'])->name('save.step');
-            Route::post('/complete-store', [UserController::class, 'completeStore'])->name('complete.store');
-            Route::get('/edit/{id}', [UserController::class, 'edit'])->name('edit');
-            Route::post('/update/{id}', [UserController::class, 'update'])->name('update-store');
+            Route::post('/save-step', [\App\Http\Controllers\User\EmployeeCreateController::class, 'saveStep'])->name('save.step');
+            Route::post('/complete-store', [\App\Http\Controllers\User\EmployeeCreateController::class, 'completeStore'])->name('complete.store');
+            Route::get('/edit/{id}', [\App\Http\Controllers\User\EmployeeEditController::class, 'edit'])->name('edit');
+            Route::post('/update/{id}', [\App\Http\Controllers\User\EmployeeEditController::class, 'update'])->name('update-store');
             // Employee 360 page — admin + HR only.
             Route::get('/show/{id}', [UserController::class, 'show'])->name('show')->middleware('role:admin,hr');
             Route::get('/show/{id}/tab/{tab}', [\App\Http\Controllers\User\EmployeeProfileController::class, 'tab'])->name('profile.tab')->middleware('role:admin,hr');
@@ -256,19 +256,19 @@ Route::group(['middleware' => ['tenant']], function () {
                 // Company policy values customised for this one employee (employee_policy_overrides).
                 Route::post('/show/{id}/policies/{section}', 'savePolicy')->name('profile.policy');
             });
-            Route::get('/load-data', [UserController::class, 'loadSavedData'])->name('load.data');
+            Route::get('/load-data', [\App\Http\Controllers\User\EmployeeCreateController::class, 'loadSavedData'])->name('load.data');
 
             Route::get('/export/excel', [UserController::class, 'exportExcel'])->name('export.excel');
             Route::get('/export/pdf', [UserController::class, 'exportPDF'])->name('export.pdf');
-            Route::post('/update-step/{id}', [UserController::class, 'updateStep'])->name('update.step');
-            Route::post('/update-complete/{id}', [UserController::class, 'completeUpdate'])->name('complete.update');
+            Route::post('/update-step/{id}', [\App\Http\Controllers\User\EmployeeEditController::class, 'updateStep'])->name('update.step');
+            Route::post('/update-complete/{id}', [\App\Http\Controllers\User\EmployeeEditController::class, 'completeUpdate'])->name('complete.update');
 
-            Route::post('/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status');
-            Route::post('/toggle-face-register', [UserController::class, 'toggleFaceRegister'])->name('toggle-face-register');
-            Route::post('/update-attendance-type', [UserController::class, 'updateAttendanceType'])->name('update-attendance-type');
-            Route::post('/toggle-location-tracking', [UserController::class, 'toggleLocationTracking'])->name('toggle-location-tracking');
-            Route::post('/bulk-location-tracking', [UserController::class, 'bulkLocationTracking'])->name('bulk-location-tracking');
-            Route::post('/bulk-push-to-device', [UserController::class, 'bulkPushToDevice'])->name('bulk-push-to-device')->middleware('feature:attendance_biometric');
+            Route::post('/toggle-status', [\App\Http\Controllers\User\EmployeeSettingsController::class, 'toggleStatus'])->name('toggle-status');
+            Route::post('/toggle-face-register', [\App\Http\Controllers\User\EmployeeSettingsController::class, 'toggleFaceRegister'])->name('toggle-face-register');
+            Route::post('/update-attendance-type', [\App\Http\Controllers\User\EmployeeSettingsController::class, 'updateAttendanceType'])->name('update-attendance-type');
+            Route::post('/toggle-location-tracking', [\App\Http\Controllers\User\EmployeeSettingsController::class, 'toggleLocationTracking'])->name('toggle-location-tracking');
+            Route::post('/bulk-location-tracking', [\App\Http\Controllers\User\EmployeeSettingsController::class, 'bulkLocationTracking'])->name('bulk-location-tracking');
+            Route::post('/bulk-push-to-device', [\App\Http\Controllers\User\EmployeeSettingsController::class, 'bulkPushToDevice'])->name('bulk-push-to-device')->middleware('feature:attendance_biometric');
         });
 
         //Holiday Route
@@ -500,16 +500,16 @@ Route::group(['middleware' => ['tenant']], function () {
         });
         Route::prefix('team')->name('team.')->group(function () {
             Route::get('/members', [TeamController::class, 'team'])->name('index');
-            Route::get('/member-detail/{id}', [TeamController::class, 'viewUserProfile'])->name('member-detail');
-            Route::get('/user/{id}/attendance/calendar', [TeamController::class, 'userAttendanceCalendarData'])->name('user.attendance.calendar');
-            Route::get('/user/{id}/attendance/table', [TeamController::class, 'userAttendanceTableData'])->name('user.attendance.table');
-            Route::get('/user/{id}/attendance-stats', [TeamController::class, 'userAttendanceStats'])->name('user.attendance.stats');
+            Route::get('/member-detail/{id}', [\App\Http\Controllers\Team\TeamMemberController::class, 'viewUserProfile'])->name('member-detail');
+            Route::get('/user/{id}/attendance/calendar', [\App\Http\Controllers\Team\TeamMemberController::class, 'userAttendanceCalendarData'])->name('user.attendance.calendar');
+            Route::get('/user/{id}/attendance/table', [\App\Http\Controllers\Team\TeamMemberController::class, 'userAttendanceTableData'])->name('user.attendance.table');
+            Route::get('/user/{id}/attendance-stats', [\App\Http\Controllers\Team\TeamMemberController::class, 'userAttendanceStats'])->name('user.attendance.stats');
             Route::post('/get-user-shift', [TeamController::class, 'getUserShift'])->name('get-user-shift');
 
             // Monthly Attendance Summary moved to Reports (report.attendance.summary.*); old URLs redirect.
             Route::get('/attendance-summary', fn (\Illuminate\Http\Request $r) => redirect()->route('report.attendance.summary.index', $r->except('tenant_id')))->name('attendance-summary');
             Route::get('/attendance-summary/export', fn (\Illuminate\Http\Request $r) => redirect()->route('report.attendance.summary.export', $r->except('tenant_id')))->name('attendance-summary.export');
-            Route::get('/attendance-summary/quick', [TeamController::class, 'getQuickSummary'])->name('attendance-summary.quick');
+            Route::get('/attendance-summary/quick', [\App\Http\Controllers\Team\AttendanceSummaryController::class, 'getQuickSummary'])->name('attendance-summary.quick');
              Route::post('/attendance-mark', [TeamController::class, 'markAttendance'])
                 ->middleware('role:admin,hr,manager')
                 ->name('mark-attendance');
@@ -545,13 +545,13 @@ Route::group(['middleware' => ['tenant']], function () {
         Route::middleware('shifts.custom')->prefix('shift')->name('shift.')->group(function () {
             // Read-only: roster + assignments list — admin / hr / manager
             Route::middleware('role:admin,hr,manager')->group(function () {
-                Route::get('/roster', [ShiftController::class, 'roster'])->name('roster');
-                Route::get('/user-shifts/data', [ShiftController::class, 'getUserShiftsData'])->name('user-shifts.data');
-                Route::get('/user-shifts/export', [ShiftController::class, 'exportUserShifts'])->name('user-shifts.export');
-                Route::get('/get-users-by-type', [ShiftController::class, 'getUsersByType'])->name('get-users-by-type');
-                Route::post('/assignment-conflicts', [ShiftController::class, 'checkAssignmentConflicts'])->name('assignment-conflicts');
-                Route::get('/assignments/history', [ShiftController::class, 'assignmentHistory'])->name('assignments.history');
-                Route::get('/change-log', [ShiftController::class, 'changeLog'])->name('change-log');
+                Route::get('/roster', [\App\Http\Controllers\Shift\RosterController::class, 'roster'])->name('roster');
+                Route::get('/user-shifts/data', [\App\Http\Controllers\Shift\RosterController::class, 'getUserShiftsData'])->name('user-shifts.data');
+                Route::get('/user-shifts/export', [\App\Http\Controllers\Shift\RosterController::class, 'exportUserShifts'])->name('user-shifts.export');
+                Route::get('/get-users-by-type', [\App\Http\Controllers\Shift\RosterController::class, 'getUsersByType'])->name('get-users-by-type');
+                Route::post('/assignment-conflicts', [\App\Http\Controllers\Shift\ShiftAssignmentController::class, 'checkAssignmentConflicts'])->name('assignment-conflicts');
+                Route::get('/assignments/history', [\App\Http\Controllers\Shift\ShiftAssignmentController::class, 'assignmentHistory'])->name('assignments.history');
+                Route::get('/change-log', [\App\Http\Controllers\Shift\ShiftAssignmentController::class, 'changeLog'])->name('change-log');
             });
 
             // Shift swap / change requests — every role; ShiftRequestService decides
@@ -581,13 +581,13 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::post('/change-status/{id}', [ShiftController::class, 'changeStatus'])->name('change-status');
                 Route::delete('/destroy/{id}', [ShiftController::class, 'destroy'])->name('destroy');
 
-                Route::post('/assign', [ShiftController::class, 'assignShift'])->name('assign');
-                Route::post('/update-user-shift', [ShiftController::class, 'updateUserShift'])->name('update-user-shift');
-                Route::post('/bulk-delete-user-shifts', [ShiftController::class, 'bulkDeleteUserShifts'])->name('bulk-delete-user-shifts');
-                Route::delete('/destroy-assigned/{id}', [ShiftController::class, 'destroyAssigned'])->name('destroy-assigned');
-                Route::post('/user-shifts/bulk-update', [ShiftController::class, 'bulkUpdateUserShifts'])->name('user-shifts.bulk-update');
-                Route::post('/user-shifts/assign-bulk', [ShiftController::class, 'assignBulkShifts'])->name('user-shifts.assign-bulk');
-                Route::post('/assignments/{id}/end-permanent', [ShiftController::class, 'endPermanentShift'])->name('assignments.end-permanent');
+                Route::post('/assign', [\App\Http\Controllers\Shift\ShiftAssignmentController::class, 'assignShift'])->name('assign');
+                Route::post('/update-user-shift', [\App\Http\Controllers\Shift\RosterController::class, 'updateUserShift'])->name('update-user-shift');
+                Route::post('/bulk-delete-user-shifts', [\App\Http\Controllers\Shift\RosterController::class, 'bulkDeleteUserShifts'])->name('bulk-delete-user-shifts');
+                Route::delete('/destroy-assigned/{id}', [\App\Http\Controllers\Shift\RosterController::class, 'destroyAssigned'])->name('destroy-assigned');
+                Route::post('/user-shifts/bulk-update', [\App\Http\Controllers\Shift\RosterController::class, 'bulkUpdateUserShifts'])->name('user-shifts.bulk-update');
+                Route::post('/user-shifts/assign-bulk', [\App\Http\Controllers\Shift\ShiftAssignmentController::class, 'assignBulkShifts'])->name('user-shifts.assign-bulk');
+                Route::post('/assignments/{id}/end-permanent', [\App\Http\Controllers\Shift\ShiftAssignmentController::class, 'endPermanentShift'])->name('assignments.end-permanent');
 
                 // Rotating shift patterns
                 Route::get('/rotations', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'index'])->name('rotations.index');
@@ -598,9 +598,9 @@ Route::group(['middleware' => ['tenant']], function () {
             });
         });
         Route::prefix('my-payroll')->name('my-payroll.')->middleware(['feature:payroll', 'permission:payroll,view'])->group(function () {
-            Route::get('/salary-slips', [MonthlyPayrollController::class, 'mySalarySlips'])->name('my-salary-slips');
-            Route::get('/download/{id}', [MonthlyPayrollController::class, 'downloadSalarySlip'])->name('download-salary-slip');
-            Route::get('/view/{id}', [MonthlyPayrollController::class, 'viewSalarySlip'])->name('view-salary-slip');
+            Route::get('/salary-slips', [\App\Http\Controllers\Payroll\PayslipController::class, 'mySalarySlips'])->name('my-salary-slips');
+            Route::get('/download/{id}', [\App\Http\Controllers\Payroll\PayslipController::class, 'downloadSalarySlip'])->name('download-salary-slip');
+            Route::get('/view/{id}', [\App\Http\Controllers\Payroll\PayslipController::class, 'viewSalarySlip'])->name('view-salary-slip');
         });
 
         // Monthly Payroll Routes
@@ -611,11 +611,11 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::get('/{id}', [MonthlyPayrollController::class, 'show'])->name('show')->middleware('permission:payroll,view');
             Route::get('/{id}/edit', [MonthlyPayrollController::class, 'edit'])->name('edit')->middleware('permission:payroll,edit');
             Route::put('/{id}', [MonthlyPayrollController::class, 'update'])->name('update')->middleware('permission:payroll,edit');
-            Route::get('/{id}/payslip', [MonthlyPayrollController::class, 'generatePayslip'])->name('payslip')->middleware('permission:payroll,view');
-            Route::patch('/{id}/status', [MonthlyPayrollController::class, 'updateStatus'])->name('status')->middleware('permission:payroll,edit');
-            Route::post('/{id}/reopen', [MonthlyPayrollController::class, 'reopen'])->name('reopen')->middleware('permission:payroll,manage');
-            Route::post('/bulk-update', [MonthlyPayrollController::class, 'bulkUpdate'])->name('bulk-update')->middleware('permission:payroll,edit');
-            Route::post('/export', [MonthlyPayrollController::class, 'export'])->name('export')->middleware('permission:payroll,export');
+            Route::get('/{id}/payslip', [\App\Http\Controllers\Payroll\PayslipController::class, 'generatePayslip'])->name('payslip')->middleware('permission:payroll,view');
+            Route::patch('/{id}/status', [\App\Http\Controllers\Payroll\MonthlyPayrollStatusController::class, 'updateStatus'])->name('status')->middleware('permission:payroll,edit');
+            Route::post('/{id}/reopen', [\App\Http\Controllers\Payroll\MonthlyPayrollStatusController::class, 'reopen'])->name('reopen')->middleware('permission:payroll,manage');
+            Route::post('/bulk-update', [\App\Http\Controllers\Payroll\MonthlyPayrollStatusController::class, 'bulkUpdate'])->name('bulk-update')->middleware('permission:payroll,edit');
+            Route::post('/export', [\App\Http\Controllers\Payroll\MonthlyPayrollExportController::class, 'export'])->name('export')->middleware('permission:payroll,export');
             Route::delete('/{id}', [MonthlyPayrollController::class, 'destroy'])->name('destroy')->middleware('permission:payroll,delete');
             Route::post('/calculate-estimates', [MonthlyPayrollController::class, 'calculateEstimates'])->name('calculate-estimates')->middleware('permission:payroll,create');
             Route::post('/{id}/recalculate-preview', [MonthlyPayrollController::class, 'recalculatePreview'])->name('recalculate-preview')->middleware('permission:payroll,edit');
@@ -1094,26 +1094,26 @@ Route::group(['middleware' => ['tenant']], function () {
             // Attendance Reports — any attendance method (manual / face / biometric) produces
             // attendance data, so they don't depend on the manual clock-in feature alone.
             Route::middleware('feature:attendance,attendance_face,attendance_biometric')->group(function () {
-                Route::get('/attendance/detail', [AttendanceReportController::class, 'detailAttendanceReport'])->name('attendance.detail.index');
-                Route::get('/attendance/detail/export', [AttendanceReportController::class, 'detailExportAttendance'])->name('attendance.detail.export');
-                Route::get('/attendance/day', [AttendanceReportController::class, 'dayAttendanceReport'])->name('attendance.day.index');
-                Route::get('/attendance/day/export', [AttendanceReportController::class, 'dayExportAttendance'])->name('attendance.day.export');
-                Route::get('/attendance/hourly', [AttendanceReportController::class, 'hourlyAttendanceReport'])->name('attendance.hourly.index');
-                Route::get('/attendance/hourly/export', [AttendanceReportController::class, 'hourlyExportAttendance'])->name('attendance.hourly.export');
-                Route::get('/attendance/overall', [AttendanceReportController::class, 'overallAttendanceReport'])->name('attendance.overall.index');
-                Route::get('/attendance/overall/export', [AttendanceReportController::class, 'overallExportAttendance'])->name('attendance.overall.export');
-                Route::get('/attendance/employee-wise', [AttendanceReportController::class, 'employeeWiseAttendance'])->name('attendance.detailed.index');
-                Route::get('/attendance/employee-wise/export', [AttendanceReportController::class, 'employeeWisExportReport'])->name('attendance.detailed.export');
-                Route::get('/attendance/monthly/summary', [AttendanceReportController::class, 'employeeWiseAttendance'])->name('attendance.monthly.summary.index');
-                Route::get('/attendance/monthly/summary/export', [AttendanceReportController::class, 'employeeWisExportReport'])->name('attendance.monthly.summary.export');
+                Route::get('/attendance/detail', [\App\Http\Controllers\Report\DetailAttendanceReportController::class, 'detailAttendanceReport'])->name('attendance.detail.index');
+                Route::get('/attendance/detail/export', [\App\Http\Controllers\Report\DetailAttendanceReportController::class, 'detailExportAttendance'])->name('attendance.detail.export');
+                Route::get('/attendance/day', [\App\Http\Controllers\Report\DayAttendanceReportController::class, 'dayAttendanceReport'])->name('attendance.day.index');
+                Route::get('/attendance/day/export', [\App\Http\Controllers\Report\DayAttendanceReportController::class, 'dayExportAttendance'])->name('attendance.day.export');
+                Route::get('/attendance/hourly', [\App\Http\Controllers\Report\HourlyAttendanceReportController::class, 'hourlyAttendanceReport'])->name('attendance.hourly.index');
+                Route::get('/attendance/hourly/export', [\App\Http\Controllers\Report\HourlyAttendanceReportController::class, 'hourlyExportAttendance'])->name('attendance.hourly.export');
+                Route::get('/attendance/overall', [\App\Http\Controllers\Report\OverallAttendanceReportController::class, 'overallAttendanceReport'])->name('attendance.overall.index');
+                Route::get('/attendance/overall/export', [\App\Http\Controllers\Report\OverallAttendanceReportController::class, 'overallExportAttendance'])->name('attendance.overall.export');
+                Route::get('/attendance/employee-wise', [\App\Http\Controllers\Report\EmployeeWiseAttendanceReportController::class, 'employeeWiseAttendance'])->name('attendance.detailed.index');
+                Route::get('/attendance/employee-wise/export', [\App\Http\Controllers\Report\EmployeeWiseAttendanceReportController::class, 'employeeWisExportReport'])->name('attendance.detailed.export');
+                Route::get('/attendance/monthly/summary', [\App\Http\Controllers\Report\EmployeeWiseAttendanceReportController::class, 'employeeWiseAttendance'])->name('attendance.monthly.summary.index');
+                Route::get('/attendance/monthly/summary/export', [\App\Http\Controllers\Report\EmployeeWiseAttendanceReportController::class, 'employeeWisExportReport'])->name('attendance.monthly.summary.export');
 
                 // Monthly Attendance Summary (present/absent/leave/... counts per employee) — formerly team.attendance-summary.
-                Route::get('/attendance/summary', [TeamController::class, 'attendanceSummary'])->name('attendance.summary.index');
-                Route::get('/attendance/summary/export', [TeamController::class, 'exportAttendanceSummary'])->name('attendance.summary.export');
+                Route::get('/attendance/summary', [\App\Http\Controllers\Team\AttendanceSummaryController::class, 'attendanceSummary'])->name('attendance.summary.index');
+                Route::get('/attendance/summary/export', [\App\Http\Controllers\Team\AttendanceSummaryController::class, 'exportAttendanceSummary'])->name('attendance.summary.export');
 
-                Route::get('/attendance/branch-wise', [AttendanceReportController::class, 'branchWiseAttendanceReport'])->name('attendance.branch-wise');
-                Route::get('/attendance/branch-wise/{branchId}', [AttendanceReportController::class, 'branchWiseDetailReport'])->name('attendance.branch-wise.detail');
-                Route::get('/attendance/branch-wise/{branchId}/export', [AttendanceReportController::class, 'branchWiseDetailExport'])->name('attendance.branch-wise.detail.export');
+                Route::get('/attendance/branch-wise', [\App\Http\Controllers\Report\LocationAttendanceReportController::class, 'branchWiseAttendanceReport'])->name('attendance.branch-wise');
+                Route::get('/attendance/branch-wise/{branchId}', [\App\Http\Controllers\Report\LocationAttendanceReportController::class, 'branchWiseDetailReport'])->name('attendance.branch-wise.detail');
+                Route::get('/attendance/branch-wise/{branchId}/export', [\App\Http\Controllers\Report\LocationAttendanceReportController::class, 'branchWiseDetailExport'])->name('attendance.branch-wise.detail.export');
 
                 // Clock In/Out log — one row per punch (multiple clock in/out), with location details.
                 Route::get('/attendance/punches', [\App\Http\Controllers\Report\PunchReportController::class, 'index'])->name('attendance.punches.index');
@@ -1121,7 +1121,7 @@ Route::group(['middleware' => ['tenant']], function () {
             });
 
             Route::middleware('feature:overtime')->group(function () {
-                Route::get('/overtime/monthly', [AttendanceReportController::class, 'overtimeMonthlyReport'])->name('overtime.monthly.index');
+                Route::get('/overtime/monthly', [\App\Http\Controllers\Report\OvertimeReportController::class, 'overtimeMonthlyReport'])->name('overtime.monthly.index');
             });
 
             // Shift Report (monthly): which employee is on which shift on which date

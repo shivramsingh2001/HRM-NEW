@@ -79,6 +79,7 @@ class DepartmentController extends Controller
             $department->save();
             return response()->json(['success' => true, 'message' => 'Department Created Successfully!!!'], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.' . $e->getMessage()], 500);
         }
     }
@@ -112,6 +113,7 @@ class DepartmentController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json(['success' => false, 'message' => 'Department not found.'], 404);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -130,6 +132,7 @@ class DepartmentController extends Controller
             $department->save();
             return response()->json(['success' => true, 'message' => 'Status Updated Successfully'], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong. Please try again later.'

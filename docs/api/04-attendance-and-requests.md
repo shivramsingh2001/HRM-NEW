@@ -462,7 +462,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/regularization \
   "message": "Regularization requests fetched successfully",
   "data": [
     {
-      "id": 55, "date": "2026-09-25", "request_type": "in_time", "in_time": "09:30", "out_time": null,
+      "id": 55, "date": "2026-09-25", "request_type": "in_time", "in_time": "09:30", "out_time": null, "out_next_day": false,
       "reason": "Forgot to clock in", "file": null, "status": "pending", "submit_date": "2026-09-25 20:11:03",
       "user_id": 101, "employee_id": "EMP-101", "user_name": "Asha Rao", "user_email": "asha@example.com",
       "profile_image": null, "designation": "Software Engineer", "approved_by": null, "approved_date": null
@@ -472,6 +472,8 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/regularization \
   "links": {"first": "...", "last": "...", "prev": null, "next": null}
 }
 ```
+
+`out_next_day` (bool, added 2026-10-09): the requested out time is on the day after `date`. Until 2026-10-10 this endpoint (and the manager one) answered 500 — fixed.
 
 **Error responses:** `500 {"success": false, "message": "An error occurred. Please try again later."}`.
 

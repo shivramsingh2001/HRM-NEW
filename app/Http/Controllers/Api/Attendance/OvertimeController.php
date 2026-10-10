@@ -150,6 +150,7 @@ class OvertimeController extends Controller
 
             return response()->json($responseData, 200);
         } catch (Exception $e) {
+            report($e);
 
             return response()->json([
                 'success' => false,
@@ -223,6 +224,7 @@ class OvertimeController extends Controller
                 'message' => $message,
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => true,
                 'message' => "An error occured.Please try again later.",
@@ -308,6 +310,7 @@ class OvertimeController extends Controller
                 'message' => 'Overtime request updated successfully',
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => true,
                 'message' => "An error occured.Please try again later.",
@@ -352,6 +355,7 @@ class OvertimeController extends Controller
                 'message' => 'Overtime request cancelled successfully'
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => true,
                 'message' => "An error occured.Please try again later.",
@@ -431,6 +435,7 @@ class OvertimeController extends Controller
                 'data' => $formattedData
             ], 200);
         } catch (Exception $e) {
+            report($e);
 
             return response()->json([
                 'success' => false,
@@ -528,6 +533,7 @@ class OvertimeController extends Controller
                 ]
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve pending approvals: ' . $e->getMessage()
@@ -615,6 +621,7 @@ class OvertimeController extends Controller
                 // ]
             ], 200);
         } catch (Exception $e) {
+            report($e);
 
             return response()->json([
                 'success' => false,
@@ -691,6 +698,7 @@ class OvertimeController extends Controller
                 // ]
             ], 200);
         } catch (Exception $e) {
+            report($e);
 
             return response()->json([
                 'success' => false,

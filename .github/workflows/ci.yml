@@ -1,0 +1,71 @@
+# Code-quality plan, Phase 0 — runs on every push and pull request.
+#  1. Pint (code style) on the PHP files ADDED by the push / PR, so
+#     new code follows the style and legacy files are not reformatted wholesale.
+#  2. Larastan (static analysis, level 5) against phpstan-baseline.neon — only
+#     new errors fail.
+#  3. The tests that need no database: tests/Unit + the static guards
+#     (tenant-scope, controller size). Feature tests use the shared dev MySQL
+#     data and are run locally, not here (group "database" is excluded).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, intl, gd, zip, bcmath, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Pint (new files only)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="$(git rev-list --max-parents=0 HEAD)"
+          fi
+          FILES=$(git diff --name-only --diff-filter=A "$BASE" HEAD -- '*.php' | grep -v '^vendor/' || true)
+          if [ -z "$FILES" ]; then
+            echo "No PHP files changed."
+          else
+            echo "$FILES"
+            vendor/bin/pint --test $FILES
+          fi
+
+      - name: Larastan
+        run: vendor/bin/phpstan analyse --memory-limit=2G --no-progress
+
+      - name: Tests (no database)
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+        run: php artisan test tests/Unit tests/Feature/TenantScopeGuardTest.php tests/Feature/ControllerSizeGuardTest.php tests/Feature/ConventionGuardTest.php --exclude-group database

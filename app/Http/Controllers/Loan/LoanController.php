@@ -173,6 +173,7 @@ class LoanController extends Controller
         return view('client.loan.loans.index', compact('loans', 'categories', 'advanceCategories', 'statistics'));
         
     } catch (\Exception $e) {
+        report($e);
         return back()->withErrors('An error occurred. Please try again later.');
     }
 }
@@ -338,6 +339,7 @@ class LoanController extends Controller
 
             return redirect()->route('loan.requests.index')->with('success', $message);
         } catch (\Exception $e) {
+            report($e);
             DB::rollback();
 
             if ($request->ajax()) {
@@ -496,6 +498,7 @@ class LoanController extends Controller
                 'A ' . $category->name . ' loan of ₹' . number_format((float) $loan->amount, 2) . ' was created and approved for you by ' . auth()->user()->name . '.',
                 ['type' => 'loan_approved', 'loan_id' => (string) $loan->id]);
         } catch (\Throwable $e) {
+            report($e);
             // never block on notification
         }
 
@@ -534,6 +537,7 @@ class LoanController extends Controller
                 'data' => $loan
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Loan not found'
@@ -639,6 +643,7 @@ class LoanController extends Controller
 
             return redirect()->route('loan.requests.index')->with('success', 'Loan updated successfully');
         } catch (\Exception $e) {
+            report($e);
             DB::rollback();
 
             if ($request->ajax()) {
@@ -681,6 +686,7 @@ class LoanController extends Controller
                 'message' => 'Loan deleted successfully'
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -748,6 +754,7 @@ class LoanController extends Controller
                 'data' => $loan
             ]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollback();
             return response()->json([
                 'success' => false,
@@ -800,6 +807,7 @@ class LoanController extends Controller
                 'data' => $loan
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -868,6 +876,7 @@ class LoanController extends Controller
                 'data' => $loan
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -918,6 +927,7 @@ class LoanController extends Controller
                 'data' => $loan
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -1002,6 +1012,7 @@ class LoanController extends Controller
                 'message' => 'Lump sum payment processed successfully. Loan has been closed.'
             ]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollback();
             return response()->json([
                 'success' => false,
@@ -1046,6 +1057,7 @@ class LoanController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -1128,6 +1140,7 @@ class LoanController extends Controller
                 'rejectedCount'
             ));
         } catch (\Exception $e) {
+            report($e);
             return back()->withErrors('An error occurred. Please try again later.')->with('error', $e->getMessage());
         }
     }
@@ -1163,6 +1176,7 @@ class LoanController extends Controller
 
             return view('client.loan.my-loans', compact('summary', 'loans'));
         } catch (\Exception $e) {
+            report($e);
             return back()->withErrors('An error occurred. Please try again later.');
         }
     }
@@ -1295,6 +1309,7 @@ class LoanController extends Controller
                 'data' => $statistics,
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while generating the summary.',
@@ -1334,6 +1349,7 @@ class LoanController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while generating the employee summary.',

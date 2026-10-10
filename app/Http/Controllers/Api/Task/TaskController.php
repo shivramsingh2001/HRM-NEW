@@ -91,6 +91,7 @@ class TaskController extends Controller
                 'data' => $teamData,
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -346,6 +347,7 @@ class TaskController extends Controller
                 ]
             ]);
         } catch (Exception $e) {
+            report($e);
 
             return response()->json([
                 'success' => false,
@@ -491,6 +493,7 @@ class TaskController extends Controller
                 'message' => $message,
             ], 200);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([
@@ -677,6 +680,7 @@ class TaskController extends Controller
 
             ], 200);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([

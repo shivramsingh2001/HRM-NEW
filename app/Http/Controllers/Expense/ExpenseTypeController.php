@@ -57,6 +57,7 @@ class ExpenseTypeController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Expense Type Created Successfully!!!'], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -91,6 +92,7 @@ class ExpenseTypeController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json(['success' => false, 'message' => 'Expense Type not found.'], 404);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -110,6 +112,7 @@ class ExpenseTypeController extends Controller
             $type->save();
             return response()->json(['success' => true, 'message' => 'Status Updated Successfully'], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong. Please try again later.'

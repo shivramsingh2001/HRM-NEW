@@ -26,6 +26,7 @@ class HolidayController extends Controller
                 'data' => $holidays
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An error occured. Please try again later.".$e->getMessage(),

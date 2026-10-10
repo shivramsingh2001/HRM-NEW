@@ -54,7 +54,8 @@ session.
    confirm the change is fully reflected in the relevant `docs/*.md` (and vice versa — that nothing
    in the diff contradicts what the docs claim). This is the review mechanism; don't rely on memory
    of what you intended to update.
-7. **Never modify application behavior just to make documentation easier.** These docs describe
+7. **Follow the coding conventions** in [`docs/architecture.md` → Coding conventions](docs/architecture.md#coding-conventions-code-quality-plan-phase-5-2026-10-10) (thin controllers + services, FormRequests, `report($e)` in every generic catch, no SQL in controllers, refactor behind a golden-master snapshot). CI enforces them with `ControllerSizeGuardTest`, `ConventionGuardTest`, `TenantScopeGuardTest` and Larastan (`phpstan.neon` + baseline).
+8. **Never modify application behavior just to make documentation easier.** These docs describe
    the app as it is; keep it that way unless the user asks for a code change.
 
 ## Known project quirks (see docs for detail)

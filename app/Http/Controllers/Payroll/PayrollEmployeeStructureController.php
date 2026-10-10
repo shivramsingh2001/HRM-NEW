@@ -302,6 +302,7 @@ class PayrollEmployeeStructureController extends Controller
 
             return response()->json(['success' => true, 'message' => $message]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([

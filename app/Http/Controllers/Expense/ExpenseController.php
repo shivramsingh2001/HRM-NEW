@@ -508,6 +508,7 @@ class ExpenseController extends Controller
                 'data' => $transactions
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to get transactions'
@@ -715,6 +716,7 @@ class ExpenseController extends Controller
                 'data' => $expense->payments
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch payments'

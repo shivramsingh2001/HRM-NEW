@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Api\Attendance\AttendanceController;
 use App\Http\Controllers\Api\Shift\ShiftController as ApiShiftController;
 use App\Models\Attendance;
 use App\Models\AttendancePunch;
@@ -129,7 +128,7 @@ class MultiShiftCoverageTest extends TestCase
         $this->onDay($this->shift('Current', $now->copy()->subHour()->format('H:i'), $now->copy()->addHours(7)->format('H:i')), $now->toDateString());
 
         Auth::login($this->employee);
-        $controller = app(AttendanceController::class);
+        $controller = app(\App\Http\Controllers\Api\Attendance\ClockController::class);
         $body = ['lat' => 28.6, 'long' => 77.2, 'address' => 'Test field site address'];
 
         $in = $controller->clockIn(Request::create('/x', 'POST', $body))->getData(true);
@@ -149,7 +148,7 @@ class MultiShiftCoverageTest extends TestCase
         $this->onDay($this->shift('Day', '09:00', '18:00'), $d);
         $night = $this->onDay($this->shift('Night', '22:00', '06:00'), $d, true);
         Auth::login($this->employee);
-        $controller = app(AttendanceController::class);
+        $controller = app(\App\Http\Controllers\Api\Attendance\MobileRegularizationController::class);
         $base = ['date' => $d, 'request_type' => 'both', 'in_time' => '22:00', 'out_time' => '06:00', 'reason' => 'Forgot to punch'];
 
         // Primary (day) shift: out before in is a typo.

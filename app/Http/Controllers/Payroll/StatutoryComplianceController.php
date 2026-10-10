@@ -82,6 +82,7 @@ class StatutoryComplianceController extends Controller
             return redirect()->route('payroll-compliance.index')
                 ->with('success', strtoupper($type) . ' rates updated successfully.');
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return redirect()->back()->with('error', 'Failed to update rates: ' . $e->getMessage());

@@ -39,6 +39,7 @@ class VendorController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Vendor created successfully.', 'data' => $vendor]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -67,6 +68,7 @@ class VendorController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Vendor updated successfully.']);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }
@@ -89,6 +91,7 @@ class VendorController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Vendor deleted successfully.']);
         } catch (\Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Something went wrong. Please try again later.'], 500);
         }
     }

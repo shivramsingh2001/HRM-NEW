@@ -53,6 +53,7 @@ class FCMController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to store token: ' . $e->getMessage()
@@ -98,6 +99,7 @@ class FCMController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to remove token: ' . $e->getMessage()

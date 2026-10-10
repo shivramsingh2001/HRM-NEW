@@ -61,6 +61,7 @@ class ProjectController extends Controller
                 'data' => $projects
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An Error occured. Please try again later."
@@ -104,6 +105,7 @@ class ProjectController extends Controller
                 'data' => $projects
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An Error occured. Please try again later.".$e->getMessage()
@@ -168,6 +170,7 @@ class ProjectController extends Controller
                     ]
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => "An Error occured. Please try again later."

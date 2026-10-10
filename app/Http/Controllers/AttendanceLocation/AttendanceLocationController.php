@@ -54,6 +54,7 @@ class AttendanceLocationController extends Controller
                 'data' => $location,
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create attendance location',
@@ -90,6 +91,7 @@ class AttendanceLocationController extends Controller
                 'message' => 'Attendance location updated successfully',
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update attendance location',
@@ -122,6 +124,7 @@ class AttendanceLocationController extends Controller
                 'message' => 'Attendance location not found.',
             ], 404);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete attendance location',

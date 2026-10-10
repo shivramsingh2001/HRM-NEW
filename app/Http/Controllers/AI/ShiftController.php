@@ -33,6 +33,7 @@ class ShiftController extends Controller
                 $startDate = $request->filled('start_date') ? Carbon::parse((string) $request->start_date)->startOfDay() : now()->startOfMonth();
                 $endDate = $request->filled('end_date') ? Carbon::parse((string) $request->end_date)->startOfDay() : now()->endOfMonth()->startOfDay();
             } catch (\Throwable $e) {
+                report($e);
                 return $this->errorResponse('Invalid date. Use the format YYYY-MM-DD for start_date and end_date.', 422);
             }
 
@@ -395,6 +396,7 @@ class ShiftController extends Controller
                     try {
                         $item['start_time'] = Carbon::parse($item['start_time'])->format('h:i A');
                     } catch (\Exception $e) {
+                        report($e);
                         // Keep as is if parsing fails
                     }
                 }
@@ -402,6 +404,7 @@ class ShiftController extends Controller
                     try {
                         $item['end_time'] = Carbon::parse($item['end_time'])->format('h:i A');
                     } catch (\Exception $e) {
+                        report($e);
                         // Keep as is if parsing fails
                     }
                 }

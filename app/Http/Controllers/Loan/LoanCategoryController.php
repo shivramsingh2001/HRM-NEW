@@ -23,6 +23,7 @@ class LoanCategoryController extends Controller
             $data['categories'] = $query->orderBy('sort_order', 'asc')->orderBy('created_at', 'asc')->get();
             return view('client.loan.category.index', $data);
         } catch (Exception $e) {
+            report($e);
             return back()->withErrors('An error occurred. Please try again later.');
         }
     }
@@ -67,6 +68,7 @@ class LoanCategoryController extends Controller
                 'data' => $category
             ], 201);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.',
@@ -101,6 +103,7 @@ class LoanCategoryController extends Controller
                 'data' => $category
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Category not found'
@@ -158,6 +161,7 @@ class LoanCategoryController extends Controller
                 'data' => $category
             ], 200);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.',
@@ -189,6 +193,7 @@ class LoanCategoryController extends Controller
                 'message' => 'Loan category deleted successfully'
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred. Please try again later.'
@@ -217,6 +222,7 @@ class LoanCategoryController extends Controller
                 'data' => $categories
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred'
@@ -274,6 +280,7 @@ class LoanCategoryController extends Controller
                 ]
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred'

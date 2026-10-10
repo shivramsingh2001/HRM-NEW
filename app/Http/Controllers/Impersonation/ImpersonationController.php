@@ -117,6 +117,7 @@ class ImpersonationController extends Controller
                 );
             }
         } catch (\Throwable $e) {
+            report($e);
             // never block the flow on an audit write
         }
     }

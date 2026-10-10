@@ -276,6 +276,7 @@ class MeetingController extends Controller
             return redirect()->route('meetings.index')
                 ->with('success', 'Meeting created successfully!');
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
 
             return back()->with('error', 'Failed to create meeting: ' . $e->getMessage())
@@ -526,6 +527,7 @@ class MeetingController extends Controller
             return redirect()->route('meetings.index')
                 ->with('success', 'Meeting cancelled successfully!');
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return back()
                 ->with('error', 'Failed to cancel meeting: ' . $e->getMessage());

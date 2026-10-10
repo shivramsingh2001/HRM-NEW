@@ -93,6 +93,7 @@ class PayrollComponentController extends Controller
                 'data' => $component,
             ]);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([
@@ -171,6 +172,7 @@ class PayrollComponentController extends Controller
                 'message' => $e->getMessage(),
             ], 422);
         } catch (\Exception $e) {
+            report($e);
             DB::rollBack();
 
             return response()->json([
@@ -207,6 +209,7 @@ class PayrollComponentController extends Controller
                 'message' => 'Status updated successfully.',
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong. Please try again later.',

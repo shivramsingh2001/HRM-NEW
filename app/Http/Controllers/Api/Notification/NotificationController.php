@@ -79,6 +79,7 @@ class NotificationController extends Controller
             ]);
             
         } catch (\Exception $e) {
+            report($e);
           
             return response()->json([
                 'success' => false,

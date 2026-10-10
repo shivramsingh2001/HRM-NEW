@@ -74,6 +74,7 @@ class LocationTrackingController extends Controller
                     $result = $this->locationAlertService->sendLocationOffAlert($user, $locationData);
                     
                 } catch (\Exception $e) {
+                report($e);
                    
                 }
             } else {
@@ -90,6 +91,7 @@ class LocationTrackingController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            report($e);
            
             
             return response()->json([

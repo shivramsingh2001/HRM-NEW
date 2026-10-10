@@ -9,6 +9,16 @@ use Illuminate\Notifications\Notifiable;
 use App\Traits\TenantTrait;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
+/**
+ * Columns used across the app, declared for static analysis (Larastan).
+ *
+ * @property int $id
+ * @property int|null $tenant_id
+ * @property string $name
+ * @property string|null $email
+ * @property string|null $employee_id
+ * @property string $role
+ */
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */

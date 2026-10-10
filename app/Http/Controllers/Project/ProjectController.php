@@ -196,6 +196,7 @@ class ProjectController extends Controller
                 ]
             ]);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -476,6 +477,7 @@ class ProjectController extends Controller
                 'message' => 'Project updated successfully!',
             ]);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -526,6 +528,7 @@ class ProjectController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Failed to post update.'], 500);
         }
@@ -553,6 +556,7 @@ class ProjectController extends Controller
                 'progress_percentage' => $project->fresh()->progress_percentage,
             ]);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to reset progress.'], 500);
         }
     }
@@ -581,6 +585,7 @@ class ProjectController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to add comment.'], 500);
         }
     }
@@ -595,6 +600,7 @@ class ProjectController extends Controller
             $comment->delete();
             return response()->json(['success' => true, 'message' => 'Comment deleted.']);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to delete comment.'], 500);
         }
     }
@@ -630,6 +636,7 @@ class ProjectController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to upload file.'], 500);
         }
     }
@@ -647,6 +654,7 @@ class ProjectController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Attachment deleted.']);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to delete attachment.'], 500);
         }
     }
@@ -678,6 +686,7 @@ class ProjectController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to add milestone.'], 500);
         }
     }
@@ -716,6 +725,7 @@ class ProjectController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to update milestone.'], 500);
         }
     }
@@ -732,6 +742,7 @@ class ProjectController extends Controller
             $milestone->delete();
             return response()->json(['success' => true, 'message' => 'Milestone deleted.']);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to delete milestone.'], 500);
         }
     }
@@ -767,6 +778,7 @@ class ProjectController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to log risk.'], 500);
         }
     }
@@ -792,6 +804,7 @@ class ProjectController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to update risk.'], 500);
         }
     }
@@ -808,6 +821,7 @@ class ProjectController extends Controller
             $risk->delete();
             return response()->json(['success' => true, 'message' => 'Risk deleted.']);
         } catch (Exception $e) {
+            report($e);
             return response()->json(['success' => false, 'message' => 'Failed to delete risk.'], 500);
         }
     }
@@ -819,6 +833,7 @@ class ProjectController extends Controller
         try {
             return decrypt($id);
         } catch (\Exception $e) {
+            report($e);
             return $id;
         }
     }

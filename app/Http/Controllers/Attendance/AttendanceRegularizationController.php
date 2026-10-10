@@ -199,6 +199,7 @@ class AttendanceRegularizationController extends Controller
             ]);
 
         } catch (Exception $e) {
+             report($e);
              DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -433,6 +434,7 @@ class AttendanceRegularizationController extends Controller
             ]);
 
         } catch (\Exception $e) {
+             report($e);
              DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -474,6 +476,7 @@ class AttendanceRegularizationController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete request: ' . $e->getMessage()
@@ -543,6 +546,7 @@ class AttendanceRegularizationController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to cancel request: ' . $e->getMessage()

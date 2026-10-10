@@ -210,6 +210,7 @@ class MeetingMinuteController extends Controller
             // Back to the meeting list (the minutes are written from its drawer).
             return redirect()->route('meetings.index')->with('success', $message);
         } catch (Exception $e) {
+            report($e);
             DB::rollBack();
             return redirect()->back()
                 ->with('error', 'Failed to save meeting minutes: ' . $e->getMessage())

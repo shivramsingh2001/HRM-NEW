@@ -201,6 +201,7 @@ class ShiftRotationController extends Controller
         try {
             app(AuditLogger::class)->record('tenant_user', Auth::id(), (int) Auth::user()->tenant_id, $action, 'shift_rotation_pattern', (int) $pattern->id, $old, $new + ['name' => $pattern->name]);
         } catch (\Throwable $e) {
+        report($e);
         }
     }
 }
