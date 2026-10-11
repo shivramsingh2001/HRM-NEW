@@ -138,18 +138,16 @@ Schedule::command('performance:rollup-monthly --notify')
 ->runInBackground()
 ->appendOutputTo(storage_path('logs/performance-monthly.log'));
 
-// Field GPS tracking — meter seat usage for billing, then prune old breadcrumbs.
+// Field GPS tracking — meter seat usage for billing.
 Schedule::command('field-tracking:meter')
     ->dailyAt('02:30')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/field-tracking-meter.log'));
 
-Schedule::command('field-tracking:prune')
-    ->dailyAt('03:30')
-    ->withoutOverlapping()
-    ->runInBackground()
-    ->appendOutputTo(storage_path('logs/field-tracking-prune.log'));
+// field-tracking:prune (legacy attendance_tracks) is no longer scheduled: that table is
+// frozen and its rows were migrated into attendance_tracking_points (2026-10-11).
+// Run it by hand only if the old table ever needs cleaning.
 
 // Two-table GPS tracking (sessions + points) — stale-session close + prune.
 Schedule::command('field-tracking:sweep-sessions')

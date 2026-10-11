@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Services\FieldTracking\ArchivingPruner;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 
 /**
  * Two-table sibling of field-tracking:prune, for attendance_tracking_sessions
@@ -14,12 +13,11 @@ use Illuminate\Support\Facades\File;
  *
  *  1. Force-closes sessions left open with no activity for --stale-hours
  *     (crash/uninstall/lost device never sending a clean clock-out).
- *  2. Prunes (archiving to NDJSON first, like field-tracking:prune) points
- *     past each tenant's retention window, then deletes the now-empty closed
- *     sessions that window has aged out.
+ *  2. Prunes points past each tenant's retention window — every deleted point is
+ *     appended to an NDJSON month file first (ArchivingPruner, partial months
+ *     included) — then deletes the now-empty closed sessions that window has aged out.
  *
- * attendance_tracks itself is untouched here — field-tracking:prune keeps
- * running against it unchanged until it's removed in a follow-up cleanup.
+ * attendance_tracks itself is untouched here (legacy; see field-tracking:prune).
  */
 class FieldTrackingSweepSessions extends Command
 {
@@ -31,7 +29,7 @@ class FieldTrackingSweepSessions extends Command
 
     protected $description = 'Force-close stale open GPS sessions and prune (archive+delete) old tracking points/sessions past retention.';
 
-    public function handle(): int
+    public function handle(ArchivingPruner $pruner): int
     {
         $dry = (bool) $this->option('dry-run');
         $chunk = max(500, (int) $this->option('chunk'));
@@ -68,15 +66,14 @@ class FieldTrackingSweepSessions extends Command
                 continue;
             }
 
-            if ($archive && $duePoints > 0) {
-                $this->archivePointMonths((int) $t->id, $cutoff);
-            }
-
-            do {
-                $n = DB::table('attendance_tracking_points')->where('tenant_id', $t->id)
-                    ->where('track_time', '<', $cutoff)->limit($chunk)->delete();
-                $totalDeletedPoints += $n;
-            } while ($n > 0);
+            $totalDeletedPoints += $pruner->prune(
+                'attendance_tracking_points',
+                (int) $t->id,
+                $cutoff,
+                $chunk,
+                $archive ? storage_path("app/field-tracking-archive/tenant-{$t->id}") : null,
+                'points-'
+            );
 
             do {
                 $n = DB::table('attendance_tracking_sessions')->where('tenant_id', $t->id)
@@ -126,45 +123,6 @@ class FieldTrackingSweepSessions extends Command
                     'updated_at' => now(),
                 ]);
             }
-        }
-    }
-
-    /** NDJSON-dump each whole calendar month of points fully older than the cutoff. */
-    private function archivePointMonths(int $tenantId, Carbon $cutoff): void
-    {
-        $oldest = DB::table('attendance_tracking_points')->where('tenant_id', $tenantId)
-            ->where('track_time', '<', $cutoff)->min('track_time');
-        if (! $oldest) {
-            return;
-        }
-
-        $cursor = Carbon::parse($oldest)->startOfMonth();
-        $lastFull = $cutoff->copy()->startOfMonth();
-
-        $dir = storage_path("app/field-tracking-archive/tenant-{$tenantId}");
-        File::ensureDirectoryExists($dir);
-
-        while ($cursor->lt($lastFull)) {
-            $mStart = $cursor->copy()->startOfMonth();
-            $mEnd = $cursor->copy()->endOfMonth()->endOfDay();
-            $path = "{$dir}/points-{$cursor->format('Y-m')}.ndjson";
-
-            if (! File::exists($path)) {
-                $handle = fopen($path, 'w');
-                DB::table('attendance_tracking_points')->where('tenant_id', $tenantId)
-                    ->whereBetween('track_time', [$mStart, $mEnd])->orderBy('id')
-                    ->chunk(2000, function ($rows) use ($handle) {
-                        foreach ($rows as $r) {
-                            fwrite($handle, json_encode($r, JSON_UNESCAPED_SLASHES) . "\n");
-                        }
-                    });
-                fclose($handle);
-                if (filesize($path) === 0) {
-                    @unlink($path);
-                }
-            }
-
-            $cursor->addMonth();
         }
     }
 }
