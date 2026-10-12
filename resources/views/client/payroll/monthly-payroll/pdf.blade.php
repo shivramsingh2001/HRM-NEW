@@ -275,14 +275,14 @@
                     }
                 } else {
                     $legacyEarningFields = [
-                        'basic_salary' => 'Basic', 'hra' => 'HRA', 'conveyence' => 'Conveyence',
+                        'basic_salary' => 'Basic Salary', 'hra' => 'HRA', 'conveyence' => 'Conveyance Allowance',
                         'medical_allowance' => 'Medical Allowance', 'children_allowance' => 'Children Allowance',
                         'post_allowance' => 'Post Allowance', 'leave_travel_allowance' => 'Leave Travel Allowance',
                         'monthly_incentive' => 'Monthly Incentive', 'special_allowance' => 'Special Allowance',
                         'overtime_amount' => 'Overtime',
                     ];
                     $legacyDeductionFields = [
-                        'provident_fund' => 'Provident Fund', 'esi' => 'ESI', 'professional_tax' => 'PT',
+                        'provident_fund' => 'Provident Fund', 'esi' => 'ESI', 'professional_tax' => 'Professional Tax',
                         'tds' => 'TDS', 'salary_advance_deduction' => 'Salary Advance Deduction', 'loan_deduction' => 'Loan Deduction', 'other_deductions' => 'Other Deductions',
                     ];
 
