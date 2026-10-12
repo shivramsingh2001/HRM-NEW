@@ -517,6 +517,10 @@ Route::group(['middleware' => ['tenant']], function () {
              Route::post('/attendance-mark', [TeamController::class, 'markAttendance'])
                 ->middleware('role:admin,hr,manager')
                 ->name('mark-attendance');
+            // Same status for several selected employees (Team Members multi-select).
+            Route::post('/attendance-mark-bulk', [\App\Http\Controllers\Team\BulkAttendanceController::class, 'store'])
+                ->middleware('role:admin,hr,manager')
+                ->name('mark-attendance-bulk');
             Route::get('/attendance-log', [TeamController::class, 'attendanceLog'])
                 ->middleware('permission:team,view')
                 ->name('attendance-log');

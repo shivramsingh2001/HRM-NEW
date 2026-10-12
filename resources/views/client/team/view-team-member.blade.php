@@ -861,6 +861,23 @@
             </form>
         </div>
 
+        @php
+            // Admin / HR / Manager (own reportees) may mark attendance — one employee
+            // (row button) or several at once (checkboxes + bulk bar).
+            $canBulkMark = app(\App\Services\RbacService::class)->can(auth()->user(), 'attendance', 'edit');
+        @endphp
+
+        @if ($canBulkMark)
+            <!-- Bulk bar: shown while one or more employees are ticked -->
+            <div id="bulkBar" class="alert alert-secondary d-none align-items-center gap-2 py-2 px-2 flex-wrap mb-2">
+                <span><strong id="bulkCount">0</strong> selected</span>
+                <button type="button" class="btn btn-sm btn-primary" id="openBulkMark">
+                    <i class="feather-edit-2 me-1"></i> Mark attendance
+                </button>
+                <button type="button" class="btn btn-sm btn-light ms-auto" id="clearSel">Clear</button>
+            </div>
+        @endif
+
         <!-- Team Members Table -->
         <div class="row">
             <div class="col-lg-12">
@@ -870,6 +887,9 @@
                             <table class="table" id="teamTable">
                                 <thead>
                                     <tr>
+                                        @if ($canBulkMark)
+                                            <th style="width:28px"><input type="checkbox" id="selectAll" title="Select all on this page"></th>
+                                        @endif
                                         <th width="40">#</th>
                                         <th>Employee</th>
                                         <th>Designation</th>
@@ -955,6 +975,10 @@
                                                 1;
                                         @endphp
                                         <tr>
+                                            @if ($canBulkMark)
+                                                <td><input type="checkbox" class="row-sel" value="{{ $member->id }}"
+                                                        data-name="{{ $member->name }}" data-emp="{{ $member->employee_id }}"></td>
+                                            @endif
                                             <td>{{ $serialNumber }}</td>
                                             <td>
                                                 <div class="employee-info">
@@ -1033,7 +1057,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="10" class="text-center py-5">
+                                            <td colspan="{{ $canBulkMark ? 11 : 10 }}" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="feather-users"></i>
                                                     <h4>No Team Members Found</h4>
@@ -1258,6 +1282,135 @@
                         </button>
                     </div>
     </x-ui.drawer>
+
+    @php $canBulkMark = $canBulkMark ?? app(\App\Services\RbacService::class)->can(auth()->user(), 'attendance', 'edit'); @endphp
+    @if ($canBulkMark)
+    <!-- Bulk Mark Attendance Drawer: same status for every ticked employee -->
+    <x-ui.drawer id="bulkMarkDrawer" title="Mark Attendance — Selected Employees" width="480px">
+        <div class="employee-info-card mb-3">
+            <div class="eic-top">
+                <div class="info">
+                    <h6><span id="bulkMarkCount">0</span> employees selected</h6>
+                    <p class="mb-0" id="bulkMarkNames" style="font-size: 12px; max-height: 66px; overflow-y: auto;"></p>
+                </div>
+                <span class="eic-date">
+                    <i class="feather-calendar me-1"></i>{{ \Carbon\Carbon::parse(request('date', date('Y-m-d')))->format('d M Y') }}
+                </span>
+            </div>
+        </div>
+
+        <form id="bulkMarkForm">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">
+                        <i class="feather-check-circle me-1" style="color: var(--icon-color, #0D6EFD);"></i>
+                        Attendance Status <span class="required">*</span>
+                    </label>
+                    <select class="attendance-status-select form-control" name="status" id="bulkStatus">
+                        <option value="present">✅ Present (Full Day)</option>
+                        <option value="half_day">🌓 Half Day</option>
+                        <option value="first_half_leave">🌅 First Half Leave (Morning)</option>
+                        <option value="second_half_leave">🌇 Second Half Leave (Afternoon)</option>
+                        <option value="on_leave">📅 On Leave (Full Day)</option>
+                        <option value="absent">❌ Absent</option>
+                        <option value="holiday">🎉 Holiday</option>
+                        <option value="weekoff">🛌 Week Off</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">
+                        <i class="feather-calendar me-1" style="color: var(--icon-color, #0D6EFD);"></i>
+                        Apply through <span class="text-muted" style="font-size: 11px;">(optional)</span>
+                    </label>
+                    <input type="date" class="form-control" name="end_date" id="bulkEndDate"
+                        value="{{ request('date', date('Y-m-d')) }}" max="{{ date('Y-m-d') }}">
+                </div>
+            </div>
+
+            <div id="bulkClockFields">
+                <div class="form-check mb-2" id="bulkShiftTimesField"
+                    title="Each employee gets their own shift start and end time for the day">
+                    <input class="form-check-input" type="checkbox" id="bulkUseShiftTimes" name="use_shift_times" value="1" checked>
+                    <label class="form-check-label" for="bulkUseShiftTimes" style="font-size: 12.5px;">
+                        Use each employee's shift timings
+                    </label>
+                </div>
+                <div class="row g-3" id="bulkTimeInputs">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="feather-clock me-1" style="color: var(--icon-color, #0D6EFD);"></i>
+                            Clock In Time <span class="required">*</span>
+                        </label>
+                        <input type="time" class="form-control" name="clock_in" id="bulkClockIn">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="feather-clock me-1" style="color: var(--icon-color, #0D6EFD);"></i>
+                            Clock Out Time <span class="required">*</span>
+                        </label>
+                        <input type="time" class="form-control" name="clock_out" id="bulkClockOut">
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" name="clock_out_next_day" value="1" id="bulkNextDay">
+                            <label class="form-check-label" for="bulkNextDay" style="font-size: 12.5px;">
+                                Clock-out is on the next day
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3" id="bulkLeaveTypeField" style="display: none;">
+                <label class="form-label">
+                    <i class="feather-calendar me-1" style="color: var(--icon-color, #0D6EFD);"></i>
+                    Leave Type <span class="required">*</span>
+                </label>
+                <select class="form-control" name="leave_type_id" id="bulkLeaveTypeId">
+                    <option value="">-- Select leave type --</option>
+                    @foreach ($leaveTypes ?? [] as $lt)
+                        <option value="{{ $lt->id }}">{{ $lt->name }}</option>
+                    @endforeach
+                </select>
+                <small class="text-muted" style="font-size: 11px; display: block; margin-top: 4px;">
+                    <i class="feather-info me-1"></i>
+                    An approved leave is created for each employee and their balance deducted
+                    (loss of pay if the balance is short).
+                </small>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">
+                    <i class="feather-message-square me-1" style="color: var(--icon-color, #0D6EFD);"></i>
+                    Remarks
+                </label>
+                <textarea class="form-control" name="remarks" id="bulkRemarks" rows="2"
+                    placeholder="e.g., Office closed — marked for all selected employees"></textarea>
+            </div>
+
+            <div class="mt-2">
+                <div class="alert alert-info"
+                    style="background: var(--primary-light); border-color: var(--border-focus); color: var(--primary); padding: 8px 12px; font-size: 12px; border-radius: 8px;">
+                    <i class="feather-shield me-1"></i>
+                    Replaces whatever is recorded for these employees on the selected day(s).
+                    Marked by <strong>{{ auth()->user()->name }}</strong> ({{ auth()->user()->role }}).
+                </div>
+            </div>
+        </form>
+
+        <!-- Result of the last submit: who could not be marked and why -->
+        <div id="bulkMarkResult" class="mt-2" style="display: none; font-size: 12px;"></div>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-primary btn-sm" id="bulkMarkSubmitBtn" onclick="submitBulkMark()">
+                <i class="feather-check me-1"></i> Mark <span id="bulkMarkBtnCount">0</span> employees
+            </button>
+            <button type="button" class="btn btn-modal-cancel btn-sm" data-bs-dismiss="offcanvas">
+                <i class="feather-x me-1"></i> Cancel
+            </button>
+        </div>
+    </x-ui.drawer>
+    @endif
 @endsection
 
 @section('script-area')
@@ -1749,6 +1902,148 @@
                     submitBtn.disabled = false;
                     toastr.error('An error occurred while marking attendance');
                     console.error('Error:', error);
+                });
+        }
+
+        // ==================== BULK MARK (several employees, same status) ====================
+        const bulkSelected = () => Array.from(document.querySelectorAll('.row-sel:checked'));
+
+        function syncBulk() {
+            const n = bulkSelected().length;
+            $('#bulkBar').toggleClass('d-none', n === 0).toggleClass('d-flex', n > 0);
+            $('#bulkCount').text(n);
+            const all = document.querySelectorAll('.row-sel');
+            const sa = document.getElementById('selectAll');
+            if (sa) {
+                sa.checked = all.length > 0 && n === all.length;
+                sa.indeterminate = n > 0 && n < all.length;
+            }
+        }
+
+        function onBulkStatusChange() {
+            const status = document.getElementById('bulkStatus').value;
+            const needsClock = CLOCK_STATUSES.includes(status);
+            const isLeave = LEAVE_STATUSES.includes(status);
+            const useShift = document.getElementById('bulkUseShiftTimes');
+
+            document.getElementById('bulkClockFields').style.display = needsClock ? '' : 'none';
+            // Shift timings only make sense for a full present day; half day needs real times.
+            document.getElementById('bulkShiftTimesField').style.display = status === 'present' ? '' : 'none';
+            if (status !== 'present') useShift.checked = false;
+            document.getElementById('bulkTimeInputs').style.display = (needsClock && !useShift.checked) ? '' : 'none';
+            document.getElementById('bulkLeaveTypeField').style.display = isLeave ? '' : 'none';
+        }
+
+        $(document).on('change', '.row-sel', syncBulk);
+        $('#selectAll').on('change', function() {
+            $('.row-sel').prop('checked', this.checked);
+            syncBulk();
+        });
+        $('#clearSel').on('click', function() {
+            $('.row-sel, #selectAll').prop('checked', false);
+            syncBulk();
+        });
+        $('#bulkStatus').on('change', onBulkStatusChange);
+        $('#bulkUseShiftTimes').on('change', onBulkStatusChange);
+
+        $('#openBulkMark').on('click', function() {
+            const rows = bulkSelected();
+            if (!rows.length) {
+                toastr.warning('Select at least one employee.');
+                return;
+            }
+            document.getElementById('bulkMarkCount').textContent = rows.length;
+            document.getElementById('bulkMarkBtnCount').textContent = rows.length;
+            document.getElementById('bulkMarkNames').textContent =
+                rows.map(r => r.dataset.name + (r.dataset.emp ? ' (' + r.dataset.emp + ')' : '')).join(', ');
+            document.getElementById('bulkMarkResult').style.display = 'none';
+            onBulkStatusChange();
+            bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('bulkMarkDrawer')).show();
+        });
+
+        function submitBulkMark() {
+            const ids = bulkSelected().map(r => r.value);
+            const status = document.getElementById('bulkStatus').value;
+            const useShift = status === 'present' && document.getElementById('bulkUseShiftTimes').checked;
+            const needsTimes = CLOCK_STATUSES.includes(status) && !useShift;
+            const clockIn = document.getElementById('bulkClockIn').value.substring(0, 5);
+            const clockOut = document.getElementById('bulkClockOut').value.substring(0, 5);
+            const leaveType = document.getElementById('bulkLeaveTypeId').value;
+
+            if (!ids.length) { toastr.error('Select at least one employee.'); return; }
+            if (needsTimes && (!clockIn || !clockOut)) {
+                toastr.error('Enter Clock In and Clock Out' + (status === 'present' ? ', or tick "Use each employee\'s shift timings"' : ''));
+                return;
+            }
+            if (needsTimes && !document.getElementById('bulkNextDay').checked && clockOut <= clockIn) {
+                toastr.error('Clock Out must be after Clock In (tick "Clock-out is on the next day" for an overnight shift)');
+                return;
+            }
+            if (LEAVE_STATUSES.includes(status) && !leaveType) { toastr.error('Please select a leave type'); return; }
+
+            const fd = new FormData();
+            ids.forEach(id => fd.append('user_ids[]', id));
+            fd.set('date', document.querySelector('input[name="date"]').value || '{{ date('Y-m-d') }}');
+            fd.set('end_date', document.getElementById('bulkEndDate').value || '');
+            fd.set('status', status);
+            if (useShift) fd.set('use_shift_times', '1');
+            if (needsTimes) {
+                fd.set('clock_in', clockIn);
+                fd.set('clock_out', clockOut);
+                if (document.getElementById('bulkNextDay').checked) fd.set('clock_out_next_day', '1');
+            }
+            if (LEAVE_STATUSES.includes(status)) fd.set('leave_type_id', leaveType);
+            fd.set('remarks', document.getElementById('bulkRemarks').value || '');
+
+            const btn = document.getElementById('bulkMarkSubmitBtn');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="feather-loader me-1"></i> Saving...';
+            btn.disabled = true;
+
+            fetch('{{ route('team.mark-attendance-bulk') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    },
+                    body: fd
+                })
+                .then(r => r.json().then(data => ({ ok: r.ok, data })))
+                .then(({ ok, data }) => {
+                    btn.innerHTML = original;
+                    btn.disabled = false;
+
+                    if (!ok && !data.marked) {
+                        toastr.error(data.message || 'Failed to mark attendance');
+                        return;
+                    }
+
+                    const failed = data.failed || [];
+                    if (failed.length) {
+                        // Keep the drawer open so the admin sees who was not marked and why.
+                        const box = document.getElementById('bulkMarkResult');
+                        box.innerHTML = '<div class="alert alert-warning py-2 px-2 mb-0">' +
+                            '<strong>' + failed.length + ' not marked:</strong><ul class="mb-0 ps-3">' +
+                            failed.map(f => '<li>' + $('<span>').text(f.name).html() + ' — ' + $('<span>').text(f.reason).html() + '</li>').join('') +
+                            '</ul></div>';
+                        box.style.display = '';
+                        (data.marked || []).length ? toastr.warning(data.message) : toastr.error(data.message);
+                        if ((data.marked || []).length) {
+                            document.getElementById('bulkMarkDrawer').addEventListener('hidden.bs.offcanvas', () => window.location.reload(), { once: true });
+                        }
+                        return;
+                    }
+
+                    toastr.success(data.message);
+                    const drawer = bootstrap.Offcanvas.getInstance(document.getElementById('bulkMarkDrawer'));
+                    if (drawer) drawer.hide();
+                    setTimeout(() => window.location.reload(), 1200);
+                })
+                .catch(err => {
+                    btn.innerHTML = original;
+                    btn.disabled = false;
+                    toastr.error('An error occurred while marking attendance');
+                    console.error('Error:', err);
                 });
         }
     </script>
