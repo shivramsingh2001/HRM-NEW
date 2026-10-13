@@ -23,7 +23,8 @@
 @foreach ($show as $groupKey)
     @php
         $groupMeta = $dynamicGroups[$groupKey];
-        $groupComponents = $dynamicComponents[$groupKey] ?? [];
+        // Extra working days have their own section (days × one day's salary), not an amount field here.
+        $groupComponents = array_values(array_filter($dynamicComponents[$groupKey] ?? [], fn ($c) => ($c['code'] ?? null) !== 'extra_work_days'));
     @endphp
     <div class="form-section" @if ($groupKey === 'employer_contributions') style="border-color:#93c5fd;" @endif>
         <div class="section-title">

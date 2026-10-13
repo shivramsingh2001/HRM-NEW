@@ -36,6 +36,7 @@ class OvertimePolicySettingsController extends Controller
                 'rate_type' => $request->input('rate_type'),
                 'rate_multiplier' => $request->filled('rate_multiplier') ? $request->input('rate_multiplier') : ($row->rate_multiplier ?? 1.5),
                 'fixed_rate_per_hour' => $request->input('rate_type') === 'fixed' ? $num('fixed_rate_per_hour') : $row->fixed_rate_per_hour,
+                'extra_shift_pay_mode' => $request->input('extra_shift_pay_mode') ?: ($row->extra_shift_pay_mode ?? OvertimeSetting::EXTRA_SHIFT_OVERTIME),
                 'require_approval' => $request->boolean('require_approval'),
                 'auto_approve_limit' => $num('auto_approve_limit'),
             ]);

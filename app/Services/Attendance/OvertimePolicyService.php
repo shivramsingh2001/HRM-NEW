@@ -27,6 +27,7 @@ class OvertimePolicyService
         'rate_type' => 'multiplier',
         'rate_multiplier' => 1.5,
         'fixed_rate_per_hour' => null,
+        'extra_shift_pay_mode' => OvertimeSetting::EXTRA_SHIFT_OVERTIME,
         'max_hours_per_day' => null,
         'max_hours_per_month' => null,
         'require_approval' => true,
@@ -59,6 +60,16 @@ class OvertimePolicyService
     public function isAuto(int $tenantId): bool
     {
         return $this->enabled($tenantId) && $this->company($tenantId)->mode === OvertimeSetting::MODE_AUTO;
+    }
+
+    /**
+     * How work in an assigned additional (2nd+) shift is paid: overtime hours
+     * (default) or extra working days at one day's salary. Not tied to the
+     * overtime on/off switch — the shift itself was assigned.
+     */
+    public function paysExtraShiftAsDays(int $tenantId): bool
+    {
+        return ($this->company($tenantId)->extra_shift_pay_mode ?? OvertimeSetting::EXTRA_SHIFT_OVERTIME) === OvertimeSetting::EXTRA_SHIFT_EXTRA_DAY;
     }
 
     /** The settings this employee follows: company row + Employee 360 overrides, as a plain object. */

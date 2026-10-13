@@ -210,6 +210,12 @@
                                         <td style="width: 50%; font-weight: 500; font-size: 11px; color: #64748b;">Payable Days :</td>
                                         <td style="width: 50%; text-align: right; font-size: 12px; color: #111827;">{{ ($monthlyPayroll->payable_days ?? 0)}}</td>
                                     </tr>
+                                    @if ((float) ($monthlyPayroll->extra_work_days ?? 0) > 0)
+                                    <tr>
+                                        <td style="width: 50%; font-weight: 500; font-size: 11px; color: #64748b;">Extra Working Days :</td>
+                                        <td style="width: 50%; text-align: right; font-size: 12px; color: #111827;">{{ rtrim(rtrim(number_format((float) $monthlyPayroll->extra_work_days, 2), '0'), '.') }}</td>
+                                    </tr>
+                                    @endif
                                 </tbody>
                             </table>
                         </td>
@@ -248,7 +254,7 @@
 
                     $slipEarnings = collect($slipResolved['earnings'])
                         ->merge($slipResolved['reimbursements'])
-                        ->reject(fn ($c) => in_array($c['code'] ?? null, ['overtime', 'shift_allowance'], true))
+                        ->reject(fn ($c) => in_array($c['code'] ?? null, ['overtime', 'shift_allowance', 'extra_work_days'], true))
                         ->filter(fn ($c) => $c['amount'] > 0)
                         ->map(fn ($c) => ['name' => $c['name'], 'amount' => $c['amount']])
                         ->values();
@@ -260,6 +266,11 @@
                     if ((float) ($monthlyPayroll->shift_allowance_amount ?? 0) > 0) {
                         $slipEarnings->push(['name' => optional($monthlyPayroll->components)->first(fn ($c) => str_starts_with($c->component_name, 'Shift Allowance'))?->component_name ?? 'Shift Allowance',
                             'amount' => (float) $monthlyPayroll->shift_allowance_amount]);
+                    }
+                    // Extra working days (2nd shifts paid as days) as stored on this payslip.
+                    if ((float) ($monthlyPayroll->extra_work_day_amount ?? 0) > 0) {
+                        $slipEarnings->push(['name' => \App\Services\Payroll\ExtraWorkDayCalculator::label((float) $monthlyPayroll->extra_work_days),
+                            'amount' => (float) $monthlyPayroll->extra_work_day_amount]);
                     }
                     // Loan / salary-advance lines come from what THIS payslip stored: a live recalculation
                     // sees the instalments it already collected as paid and would show nothing.

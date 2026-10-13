@@ -32,6 +32,7 @@ class UpdateOvertimePolicySettingsRequest extends FormRequest
                 'rate_type' => ['required', 'in:multiplier,fixed'],
                 'rate_multiplier' => ['required_if:rate_type,multiplier', 'nullable', 'numeric', 'min:1', 'max:5'],
                 'fixed_rate_per_hour' => ['required_if:rate_type,fixed', 'nullable', 'numeric', 'min:1', 'max:100000'],
+                'extra_shift_pay_mode' => ['nullable', 'in:overtime,extra_day'],
                 'require_approval' => ['nullable', 'boolean'],
                 'auto_approve_limit' => ['nullable', 'numeric', 'min:0', 'max:24'],
             ];

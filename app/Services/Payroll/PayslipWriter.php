@@ -179,6 +179,9 @@ class PayslipWriter
             'overtime_amount' => $result['overtime_amount'] ?? 0,
             'shift_allowance_amount' => round((float) optional($earnings->get('shift_allowance'))['amount'], 2),
             'shift_allowance_days' => $result['shift_allowance_days'] ?? 0,
+            'extra_work_days' => $result['extra_work_days'] ?? 0,
+            'extra_work_day_rate' => $result['extra_work_day_rate'] ?? 0,
+            'extra_work_day_amount' => round((float) optional($earnings->get('extra_work_days'))['amount'], 2),
             'actual_worked_hours' => $context['actual_worked_hours'],
             'loan_deduction' => $result['loan_deduction'],
             'loan_deduction_enabled' => $includeLoanDeductions,
@@ -249,7 +252,7 @@ class PayslipWriter
                     'component_name' => $earningNames[$key] ?? $this->formatComponentName($key),
                     'component_type' => 'earning',
                     'amount' => $amount,
-                    'is_taxable' => in_array($key, ['basic', 'hra', 'special', 'incentive', 'shift_allowance']),
+                    'is_taxable' => in_array($key, ['basic', 'hra', 'special', 'incentive', 'shift_allowance', 'extra_work_days']),
                     'description' => $this->formatComponentName($key).' for the month',
                 ]);
             }
@@ -310,6 +313,7 @@ class PayslipWriter
             'special' => 'Special Allowance',
             'overtime' => 'Overtime',
             'shift_allowance' => 'Shift Allowance',
+            'extra_work_days' => 'Extra Working Days',
         ][$key] ?? ucwords(str_replace('_', ' ', $key));
     }
 

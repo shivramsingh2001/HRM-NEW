@@ -278,6 +278,14 @@ class LegacyPayrollCalculator
             $earnings['shift_allowance'] = $shiftAllowance['amount'];
         }
 
+        // Additional shifts paid as extra working days (Company Policies → Additional shift pay):
+        // one day's salary = full monthly gross ÷ days in month. 0 when they are paid as overtime.
+        $extraWork = app(\App\Services\Payroll\ExtraWorkDayCalculator::class)
+            ->calculate((int) $tenantId, (int) $employee->id, $yearMonth, $this->monthlyGross($userPayroll));
+        if ($extraWork['amount'] > 0) {
+            $earnings['extra_work_days'] = $extraWork['amount'];
+        }
+
         // =====================================================================
         // LOAN DEDUCTIONS -- always computed (for display via
         // loan_deduction_computed) even when $includeLoanDeductions is
@@ -393,6 +401,9 @@ class LegacyPayrollCalculator
             'overtime_amount' => $earnings['overtime'] ?? 0,
             'shift_allowance_amount' => $earnings['shift_allowance'] ?? 0,
             'shift_allowance_days' => $shiftAllowance['days'],
+            'extra_work_days' => $extraWork['days'],
+            'extra_work_day_rate' => $extraWork['rate'],
+            'extra_work_day_amount' => $earnings['extra_work_days'] ?? 0,
             'expected_hours' => round($expectedHours, 2),
             'actual_worked_hours' => round($actualWorkedHours, 2),
             'hourly_rate' => round($hourlyRate, 2),
@@ -442,7 +453,7 @@ class LegacyPayrollCalculator
             'earnings' => $earnings,
             'employee_deductions' => $employeeDeductions,
             'employer_contributions' => $employerContributions,
-            'earning_names' => ['shift_allowance' => $shiftAllowance['label']],
+            'earning_names' => ['shift_allowance' => $shiftAllowance['label'], 'extra_work_days' => $extraWork['label']],
             'advance_deduction' => $advanceDeduction,
             'loan_deduction' => $loanDeductions,
         ];
@@ -991,6 +1002,12 @@ class LegacyPayrollCalculator
             'incentive' => round($userPayroll->monthly_incentive * $prorationFactor, 2),
             'special' => round($userPayroll->special_allowance * $prorationFactor, 2),
         ];
+    }
+
+    /** Full monthly gross (fixed earnings before proration) — the base of one day's salary. */
+    public function monthlyGross($userPayroll): float
+    {
+        return round(array_sum($this->calculateEarnings($userPayroll, 1.0)), 2);
     }
 
     /**

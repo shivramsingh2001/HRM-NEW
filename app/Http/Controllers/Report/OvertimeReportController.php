@@ -85,13 +85,10 @@ class OvertimeReportController extends Controller
                 ->get()
                 ->groupBy('user_id');
 
-            // Multi-shift: minutes worked in 2nd+ shifts are automatic overtime.
-            $extraShiftMinutes = DB::table('attendances')
-                ->where('tenant_id', $tenantId)
-                ->whereBetween('date', [$monthStart, $monthEnd])
-                ->where('extra_shift_minutes', '>', 0)
-                ->groupBy('user_id')
-                ->pluck(DB::raw('SUM(extra_shift_minutes)'), 'user_id');
+            // Multi-shift: 2nd+ shift minutes are automatic overtime — or extra working days (no OT cost) per Company Policies.
+            $extraShiftMinutes = app(\App\Services\Attendance\ExtraShiftOvertime::class)->minutesByUser($tenantId, $monthStart, $monthEnd);
+            $extraWorkDays = app(\App\Services\Payroll\ExtraWorkDayCalculator::class)->daysByUser($tenantId, $monthStart, $monthEnd);
+            $extraShiftAsDays = app(\App\Services\Payroll\ExtraWorkDayCalculator::class)->enabled($tenantId);
 
             // Per-employee hourly rate, dynamic-or-legacy — same resolution
             // AttendanceAnalyticsService::overtimeCost() uses tenant-wide,
@@ -123,7 +120,7 @@ class OvertimeReportController extends Controller
                 $userRequests = $requests->get($user->id, collect());
                 $extraShiftHours = round(((int) ($extraShiftMinutes[$user->id] ?? 0)) / 60, 2);
 
-                if ($userRequests->isEmpty() && $extraShiftHours <= 0) {
+                if ($userRequests->isEmpty() && $extraShiftHours <= 0 && ($extraWorkDays[$user->id] ?? 0) <= 0) {
                     continue;
                 }
 
@@ -162,6 +159,7 @@ class OvertimeReportController extends Controller
                     'rejected_count' => $rejected->count(),
                     'approved_hours' => $approvedHours,
                     'extra_shift_hours' => $extraShiftHours,
+                    'extra_work_days' => (float) ($extraWorkDays[$user->id] ?? 0),
                     'pending_hours' => $pendingHours,
                     'rejected_hours' => $rejectedHours,
                     'hourly_rate' => $rate,
@@ -198,7 +196,7 @@ class OvertimeReportController extends Controller
             );
 
             return view('client.report.attendance.overtime-monthly', compact(
-                'reportData', 'stats', 'departments', 'branches', 'selectedMonth', 'search', 'departmentFilter', 'statusFilter', 'branchFilter'
+                'reportData', 'stats', 'departments', 'branches', 'selectedMonth', 'search', 'departmentFilter', 'statusFilter', 'branchFilter', 'extraShiftAsDays'
             ));
         } catch (Exception $e) {
             Log::error('Overtime Monthly Report Error: '.$e->getMessage());

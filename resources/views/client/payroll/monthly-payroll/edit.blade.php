@@ -1203,6 +1203,46 @@
                     @endif
 
                     <!-- ============================================================ -->
+                    <!-- EXTRA WORKING DAYS -- 2nd shifts paid as days (policy)       -->
+                    <!-- ============================================================ -->
+                    @if ($showExtraWorkDays)
+                    <div class="form-section">
+                        <div class="section-title">
+                            <span><i class="feather-plus-square me-1" style="color: var(--icon-color, #0D6EFD);"></i>Extra Working Days</span>
+                            <span style="font-size: 10px; color: var(--gray-500);"><i class="feather-edit-2"></i> Days are editable</span>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Extra working days</label>
+                                    <input type="number" step="0.5" min="0" max="62" name="extra_work_days" id="extra_work_days"
+                                        class="form-control @error('extra_work_days') is-invalid @enderror"
+                                        value="{{ old('extra_work_days', (float) ($monthlyPayroll->extra_work_days ?? 0)) }}">
+                                    @error('extra_work_days')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>One day's salary (₹)</label>
+                                    <input type="number" step="0.01" class="form-control" id="extra_work_day_rate"
+                                        value="{{ number_format($extraWorkDayRate, 2, '.', '') }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Amount (₹)</label>
+                                    <input type="number" step="0.01" class="form-control" id="extra_work_day_amount"
+                                        value="{{ number_format((float) ($monthlyPayroll->extra_work_day_amount ?? 0), 2, '.', '') }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="help-text">Assigned additional (2nd) shifts worked, paid as extra days: days × one day's salary (monthly gross ÷ days in month). Not added to payable days.</small>
+                    </div>
+                    @endif
+
+                    <!-- ============================================================ -->
                     <!-- OVERTIME SECTION -- approved breakdown + non-approved include -->
                     <!-- ============================================================ -->
                     <div class="form-section">
@@ -1908,6 +1948,9 @@
             let incentive = parseFloat($('#monthly_incentive').val()) || 0;
             let special = parseFloat($('#special_allowance').val()) || 0;
             let shiftAllowance = parseFloat($('#shift_allowance_amount').val()) || 0;
+            // Extra working days: days × one day's salary (0 when the section isn't shown).
+            let extraWorkDays = Math.round((parseFloat($('#extra_work_days').val()) || 0) * (parseFloat($('#extra_work_day_rate').val()) || 0) * 100) / 100;
+            $('#extra_work_day_amount').val(extraWorkDays.toFixed(2));
             let overtime = (parseFloat($('#overtime_amount').val()) || 0)
                 + (includePendingOvertime ? pendingOvertimePreviewAmount : 0);
             let pf = parseFloat($('#pf').val()) || 0;
@@ -1920,7 +1963,7 @@
             let employerPf = parseFloat($('#employer_pf').val()) || 0;
             let employerEsi = parseFloat($('#employer_esi').val()) || 0;
             
-            let gross = basic + hra + conveyence + medical + children + post + lta + incentive + special + overtime + shiftAllowance;
+            let gross = basic + hra + conveyence + medical + children + post + lta + incentive + special + overtime + shiftAllowance + extraWorkDays;
             let deductions = pf + esi + pt + tds + loan + advance + other;
             let net = gross - deductions;
             let employerTotal = employerPf + employerEsi;
@@ -2085,6 +2128,12 @@
             .on('input change', function() {
                 calculateTotals();
             });
+        // Extra working days — the dynamic form re-runs its engine preview instead (below).
+        @unless ($isDynamic)
+        $('#extra_work_days').on('input change', function() {
+            calculateTotals();
+        });
+        @endunless
 
         // ================================================================
         // INITIALIZATION
@@ -2161,6 +2210,9 @@
                         paid_leaves: d.paidLeaves,
                         week_offs: d.weekOffs,
                         holidays: d.holidays,
+                        @if ($showExtraWorkDays)
+                        extra_work_days: parseFloat($('#extra_work_days').val()) || 0,
+                        @endif
                         loan_deduction_enabled: $('#loan_deduction_enabled').val() || 1,
                     },
                     success: function(response) {
@@ -2185,6 +2237,10 @@
                         $('#total_deductions').val(data.total_deductions);
                         $('#net_payable').val(data.net_payable);
                         $('#payable_days_input').val(data.payable_days);
+                        if (Number(data.extra_work_day_rate) > 0) {
+                            $('#extra_work_day_rate').val(Number(data.extra_work_day_rate).toFixed(2));
+                        }
+                        $('#extra_work_day_amount').val(Number(data.extra_work_day_amount || 0).toFixed(2));
 
                         const employerTotal = (data.employer_contributions || []).reduce((sum, c) => sum + Number(c.amount), 0);
                         $('#employer_contributions_display').text('₹' + employerTotal.toLocaleString('en-IN', {minimumFractionDigits: 2}));
@@ -2199,8 +2255,8 @@
                 });
             }
 
-            // Week Off / Holiday — direct edits, straightforward recompute.
-            $('#week_offs_days, #holidays_days').on('change', function() {
+            // Week Off / Holiday / extra working days — direct edits, straightforward recompute.
+            $('#week_offs_days, #holidays_days, #extra_work_days').on('change', function() {
                 updateAbsentDisplay();
                 runPreview();
             });

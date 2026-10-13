@@ -712,6 +712,10 @@
                                         : '× ' . ($otNum($overtime->rate_multiplier) ?? '1.5') . ' hourly rate' }}
                                 </span>
                             </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Additional shift</span>
+                                <span class="info-row__value">{{ $overtime->extra_shift_pay_mode === 'extra_day' ? 'Paid as extra working day' : 'Paid as overtime hours' }}</span>
+                            </div>
                             @unless ($otAuto)
                                 <div class="info-row">
                                     <span class="info-row__label">Approval</span>
@@ -1066,6 +1070,17 @@
                 </div>
                 <div class="field-hint">Hourly rate = basic salary ÷ days (payroll setting) ÷ working hours per day.</div>
 
+                <label class="field-label mt-3">Additional (2nd) shift pay</label>
+                <select class="field-input" name="extra_shift_pay_mode">
+                    <option value="overtime" @selected(old('extra_shift_pay_mode', $overtime->extra_shift_pay_mode) !== 'extra_day')>Count as overtime hours (hours × overtime rate)</option>
+                    <option value="extra_day" @selected(old('extra_shift_pay_mode', $overtime->extra_shift_pay_mode) === 'extra_day')>Count as extra working day (one day's salary)</option>
+                </select>
+                <div class="field-hint">
+                    For an assigned additional shift worked on the same day. Extra working day = 1 day per shift
+                    (½ day if less than half its hours were worked), paid at monthly gross ÷ days in month,
+                    as its own payslip line. Applies to payroll generated after saving.
+                </div>
+
                 <div id="ot_approval_fields" class="{{ $overtime->mode === 'auto' ? 'd-none' : '' }}">
                     <div class="form-check form-switch mt-3">
                         <input class="form-check-input" type="checkbox" role="switch"
@@ -1078,7 +1093,7 @@
                            value="{{ old('auto_approve_limit', $overtime->auto_approve_limit) }}" placeholder="Never">
                     <div class="field-hint">Request &amp; approval mode only.</div>
                 </div>
-                @foreach (['min_hours', 'max_hours_per_day', 'max_hours_per_month', 'rate_type', 'rate_multiplier', 'fixed_rate_per_hour', 'auto_approve_limit'] as $f)
+                @foreach (['min_hours', 'max_hours_per_day', 'max_hours_per_month', 'rate_type', 'rate_multiplier', 'fixed_rate_per_hour', 'extra_shift_pay_mode', 'auto_approve_limit'] as $f)
                     @error($f)
                         <div class="text-danger small mt-1">{{ $message }}</div>
                     @enderror

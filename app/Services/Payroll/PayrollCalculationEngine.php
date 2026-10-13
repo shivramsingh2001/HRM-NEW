@@ -54,7 +54,9 @@ class PayrollCalculationEngine
             throw new RuntimeException("No dynamic payroll structure found for user {$employee->id} effective {$monthEnd}.");
         }
 
-        $context = $this->contextBuilder->build($employee->id, $tenantId, $yearMonth, $dayOverrides);
+        // extra_work_days is read below; only the day counts go to the attendance context.
+        $context = $this->contextBuilder->build($employee->id, $tenantId, $yearMonth,
+            array_diff_key($dayOverrides ?? [], ['extra_work_days' => true]) ?: null);
         $context['ctc'] = (float) $structure->ctc;
         $context['tenant_id'] = $tenantId;
         $context['month_end_date'] = $monthEnd;
@@ -179,6 +181,27 @@ class PayrollCalculationEngine
             ];
         }
 
+        // Additional shifts paid as extra working days (Company Policies → Additional shift pay) —
+        // one day's salary = full monthly gross (before proration) ÷ days in month. Same placement
+        // as overtime: taxable, not a PF/ESI/PT base. Edit Payroll can override the day count.
+        $extraWorkDays = isset($dayOverrides['extra_work_days'])
+            ? max(0.0, round((float) $dayOverrides['extra_work_days'], 2))
+            : app(ExtraWorkDayCalculator::class)->days($tenantId, (int) $employee->id, $yearMonth)['days'];
+        $extraWorkDayRate = $extraWorkDays > 0
+            ? ExtraWorkDayCalculator::dayRate($this->monthlyGross($components, $context), (int) $context['calendar_days'])
+            : 0.0;
+        $extraWorkDayAmount = round($extraWorkDays * $extraWorkDayRate, 2);
+        if ($extraWorkDayAmount > 0) {
+            $lineItems[] = [
+                'code' => 'extra_work_days',
+                'name' => ExtraWorkDayCalculator::label($extraWorkDays),
+                'component_type' => 'earning',
+                'calculation_method' => 'system_computed',
+                'amount' => $extraWorkDayAmount,
+                'is_taxable' => true,
+            ];
+        }
+
         // Loan deduction is folded in as a real deduction line item (rather
         // than subtracted separately at the end) so total_deductions and
         // net_payable stay consistent with each other -- previously
@@ -271,6 +294,9 @@ class PayrollCalculationEngine
             'overtime_amount' => $overtimeAmount,
             'shift_allowance_amount' => $shiftAllowance['amount'],
             'shift_allowance_days' => $shiftAllowance['days'],
+            'extra_work_days' => $extraWorkDays,
+            'extra_work_day_rate' => $extraWorkDayRate,
+            'extra_work_day_amount' => $extraWorkDayAmount,
             'late_deduction' => round($lateEarly['late_deduction_amount'], 2),
             'early_deduction' => round($lateEarly['early_deduction_amount'], 2),
             'employer_contributions_total' => round($employerContributions, 2),
@@ -484,6 +510,41 @@ class PayrollCalculationEngine
             $basic, 'day_based', (float) ($master->working_hours_per_day ?? 8), $month->daysInMonth, $month->daysInMonth,
             $master->ot_rate_divisor_mode ?? 'calendar_days', (int) ($master->ot_fixed_working_days ?? 26)
         );
+    }
+
+    /** One day's salary for extra working days (full monthly gross ÷ days in month); 0 without a structure. */
+    public function extraWorkDayRate(User $employee, int $tenantId, string $yearMonth): float
+    {
+        $month = Carbon::createFromFormat('Y-m', $yearMonth);
+        [$structure, $components] = $this->loadStructureAndComponents($employee, $tenantId, $month->copy()->endOfMonth()->toDateString());
+        if (! $structure) {
+            return 0.0;
+        }
+
+        return ExtraWorkDayCalculator::dayRate($this->monthlyGross($components, [
+            'ctc' => (float) $structure->ctc,
+            'tenant_id' => $tenantId,
+            'month_end_date' => $month->copy()->endOfMonth()->toDateString(),
+            'state_code' => Tenant::withoutGlobalScopes()->whereKey($tenantId)->value('state'),
+        ]), $month->daysInMonth);
+    }
+
+    /** Full monthly gross: every earning component before proration (pass 1 without the proration step). */
+    private function monthlyGross($components, array $context): float
+    {
+        $raw = [];
+        $gross = 0.0;
+        foreach ($components as $ec) {
+            if (! in_array($ec->component->component_type, ['earning', 'employer_contribution', 'reimbursement'], true)) {
+                continue;
+            }
+            $raw[$ec->component->code] = $this->resolveComponentRaw($ec, $raw, null, $context);
+            if ($ec->component->component_type === 'earning') {
+                $gross += $raw[$ec->component->code];
+            }
+        }
+
+        return round($gross, 2);
     }
 
     public function rawComponentAmount(User $employee, int $tenantId, string $yearMonth, string $code): float

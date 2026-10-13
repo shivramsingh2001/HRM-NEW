@@ -27,8 +27,8 @@ class DayAttendanceReportController extends Controller
     public function dayAttendanceReport(Request $request)
     {
         try {
-            // Get tenant_id from session
             $tenantId = session('tenant_id');
+            $extraShiftIsOvertime = ! app(\App\Services\Attendance\OvertimePolicyService::class)->paysExtraShiftAsDays((int) $tenantId); // else extra working days, not OT
 
             if (! $tenantId) {
                 return back()->with('error', 'Tenant not found. Please login again.');
@@ -281,10 +281,10 @@ class DayAttendanceReportController extends Controller
                     'shift_end_time' => $attendance->shiftendtime ?? null,
                     'late_minutes' => $attendance->late_minutes ?? 0,
                     'early_exit_minutes' => $attendance->earlyexitminutes ?? 0,
-                    'overtime_minutes' => ($overtime ? ($overtime->approved_hours * 60) : 0) + (int) ($attendance->extra_shift_minutes ?? 0),
+                    'overtime_minutes' => ($overtime ? ($overtime->approved_hours * 60) : 0) + ($extraShiftIsOvertime ? (int) ($attendance->extra_shift_minutes ?? 0) : 0),
                     'overtime_hours' => $overtime ? $overtime->approved_hours : null,
                     'overtime_reason' => $overtime ? $overtime->reason : null,
-                    'extra_shift_minutes' => (int) ($attendance->extra_shift_minutes ?? 0),
+                    'extra_shift_minutes' => $extraShiftIsOvertime ? (int) ($attendance->extra_shift_minutes ?? 0) : 0,
                     'shifts' => $daySegments->map(fn ($seg) => [
                         'name' => $seg->shift_name,
                         'start' => $seg->scheduled_start,
@@ -388,8 +388,8 @@ class DayAttendanceReportController extends Controller
     public function dayExportAttendance(Request $request)
     {
         try {
-            // Get tenant_id from session
             $tenantId = session('tenant_id');
+            $extraShiftIsOvertime = ! app(\App\Services\Attendance\OvertimePolicyService::class)->paysExtraShiftAsDays((int) $tenantId); // else extra working days, not OT
 
             if (! $tenantId) {
                 return back()->with('error', 'Tenant not found. Please login again.');
@@ -627,10 +627,10 @@ class DayAttendanceReportController extends Controller
                     'shift_end_time' => $attendance->scheduled_shift_end ?? null,
                     'late_minutes' => $attendance->late_minutes ?? 0,
                     'early_exit_minutes' => $attendance->early_departure_minutes ?? 0,
-                    'overtime_minutes' => ($overtime ? ($overtime->approved_hours * 60) : 0) + (int) ($attendance->extra_shift_minutes ?? 0),
+                    'overtime_minutes' => ($overtime ? ($overtime->approved_hours * 60) : 0) + ($extraShiftIsOvertime ? (int) ($attendance->extra_shift_minutes ?? 0) : 0),
                     'overtime_hours' => $overtime ? $overtime->approved_hours : null,
                     'overtime_reason' => $overtime ? $overtime->reason : null,
-                    'extra_shift_minutes' => (int) ($attendance->extra_shift_minutes ?? 0),
+                    'extra_shift_minutes' => $extraShiftIsOvertime ? (int) ($attendance->extra_shift_minutes ?? 0) : 0,
                     'shifts' => $daySegments->map(fn ($seg) => [
                         'name' => $seg->shift_name,
                         'start' => $seg->scheduled_start,

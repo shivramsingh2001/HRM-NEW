@@ -69,7 +69,11 @@
                                 <th>Attendance Location</th>
                                 <th class="text-center">Requests</th>
                                 <th class="text-center">Approved</th>
+                                @if ($extraShiftAsDays ?? false)
+                                <th class="text-center" title="Additional (2nd+) shifts worked — paid as extra working days, not overtime">Extra Shift Days</th>
+                                @else
                                 <th class="text-center" title="Hours worked in additional (2nd+) shifts — paid as overtime automatically">Extra Shift</th>
+                                @endif
                                 <th class="text-center">Pending</th>
                                 <th class="text-center">Rejected</th>
                                 <th class="text-end">Rate (₹/hr)</th>
@@ -102,7 +106,11 @@
                                         <span class="hours-pill hours-approved">{{ number_format($row['approved_hours'], 1) }}h ({{ $row['approved_count'] }})</span>
                                     </td>
                                     <td class="text-center">
+                                        @if ($extraShiftAsDays ?? false)
+                                        <span class="hours-pill hours-approved">{{ rtrim(rtrim(number_format($row['extra_work_days'] ?? 0, 1), '0'), '.') }}d</span>
+                                        @else
                                         <span class="hours-pill hours-approved">{{ number_format($row['extra_shift_hours'] ?? 0, 1) }}h</span>
+                                        @endif
                                     </td>
                                     <td class="text-center">
                                         <span class="hours-pill hours-pending">{{ number_format($row['pending_hours'], 1) }}h ({{ $row['pending_count'] }})</span>

@@ -153,12 +153,57 @@ class PayrollEditService
             }
         }
 
+        // Extra working days (Company Policies → Additional shift pay = Extra working day): shown when
+        // the company pays 2nd shifts as days, or this payslip already has some.
+        $showExtraWorkDays = (float) $monthlyPayroll->extra_work_days > 0
+            || app(ExtraWorkDayCalculator::class)->enabled((int) $monthlyPayroll->tenant_id);
+        $extraWorkDayRate = $showExtraWorkDays ? $this->extraWorkDayRate($monthlyPayroll, $userPayroll) : 0.0;
+
         return compact(
             'monthlyPayroll', 'months', 'userPayroll', 'loanDueItems', 'loanDueTotal', 'advanceDueItems', 'advanceDueTotal',
             'approvedOvertimeRequests', 'pendingOvertimeRequests', 'canApproveOvertime',
             'overtimeRateMultiplier', 'overtimeFixedRate', 'overtimeRateInfo', 'pendingOvertimeRate', 'pendingOvertimeHours', 'pendingOvertimeAmount',
-            'isDynamic', 'dynamicComponents'
+            'isDynamic', 'dynamicComponents', 'showExtraWorkDays', 'extraWorkDayRate'
         );
+    }
+
+    /**
+     * One day's salary for this payslip's extra working days: the rate stored at
+     * generation, else full monthly gross ÷ days in the month (legacy salary or
+     * the dynamic structure).
+     */
+    public function extraWorkDayRate(MonthlyPayroll $monthlyPayroll, $userPayroll = null): float
+    {
+        if ((float) $monthlyPayroll->extra_work_day_rate > 0) {
+            return round((float) $monthlyPayroll->extra_work_day_rate, 2);
+        }
+
+        if ($monthlyPayroll->engine_version === 'dynamic_v1') {
+            $employee = \App\Models\User::withoutGlobalScopes()->find($monthlyPayroll->user_id);
+
+            return $employee ? app(PayrollCalculationEngine::class)->extraWorkDayRate(
+                $employee, (int) $monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month
+            ) : 0.0;
+        }
+
+        return $userPayroll
+            ? ExtraWorkDayCalculator::dayRate($this->calculator->monthlyGross($userPayroll),
+                Carbon::createFromFormat('Y-m', $monthlyPayroll->payroll_month)->daysInMonth)
+            : 0.0;
+    }
+
+    /**
+     * Legacy form: [days, rate, amount] — the typed extra working days (else the
+     * stored ones) × one day's salary, priced on the server.
+     *
+     * @return array{0: float, 1: float, 2: float}
+     */
+    private function legacyExtraWorkDays(Request $request, MonthlyPayroll $monthlyPayroll, $userPayroll): array
+    {
+        $days = max(0.0, round((float) $request->input('extra_work_days', $monthlyPayroll->extra_work_days ?? 0), 2));
+        $rate = $days > 0 ? $this->extraWorkDayRate($monthlyPayroll, $userPayroll) : (float) ($monthlyPayroll->extra_work_day_rate ?? 0);
+
+        return [$days, $rate, round($days * $rate, 2)];
     }
 
     /**
@@ -207,7 +252,8 @@ class PayrollEditService
             + (float) ($request->special_allowance ?? 0)
             + (float) ($request->overtime_amount ?? 0)
             + (float) ($request->shift_allowance_amount ?? 0)
-            + $pendingOvertimePreviewAmount;
+            + $pendingOvertimePreviewAmount
+            + $this->legacyExtraWorkDayPreview($request, $id);
 
         $loanDeductionEnabled = $request->boolean('loan_deduction_enabled', true);
         $requestedLoanDeduction = $loanDeductionEnabled ? (float) ($request->loan_deduction ?? 0) : 0.0;
@@ -226,6 +272,17 @@ class PayrollEditService
         $netPayablePreview = round($grossEarningsPreview - $totalDeductionsPreview, 2);
 
         return $netPayablePreview;
+    }
+
+    private function legacyExtraWorkDayPreview(Request $request, $id): float
+    {
+        $monthlyPayroll = MonthlyPayroll::whereKey($id)->first();
+        if (! $monthlyPayroll) {
+            return 0.0;
+        }
+        $userPayroll = \App\Models\UserPayroll::where('user_id', $monthlyPayroll->user_id)->where('is_current', 1)->where('status', 1)->first();
+
+        return $this->legacyExtraWorkDays($request, $monthlyPayroll, $userPayroll)[2];
     }
 
     /** Save the legacy Edit Payroll form. Throws PayrollEditException with the message the screen shows. */
@@ -321,6 +378,10 @@ class PayrollEditService
                 + $overtimeAmount
                 + (float) ($request->shift_allowance_amount ?? 0);
 
+            // Extra working days (2nd shifts paid as days) — typed days × one day's salary.
+            [$extraWorkDays, $extraWorkDayRate, $extraWorkDayAmount] = $this->legacyExtraWorkDays($request, $monthlyPayroll, $userPayroll);
+            $grossEarnings += $extraWorkDayAmount;
+
             $totalDeductions = $request->provident_fund
                 + $request->esi
                 + $request->professional_tax
@@ -360,6 +421,9 @@ class PayrollEditService
                 'special_allowance' => $request->special_allowance ?? 0,
                 'overtime_amount' => $overtimeAmount,
                 'shift_allowance_amount' => (float) ($request->shift_allowance_amount ?? 0),
+                'extra_work_days' => $extraWorkDays,
+                'extra_work_day_rate' => $extraWorkDayRate,
+                'extra_work_day_amount' => $extraWorkDayAmount,
                 'provident_fund' => $request->provident_fund,
                 'esi' => $request->esi,
                 'professional_tax' => $request->professional_tax,
@@ -403,6 +467,7 @@ class PayrollEditService
                 'special' => $request->special_allowance ?? 0,
                 'overtime' => $overtimeAmount,
                 'shift_allowance' => (float) ($request->shift_allowance_amount ?? 0),
+                'extra_work_days' => $extraWorkDayAmount,
             ];
 
             $employeeDeductions = [
@@ -421,7 +486,7 @@ class PayrollEditService
             ];
 
             $this->payslips->savePayrollComponents($id, $earnings, $employeeDeductions, $employerContributions,
-                ['shift_allowance' => $shiftAllowanceName]);
+                ['shift_allowance' => $shiftAllowanceName, 'extra_work_days' => ExtraWorkDayCalculator::label($extraWorkDays)]);
 
             // Sync the loan ledger to match what was actually saved on this
             // payslip -- idempotent (applyDeduction()/revokeForPayroll()
@@ -536,12 +601,15 @@ class PayrollEditService
             'net_payable' => $result['net_payable'],
             'payable_days' => $result['context']['payable_days'],
             'absent_days' => $result['context']['absent_days'],
+            'extra_work_days' => $result['extra_work_days'],
+            'extra_work_day_rate' => $result['extra_work_day_rate'],
+            'extra_work_day_amount' => $result['extra_work_day_amount'],
         ];
     }
 
     /**
-     * present_days/paid_leave_days/week_offs/holidays for
-     * PayrollAttendanceContextBuilder::build()'s $dayOverrides — unset
+     * present_days/paid_leave_days/week_offs/holidays (+ extra_work_days, read
+     * by the engine itself) for PayrollCalculationEngine's $dayOverrides — unset
      * fields fall back to this payroll's current stored value rather than
      * 0, so submitting the form without touching every single day-count
      * field can't accidentally zero one out.
@@ -553,6 +621,8 @@ class PayrollEditService
             'paid_leave_days' => (float) ($data['paid_leaves'] ?? $monthlyPayroll->paid_leaves ?? 0),
             'week_offs' => (float) ($data['week_offs'] ?? $monthlyPayroll->week_offs ?? 0),
             'holidays' => (float) ($data['holidays'] ?? $monthlyPayroll->holidays ?? 0),
+            // Extra working days (2nd shifts paid as days): the typed value, else this payslip's own.
+            'extra_work_days' => (float) ($data['extra_work_days'] ?? $monthlyPayroll->extra_work_days ?? 0),
         ];
     }
 

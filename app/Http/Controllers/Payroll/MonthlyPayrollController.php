@@ -283,6 +283,7 @@ class MonthlyPayrollController extends Controller
             'paid_leaves'        => 'nullable|numeric|min:0',
             'overtime_hours'     => 'nullable|numeric|min:0',
             'shift_allowance_amount' => 'nullable|numeric|min:0',
+            'extra_work_days'    => 'nullable|numeric|min:0|max:62',
             'basic_salary'       => 'required|numeric|min:0',
             'hra'                => 'required|numeric|min:0',
             'conveyence'         => 'required|numeric|min:0',
@@ -344,6 +345,7 @@ class MonthlyPayrollController extends Controller
             'paid_leaves' => 'nullable|numeric|min:0',
             'week_offs' => 'nullable|numeric|min:0',
             'holidays' => 'nullable|numeric|min:0',
+            'extra_work_days' => 'nullable|numeric|min:0|max:62',
             'overtime_hours' => 'nullable|numeric|min:0',
             'remarks' => 'nullable|string',
             'loan_deduction_enabled' => 'nullable|boolean',
@@ -376,6 +378,7 @@ class MonthlyPayrollController extends Controller
             'paid_leaves' => 'nullable|numeric|min:0',
             'week_offs' => 'nullable|numeric|min:0',
             'holidays' => 'nullable|numeric|min:0',
+            'extra_work_days' => 'nullable|numeric|min:0|max:62',
             'loan_deduction_enabled' => 'nullable|boolean',
         ]);
 

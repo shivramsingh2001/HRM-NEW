@@ -12,6 +12,10 @@ class OvertimeSetting extends Model
     public const MODE_REQUEST = 'request';
     public const MODE_AUTO = 'auto';
 
+    /** Additional (2nd+) shift work: paid as overtime hours, or as extra working days. */
+    public const EXTRA_SHIFT_OVERTIME = 'overtime';
+    public const EXTRA_SHIFT_EXTRA_DAY = 'extra_day';
+
     protected $fillable = [
         'tenant_id',
         'enabled',
@@ -22,6 +26,7 @@ class OvertimeSetting extends Model
         'rate_type',
         'rate_multiplier',
         'fixed_rate_per_hour',
+        'extra_shift_pay_mode',
         'max_hours_per_day',
         'max_hours_per_month',
         'require_approval',

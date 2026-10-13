@@ -382,6 +382,7 @@ class PayrollController extends Controller
                 ['name' => 'Special Allowance', 'amount' => $payslip->special_allowance ?? 0],
                 ['name' => 'Overtime', 'amount' => $payslip->overtime_amount ?? 0],
                 ['name' => 'Shift Allowance', 'amount' => $payslip->shift_allowance_amount ?? 0],
+                ['name' => \App\Services\Payroll\ExtraWorkDayCalculator::label((float) $payslip->extra_work_days), 'amount' => $payslip->extra_work_day_amount ?? 0],
             ];
 
             // Get deductions breakdown
@@ -395,13 +396,8 @@ class PayrollController extends Controller
             ];
 
             // Filter out zero amounts
-            $earnings = array_filter($earnings, function($item) {
-                return $item['amount'] > 0;
-            });
-
-            $deductions = array_filter($deductions, function($item) {
-                return $item['amount'] > 0;
-            });
+            $earnings = array_filter($earnings, fn ($item) => $item['amount'] > 0);
+            $deductions = array_filter($deductions, fn ($item) => $item['amount'] > 0);
 
             return response()->json([
                 'success' => true,
@@ -421,6 +417,7 @@ class PayrollController extends Controller
                         'absent_days' => $payslip->absent_days,
                         'paid_leaves' => $payslip->paid_leaves,
                         'overtime_hours' => $payslip->overtime_hours,
+                        'extra_work_days' => $payslip->extra_work_days ?? 0,
                     ],
                     'earnings' => array_values($earnings),
                     'deductions' => array_values($deductions),
