@@ -603,8 +603,8 @@
                 </x-ui.data-table>
             @endif
         </div>
-        @if (method_exists($ob, 'links') && $ob->hasPages())
-            <x-ui.pagination-footer :paginator="$ob" label="requests" />
+        @if (method_exists($offboardings, 'links') && $offboardings->hasPages())
+            <x-ui.pagination-footer :paginator="$offboardings" label="requests" />
         @endif
     </div>
 @endsection
