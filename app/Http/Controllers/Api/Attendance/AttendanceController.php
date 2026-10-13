@@ -338,6 +338,9 @@ class AttendanceController extends Controller
             $punchBlocked = $this->mobilePunchBlocked((int) $userId);
             $data['can_mark_attendance'] = ! $punchBlocked;
             $data['attendance_block_reason'] = $punchBlocked ? self::BIOMETRIC_ONLY_MESSAGE : null;
+            // Multi-shift: clocked out of one shift with another still ahead → status 0, so an
+            // app that offers Clock In on status 0 offers the next shift. One-shift days unchanged.
+            $data['status'] = $this->nextShiftStillAhead($data, (int) $userId, (int) ($user->tenant_id ?? 0), $today) ? 0 : $data['status'];
 
             return response()->json([
                 'status' => true,
@@ -454,6 +457,22 @@ class AttendanceController extends Controller
      * Every shift the user works on $date (primary first) with a per-shift
      * status: upcoming | ongoing | completed. Empty when no shift applies.
      */
+    /**
+     * Today's day is closed (clocked out) and a shift not yet clocked in is open for clock-in
+     * now (from EARLY_CLOCK_IN_MINUTES before its start until its end).
+     */
+    private function nextShiftStillAhead(array $data, int $userId, int $tenantId, string $date): bool
+    {
+        if (empty($data['clock_out']) || count($data['shifts']) < 2 || $data['date'] !== $date) {
+            return false;
+        }
+        $upcoming = collect($data['shifts'])->where('status', 'upcoming')->pluck('user_shift_id')->all();
+
+        return app(\App\Services\Attendance\TenantShiftResolver::class)->instancesForUserDate($userId, $tenantId, $date)
+            ->contains(fn ($i) => in_array($i['user_shift_id'], $upcoming, true) && $i['end']->isFuture()
+                && $i['start']->copy()->subMinutes(\App\Services\Attendance\TenantShiftResolver::EARLY_CLOCK_IN_MINUTES)->isPast());
+    }
+
     private function shiftsForDay(int $userId, int $tenantId, string $date): array
     {
         if (!$tenantId) {

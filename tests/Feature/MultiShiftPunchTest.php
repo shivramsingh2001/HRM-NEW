@@ -245,6 +245,9 @@ class MultiShiftPunchTest extends TestCase
         $this->assertCount(2, $today['shifts']);
         $this->assertSame(['completed', 'upcoming'], array_column($today['shifts'], 'status'));
         $this->assertSame([false, true], array_column($today['shifts'], 'is_additional'));
+        // Clocked out of Morning: status 0 (Clock In offered) only while Evening is open for clock-in (21:00–23:30).
+        $windowOpen = now()->between(Carbon::parse("$d 21:00"), Carbon::parse("$d 23:30"));
+        $this->assertSame($windowOpen ? 0 : 1, (int) $today['status']);
 
         $history = $controller->punchHistory(Request::create('/', 'GET', ['date' => $d]))->getData(true)['data'];
         $this->assertSame($this->tag . ' Morning', $history['sessions'][0]['shift']['name']);
@@ -351,5 +354,27 @@ class MultiShiftPunchTest extends TestCase
 
         // One shift that day: no picker.
         $this->assertSame([], $resolver->markableShifts($this->admin->id, $this->tenantId, $d));
+    }
+    public function test_today_api_status_is_0_while_the_next_shift_can_be_clocked_in(): void
+    {
+        // Evening starts 30 min from now (its clock-in window is open); skip near midnight.
+        $now = now();
+        if ($now->hour < 1 || $now->copy()->addMinutes(150)->toDateString() !== $now->toDateString()) {
+            $this->markTestSkipped('Needs both shifts inside today.');
+        }
+        $d = $now->toDateString();
+        $this->onDay($this->shift('Morning', '00:00', '00:30'), $d);
+        $this->onDay($this->shift('Evening', $now->copy()->addMinutes(30)->format('H:i'), $now->copy()->addMinutes(150)->format('H:i')), $d, true);
+        $this->punch('in', "$d 00:05");
+        $this->punch('out', "$d 00:25");
+        Auth::login($this->employee);
+        $controller = app(AttendanceController::class);
+
+        $this->assertSame(0, (int) $controller->getAttendance()->getData(true)['data']['status']);
+        $this->punch('in', $now->format('Y-m-d H:i:s'));   // accepted: the Evening shift
+        $this->assertSame(1, (int) $controller->getAttendance()->getData(true)['data']['status']);
+        $this->punch('out', $now->copy()->addMinutes(5)->format('Y-m-d H:i:s'));
+        // Evening already worked (not over yet): stays 1.
+        $this->assertSame(1, (int) $controller->getAttendance()->getData(true)['data']['status']);
     }
 }
