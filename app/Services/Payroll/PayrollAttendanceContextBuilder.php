@@ -34,6 +34,7 @@ class PayrollAttendanceContextBuilder
      * attested attendance-derived values before payable_days/proration are
      * (re)computed, so an HR edit to Week Off/Absent/Holiday actually flows
      * through to the real per-component proration, not just a display field.
+     * An optional payable_days override (a saved payslip's) is used as-is.
      */
     public function build(int $userId, int $tenantId, string $yearMonth, ?array $dayOverrides = null): array
     {
@@ -48,7 +49,11 @@ class PayrollAttendanceContextBuilder
                 array_flip(['present_days', 'paid_leave_days', 'week_offs', 'holidays'])
             ));
             // A worked holiday / week-off is inside present_days AND holidays / week_offs — paid once.
-            $days['payable_days'] = max(0, $days['present_days'] - ($days['worked_off_day_credit'] ?? 0)) + $days['paid_leave_days'] + $days['week_offs'] + $days['holidays'];
+            // A saved payslip's own payable_days (exact — its present_days column is a whole number) wins.
+            $days['payable_days'] = isset($dayOverrides['payable_days']) ? (float) $dayOverrides['payable_days']
+                : max(0, $days['present_days'] - ($days['worked_off_day_credit'] ?? 0)) + $days['paid_leave_days'] + $days['week_offs'] + $days['holidays'];
+            // Absent is whatever the edited days leave of the month (as the Edit form shows it).
+            $days['absent_days'] = max(0, $start->daysInMonth - $days['payable_days']);
         }
 
         $overtime = $this->approvedOvertimeHours($userId, $tenantId, $start->toDateString(), $end->toDateString());

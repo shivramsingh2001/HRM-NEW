@@ -250,7 +250,8 @@
 
                 if ($isDynamicSlip) {
                     $slipResolved = app(\App\Services\Payroll\PayrollCalculationEngine::class)
-                        ->resolveEmployeeComponents($monthlyPayroll->user, $monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month);
+                        ->resolveEmployeeComponents($monthlyPayroll->user, $monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month,
+                            app(\App\Services\Payroll\PayrollEditService::class)->storedDayOverrides($monthlyPayroll));
 
                     $slipEarnings = collect($slipResolved['earnings'])
                         ->merge($slipResolved['reimbursements'])

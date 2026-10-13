@@ -143,7 +143,7 @@ class PayrollEditService
         if ($isDynamic) {
             try {
                 $dynamicComponents = app(\App\Services\Payroll\PayrollCalculationEngine::class)
-                    ->resolveEmployeeComponents($monthlyPayroll->user, $monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month);
+                    ->resolveEmployeeComponents($monthlyPayroll->user, $monthlyPayroll->tenant_id, $monthlyPayroll->payroll_month, $this->storedDayOverrides($monthlyPayroll));
             } catch (\Throwable $e) {
                 // No PayrollEmployeeStructure effective for this employee/month
                 // (e.g. this payroll predates the dynamic engine for them) —
@@ -614,6 +614,22 @@ class PayrollEditService
      * 0, so submitting the form without touching every single day-count
      * field can't accidentally zero one out.
      */
+    /**
+     * This payslip's saved day counts as engine $dayOverrides, so a live recompute (Edit form
+     * fields, salary slip) shows what was saved, not what raw attendance alone would give.
+     */
+    public function storedDayOverrides(MonthlyPayroll $monthlyPayroll): array
+    {
+        return [
+            'present_days' => (float) $monthlyPayroll->present_days,
+            'paid_leave_days' => (float) ($monthlyPayroll->paid_leaves ?? 0),
+            'week_offs' => (float) ($monthlyPayroll->week_offs ?? 0),
+            'holidays' => (float) ($monthlyPayroll->holidays ?? 0),
+            'payable_days' => (float) $monthlyPayroll->payable_days,
+            'extra_work_days' => (float) ($monthlyPayroll->extra_work_days ?? 0),
+        ];
+    }
+
     private function dayOverridesFromRequest(array $data, MonthlyPayroll $monthlyPayroll): array
     {
         return [
