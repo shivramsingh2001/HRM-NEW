@@ -1154,6 +1154,11 @@
 
                     <!-- Shift Info -->
                     <div class="shift-info-card mb-3" id="shiftInfoCard">
+                        <!-- 2+ shifts that day: pick the one being marked (one shift = fixed, no picker) -->
+                        <div class="mb-2" id="modalShiftPickWrap" style="display: none;">
+                            <label class="shift-label d-block mb-1" for="modalShiftPick">Mark attendance for shift <span class="required">*</span></label>
+                            <select class="form-control form-control-sm" id="modalShiftPick"></select>
+                        </div>
                         <div class="d-flex align-items-center gap-3 flex-wrap">
                             <div>
                                 <span class="shift-label">Shift:</span>
@@ -1180,6 +1185,7 @@
                     <form id="markAttendanceForm" method="POST">
                         @csrf
                         <input type="hidden" name="user_id" id="markUserId">
+                        <input type="hidden" name="user_shift_id" id="markUserShiftId">
                         <input type="hidden" name="date" id="attendanceDate"
                             value="{{ request('date', date('Y-m-d')) }}">
 
@@ -1499,6 +1505,45 @@
          * recorded for the day — they are shown as they are, so changing only
          * one of them keeps the other.
          */
+        // Mark Attendance for an employee with 2+ shifts that day: a shift picker. The chosen
+        // shift fills the shift card, its own recorded times and the clock in/out defaults.
+        function setupShiftPicker(shifts, asClock, isToday) {
+            const pick = document.getElementById('modalShiftPick');
+            const hm = t => t ? String(t).substring(0, 5) : '';
+            pick.innerHTML = shifts.map((s, i) => `<option value="${i}">${s.is_additional ? '+ ' : ''}${s.shift_name} (${asClock(hm(s.start_time))} – ${asClock(hm(s.end_time))})</option>`).join('');
+            const apply = s => {
+                document.getElementById('markUserShiftId').value = s.user_shift_id || '';
+                document.getElementById('modalShiftName').textContent = s.shift_name;
+                document.getElementById('modalShiftStart').textContent = s.start_time || '--:--';
+                document.getElementById('modalShiftEnd').textContent = s.end_time || '--:--';
+                const type = document.getElementById('modalShiftType');
+                type.textContent = s.is_overnight ? '🌙 Overnight Shift' : '☀️ Regular Shift';
+                type.className = 'shift-badge ' + (s.is_overnight ? 'overnight' : 'regular');
+                document.getElementById('shiftNote').style.display = s.is_overnight ? 'block' : 'none';
+                document.getElementById('shiftNoteText').textContent = 'This is an overnight shift. Clock out time will be on the next day.';
+                // This shift's own recorded times, else its schedule.
+                const isOpen = s.clock_in !== '' && s.clock_out === '';
+                document.getElementById('modalRecordedIn').textContent = asClock(s.clock_in);
+                document.getElementById('modalRecordedOut').textContent = s.clock_out ? asClock(s.clock_out) : (isOpen ? 'Still working' : '—');
+                document.getElementById('clockInTime').value = s.clock_in || hm(s.start_time);
+                document.getElementById('clockInTime').dataset.recorded = s.clock_in;
+                document.getElementById('clockOutTime').value = s.clock_out || (isOpen ? '' : hm(s.end_time));
+                const clockOutOnly = document.getElementById('clockOutOnly');
+                clockOutOnly.dataset.available = isOpen ? '1' : '';
+                document.getElementById('stillWorking').checked = isOpen && isToday;
+                clockOutOnly.checked = isOpen && !isToday;
+                document.getElementById('clockOutNextDay').checked = false;
+                onMarkStatusChange();
+            };
+            pick.onchange = () => apply(shifts[pick.value]);
+            // Default: the shift still open, else the first not yet recorded, else the first.
+            const firstOpen = shifts.findIndex(s => s.clock_in && !s.clock_out);
+            const firstFree = shifts.findIndex(s => !s.clock_in);
+            pick.value = String(firstOpen >= 0 ? firstOpen : Math.max(firstFree, 0));
+            document.getElementById('modalShiftPickWrap').style.display = 'block';
+            apply(shifts[pick.value]);
+        }
+
         function openMarkAttendanceModal(userId, name, employeeId, designation, punchIn = '', punchOut = '') {
             const clockInInput = document.getElementById('clockInTime');
             const clockOutInput = document.getElementById('clockOutTime');
@@ -1538,6 +1583,8 @@
             document.getElementById('markUserId').value = userId;
 
             // Reset shift info to loading state
+            document.getElementById('markUserShiftId').value = '';
+            document.getElementById('modalShiftPickWrap').style.display = 'none';
             document.getElementById('modalShiftName').textContent = 'Loading...';
             document.getElementById('modalShiftStart').textContent = '--:--';
             document.getElementById('modalShiftEnd').textContent = '--:--';
@@ -1587,6 +1634,11 @@
                         }
                         if (!hasRecorded && shift.end_time && !stillWorking.checked) {
                             clockOutInput.value = String(shift.end_time).substring(0, 5);
+                        }
+
+                        // 2+ shifts that day: choose which one this marks.
+                        if ((data.shifts || []).length > 1) {
+                            setupShiftPicker(data.shifts, asClock, isToday);
                         }
                     } else {
                         document.getElementById('modalShiftName').textContent = 'No Shift Assigned';
@@ -1880,6 +1932,10 @@
             // Get the selected date from the filter
             const selectedDate = document.querySelector('input[name="date"]').value || '{{ date('Y-m-d') }}';
             formData.set('date', selectedDate);
+            // A chosen shift applies to a single day only; a range marks whole days.
+            if (formData.get('end_date') && formData.get('end_date') !== selectedDate) {
+                formData.delete('user_shift_id');
+            }
 
             // Log the data being sent for debugging
             console.log('Sending data:');

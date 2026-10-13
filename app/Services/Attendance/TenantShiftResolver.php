@@ -175,6 +175,40 @@ class TenantShiftResolver
         return $best;
     }
 
+    /**
+     * Mark Attendance's shift picker: the user's shifts on $date (only when 2+),
+     * each with the clock-in / clock-out already recorded for it ("HH:MM").
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function markableShifts(int $userId, int $tenantId, string $date): array
+    {
+        $instances = $this->instancesForUserDate($userId, $tenantId, $date);
+        if ($instances->count() < 2) {
+            return [];
+        }
+        $segments = DB::table('attendance_shift_segments')
+            ->where('tenant_id', $tenantId)->where('user_id', $userId)->whereDate('date', $date)
+            ->get(['user_shift_id', 'first_in', 'last_out', 'is_open'])->keyBy('user_shift_id');
+        $hm = fn ($at) => $at ? Carbon::parse($at)->format('H:i') : '';
+
+        return $instances->map(function (array $i) use ($segments, $hm) {
+            $seg = $segments->get($i['user_shift_id']);
+            $shift = $i['shift'];
+
+            return [
+                'user_shift_id' => $i['user_shift_id'],
+                'shift_name' => $shift->getAttribute('name'),
+                'start_time' => $shift->getAttribute('start_time'),
+                'end_time' => $shift->getAttribute('end_time'),
+                'is_overnight' => ShiftWindow::isOvernight($shift),
+                'is_additional' => $i['is_additional'],
+                'clock_in' => $hm($seg->first_in ?? null),
+                'clock_out' => ($seg && ! $seg->is_open) ? $hm($seg->last_out) : '',
+            ];
+        })->values()->all();
+    }
+
     /** The day's primary user_shifts row (id, shift_id), or null. */
     public function primaryRow(int $userId, int $tenantId, string $date): ?object
     {

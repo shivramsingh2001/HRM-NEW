@@ -57,6 +57,9 @@ class MarkAttendanceRequest extends FormRequest
                 'required_if:status,on_leave,first_half_leave,second_half_leave',
                 Rule::exists('leave_types', 'id')->where('tenant_id', $tenantId),
             ],
+            // Multi-shift employee: the one shift (user_shifts row of that day) being marked.
+            'user_shift_id' => ['nullable', 'integer', Rule::exists('user_shifts', 'id')
+                ->where('tenant_id', $tenantId)->where('user_id', $this->input('user_id'))->where('date', $this->input('date'))],
             'remarks' => ['nullable', 'string', 'max:500'],
         ];
     }

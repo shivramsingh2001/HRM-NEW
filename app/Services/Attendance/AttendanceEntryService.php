@@ -148,7 +148,8 @@ class AttendanceEntryService
      * @param array{
      *   user_id:int, tenant_id:int, date:string, end_date?:?string,
      *   status:AttendanceStatus, clock_in?:?string, clock_out?:?string,
-     *   remarks?:?string, leave_type_id?:?int, clock_in_only?:bool, clock_out_only?:bool
+     *   remarks?:?string, leave_type_id?:?int, clock_in_only?:bool, clock_out_only?:bool,
+     *   clock_out_next_day?:bool, user_shift_id?:?int
      * } $input
      * @return array{attendance:Attendance, leave:?\App\Models\Leave, is_update:bool, shift:?object, marked:int}
      */
@@ -167,6 +168,13 @@ class AttendanceEntryService
             source: 'manual',
             reason: $input['remarks'] ?? ('Marked by ' . $actor->name . ' (' . $status->value . ')'),
         );
+
+        // Multi-shift employee, one day, one chosen shift: mark just that shift.
+        if (! empty($input['user_shift_id']) && in_array($status, [AttendanceStatus::Present, AttendanceStatus::HalfDay], true)
+            && $start->equalTo($end) && empty($input['clock_out_only']) && ! empty($input['clock_in'])
+            && app(TenantShiftResolver::class)->instancesForUserDate($userId, $tenantId, $start->format('Y-m-d'))->count() > 1) {
+            return $this->markShift($userId, $tenantId, $start->format('Y-m-d'), (int) $input['user_shift_id'], $status, $input, $actor, $ctx);
+        }
 
         // Present with a clock-in but no clock-out: the employee is checked in
         // and still working — one day only, never a range. Opt-in per caller
@@ -350,6 +358,92 @@ class AttendanceEntryService
         }
 
         return $userShiftId !== null ? (int) $userShiftId : null;
+    }
+
+    /**
+     * Mark ONE shift of a multi-shift day by hand (Present / Half Day): its
+     * clock-in (and clock-out, when given) are written as manual punches of
+     * that shift, replacing only that shift's punches — the day's other shifts
+     * keep theirs — and the day is re-derived through the rollup.
+     *
+     * @return array{attendance:Attendance, leave:null, is_update:bool, shift:?object, marked:int}
+     */
+    private function markShift(int $userId, int $tenantId, string $date, int $userShiftId, AttendanceStatus $status, array $input, User $actor, AuditContext $ctx): array
+    {
+        $ym = Carbon::parse($date)->format('Y-m');
+        if (app(PeriodLockService::class)->isLocked($tenantId, $ym)) {
+            throw new \App\Exceptions\PeriodLockedException($ym);
+        }
+
+        $target = app(TenantShiftResolver::class)->instancesForUserDate($userId, $tenantId, $date)
+            ->first(fn ($i) => (int) $i['user_shift_id'] === $userShiftId);
+        if (! $target) {
+            throw new \RuntimeException('That shift is not assigned to the employee on this date.');
+        }
+        $shift = $target['shift'];
+        $clockIn = $this->regularizedTime($date, $input['clock_in'], $shift, 'in', null);
+        $clockOut = ! empty($input['clock_out']) ? $this->regularizedTime($date, $input['clock_out'], $shift, 'out', $clockIn) : null;
+        if ($clockOut && ! empty($input['clock_out_next_day'])) {
+            $clockOut = $this->calc->nextDayClockOut($clockOut, $date);
+        }
+        $existed = Attendance::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)->where('date', $date)->exists();
+
+        $attendance = DB::transaction(function () use ($userId, $tenantId, $date, $userShiftId, $target, $status, $actor, $ctx, $clockIn, $clockOut) {
+            // An earlier whole-day mark keeps its times on its own shift first.
+            $this->keepManualDayAsPunches($userId, $tenantId, $date);
+
+            // Only this shift's punches are replaced (untagged punches belong to the main shift).
+            AttendancePunch::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)->where('user_id', $userId)->where('date', $date)->where('status', 'active')
+                ->where(fn ($q) => $q->where('user_shift_id', $userShiftId)
+                    ->when(! $target['is_additional'], fn ($q) => $q->orWhereNull('user_shift_id')))
+                ->update([
+                    'status' => 'void',
+                    'voided_by' => $actor->id,
+                    'voided_at' => now(),
+                    'void_reason' => 'Superseded by manual attendance marking',
+                ]);
+
+            $tz = app(TimezoneResolver::class)->forUser($userId, $tenantId);
+            foreach (array_filter(['in' => $clockIn, 'out' => $clockOut]) as $direction => $at) {
+                AttendancePunch::create([
+                    'tenant_id' => $tenantId,
+                    'user_id' => $userId,
+                    'date' => $date,
+                    'direction' => $direction,
+                    'punched_at' => $at->format('Y-m-d H:i:s'),
+                    'punched_at_utc' => $this->calc->toUtc($at->format('Y-m-d H:i:s'), $tz),
+                    'timezone' => $tz,
+                    'source' => 'manual',
+                    'method' => 'manual_mark',
+                    'address' => 'Marked by ' . $actor->name,
+                    'attendance_location_id' => UserJobDetail::where('user_id', $userId)->where('tenant_id', $tenantId)->value('office_branch'),
+                    'actor_id' => $actor->id,
+                    'actor_role' => $actor->role,
+                    'reason' => $ctx->reason,
+                    'status' => 'active',
+                    'session_seq' => 1,
+                    'user_shift_id' => $userShiftId,
+                ]);
+            }
+            DB::table('user_shifts')->where('id', $userShiftId)
+                ->update(['status' => $clockOut ? 'complete' : 'ongoing', 'updated_at' => now()]);
+
+            $row = app(AttendanceRollupService::class)->recompute($userId, $tenantId, $date, $ctx);
+
+            return $this->record($userId, $tenantId, $date, [
+                'attendance_status' => $status === AttendanceStatus::HalfDay ? 'half_day'
+                    : (in_array($row->getAttribute('attendance_status'), ['present', 'late'], true) ? $row->getAttribute('attendance_status') : 'present'),
+                'day_fraction' => $status->dayFraction(),
+                'effective_status' => null,
+                'policy_note' => null,
+                'is_regularized' => 0,
+                'marked_by' => $actor->id,
+                'remarks' => $ctx->reason,
+            ], $ctx);
+        });
+
+        return ['attendance' => $attendance, 'leave' => null, 'is_update' => $existed, 'shift' => $shift, 'marked' => 1];
     }
 
     /**

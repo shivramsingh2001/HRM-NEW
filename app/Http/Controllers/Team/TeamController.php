@@ -191,6 +191,7 @@ class TeamController extends Controller
                 'clock_out_next_day' => $request->boolean('clock_out_next_day'),
                 'leave_type_id' => $request->input('leave_type_id'),
                 'remarks' => $request->input('remarks'),
+                'user_shift_id' => $request->input('user_shift_id'),
             ], $actor);
 
             $attendance = $result['attendance'];
@@ -307,7 +308,9 @@ class TeamController extends Controller
                             'grace_minutes' => $shift->grace_minutes ?? 0,
                             'shift_id' => $shift->id,
                             'is_overnight' => $isOvernight
-                        ]
+                        ],
+                        // 2+ shifts that day: Mark Attendance lets the admin pick one.
+                        'shifts' => app(\App\Services\Attendance\TenantShiftResolver::class)->markableShifts((int) $userId, (int) $tenantId, $date),
                     ]);
                 }
             }

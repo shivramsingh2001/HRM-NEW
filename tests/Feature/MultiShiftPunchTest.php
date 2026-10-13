@@ -308,4 +308,48 @@ class MultiShiftPunchTest extends TestCase
         $this->assertStringContainsString("05:19 PM –", $html);
         $this->assertStringContainsString("ongoing", $html);
     }
+    public function test_mark_attendance_marks_only_the_chosen_shift(): void
+    {
+        $d = $this->day;
+        $general = $this->onDay($this->shift("General", "09:30", "17:00"), $d);
+        $night = $this->onDay($this->shift("Night", "17:15", "02:15"), $d, true);
+        $this->punch("in", "$d 09:31");
+        $this->punch("out", "$d 17:02");
+        $resolver = app(\App\Services\Attendance\TenantShiftResolver::class);
+
+        // The picker: both shifts, the General one with its recorded times.
+        $choices = $resolver->markableShifts($this->employee->id, $this->tenantId, $d);
+        $this->assertSame([$general->id, $night->id], array_column($choices, "user_shift_id"));
+        $this->assertSame(["09:31", "17:02"], [$choices[0]["clock_in"], $choices[0]["clock_out"]]);
+        $this->assertSame("", $choices[1]["clock_in"]);
+
+        // Admin marks the Night shift only, through the real endpoint.
+        $this->actingAs($this->admin)->withSession(["tenant_id" => $this->tenantId]);
+        app()->instance("current_tenant", \App\Models\Tenant::find($this->tenantId));
+        $this->postJson(route("team.mark-attendance"), [
+            "user_id" => $this->employee->id, "date" => $d, "status" => "present",
+            "clock_in" => "17:20", "clock_out" => "02:00", "user_shift_id" => $night->id,
+        ])->assertOk()->assertJson(["success" => true]);
+
+        $active = AttendancePunch::withoutGlobalScopes()->where("user_id", $this->employee->id)->where("status", "active")->orderBy("punched_at")->get();
+        $this->assertSame(["mobile_app", "mobile_app", "manual", "manual"], $active->pluck("source")->all());
+        $this->assertSame([$general->id, $general->id, $night->id, $night->id], $active->pluck("user_shift_id")->map(fn ($v) => (int) $v)->all());
+        $this->assertSame(Carbon::parse($d)->addDay()->toDateString() . " 02:00:00", Carbon::parse($active[3]->punched_at)->format("Y-m-d H:i:s"));
+        $a = $this->attendance($d);
+        $this->assertSame(2, (int) $a->shift_count);
+        $this->assertSame(520, (int) $a->extra_shift_minutes); // 17:20 → 02:00
+        $this->assertSame(["complete", "complete"], [$general->fresh()->status, $night->fresh()->status]);
+
+        // Re-marking the General shift replaces only its punches.
+        $this->postJson(route("team.mark-attendance"), [
+            "user_id" => $this->employee->id, "date" => $d, "status" => "present",
+            "clock_in" => "09:30", "clock_out" => "17:00", "user_shift_id" => $general->id,
+        ])->assertOk();
+        $active = AttendancePunch::withoutGlobalScopes()->where("user_id", $this->employee->id)->where("status", "active")->orderBy("punched_at")->get();
+        $this->assertSame(["09:30", "17:00", "17:20", "02:00"], $active->map(fn ($p) => Carbon::parse($p->punched_at)->format("H:i"))->all());
+        $this->assertSame(520, (int) $this->attendance($d)->extra_shift_minutes);
+
+        // One shift that day: no picker.
+        $this->assertSame([], $resolver->markableShifts($this->admin->id, $this->tenantId, $d));
+    }
 }
