@@ -65,7 +65,7 @@ class ControllerSizeGuardTest extends TestCase
         'app/Http/Controllers/Attendance/OvertimeController.php' => [889, 160],
         'app/Http/Controllers/Attendance/RequestController.php' => [1059, 112],
         'app/Http/Controllers/Auth/AuthController.php' => [176, 116],
-        'app/Http/Controllers/Concerns/TeamAttendanceStatus.php' => [309, 117],
+        'app/Http/Controllers/Concerns/TeamAttendanceStatus.php' => [323, 114],
         'app/Http/Controllers/Expense/ExpenseController.php' => [790, 149],
         'app/Http/Controllers/Expense/PaymentController.php' => [496, 107],
         'app/Http/Controllers/Leave/LeaveController.php' => [754, 153],

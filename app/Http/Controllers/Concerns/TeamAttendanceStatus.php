@@ -213,6 +213,8 @@ trait TeamAttendanceStatus
             ->get()
             ->keyBy('user_id');
 
+        $shiftSessions = $this->shiftSessionsByAttendance($attendanceRecords);
+
         // COALESCE(end_date, start_date) so legacy one-row-per-day records
         // (created before leave requests were collapsed to a single row and
         // never had end_date set) still match on their single day.
@@ -251,14 +253,7 @@ trait TeamAttendanceStatus
             $weekoff = $weekoffs->get($user->id);
 
             // Determine status with shift-based logic
-            $status = $this->determineUserStatus(
-                $attendance,
-                $leave,
-                $holiday,
-                $weekoff,
-                $currentDate,
-                $user->id
-            );
+            $status = $this->determineUserStatus($attendance, $leave, $holiday, $weekoff, $currentDate, $user->id);
 
             // Create member object
             $member = new \stdClass;
@@ -273,12 +268,31 @@ trait TeamAttendanceStatus
             $member->punch_in = $attendance ? $attendance->clock_in : null;
             $member->punch_out = $attendance ? $attendance->clock_out : null;
             $member->total_hours = $attendance ? $attendance->total_hours : null;
+            $member->shift_sessions = $attendance ? $shiftSessions->get($attendance->id, collect()) : collect();
+            $member->open_shift = $member->shift_sessions->first(fn ($s) => $s->in && ! $s->out)?->name;
             $member->status = $status;
 
             $teamData->push($member);
         }
 
         return $teamData;
+    }
+
+    /**
+     * Multi-shift days: [{name, in, out}] per shift worked (out null while open),
+     * keyed by attendance id — only days with 2+ shifts.
+     */
+    private function shiftSessionsByAttendance($attendanceRecords)
+    {
+        return \App\Models\AttendanceShiftSegment::with('shift:id,name')
+            ->whereIn('attendance_id', $attendanceRecords->where('shift_count', '>', 1)->pluck('id'))
+            ->orderBy('first_in')
+            ->get()
+            ->groupBy('attendance_id')
+            ->filter(fn ($segments) => $segments->count() > 1)
+            ->map(fn ($segments) => $segments->map(fn ($s) => (object) [
+                'name' => $s->shift->name ?? 'Shift', 'in' => $s->first_in, 'out' => $s->is_open ? null : $s->last_out,
+            ])->values());
     }
 
     private function getMonthOptions()

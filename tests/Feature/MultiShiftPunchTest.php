@@ -277,4 +277,33 @@ class MultiShiftPunchTest extends TestCase
         $this->assertSame("$d 09:33:00", Carbon::parse($a->clock_in)->format("Y-m-d H:i:s"));
         $this->assertSame(447, (int) $a->extra_shift_minutes); // 09:33 → 17:00 on the additional shift
     }
+    public function test_team_page_lists_each_shifts_clock_in_and_out(): void
+    {
+        $d = $this->day;
+        $this->onDay($this->shift("General", "09:30", "17:00"), $d);
+        $this->onDay($this->shift("Night", "17:15", "02:15"), $d, true);
+        $this->punch("in", "$d 09:30");
+        $this->punch("out", "$d 17:00");
+        $this->punch("in", "$d 17:19");
+
+        $this->actingAs($this->admin)->withSession(["tenant_id" => $this->tenantId]);
+        app()->instance("current_tenant", \App\Models\Tenant::find($this->tenantId));
+        $controller = app(\App\Http\Controllers\Team\TeamController::class);
+        [$admin, $name] = [$this->admin, $this->employee->name];
+        $members = (function () use ($admin, $d, $name) {
+            return $this->getTeamMembers($admin, $d, null, $name);
+        })->call($controller);
+        $member = $members->firstWhere("id", $this->employee->id);
+        $this->assertNotNull($member);
+        $this->assertSame([$this->tag . " General", $this->tag . " Night"], $member->shift_sessions->pluck("name")->all());
+        $this->assertSame(["09:30", "17:19"], $member->shift_sessions->map(fn ($s) => $s->in->format("H:i"))->all());
+        $this->assertSame("17:00", $member->shift_sessions[0]->out->format("H:i"));
+        $this->assertNull($member->shift_sessions[1]->out);
+        $this->assertSame($this->tag . " Night", $member->open_shift);
+
+        $html = view("client.team.partials.direct-reports", ["directReports" => collect([$member])])->render();
+        $this->assertStringContainsString("09:30 AM –", $html);
+        $this->assertStringContainsString("05:19 PM –", $html);
+        $this->assertStringContainsString("ongoing", $html);
+    }
 }

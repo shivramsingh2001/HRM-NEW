@@ -39,12 +39,23 @@
                                 </div>
                                 <div class="d-flex align-items-center gap-2 mt-1">
                                     <span class="badge-status {{ $badgeClass }}">{{ $report->status }}</span>
+                                    @if (($report->shift_sessions ?? collect())->isNotEmpty())
+                                        {{-- 2+ shifts worked: one in/out pair per shift. --}}
+                                        <span class="text-muted fs-11">
+                                            @foreach ($report->shift_sessions as $session)
+                                                <span class="text-nowrap {{ $loop->first ? '' : 'ms-2' }}">{{ $session->name }}:
+                                                    {{ $session->in ? $session->in->format('h:i A') : '--:--' }} –
+                                                    {{ $session->out ? $session->out->format('h:i A') : ($session->in ? 'ongoing' : '--:--') }}</span>
+                                            @endforeach
+                                        </span>
+                                    @else
                                     <span class="text-muted fs-11">
                                         <i class="feather-log-in fs-10"></i>
                                         {{ $report->punch_in ? \Carbon\Carbon::parse($report->punch_in)->format('h:i A') : '--:--' }}
                                         <i class="feather-log-out fs-10 ms-1"></i>
                                         {{ $report->punch_out ? \Carbon\Carbon::parse($report->punch_out)->format('h:i A') : '--:--' }}
                                     </span>
+                                    @endif
                                 </div>
                             </div>
                         </div>

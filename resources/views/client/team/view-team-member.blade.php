@@ -1002,7 +1002,27 @@
                                                     <span class="status-dot {{ $statusDot }}"></span>
                                                     {{ $statusLabel }}
                                                 </span>
+                                                @if ($member->open_shift ?? null)
+                                                    <div class="text-muted fs-11 mt-1">{{ $member->open_shift }}</div>
+                                                @endif
                                             </td>
+                                            @if (($member->shift_sessions ?? collect())->isNotEmpty())
+                                                {{-- 2+ shifts worked: one line per shift. --}}
+                                                @foreach (['in', 'out'] as $side)
+                                                    <td>
+                                                        @foreach ($member->shift_sessions as $session)
+                                                            <div class="text-nowrap">
+                                                                <span class="text-muted fs-11">{{ $session->name }}:</span>
+                                                                @if ($session->{$side})
+                                                                    <span style="font-weight: 500; color: #0f172a;">{{ $session->{$side}->format('h:i A') }}</span>
+                                                                @else
+                                                                    <span class="text-muted">{{ $side === 'out' && $session->in ? 'ongoing' : '—' }}</span>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </td>
+                                                @endforeach
+                                            @else
                                             <td>
                                                 @if ($member->punch_in)
                                                     <span style="font-weight: 500; color: #0f172a;">
@@ -1021,6 +1041,7 @@
                                                     <span class="text-muted">—</span>
                                                 @endif
                                             </td>
+                                            @endif
                                             <td>
                                                 @if ($member->punch_in && $member->punch_out)
                                                     @php
