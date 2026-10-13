@@ -261,9 +261,12 @@ class AttendanceEntryService
                 ]);
             \App\Models\AttendanceShiftSegment::withoutGlobalScopes()->where('attendance_id', $attendance->id)->delete();
 
-            // Every shift that day (primary and additional) is settled.
+            // Multi-shift day with times: they stand for the shift they fall in, and the
+            // day's other shift stays open to clock in. Otherwise every shift is settled.
+            $keptShiftId = $this->keepManualDayAsPunches($userId, $tenantId, $date);
             DB::table('user_shifts')
                 ->where('tenant_id', $tenantId)->where('user_id', $userId)->where('date', $date)
+                ->when($keptShiftId, fn ($q) => $q->where('id', $keptShiftId))
                 ->update(['status' => 'complete', 'updated_at' => now()]);
 
             $leave = null;
@@ -297,6 +300,56 @@ class AttendanceEntryService
             'shift' => $lastShift,
             'marked' => $marked,
         ];
+    }
+
+    /**
+     * Multi-shift day hand-set by an admin (a row with times, no punches): write
+     * its times back as manual punches of the shift they fall in, so the day's
+     * OTHER shift can still be clocked / regularized without erasing it.
+     * Returns the user_shifts id they were tied to, or null when nothing to do.
+     */
+    public function keepManualDayAsPunches(int $userId, int $tenantId, string $date): ?int
+    {
+        $resolver = app(TenantShiftResolver::class);
+        if ($resolver->instancesForUserDate($userId, $tenantId, $date)->count() < 2
+            || AttendancePunch::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)
+                ->where('date', $date)->where('status', 'active')->exists()) {
+            return null;
+        }
+        $row = Attendance::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)->where('date', $date)->first();
+        if (! $row || empty($row->clock_in) || empty($row->clock_out)) {
+            return null;
+        }
+
+        $clockIn = Carbon::parse($row->clock_in);
+        $instance = $resolver->instanceForPunch($userId, $tenantId, $clockIn);
+        $userShiftId = ($instance && $instance['date'] === $date ? $instance['user_shift_id'] : null)
+            ?? $resolver->primaryRow($userId, $tenantId, $date)?->id;
+        $tz = app(TimezoneResolver::class)->forUser($userId, $tenantId);
+        $actor = $row->getAttribute('marked_by') ? User::withoutGlobalScopes()->find($row->getAttribute('marked_by')) : null;
+
+        foreach (['in' => $clockIn, 'out' => Carbon::parse($row->clock_out)] as $direction => $at) {
+            AttendancePunch::create([
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'date' => $date,
+                'direction' => $direction,
+                'punched_at' => $at->format('Y-m-d H:i:s'),
+                'punched_at_utc' => $this->calc->toUtc($at->format('Y-m-d H:i:s'), $tz),
+                'timezone' => $tz,
+                'source' => 'manual',
+                'method' => 'manual_mark',
+                'address' => 'Marked by ' . ($actor->name ?? 'admin'),
+                'actor_id' => $actor?->id,
+                'actor_role' => $actor?->role,
+                'reason' => $row->getAttribute('remarks'),
+                'status' => 'active',
+                'session_seq' => 1,
+                'user_shift_id' => $userShiftId,
+            ]);
+        }
+
+        return $userShiftId !== null ? (int) $userShiftId : null;
     }
 
     /**
@@ -539,6 +592,8 @@ class AttendanceEntryService
         }
 
         return DB::transaction(function () use ($reg, $approver, $userId, $tenantId, $date, $instances, $target, $shift, $jobDetail, $ctx, $flags, $clockIn, $clockOut) {
+            // A hand-set multi-shift day keeps its times on their own shift, not lost to this one.
+            $this->keepManualDayAsPunches($userId, $tenantId, $date);
             $punches = $this->punchesOfShift($userId, $tenantId, $date, $instances, $target);
             $existing = Attendance::withoutGlobalScopes()
                 ->where('tenant_id', $tenantId)->where('user_id', $userId)->where('date', $date)->first();

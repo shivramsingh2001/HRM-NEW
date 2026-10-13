@@ -142,7 +142,11 @@ class AttendancePunchService
                     ->where('user_id', $input->userId)
                     ->where('date', $date)
                     ->exists();
-                if ($existingAttendance) {
+                // Multi-shift: an admin-set day only covers the shift its times fall in;
+                // clocking in for the day's other, not yet started shift is still allowed.
+                $kept = $existingAttendance && $matchedShift && $matchedShift['user_shift_id']
+                    && ! in_array(app(AttendanceEntryService::class)->keepManualDayAsPunches($input->userId, $input->tenantId, $date), [null, $matchedShift['user_shift_id']], true);
+                if ($existingAttendance && ! $kept) {
                     throw new OpenPunchSessionException(
                         'Attendance for this date has already been set (manually or via regularization). Use regularization to make changes.'
                     );

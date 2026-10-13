@@ -249,4 +249,32 @@ class MultiShiftPunchTest extends TestCase
         $history = $controller->punchHistory(Request::create('/', 'GET', ['date' => $d]))->getData(true)['data'];
         $this->assertSame($this->tag . ' Morning', $history['sessions'][0]['shift']['name']);
     }
+    public function test_admin_marked_shift_leaves_the_days_other_shift_open_to_clock_in(): void
+    {
+        // User 1152 on 12 Oct: night shift primary, day shift additional; the admin
+        // re-marked the day shift by hand, then the night clock-in was refused.
+        $d = $this->day;
+        $night = $this->onDay($this->shift("Night", "21:20", "07:30"), $d);
+        $general = $this->onDay($this->shift("General", "09:00", "18:30"), $d, true);
+        $this->punch("in", "$d 13:16");
+        $this->punch("out", "$d 17:00");
+
+        app(\App\Services\Attendance\AttendanceEntryService::class)->markStatus([
+            "user_id" => $this->employee->id, "tenant_id" => $this->tenantId, "date" => $d,
+            "status" => \App\Enums\AttendanceStatus::Present, "clock_in" => "09:33", "clock_out" => "17:00",
+        ], $this->admin);
+
+        $kept = AttendancePunch::withoutGlobalScopes()->where("user_id", $this->employee->id)->where("status", "active")->get();
+        $this->assertSame([$general->id, $general->id], $kept->pluck("user_shift_id")->map(fn ($v) => (int) $v)->all());
+        $this->assertSame(["upcoming", "complete"], [$night->fresh()->status, $general->fresh()->status]);
+
+        $in = $this->punch("in", "$d 21:20");
+        $this->assertSame($night->id, (int) $in->user_shift_id);
+        $this->punch("out", Carbon::parse($d)->addDay()->toDateString() . " 07:30");
+
+        $a = $this->attendance($d);
+        $this->assertSame(2, (int) $a->shift_count);
+        $this->assertSame("$d 09:33:00", Carbon::parse($a->clock_in)->format("Y-m-d H:i:s"));
+        $this->assertSame(447, (int) $a->extra_shift_minutes); // 09:33 → 17:00 on the additional shift
+    }
 }
