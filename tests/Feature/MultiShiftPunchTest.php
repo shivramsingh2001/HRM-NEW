@@ -300,6 +300,7 @@ class MultiShiftPunchTest extends TestCase
         $this->assertSame("17:00", $member->shift_sessions[0]->out->format("H:i"));
         $this->assertNull($member->shift_sessions[1]->out);
         $this->assertSame($this->tag . " Night", $member->open_shift);
+        $this->assertSame([$this->tag . " General (09:30 AM – 05:00 PM)", $this->tag . " Night (05:15 PM – 02:15 AM)"], $member->shifts->all());
 
         $html = view("client.team.partials.direct-reports", ["directReports" => collect([$member])])->render();
         $this->assertStringContainsString("09:30 AM –", $html);

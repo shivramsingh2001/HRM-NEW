@@ -225,9 +225,8 @@ trait TeamAttendanceStatus
             ->get()
             ->keyBy('user_id');
 
-        $holiday = Holiday::whereDate('start_date', '<=', $currentDate)
-            ->whereDate('start_date', '>=', $currentDate)
-            ->first();
+        $holiday = Holiday::whereDate('start_date', '<=', $currentDate)->whereDate('start_date', '>=', $currentDate)->first();
+        $dayShifts = $this->shiftsByUser($users->pluck('id'), $currentDate, (int) $authUser->tenant_id);
 
         $weekoffs = UserWeekoffs::where('status', 1)
             ->whereIn('user_id', $users->pluck('id'))
@@ -269,6 +268,7 @@ trait TeamAttendanceStatus
             $member->punch_out = $attendance ? $attendance->clock_out : null;
             $member->total_hours = $attendance ? $attendance->total_hours : null;
             $member->shift_sessions = $attendance ? $shiftSessions->get($attendance->id, collect()) : collect();
+            $member->shifts = $dayShifts->get($user->id, collect());
             $member->open_shift = $member->shift_sessions->first(fn ($s) => $s->in && ! $s->out)?->name;
             $member->status = $status;
 
@@ -293,6 +293,28 @@ trait TeamAttendanceStatus
             ->map(fn ($segments) => $segments->map(fn ($s) => (object) [
                 'name' => $s->shift->name ?? 'Shift', 'in' => $s->first_in, 'out' => $s->is_open ? null : $s->last_out,
             ])->values());
+    }
+
+    /**
+     * Each user's shift(s) on $date as "Name (09:30 AM – 05:00 PM)", main shift first —
+     * the tenant's fixed shift for everyone when custom shifts are off.
+     */
+    private function shiftsByUser($userIds, string $date, int $tenantId)
+    {
+        $label = fn ($shift) => $shift->name . ' (' . Carbon::parse($shift->start_time)->format('h:i A')
+            . ' – ' . Carbon::parse($shift->end_time)->format('h:i A') . ')';
+        $resolver = app(\App\Services\Attendance\TenantShiftResolver::class);
+        if (! $resolver->isCustomShifts($tenantId)) {
+            $default = $resolver->defaultShift($tenantId);
+
+            return collect($userIds)->mapWithKeys(fn ($id) => [$id => $default ? collect([$label($default)]) : collect()]);
+        }
+
+        return \App\Models\UserShift::with('shift')->whereIn('user_id', $userIds)->whereDate('date', $date)->get()
+            ->filter(fn ($row) => $row->shift)
+            ->sortBy(fn ($row) => [(int) $row->is_additional, $row->shift->start_time])
+            ->groupBy('user_id')
+            ->map(fn ($rows) => $rows->map(fn ($row) => $label($row->shift))->values());
     }
 
     private function getMonthOptions()

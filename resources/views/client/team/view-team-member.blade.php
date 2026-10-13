@@ -895,6 +895,7 @@
                                         <th>Designation</th>
                                         <th>Department</th>
                                         <th>Branch</th>
+                                        <th>Shift</th>
                                         <th>Status</th>
                                         <th>Punch In</th>
                                         <th>Punch Out</th>
@@ -998,6 +999,13 @@
                                             <td>{{ $member->department ?? 'N/A' }}</td>
                                             <td>{{ $member->branch ?? 'N/A' }}</td>
                                             <td>
+                                                @forelse ($member->shifts ?? [] as $shiftLabel)
+                                                    <div class="text-nowrap fs-12">{{ $shiftLabel }}</div>
+                                                @empty
+                                                    <span class="text-muted">—</span>
+                                                @endforelse
+                                            </td>
+                                            <td>
                                                 <span class="badge {{ $statusClass }}">
                                                     <span class="status-dot {{ $statusDot }}"></span>
                                                     {{ $statusLabel }}
@@ -1078,7 +1086,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="{{ $canBulkMark ? 11 : 10 }}" class="text-center py-5">
+                                            <td colspan="{{ $canBulkMark ? 12 : 11 }}" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="feather-users"></i>
                                                     <h4>No Team Members Found</h4>
