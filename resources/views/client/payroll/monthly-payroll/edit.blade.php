@@ -1683,11 +1683,23 @@
         // ================================================================
         // DAY-BASED CALCULATIONS
         // ================================================================
+        // Week Off / Holidays as currently in the form — editable on the dynamic
+        // form, so the page-load values would cap Present at the old split.
+        function currentWeekOffs() {
+            let v = parseFloat($('#week_offs_days').val());
+            return isNaN(v) ? (originalPayroll.week_offs || 0) : v;
+        }
+
+        function currentHolidays() {
+            let v = parseFloat($('#holidays_days').val());
+            return isNaN(v) ? (originalPayroll.holidays || 0) : v;
+        }
+
         function calculateProratedSalary() {
             let presentDays = parseFloat($('#present_days').val()) || 0;
             let paidLeaves = parseFloat($('#paid_leaves').val()) || 0;
-            let weekOffs = originalPayroll.week_offs || 0;
-            let holidays = originalPayroll.holidays || 0;
+            let weekOffs = currentWeekOffs();
+            let holidays = currentHolidays();
             let totalDays = originalPayroll.total_working_days;
             
             let payableDays = presentDays + paidLeaves + weekOffs + holidays;
@@ -2041,8 +2053,8 @@
             if (!isHourBased) {
                 let presentDays = parseFloat($(this).val()) || 0;
                 let paidLeaves = parseFloat($('#paid_leaves').val()) || 0;
-                let weekOffs = originalPayroll.week_offs || 0;
-                let holidays = originalPayroll.holidays || 0;
+                let weekOffs = currentWeekOffs();
+                let holidays = currentHolidays();
                 let totalDays = originalPayroll.total_working_days;
                 
                 let payableDays = presentDays + paidLeaves + weekOffs + holidays;
@@ -2078,8 +2090,8 @@
             if (!isHourBased) {
                 let presentDays = parseFloat($('#present_days').val()) || 0;
                 let paidLeaves = parseFloat($(this).val()) || 0;
-                let weekOffs = originalPayroll.week_offs || 0;
-                let holidays = originalPayroll.holidays || 0;
+                let weekOffs = currentWeekOffs();
+                let holidays = currentHolidays();
                 let totalDays = originalPayroll.total_working_days;
                 
                 let payableDays = presentDays + paidLeaves + weekOffs + holidays;
