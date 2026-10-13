@@ -2,6 +2,12 @@
 
 @section('style')
     <style>
+        /* Shift column — same chip as the Shift roster (client/shift/roster.blade.php). */
+        .shift-chip { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 600;
+            color: #1e293b; border-left: 3px solid #4f46e5; background: #4f46e522; line-height: 1.25; white-space: nowrap; }
+        .shift-chip .t { display: block; font-weight: 500; font-size: 9px; color: #475569; }
+        .shift-chip.shift-chip-extra { margin-top: 3px; border-left-style: dashed; }
+        .chip-unassigned { color: #cbd5e1; }
         /* ==================== MODERN STATS CARDS ==================== */
         .stats-grid {
             display: grid;
@@ -999,10 +1005,15 @@
                                             <td>{{ $member->department ?? 'N/A' }}</td>
                                             <td>{{ $member->branch ?? 'N/A' }}</td>
                                             <td>
-                                                @forelse ($member->shifts ?? [] as $shiftLabel)
-                                                    <div class="text-nowrap fs-12">{{ $shiftLabel }}</div>
+                                                {{-- Same chip as the Shift roster: colour bar, name, time; dashed "+" for an additional shift. --}}
+                                                @forelse ($member->shifts ?? [] as $dayShift)
+                                                    <div><span class="shift-chip {{ $dayShift->extra ? 'shift-chip-extra' : '' }}" @if ($dayShift->extra) title="Additional shift" @endif
+                                                        style="border-left-color: {{ $dayShift->color }}; background: {{ $dayShift->color }}22;">
+                                                        {{ $dayShift->extra ? '+ ' : '' }}{{ $dayShift->name }}
+                                                        <span class="t">{{ $dayShift->time }}</span>
+                                                    </span></div>
                                                 @empty
-                                                    <span class="text-muted">—</span>
+                                                    <span class="chip-unassigned">&mdash;</span>
                                                 @endforelse
                                             </td>
                                             <td>

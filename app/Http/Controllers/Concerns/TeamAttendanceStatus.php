@@ -296,13 +296,13 @@ trait TeamAttendanceStatus
     }
 
     /**
-     * Each user's shift(s) on $date as "Name (09:30 AM – 05:00 PM)", main shift first —
+     * Each user's shift(s) on $date as {name, time, color, extra} (the Shift roster's chip), main first —
      * the tenant's fixed shift for everyone when custom shifts are off.
      */
     private function shiftsByUser($userIds, string $date, int $tenantId)
     {
-        $label = fn ($shift) => $shift->name . ' (' . Carbon::parse($shift->start_time)->format('h:i A')
-            . ' – ' . Carbon::parse($shift->end_time)->format('h:i A') . ')';
+        $label = fn ($shift, bool $extra = false) => (object) ['name' => $shift->name, 'color' => $shift->color_code ?: '#4f46e5', 'extra' => $extra,
+            'time' => Carbon::parse($shift->start_time)->format('h:i A') . '–' . Carbon::parse($shift->end_time)->format('h:i A')];
         $resolver = app(\App\Services\Attendance\TenantShiftResolver::class);
         if (! $resolver->isCustomShifts($tenantId)) {
             $default = $resolver->defaultShift($tenantId);
@@ -314,7 +314,7 @@ trait TeamAttendanceStatus
             ->filter(fn ($row) => $row->shift)
             ->sortBy(fn ($row) => [(int) $row->is_additional, $row->shift->start_time])
             ->groupBy('user_id')
-            ->map(fn ($rows) => $rows->map(fn ($row) => $label($row->shift))->values());
+            ->map(fn ($rows) => $rows->map(fn ($row) => $label($row->shift, (bool) $row->is_additional))->values());
     }
 
     private function getMonthOptions()
