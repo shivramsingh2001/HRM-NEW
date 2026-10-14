@@ -162,7 +162,7 @@ class EmployeeWiseAttendanceReportController extends Controller
 
                 // Fetch holidays
                 $holidays = DB::table('holidays')
-                    ->where('tenant_id', $tenantId)
+                    ->where('tenant_id', $tenantId)->where('status', 1)
                     ->where(function ($q) use ($monthStart, $monthEnd) {
                         $q->whereBetween('start_date', [$monthStart, $monthEnd])
                             ->orWhereBetween('end_date', [$monthStart, $monthEnd])
@@ -207,7 +207,7 @@ class EmployeeWiseAttendanceReportController extends Controller
                     });
                     $weekoff = $weekoffs->first(function ($wo) use ($date) {
                         if ($wo->off_type == 'day_based') {
-                            return strtolower($wo->day_name) == strtolower($date->format('l'));
+                            return \App\Support\WeekOffPredicate::isWeekOff(collect([$wo]), $date);
                         }
                         if ($wo->off_type == 'date_based') {
                             return $date->format('Y-m-d') >= $wo->start_date &&
@@ -347,7 +347,7 @@ class EmployeeWiseAttendanceReportController extends Controller
 
                 // Fetch holidays
                 $holidays = DB::table('holidays')
-                    ->where('tenant_id', $tenantId)
+                    ->where('tenant_id', $tenantId)->where('status', 1)
                     ->where(function ($q) use ($monthStart, $monthEnd) {
                         $q->whereBetween('start_date', [$monthStart, $monthEnd])
                             ->orWhereBetween('end_date', [$monthStart, $monthEnd])
@@ -391,7 +391,7 @@ class EmployeeWiseAttendanceReportController extends Controller
                     });
                     $weekoff = $weekoffs->first(function ($wo) use ($date) {
                         if ($wo->off_type == 'day_based') {
-                            return strtolower($wo->day_name) == strtolower($date->format('l'));
+                            return \App\Support\WeekOffPredicate::isWeekOff(collect([$wo]), $date);
                         }
                         if ($wo->off_type == 'date_based') {
                             return $date->format('Y-m-d') >= $wo->start_date &&

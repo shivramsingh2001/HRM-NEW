@@ -391,7 +391,7 @@ class AttendanceSummaryController extends Controller
                 })
                 ->get();
 
-            $holidays = Holiday::where(function ($q) use ($monthStart, $monthEnd) {
+            $holidays = Holiday::where('status', 1)->where(function ($q) use ($monthStart, $monthEnd) {
                 $q->whereBetween('start_date', [$monthStart, $monthEnd])
                     ->orWhereBetween('start_date', [$monthStart, $monthEnd])
                     ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
@@ -400,17 +400,8 @@ class AttendanceSummaryController extends Controller
                     });
             })->get();
 
-            $weekoffs = UserWeekoffs::where('user_id', $userId)
-                ->where('status', 1)
-                ->where(function ($q) use ($monthStart, $monthEnd) {
-                    $q->whereBetween('start_date', [$monthStart, $monthEnd])
-                        ->orWhereBetween('end_date', [$monthStart, $monthEnd])
-                        ->orWhere(function ($q2) use ($monthStart, $monthEnd) {
-                            $q2->where('start_date', '<=', $monthStart)
-                                ->where('end_date', '>=', $monthEnd);
-                        });
-                })
-                ->get();
+            // All active weekoffs: a weekly one may have no dates (every week).
+            $weekoffs = UserWeekoffs::where('user_id', $userId)->where('status', 1)->get();
 
             $present = 0;
             $absent = 0;
@@ -436,31 +427,11 @@ class AttendanceSummaryController extends Controller
             }
 
             // Count weekoffs
-            foreach ($weekoffs as $weekoff) {
-                $weekoffStart = Carbon::parse($weekoff->start_date);
-                $weekoffEnd = Carbon::parse($weekoff->end_date);
-
-                for ($d = $weekoffStart->copy(); $d->lte($weekoffEnd); $d->addDay()) {
-                    $dateStr = $d->format('Y-m-d');
-
-                    if (! $d->between($start, $calculationEnd)) {
-                        continue;
-                    }
-
-                    if (in_array($dateStr, $countedDates)) {
-                        continue;
-                    }
-
-                    if ($weekoff->off_type == 'day_based') {
-                        $currentDay = $d->format('l');
-                        if ($currentDay == $weekoff->day_name) {
-                            $weekoffCount++;
-                            $countedDates[] = $dateStr;
-                        }
-                    } else {
-                        $weekoffCount++;
-                        $countedDates[] = $dateStr;
-                    }
+            for ($d = $start->copy(); $d->lte($calculationEnd); $d->addDay()) {
+                $dateStr = $d->format('Y-m-d');
+                if (! in_array($dateStr, $countedDates) && \App\Support\WeekOffPredicate::isWeekOff($weekoffs, $d)) {
+                    $weekoffCount++;
+                    $countedDates[] = $dateStr;
                 }
             }
 

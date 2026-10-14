@@ -124,21 +124,10 @@ class AttendanceContoller extends Controller
             // per-day loop below gets a chance to apply its own fallback.
             // The holiday table is small (tenant-scoped, a few dozen rows at
             // most), so fetching all of them and filtering in PHP is cheap.
-            $holidays = Holiday::where('tenant_id', $tenantId)->get();
+            $holidays = Holiday::where('tenant_id', $tenantId)->where('status', 1)->get();
 
-            // Get all weekoffs for this user
-            $weekoffs = UserWeekoffs::where('user_id', $userId)
-                ->where('status', 1)
-                ->where('tenant_id', $tenantId)
-                ->where(function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('start_date', [$startDate, $endDate])
-                        ->orWhereBetween('end_date', [$startDate, $endDate])
-                        ->orWhere(function ($q2) use ($startDate, $endDate) {
-                            $q2->where('start_date', '<=', $startDate)
-                                ->where('end_date', '>=', $endDate);
-                        });
-                })
-                ->get();
+            // All active weekoffs (weekly ones may have no dates — every week).
+            $weekoffs = UserWeekoffs::where('user_id', $userId)->where('status', 1)->where('tenant_id', $tenantId)->get();
 
             // Build results
             $results = [];
@@ -166,21 +155,7 @@ class AttendanceContoller extends Controller
                 }
 
                 // Check weekoff
-                $weekoff = null;
-                foreach ($weekoffs as $w) {
-                    $weekoffStart = Carbon::parse($w->start_date);
-                    $weekoffEnd = Carbon::parse($w->end_date);
-
-                    if ($currentDate->between($weekoffStart, $weekoffEnd)) {
-                        if ($w->off_type == 'date_based') {
-                            $weekoff = $w;
-                            break;
-                        } elseif ($w->off_type == 'day_based' && $w->day_name == $currentDate->format('l')) {
-                            $weekoff = $w;
-                            break;
-                        }
-                    }
-                }
+                $weekoff = \App\Support\WeekOffPredicate::match($weekoffs, $currentDate);
 
                 // Check leave
                 $leave = null;

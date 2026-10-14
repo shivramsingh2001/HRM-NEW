@@ -223,24 +223,13 @@ trait TeamAttendanceStatus
             ->get()
             ->keyBy('user_id');
 
-        $holiday = Holiday::whereDate('start_date', '<=', $currentDate)
+        $holiday = Holiday::where('status', 1)->whereDate('start_date', '<=', $currentDate)
             ->whereDate('start_date', '>=', $currentDate)
             ->first();
 
-        $weekoffs = UserWeekoffs::where('status', 1)
-            ->whereIn('user_id', $users->pluck('id'))
-            ->where(function ($query) use ($currentDate) {
-                $query->where(function ($q) use ($currentDate) {
-                    $q->where('off_type', 'date_based')
-                        ->whereDate('start_date', '<=', $currentDate)
-                        ->whereDate('end_date', '>=', $currentDate);
-                })->orWhere(function ($q) use ($currentDate) {
-                    $q->where('off_type', 'day_based')
-                        ->where('day_name', Carbon::parse($currentDate)->format('l'));
-                });
-            })
-            ->get()
-            ->keyBy('user_id');
+        // Week-offs that make $currentDate a day off (weekly ones may have no dates — every week).
+        $weekoffs = UserWeekoffs::where('status', 1)->whereIn('user_id', $users->pluck('id'))->get()->groupBy('user_id')
+            ->map(fn ($rows) => \App\Support\WeekOffPredicate::match($rows, Carbon::parse($currentDate)))->filter();
 
         // Process each user to add status and attendance info
         $teamData = collect();

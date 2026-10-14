@@ -105,7 +105,7 @@ class LocationAttendanceReportController extends Controller
 
                     // Fetch holidays overlapping the range
                     $holidays = DB::table('holidays')
-                        ->where('tenant_id', $tenantId)
+                        ->where('tenant_id', $tenantId)->where('status', 1)
                         ->where('start_date', '<=', $endDate)
                         ->where('end_date', '>=', $startDate)
                         ->get();
@@ -150,7 +150,7 @@ class LocationAttendanceReportController extends Controller
                             $holiday = $holidays->first(fn ($h) => substr($h->start_date, 0, 10) <= $dateStr && substr($h->end_date, 0, 10) >= $dateStr);
                             $weekoff = $weekoffs->get($employeeId)?->first(function ($wo) use ($dateObj) {
                                 if ($wo->off_type == 'day_based') {
-                                    return strtolower($wo->day_name) == strtolower($dateObj->format('l'));
+                                    return \App\Support\WeekOffPredicate::isWeekOff(collect([$wo]), $dateObj);
                                 }
                                 if ($wo->off_type == 'date_based') {
                                     return $dateObj->format('Y-m-d') >= $wo->start_date &&
@@ -471,7 +471,7 @@ class LocationAttendanceReportController extends Controller
             ->groupBy('user_id');
 
         $holidays = DB::table('holidays')
-            ->where('tenant_id', $tenantId)
+            ->where('tenant_id', $tenantId)->where('status', 1)
             ->where('start_date', '<=', $endDate)
             ->where('end_date', '>=', $startDate)
             ->get();
@@ -494,7 +494,7 @@ class LocationAttendanceReportController extends Controller
                 $leave = $leaves->get($employee->id)?->first(fn ($l) => substr($l->start_date, 0, 10) <= $dateStr && substr($l->end_date, 0, 10) >= $dateStr);
                 $weekoff = $weekoffs->get($employee->id)?->first(function ($wo) use ($day, $dateStr) {
                     if ($wo->off_type == 'day_based') {
-                        return strtolower($wo->day_name) == strtolower($day->format('l'));
+                        return \App\Support\WeekOffPredicate::isWeekOff(collect([$wo]), $day);
                     }
                     if ($wo->off_type == 'date_based') {
                         return $dateStr >= $wo->start_date && $dateStr <= $wo->end_date;

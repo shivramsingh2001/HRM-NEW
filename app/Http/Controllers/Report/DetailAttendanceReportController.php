@@ -146,7 +146,7 @@ class DetailAttendanceReportController extends Controller
 
             // Fetch holidays for the month with tenant filter
             $holidayRows = DB::table('holidays')
-                ->where('tenant_id', $tenantId)
+                ->where('tenant_id', $tenantId)->where('status', 1)
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
                         ->orWhereBetween('end_date', [$monthStart, $monthEnd])
@@ -219,7 +219,7 @@ class DetailAttendanceReportController extends Controller
                         }
 
                         if ($wo->off_type == 'day_based') {
-                            return strtolower($wo->day_name) == strtolower($day->format('l'));
+                            return \App\Support\WeekOffPredicate::isWeekOff(collect([$wo]), $day);
                         }
 
                         if ($wo->off_type == 'date_based') {
@@ -477,7 +477,7 @@ class DetailAttendanceReportController extends Controller
 
             // Fetch holidays with tenant filter - FIXED: use end_date
             $holidayRows = DB::table('holidays')
-                ->where('tenant_id', $tenantId)
+                ->where('tenant_id', $tenantId)->where('status', 1)
                 ->where(function ($q) use ($monthStart, $monthEnd) {
                     $q->whereBetween('start_date', [$monthStart, $monthEnd])
                         ->orWhereBetween('end_date', [$monthStart, $monthEnd])
@@ -533,7 +533,7 @@ class DetailAttendanceReportController extends Controller
                         }
 
                         if ($wo->off_type == 'day_based') {
-                            return strtolower($wo->day_name) == strtolower($day->format('l'));
+                            return \App\Support\WeekOffPredicate::isWeekOff(collect([$wo]), $day);
                         }
 
                         if ($wo->off_type == 'date_based') {

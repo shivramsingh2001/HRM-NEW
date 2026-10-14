@@ -242,7 +242,7 @@ class UserController extends Controller
             ];
 
             // Check if it's a holiday
-            $isHoliday = Holiday::whereDate('start_date', '<=', $currentDate)
+            $isHoliday = Holiday::where('status', 1)->whereDate('start_date', '<=', $currentDate)
                 ->whereDate('start_date', '>=', $currentDate)
                 ->exists();
 
@@ -411,7 +411,7 @@ class UserController extends Controller
                 $dayName = date('l');
 
                 // Check if it's a holiday
-                $isHoliday = Holiday::whereDate('start_date', '<=', $currentDate)
+                $isHoliday = Holiday::where('status', 1)->whereDate('start_date', '<=', $currentDate)
                     ->whereDate('start_date', '>=', $currentDate)
                     ->exists();
 
@@ -503,7 +503,7 @@ class UserController extends Controller
             }
 
             // Get holidays for the month
-            $holidays = Holiday::whereDate('start_date', '<=', $currentMonthEnd)
+            $holidays = Holiday::where('status', 1)->whereDate('start_date', '<=', $currentMonthEnd)
                 ->whereDate('start_date', '>=', $currentMonthStart)
                 ->get()
                 ->keyBy(function ($item) {

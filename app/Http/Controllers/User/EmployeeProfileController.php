@@ -234,7 +234,7 @@ class EmployeeProfileController extends Controller
 
         return [
             'year' => $year,
-            'holidays' => DB::table('holidays')->where('tenant_id', $tenantId)
+            'holidays' => DB::table('holidays')->where('tenant_id', $tenantId)->where('status', 1)
                 ->where(fn ($q) => $q->whereYear('start_date', $year)->orWhereYear('end_date', $year))
                 ->orderBy('start_date')->get(),
         ];

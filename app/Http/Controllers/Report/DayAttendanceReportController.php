@@ -164,7 +164,7 @@ class DayAttendanceReportController extends Controller
 
             // Fetch holidays for this day
             $holidayRows = DB::table('holidays')
-                ->where('tenant_id', $tenantId)
+                ->where('tenant_id', $tenantId)->where('status', 1)
                 ->where('start_date', '<=', $dayStart)
                 ->where('end_date', '>=', $dayStart)
                 ->get();
@@ -203,7 +203,7 @@ class DayAttendanceReportController extends Controller
                     }
 
                     if ($wo->off_type == 'day_based') {
-                        return strtolower($wo->day_name) == strtolower($dateObj->format('l'));
+                        return \App\Support\WeekOffPredicate::isWeekOff(collect([$wo]), $dateObj);
                     }
 
                     if ($wo->off_type == 'date_based') {
@@ -477,7 +477,7 @@ class DayAttendanceReportController extends Controller
 
             // Fetch holidays for this day
             $holidayRows = DB::table('holidays')
-                ->where('tenant_id', $tenantId)
+                ->where('tenant_id', $tenantId)->where('status', 1)
                 ->where('start_date', '<=', $dayStart)
                 ->where('end_date', '>=', $dayStart)
                 ->get();
@@ -512,7 +512,7 @@ class DayAttendanceReportController extends Controller
                     }
 
                     if ($wo->off_type == 'day_based') {
-                        return strtolower($wo->day_name) == strtolower($dateObj->format('l'));
+                        return \App\Support\WeekOffPredicate::isWeekOff(collect([$wo]), $dateObj);
                     }
 
                     if ($wo->off_type == 'date_based') {
