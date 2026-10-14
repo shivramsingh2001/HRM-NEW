@@ -76,7 +76,7 @@ class ExtraShiftExtraDayTest extends TestCase
         ]);
         foreach (array_filter([[false, 480], $extraMinutes ? [true, $extraMinutes] : null]) as [$additional, $minutes]) {
             DB::table('attendance_shift_segments')->insert(['tenant_id' => $this->tenantId, 'attendance_id' => $id, 'user_id' => $userId,
-                'date' => $date, 'is_additional' => $additional, 'worked_minutes' => $minutes, 'expected_minutes' => 480,
+                'date' => $date, 'is_additional' => $additional, 'is_extra' => $additional, 'worked_minutes' => $minutes, 'expected_minutes' => 480,
                 'created_at' => now(), 'updated_at' => now()]);
         }
     }
@@ -257,5 +257,46 @@ class ExtraShiftExtraDayTest extends TestCase
         $this->assertSame('overtime', DB::table('overtime_settings')->where('tenant_id', $this->tenantId)->value('extra_shift_pay_mode'));
 
         $this->put(route('overtime-policy-settings.update'), $base + ['extra_shift_pay_mode' => 'weekly'])->assertSessionHasErrors('extra_shift_pay_mode');
+    }
+    public function test_working_only_the_additional_shift_is_not_an_extra_day(): void
+    {
+        $this->payExtraShiftAs('extra_day');
+        $user = $this->employee();
+        $date = $this->month . '-05';
+        // The rollup makes the only shift worked the normal one: is_additional 1, is_extra 0.
+        $id = DB::table('attendances')->insertGetId([
+            'tenant_id' => $this->tenantId, 'user_id' => $user->id, 'date' => $date, 'clock_in' => $date . ' 15:00:00', 'worked_hours' => 8,
+            'attendance_status' => 'present', 'effective_status' => 'present', 'attendance_type' => 'manual', 'extra_shift_minutes' => 0, 'shift_count' => 1,
+            'status' => 1, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('attendance_shift_segments')->insert(['tenant_id' => $this->tenantId, 'attendance_id' => $id, 'user_id' => $user->id, 'date' => $date,
+            'is_additional' => 1, 'is_extra' => 0, 'worked_minutes' => 480, 'expected_minutes' => 480, 'created_at' => now(), 'updated_at' => now()]);
+        $this->day($user->id, 6, 480);   // a day with both shifts → 1 extra day
+
+        $calc = app(ExtraWorkDayCalculator::class);
+        $this->assertSame(1.0, $calc->days($this->tenantId, $user->id, $this->month)['days']);
+        $end = Carbon::createFromFormat('Y-m', $this->month)->endOfMonth()->toDateString();
+        $this->assertSame(1.0, $calc->daysByUser($this->tenantId, $this->month . '-01', $end)[$user->id]);
+    }
+
+    public function test_salary_hours_leave_out_the_extra_shift(): void
+    {
+        // A past month the new employee has no other data in (the summary skips future days).
+        $user = $this->employee();
+        $month = now()->subMonthsNoOverflow(2)->format('Y-m');
+        foreach ([['01', 16.0, 480], ['02', 8.0, 0]] as [$dd, $hours, $extra]) {   // 8 h + 8 h extra, then 8 h
+            $date = "$month-$dd";
+            DB::table('attendances')->insert([
+                'tenant_id' => $this->tenantId, 'user_id' => $user->id, 'date' => $date, 'clock_in' => "$date 06:00:00",
+                'clock_out' => Carbon::parse("$date 06:00:00")->addHours((int) $hours)->format('Y-m-d H:i:s'),
+                'worked_hours' => $hours, 'total_hours' => sprintf('%02d:00:00', $hours), 'attendance_status' => 'present', 'effective_status' => 'present',
+                'attendance_type' => 'manual', 'extra_shift_minutes' => $extra, 'shift_count' => $extra ? 2 : 1, 'status' => 1,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+        app(\App\Services\AttendanceSummaryService::class)->updateMonthlySummary($user->id, $month, $this->tenantId);
+
+        $days = app(\App\Services\Attendance\PayrollDaysService::class)->forMonth($user->id, $month, $this->tenantId);
+        $this->assertEqualsWithDelta(16.0, $days['actual_worked_hours'], 0.01);   // 24 h worked − 8 h extra
     }
 }

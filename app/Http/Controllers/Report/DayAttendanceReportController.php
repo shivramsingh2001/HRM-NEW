@@ -290,7 +290,7 @@ class DayAttendanceReportController extends Controller
                         'start' => $seg->scheduled_start,
                         'end' => $seg->scheduled_end,
                         'worked_minutes' => (int) $seg->worked_minutes,
-                        'is_additional' => (bool) $seg->is_additional,
+                        'is_additional' => (bool) $seg->is_additional, 'is_extra' => (bool) ($seg->is_extra ?? false),
                     ])->values()->all(),
                     'remarks' => $attendance->remarks ?? null,
                     'leave_type' => $leave->leave_type ?? null,
@@ -636,7 +636,7 @@ class DayAttendanceReportController extends Controller
                         'start' => $seg->scheduled_start,
                         'end' => $seg->scheduled_end,
                         'worked_minutes' => (int) $seg->worked_minutes,
-                        'is_additional' => (bool) $seg->is_additional,
+                        'is_additional' => (bool) $seg->is_additional, 'is_extra' => (bool) ($seg->is_extra ?? false),
                     ])->values()->all(),
                     'remarks' => $attendance->remarks ?? null,
                     'leave_type' => $leave->leave_type ?? null,
@@ -716,7 +716,7 @@ class DayAttendanceReportController extends Controller
                 // Multi-shift: list every shift worked that day.
                 if (! empty($row['shifts'])) {
                     $shift = collect($row['shifts'])->map(fn ($sg) => ($sg['is_additional'] ? '+ ' : '')
-                        .($sg['name'] ?? 'Shift').' '.Carbon::parse($sg['start'])->format('h:i A').' - '
+                        .($sg['name'] ?? 'Shift').(! empty($sg['is_extra']) ? ' (Extra)' : '').' '.Carbon::parse($sg['start'])->format('h:i A').' - '
                         .Carbon::parse($sg['end'])->format('h:i A').' ('.round($sg['worked_minutes'] / 60, 2).' hrs)')
                         ->implode(' | ');
                 }

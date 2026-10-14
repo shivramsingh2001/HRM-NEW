@@ -36,6 +36,7 @@ class MultiShiftPayrollTest extends TestCase
     private User $employee;
     private int $tenantId;
     private array $originalFlags;
+    private ?string $originalPayMode = null;
     private string $day;
 
     protected function setUp(): void
@@ -48,6 +49,10 @@ class MultiShiftPayrollTest extends TestCase
         $this->tenantId = (int) $this->admin->tenant_id;
         $this->originalFlags = (array) DB::table('tenants')->where('id', $this->tenantId)->first(['custom_shifts_enabled', 'allow_multiple_punches']);
         DB::table('tenants')->where('id', $this->tenantId)->update(['custom_shifts_enabled' => 1, 'allow_multiple_punches' => 0]);
+        // These tests are about 2nd shifts paid as OT hours — don't depend on the company's own setting.
+        $this->originalPayMode = DB::table('overtime_settings')->where('tenant_id', $this->tenantId)->value('extra_shift_pay_mode');
+        DB::table('overtime_settings')->where('tenant_id', $this->tenantId)->update(['extra_shift_pay_mode' => 'overtime']);
+        app(\App\Services\Attendance\OvertimePolicyService::class)->forget();
 
         $this->employee = User::withoutGlobalScopes()->forceCreate([
             'name' => $this->tag . ' Employee',
@@ -75,6 +80,10 @@ class MultiShiftPayrollTest extends TestCase
         Shift::withoutGlobalScopes()->where('name', 'like', $this->tag . '%')->delete();
         User::withoutGlobalScopes()->where('id', $uid)->forceDelete();
         DB::table('tenants')->where('id', $this->tenantId)->update($this->originalFlags);
+        if ($this->originalPayMode !== null) {
+            DB::table('overtime_settings')->where('tenant_id', $this->tenantId)->update(['extra_shift_pay_mode' => $this->originalPayMode]);
+        }
+        app(\App\Services\Attendance\OvertimePolicyService::class)->forget();
         parent::tearDown();
     }
 

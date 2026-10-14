@@ -204,6 +204,7 @@ class EmployeeProfileController extends Controller
             'month' => $month,
             'monthStart' => $start,
             'rows' => $rows,
+            'shiftDays' => app(\App\Services\Attendance\MultiShiftDay::class)->forAttendances($tenantId, $rows->pluck('id')),
             'summary' => DB::table('attendance_summaries')->where('tenant_id', $tenantId)->where('user_id', $user->id)
                 ->where('year_month', $month)->whereNull('deleted_at')->first(),
             'regularizations' => DB::table('attendance_regularizations')->where('tenant_id', $tenantId)->where('user_id', $user->id)

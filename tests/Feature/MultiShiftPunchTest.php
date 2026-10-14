@@ -141,20 +141,24 @@ class MultiShiftPunchTest extends TestCase
         $this->punch('in', "$d 23:30");
     }
 
-    public function test_the_day_is_late_when_the_second_shift_starts_late(): void
+    public function test_a_late_extra_shift_does_not_make_the_day_late(): void
     {
+        // 2026-10-14 rule: the day's normal shift alone decides late / status
+        // (it used to be: any shift starting late made the whole day late).
         $d = $this->day;
         $this->onDay($this->shift('Morning', '06:00', '14:00'), $d);
-        $this->onDay($this->shift('Evening', '15:00', '23:00'), $d, true);
+        $evening = $this->onDay($this->shift('Evening', '15:00', '23:00'), $d, true);
 
         $this->punch('in', "$d 06:00");
         $this->punch('out', "$d 14:00");
         $this->punch('in', "$d 15:30");
 
         $a = $this->attendance($d);
-        $this->assertSame(30, (int) $a->late_minutes);
-        $this->assertSame('late', $a->attendance_status);
+        $this->assertSame(0, (int) $a->late_minutes);
+        $this->assertSame('present', $a->attendance_status);
         $this->assertNull($a->clock_out); // 2nd shift still open
+        // The extra shift's own lateness is still recorded on its segment.
+        $this->assertSame(30, (int) AttendanceShiftSegment::withoutGlobalScopes()->where('user_shift_id', $evening->id)->value('late_minutes'));
     }
 
     public function test_working_only_the_additional_shift_is_measured_against_that_shift(): void
@@ -169,7 +173,8 @@ class MultiShiftPunchTest extends TestCase
         $a = $this->attendance($d);
         $this->assertSame(0, (int) $a->late_minutes);
         $this->assertSame(1, (int) $a->shift_count);
-        $this->assertSame(475, (int) $a->extra_shift_minutes);
+        // The only shift worked is the day's normal shift — not extra (2026-10-14 rule).
+        $this->assertSame(0, (int) $a->extra_shift_minutes);
     }
 
     public function test_overnight_additional_shift_belongs_to_the_day_it_starts(): void
@@ -245,6 +250,8 @@ class MultiShiftPunchTest extends TestCase
         $this->assertCount(2, $today['shifts']);
         $this->assertSame(['completed', 'upcoming'], array_column($today['shifts'], 'status'));
         $this->assertSame([false, true], array_column($today['shifts'], 'is_additional'));
+        $this->assertSame([false, false], array_column($today['shifts'], 'is_extra'));   // the Evening shift isn't worked yet
+        $this->assertEquals(1.0, $today['day_value']);
         // Clocked out of Morning: status 0 (Clock In offered) only while Evening is open for clock-in (21:00–23:30).
         $windowOpen = now()->between(Carbon::parse("$d 21:00"), Carbon::parse("$d 23:30"));
         $this->assertSame($windowOpen ? 0 : 1, (int) $today['status']);
@@ -303,6 +310,10 @@ class MultiShiftPunchTest extends TestCase
         $this->assertSame("17:00", $member->shift_sessions[0]->out->format("H:i"));
         $this->assertNull($member->shift_sessions[1]->out);
         $this->assertSame($this->tag . " Night", $member->open_shift);
+        $this->assertSame(["present", "checked_in"], $member->shift_sessions->pluck("state")->all());
+        $html = $this->get(route("team.index", ["date" => $d, "search" => $name]))->assertOk()->getContent();
+        $this->assertStringContainsString('>Extra</span>', $html);   // the Night (extra) shift's tag
+        $this->assertMatchesRegularExpression("/General:<\/span>\s*<span class=\"badge badge-present\">.*Present/s", $html);
         $this->assertSame([[$this->tag . " General", "09:30 AM–05:00 PM", false], [$this->tag . " Night", "05:15 PM–02:15 AM", true]],
             $member->shifts->map(fn ($s) => [$s->name, $s->time, $s->extra])->all());
 
@@ -376,5 +387,162 @@ class MultiShiftPunchTest extends TestCase
         $this->punch('out', $now->copy()->addMinutes(5)->format('Y-m-d H:i:s'));
         // Evening already worked (not over yet): stays 1.
         $this->assertSame(1, (int) $controller->getAttendance()->getData(true)['data']['status']);
+    }
+    public function test_only_the_shifts_beyond_the_days_normal_one_are_extra(): void
+    {
+        [$main, $second] = [$this->shift('Main', '06:00', '14:00'), $this->shift('Second', '15:00', '23:00')];
+        $segments = fn ($d) => AttendanceShiftSegment::withoutGlobalScopes()->where('attendance_id', $this->attendance($d)->id)
+            ->orderBy('id')->get()->map(fn ($s) => [(int) $s->user_shift_id, (bool) $s->is_extra])->all();
+
+        // Day 1 — only the additional shift worked: it is the day's normal shift, nothing extra.
+        $d1 = Carbon::parse($this->day)->subDay()->toDateString();
+        $this->onDay($main, $d1);
+        $second1 = $this->onDay($second, $d1, true);
+        $this->punch('in', "$d1 14:55");
+        $this->punch('out', "$d1 23:00");
+        $this->assertSame([[$second1->id, false]], $segments($d1));
+        $this->assertSame(0, (int) $this->attendance($d1)->extra_shift_minutes);
+
+        // Day 2 — both worked: the main shift is the normal one, the additional one is extra.
+        $d2 = $this->day;
+        $main2 = $this->onDay($main, $d2);
+        $second2 = $this->onDay($second, $d2, true);
+        $this->punch('in', "$d2 05:55");
+        $this->punch('out', "$d2 14:00");
+        $this->punch('in', "$d2 14:55");
+        $this->punch('out', "$d2 23:00");
+        $this->assertSame([[$main2->id, false], [$second2->id, true]], $segments($d2));
+        $this->assertSame(485, (int) $this->attendance($d2)->extra_shift_minutes); // 14:55 → 23:00
+    }
+    public function test_the_days_status_comes_from_the_normal_shift_alone(): void
+    {
+        [$main, $second] = [$this->shift('Main', '06:00', '14:00'), $this->shift('Second', '15:00', '23:00')];
+        $base = Carbon::parse($this->day);
+
+        // Late only for the extra shift: the day is not late.
+        $d1 = $base->copy()->subDays(10)->toDateString();
+        $this->onDay($main, $d1);
+        $this->onDay($second, $d1, true);
+        $this->punch('in', "$d1 05:58");
+        $this->punch('out', "$d1 14:00");
+        $this->punch('in', "$d1 15:40");   // 40 min late for the extra shift
+        $this->punch('out', "$d1 23:00");
+        $a = $this->attendance($d1);
+        $this->assertSame(0, (int) $a->late_minutes);
+        $this->assertSame('present', $a->attendance_status);
+
+        // Only the additional shift worked: the day is measured against THAT shift.
+        $d2 = $base->copy()->subDays(5)->toDateString();
+        $this->onDay($main, $d2);
+        $this->onDay($second, $d2, true);
+        $this->punch('in', "$d2 15:20");   // 20 min late for the shift worked
+        $this->punch('out', "$d2 23:00");
+        $a = $this->attendance($d2);
+        $this->assertSame($second->id, (int) $a->shift_id);
+        $this->assertSame('15:00', substr((string) $a->scheduled_shift_start, 0, 5));
+        $this->assertSame(20, (int) $a->late_minutes);
+        $this->assertSame(0, (int) $a->extra_shift_minutes);
+
+        // Short normal shift (4.5 h of 8) + full extra shift, Day Classification on (present ≥ 90 %,
+        // half day ≥ 50 %): the normal shift alone decides → half day (not the 12.5 h total);
+        // the extra shift is still fully extra.
+        $d3 = $this->day;
+        $resolver = app(\App\Services\Attendance\PolicyResolver::class);
+        $resolver->forget();
+        $policy = $resolver->forTenantDate($this->tenantId, $d3)->toPersistableArray();
+        DB::table('attendance_policies')->where('tenant_id', $this->tenantId)->where('effective_from', $d3)->delete();
+        DB::table('attendance_policies')->insert(array_merge($policy, ['day_classification_enabled' => true, 'present_ratio' => 0.9, 'half_day_ratio' => 0.5,
+            'tenant_id' => $this->tenantId, 'effective_from' => $d3, 'created_at' => now(), 'updated_at' => now()]));
+        $resolver->forget();
+        try {
+            $this->onDay($main, $d3);
+            $this->onDay($second, $d3, true);
+            $this->punch('in', "$d3 06:00");
+            $this->punch('out', "$d3 10:30");
+            $this->punch('in', "$d3 15:00");
+            $this->punch('out', "$d3 23:00");
+            $a = $this->attendance($d3);
+            $this->assertSame(480, (int) $a->extra_shift_minutes);
+            $this->assertSame('half_day', $a->effective_status);
+            $this->assertEquals(0.5, (float) $a->day_fraction);
+        } finally {
+            DB::table('attendance_policies')->where('tenant_id', $this->tenantId)->where('effective_from', $d3)->delete();
+            $resolver->forget();
+        }
+    }
+    public function test_calendars_and_api_show_the_days_worth_per_company_policy(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\EnsureFeatureEnabled::class);
+        [$main, $second] = [$this->shift('Main', '06:00', '14:00'), $this->shift('Second', '15:00', '23:00')];
+        $d1 = Carbon::parse($this->day)->subDays(6)->toDateString();   // both shifts in full
+        $d2 = Carbon::parse($this->day)->subDays(3)->toDateString();   // 2nd shift under half its hours
+        foreach ([[$d1, '23:00'], [$d2, '18:00']] as [$d, $out]) {
+            $this->onDay($main, $d);
+            $this->onDay($second, $d, true);
+            $this->punch('in', "$d 06:00");
+            $this->punch('out', "$d 14:00");
+            $this->punch('in', "$d 15:00");
+            $this->punch('out', "$d $out");
+        }
+        $ids = [$this->attendance($d1)->id, $this->attendance($d2)->id];
+        $mode = DB::table('overtime_settings')->where('tenant_id', $this->tenantId)->value('extra_shift_pay_mode');
+        $policy = app(\App\Services\Attendance\OvertimePolicyService::class);
+        $setMode = function (string $m) use ($policy) {
+            DB::table('overtime_settings')->updateOrInsert(['tenant_id' => $this->tenantId], ['extra_shift_pay_mode' => $m, 'updated_at' => now()]);
+            $policy->forget();
+        };
+
+        try {
+            // Extra shifts paid as extra working days: "Present ×2" / "×1.5" everywhere.
+            $setMode('extra_day');
+            $days = app(\App\Services\Attendance\MultiShiftDay::class)->forAttendances($this->tenantId, $ids);
+            $this->assertSame([1.0, 0.5], [$days[$ids[0]]['extra_days'], $days[$ids[1]]['extra_days']]);
+            $this->assertSame([false, true], array_column($days[$ids[0]]['shifts'], 'is_extra'));
+
+            $this->actingAs($this->admin)->withSession(['tenant_id' => $this->tenantId]);
+            $member = app(\App\Services\Team\TeamMemberAttendance::class)->getAttendanceDataForUser($d1, $d2, $this->employee->id)->keyBy('date');
+            $this->assertSame('Present ×2', $member[$d1]->day_label);
+            $this->assertSame('Present ×1.5', $member[$d2]->day_label);
+
+            Auth::login($this->employee);
+            $history = collect(app(AttendanceController::class)->history(Request::create('/', 'GET', ['start_date' => $d1, 'end_date' => $d2]))->getData(true)['data'])->keyBy('date');
+            $this->assertEquals([2.0, 1.5], [$history[$d1]['day_value'], $history[$d2]['day_value']]);
+
+            $this->actingAs($this->employee)->withSession(['tenant_id' => $this->tenantId]);
+            $calendar = collect($this->get(route('attendance.index', ['start_date' => $d1, 'end_date' => $d2]))->assertOk()->viewData('calendarData'))->keyBy('start');
+            $this->assertSame(['Present ×2', 'Present ×1.5'], [$calendar[$d1]['title'], $calendar[$d2]['title']]);
+
+            // Extra shifts paid as OT hours: the calendars / API show plain Present.
+            $setMode('overtime');
+            $this->assertSame(0.0, app(\App\Services\Attendance\MultiShiftDay::class)->forAttendances($this->tenantId, $ids)[$ids[0]]['extra_days']);
+            $calendar = collect($this->get(route('attendance.index', ['start_date' => $d1, 'end_date' => $d2]))->assertOk()->viewData('calendarData'))->keyBy('start');
+            $this->assertSame('Present', $calendar[$d1]['title']);
+            Auth::login($this->employee);
+            $history = collect(app(AttendanceController::class)->history(Request::create('/', 'GET', ['start_date' => $d1, 'end_date' => $d1]))->getData(true)['data']);
+            $this->assertEquals(1.0, $history->first()['day_value']);
+        } finally {
+            DB::table('overtime_settings')->where('tenant_id', $this->tenantId)->update(['extra_shift_pay_mode' => $mode ?? 'overtime']);
+            $policy->forget();
+        }
+    }
+    public function test_recompute_command_rebuilds_old_days_with_the_new_rules(): void
+    {
+        $d = $this->day;
+        $this->onDay($this->shift('Main', '06:00', '14:00'), $d);
+        $this->onDay($this->shift('Second', '15:00', '23:00'), $d, true);
+        $this->punch('in', "$d 15:00");
+        $this->punch('out', "$d 23:00");
+        $a = $this->attendance($d);
+        // As the old rules saved it: the lone 2nd shift counted as extra (paid twice).
+        DB::table('attendances')->where('id', $a->id)->update(['extra_shift_minutes' => 480]);
+        DB::table('attendance_shift_segments')->where('attendance_id', $a->id)->update(['is_extra' => 1]);
+
+        $this->artisan('attendance:recompute-shifts', ['--from' => $d, '--to' => $d, '--tenant' => $this->tenantId, '--dry-run' => true])
+            ->expectsOutputToContain('Changed 1')->assertSuccessful();
+        $this->assertSame(480, (int) $this->attendance($d)->extra_shift_minutes);   // dry run saved nothing
+
+        $this->artisan('attendance:recompute-shifts', ['--from' => $d, '--to' => $d, '--tenant' => $this->tenantId])->assertSuccessful();
+        $this->assertSame(0, (int) $this->attendance($d)->extra_shift_minutes);
+        $this->assertSame(0, (int) AttendanceShiftSegment::withoutGlobalScopes()->where('attendance_id', $a->id)->value('is_extra'));
     }
 }

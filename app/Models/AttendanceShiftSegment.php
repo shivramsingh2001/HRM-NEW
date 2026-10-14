@@ -19,6 +19,7 @@ class AttendanceShiftSegment extends Model
     protected $casts = [
         'date' => 'date',
         'is_additional' => 'boolean',
+        'is_extra' => 'boolean',
         'is_open' => 'boolean',
         'scheduled_start' => 'datetime',
         'scheduled_end' => 'datetime',

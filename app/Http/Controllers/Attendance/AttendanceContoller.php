@@ -107,6 +107,7 @@ class AttendanceContoller extends Controller
                 ->whereBetween('date', [$startDate, $endDate])
                 ->get()
                 ->keyBy('date');
+            $shiftDays = app(\App\Services\Attendance\MultiShiftDay::class)->forAttendances((int) $tenantId, $attendances->pluck('id')); // multi-shift days ("Present ×2")
 
             // Get all approved leaves overlapping this date range
             // (start <= range end AND end >= range start covers every overlap
@@ -197,9 +198,7 @@ class AttendanceContoller extends Controller
                 $attendance = !$isFutureDate ? $attendances->get($dateStr) : null;
 
                 // Determine statuses
-                $primaryStatus = null;
-                $secondaryStatus = null;
-                $fallbackStatus = null;
+                $primaryStatus = $secondaryStatus = $fallbackStatus = null;
                 $isUpcoming = false;
 
                 if ($isFutureDate) {
@@ -236,7 +235,7 @@ class AttendanceContoller extends Controller
                         if ($attendance->clock_in && $attendance->clock_out) {
                             $primaryStatus = 'Present';
                         } elseif ($attendance->clock_in) {
-                            $primaryStatus = 'Checked In Only';
+                            $primaryStatus = ($shiftDays[$attendance->id]['normal_closed'] ?? false) ? 'Present' : 'Checked In Only'; // 2nd shift open, normal shift done = present
                         } else {
                             // No punches at all — this row exists only because
                             // it was marked by hand (Team screen manual
@@ -289,6 +288,7 @@ class AttendanceContoller extends Controller
                 $record->clock_in = $attendance ? $attendance->clock_in : null;
                 $record->clock_out = $attendance ? $attendance->clock_out : null;
                 $record->total_hours = $attendance ? $attendance->total_hours : null;
+                $record->shift_day = $attendance ? ($shiftDays[$attendance->id] ?? null) : null;
                 $record->leave_type = $leave ? $leave->leave_type : null;
                 $record->leave_reason = $leave ? $leave->reason : null;
                 $record->leave_session = $leave ? $leave->start_session : null;
@@ -500,7 +500,7 @@ class AttendanceContoller extends Controller
     {
         switch ($status) {
             case 'Present':
-                return "Present";
+                return \App\Services\Attendance\MultiShiftDay::label(\App\Services\Attendance\MultiShiftDay::dayValue(1.0, $record->shift_day ?? null)) ?? 'Present';
             case 'Holiday':
                 return $record->holiday_name ?: 'Holiday';
             case 'First Half Leave':

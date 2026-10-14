@@ -68,13 +68,25 @@ class PayrollDaysService
             'holidays' => $holidays,
             'week_offs' => $weekOffs,
             'overtime_hours' => (float) ($m['total_overtime_hours'] ?? 0),
-            'actual_worked_hours' => (float) ($m['total_worked_hours'] ?? 0),
+            // Multi-shift: extra-shift hours are paid as OT / extra working days, not as salary hours.
+            'actual_worked_hours' => max(0.0, (float) ($m['total_worked_hours'] ?? 0) - $this->extraShiftHours($userId, $yearMonth, (int) ($tenantId ?? ($m['tenant_id'] ?? 0)))),
             'total_late_minutes' => (float) ($m['total_late_minutes'] ?? 0),
             'source_calculated_at' => $m['calculated_at'] ?? null,
             'sandwich_unpaid_days' => $unpaidHolidays + $unpaidWeekOffs,
             // Worked holidays / week-offs already inside present_days / half_days (paid once, as the off-day).
             'worked_off_day_credit' => $workedOffDayCredit,
         ];
+    }
+
+    /** Hours worked in extra shifts this month (attendances.extra_shift_minutes). */
+    private function extraShiftHours(int $userId, string $yearMonth, int $tenantId): float
+    {
+        $start = \Carbon\Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
+
+        return (float) \Illuminate\Support\Facades\DB::table('attendances')
+            ->where('tenant_id', $tenantId)->where('user_id', $userId)->where('status', 1)
+            ->whereBetween('date', [$start->toDateString(), $start->copy()->endOfMonth()->toDateString()])
+            ->sum('extra_shift_minutes') / 60;
     }
 
     /** The attendance summary's day-by-day breakdown for the month (Y-m-d => day). */

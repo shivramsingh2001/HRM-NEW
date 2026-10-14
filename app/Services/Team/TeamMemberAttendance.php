@@ -42,6 +42,8 @@ class TeamMemberAttendance
             ->whereBetween('date', [$startDate, $endDate])
             ->get()
             ->keyBy('date');
+        // Multi-shift days: their shifts + extra working days ("Present ×2").
+        $shiftDays = app(\App\Services\Attendance\MultiShiftDay::class)->forAttendances((int) $user->tenant_id, $attendances->pluck('id'));
 
         // Overlap check (with COALESCE fallback for legacy one-row-per-day
         // records that never had end_date set) instead of matching start_date
@@ -144,7 +146,8 @@ class TeamMemberAttendance
                 if ($attendance && $attendance->clock_in && $attendance->clock_out) {
                     $status = $this->getAttendanceStatusByShift($totalHours, $userId, $dateStr, $attendance);
                 } elseif ($attendance && $attendance->clock_in) {
-                    $status = 'Checked In Only';
+                    // A 2nd shift still open after the normal shift is done: the day is present.
+                    $status = ($shiftDays[$attendance->id]['normal_closed'] ?? false) ? 'Present' : 'Checked In Only';
                 } elseif ($holiday) {
                     $status = 'Holiday';
                 } elseif ($leave) {
@@ -183,6 +186,12 @@ class TeamMemberAttendance
             $record->weekoff_day = $weekoff->day_name ?? null;
             $record->has_weekoff = $weekoff ? true : false;
             $record->day_status = $status;
+            // Multi-shift: the day's worth (normal shift + extra working days) and "Present ×2" / "×1.5".
+            $shiftDay = $attendance && ! $isFutureDate ? ($shiftDays[$attendance->id] ?? null) : null;
+            $base = match (strtolower((string) $status)) { 'present' => 1.0, 'halfday', 'half day' => 0.5, default => 0.0 };
+            $record->day_value = $base > 0 ? \App\Services\Attendance\MultiShiftDay::dayValue($base, $shiftDay) : null;
+            $record->day_label = $record->day_value ? \App\Services\Attendance\MultiShiftDay::label($record->day_value) : null;
+            $record->shifts = $shiftDay['shifts'] ?? [];
 
             $dates[] = $record;
         }

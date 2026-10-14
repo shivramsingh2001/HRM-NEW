@@ -8,13 +8,15 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Company Policies → "Additional shift pay" = Extra working day: every
- * assigned additional (2nd+) shift an employee worked is paid as an extra
- * working day at one day's salary, instead of as overtime hours
+ * EXTRA shift an employee worked (a shift beyond the day's normal one — see
+ * AttendanceRollupService; working only the additional shift is the normal
+ * day, not extra) is paid as an extra working day at one day's salary,
+ * instead of as overtime hours
  * (App\Services\Attendance\ExtraShiftOvertime then pays nothing). Shared by
  * both payroll engines, like ShiftAllowanceCalculator.
  *
- *  - Days come from attendance_shift_segments (is_additional, worked_minutes
- *    > 0): 1 day per additional shift, ½ day when less than half of that
+ *  - Days come from attendance_shift_segments (is_extra, worked_minutes
+ *    > 0): 1 day per extra shift, ½ day when less than half of that
  *    shift's own hours were worked.
  *  - One day's salary = the full monthly gross (before proration) ÷ days in
  *    the month — the same per-day figure an absent day costs.
@@ -47,7 +49,7 @@ class ExtraWorkDayCalculator
             ->where('a.tenant_id', $tenantId)
             ->where('a.user_id', $userId)
             ->whereBetween('a.date', [$month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString()])
-            ->where('s.is_additional', 1)
+            ->where('s.is_extra', 1)
             ->where('s.worked_minutes', '>', 0)
             ->orderBy('a.date')
             ->get(['a.date', 's.shift_id', 's.worked_minutes', 's.expected_minutes']);
@@ -78,7 +80,7 @@ class ExtraWorkDayCalculator
             ->join('attendances as a', 'a.id', '=', 's.attendance_id')
             ->where('a.tenant_id', $tenantId)
             ->whereBetween('a.date', [$startDate, $endDate])
-            ->where('s.is_additional', 1)
+            ->where('s.is_extra', 1)
             ->where('s.worked_minutes', '>', 0)
             ->groupBy('a.user_id')
             ->selectRaw('a.user_id AS uid, SUM(CASE WHEN s.expected_minutes > 0 AND s.worked_minutes * 2 < s.expected_minutes THEN 0.5 ELSE 1 END) AS days')

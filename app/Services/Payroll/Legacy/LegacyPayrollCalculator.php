@@ -532,6 +532,7 @@ class LegacyPayrollCalculator
                 DATE_FORMAT(date, '%Y-%m-%d') AS att_date,
                 total_hours,
                 worked_hours,
+                extra_shift_minutes,
                 scheduled_shift_start,
                 scheduled_shift_end
             FROM attendances
@@ -552,6 +553,8 @@ class LegacyPayrollCalculator
             } else {
                 $hours = $this->parseHours($row->total_hours ?? '0');
             }
+            // Multi-shift: the normal shift alone decides present / half day (extra shifts are paid separately).
+            $hours = max(0.0, $hours - ((int) ($row->extra_shift_minutes ?? 0)) / 60);
 
             // Create attendance object for shift-based calculation
             $attendanceObj = new \stdClass;
@@ -793,7 +796,7 @@ class LegacyPayrollCalculator
         }
 
         $rows = DB::select("
-            SELECT DATE_FORMAT(date, '%Y-%m-%d') AS att_date, total_hours, worked_hours, scheduled_shift_start, scheduled_shift_end
+            SELECT DATE_FORMAT(date, '%Y-%m-%d') AS att_date, total_hours, worked_hours, extra_shift_minutes, scheduled_shift_start, scheduled_shift_end
             FROM   attendances
             WHERE  user_id   = ?
               AND  tenant_id = ?
@@ -815,6 +818,8 @@ class LegacyPayrollCalculator
             } else {
                 $hours = $this->parseHours($row->total_hours ?? '0');
             }
+            // Multi-shift: only the normal shift's hours (extra shifts are paid as OT / extra days).
+            $hours = max(0.0, $hours - ((int) ($row->extra_shift_minutes ?? 0)) / 60);
 
             // Create attendance object for shift-based calculation
             $attendanceObj = new \stdClass;

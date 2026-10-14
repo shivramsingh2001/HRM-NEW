@@ -51,7 +51,15 @@
                     <td>{{ $r && $r->late_minutes ? $r->late_minutes . 'm' : '' }}</td>
                     <td>{{ $r && $r->early_departure_minutes ? $r->early_departure_minutes . 'm' : '' }}</td>
                     <td>
-                        @if ($r && (int) $r->shift_count > 1)<span class="p360-chip extra">{{ $r->shift_count }} shifts · +{{ round($r->extra_shift_minutes / 60, 1) }}h</span>@endif
+                        @php $shiftDay = $r ? ($shiftDays[$r->id] ?? null) : null; @endphp
+                        @if ($shiftDay)
+                            {{-- Multi-shift: each shift's own in / out; extra ones are paid as OT / extra days. --}}
+                            @if ($label = \App\Services\Attendance\MultiShiftDay::label(\App\Services\Attendance\MultiShiftDay::dayValue(1.0, $shiftDay)))<span class="p360-chip extra">{{ $label }}</span>@endif
+                            @foreach ($shiftDay['shifts'] as $s)
+                                <span class="p360-chip {{ $s['is_extra'] ? 'extra' : 'muted' }}">{{ $s['name'] }}{{ $s['is_extra'] ? ' (Extra)' : '' }}:
+                                    {{ $s['in'] ? \Carbon\Carbon::parse($s['in'])->format('h:i A') : '--:--' }}–{{ $s['out'] ? \Carbon\Carbon::parse($s['out'])->format('h:i A') : 'ongoing' }}</span>
+                            @endforeach
+                        @elseif ($r && (int) $r->shift_count > 1)<span class="p360-chip extra">{{ $r->shift_count }} shifts · +{{ round($r->extra_shift_minutes / 60, 1) }}h</span>@endif
                         @if ($r && $r->is_regularized)<span class="p360-chip">Regularized</span>@endif
                         @if ($r && $r->attendance_type === 'manual')<span class="p360-chip muted">Manual</span>@endif
                     </td>

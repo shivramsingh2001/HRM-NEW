@@ -70,7 +70,7 @@ class AttendanceController extends Controller
                         AND t.task_date <= d.date
                         AND t.deadline_date >= d.date
                 ) AS task_count,
-                a.clock_in,
+                a.id AS attendance_id, a.clock_in,
                 a.clock_out,
                 a.total_hours,
                 a.worked_hours,
@@ -105,14 +105,14 @@ class AttendanceController extends Controller
                                         CASE 
                                             WHEN a.worked_hours IS NOT NULL THEN
                                                 CASE 
-                                                    WHEN (a.worked_hours / (TIMESTAMPDIFF(HOUR, a.scheduled_shift_start, 
+                                                    WHEN ((a.worked_hours - COALESCE(a.extra_shift_minutes, 0) / 60) / (TIMESTAMPDIFF(HOUR, a.scheduled_shift_start, 
                                                         CASE 
                                                             WHEN a.scheduled_shift_end < a.scheduled_shift_start 
                                                             THEN DATE_ADD(a.scheduled_shift_end, INTERVAL 1 DAY)
                                                             ELSE a.scheduled_shift_end
                                                         END
                                                     )) * 100) < 20 THEN 'Absent'
-                                                    WHEN (a.worked_hours / (TIMESTAMPDIFF(HOUR, a.scheduled_shift_start, 
+                                                    WHEN ((a.worked_hours - COALESCE(a.extra_shift_minutes, 0) / 60) / (TIMESTAMPDIFF(HOUR, a.scheduled_shift_start, 
                                                         CASE 
                                                             WHEN a.scheduled_shift_end < a.scheduled_shift_start 
                                                             THEN DATE_ADD(a.scheduled_shift_end, INTERVAL 1 DAY)
@@ -199,7 +199,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'status'  => true,
                 'message' => 'Attendance data fetched successfully for current user',
-                'data' => $uniqueData
+                'data' => $this->withDayValues($uniqueData, $tenantId)
             ]);
         } catch (Exception $e) {
             Log::error('Attendance history failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
@@ -333,6 +333,7 @@ class AttendanceController extends Controller
 
             // Additive (multi-shift): every shift today, with its own status.
             $data['shifts'] = $this->shiftsForDay((int) $userId, (int) ($user->tenant_id ?? 0), $today);
+            $data['day_value'] = $this->withDayValues([(object) ['attendance_id' => $attendance->id ?? null, 'day_status' => ! empty($attendance->clock_in) ? 'Present' : '']], (int) ($user->tenant_id ?? 0))[0]->day_value;
 
             // Additive: lets the app hide Punch In/Out for biometric-only employees.
             $punchBlocked = $this->mobilePunchBlocked((int) $userId);
@@ -473,6 +474,26 @@ class AttendanceController extends Controller
                 && $i['start']->copy()->subMinutes(\App\Services\Attendance\TenantShiftResolver::EARLY_CLOCK_IN_MINUTES)->isPast());
     }
 
+    /**
+     * Additive `day_value` per day (multi-shift pay plan Phase 4): 1 present / 0.5 half day,
+     * + extra working days when Company Policies pays extra shifts as days (so 2 / 1.5);
+     * a 2nd shift still open after the normal shift is done reads Present, not Checked In Only.
+     */
+    private function withDayValues(array $rows, int $tenantId): array
+    {
+        $days = app(\App\Services\Attendance\MultiShiftDay::class)->forAttendances($tenantId, array_column($rows, 'attendance_id'));
+        foreach ($rows as $row) {
+            $day = $days[$row->attendance_id ?? 0] ?? null;
+            if ($day && $day['normal_closed'] && $row->day_status === 'Checked In Only') {
+                $row->day_status = 'Present';
+            }
+            $base = match ($row->day_status) { 'Present' => 1.0, 'Half Day' => 0.5, default => 0.0 };
+            $row->day_value = $base > 0 ? \App\Services\Attendance\MultiShiftDay::dayValue($base, $day) : 0.0;
+        }
+
+        return $rows;
+    }
+
     private function shiftsForDay(int $userId, int $tenantId, string $date): array
     {
         if (!$tenantId) {
@@ -497,6 +518,7 @@ class AttendanceController extends Controller
                     'end_time' => $i['end']->format('h:i A'),
                     'is_overnight' => \App\Support\ShiftWindow::isOvernight($i['shift']),
                     'is_additional' => $i['is_additional'],
+                    'is_extra' => (bool) ($seg->is_extra ?? false),
                     'status' => !$seg ? 'upcoming' : ($seg->is_open ? 'ongoing' : 'completed'),
                     'clock_in' => $seg?->first_in?->format('Y-m-d H:i:s'),
                     'clock_out' => $seg?->last_out?->format('Y-m-d H:i:s'),

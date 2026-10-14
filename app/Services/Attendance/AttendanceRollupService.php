@@ -56,6 +56,11 @@ class AttendanceRollupService
         if (count($segments) > 1 || ($segments[0]['row']['is_additional'] ?? false)) {
             $summary = $this->multiShiftSummary($summary, $segments);
         }
+        // The day is measured against its NORMAL shift: when the main shift was not
+        // worked, that is the additional shift worked (its schedule and length).
+        if (($segments[0]['row']['is_additional'] ?? false) && $segments[0]['shift']) {
+            $shift = $segments[0]['shift'];
+        }
 
         $columns = [
             'clock_in' => $summary['clock_in'],
@@ -68,8 +73,9 @@ class AttendanceRollupService
             'session_count' => $summary['session_count'],
             'shift_count' => count($segments) ?: null,
             'expected_minutes' => $shift ? intdiv($this->calc->expectedWorkSeconds($shift), 60) : null,
+            // Only shifts worked beyond the day's normal one are extra (OT / extra working day).
             'extra_shift_minutes' => array_sum(array_map(
-                fn ($seg) => $seg['row']['is_additional'] ? $seg['row']['worked_minutes'] : 0,
+                fn ($seg) => $seg['row']['is_extra'] ? $seg['row']['worked_minutes'] : 0,
                 $segments
             )),
             'punches_last_synced_at' => now(),
@@ -152,7 +158,8 @@ class AttendanceRollupService
      * ['summary' => summarize() output for that shift's sessions,
      *  'row' => attendance_shift_segments columns]. A session belongs to the
      * shift its clock-in punch was matched to (user_shift_id); punches with
-     * no / an unknown user_shift_id count toward the primary shift.
+     * no / an unknown user_shift_id count toward the primary shift. The first
+     * entry is the day's normal shift (is_extra = false), the rest are extra.
      */
     private function segments(int $userId, int $tenantId, string $date, array $paired, $shift, $scheduledStart, $scheduledEnd): array
     {
@@ -189,10 +196,14 @@ class AttendanceRollupService
 
             $segments[] = [
                 'summary' => $summary,
+                'shift' => $segShift,
                 'row' => [
                     'user_shift_id' => $instance['user_shift_id'] ?? null,
                     'shift_id' => $segShift?->id,
                     'is_additional' => (bool) ($instance['is_additional'] ?? false),
+                    // The first shift worked (the main one when worked) is the day's normal
+                    // shift; every other shift worked that day is extra.
+                    'is_extra' => $segments !== [],
                     'scheduled_start' => $start?->format('Y-m-d H:i:s'),
                     'scheduled_end' => $end?->format('Y-m-d H:i:s'),
                     'first_in' => $summary['clock_in'],
@@ -230,14 +241,14 @@ class AttendanceRollupService
     /**
      * Day-level numbers for a day worked across several shifts. Clock-in/out,
      * worked hours and session count stay the whole day's (as with multiple
-     * punches today); late/early/overtime and the status come from the first
-     * shift worked (the primary when it was worked), and the day counts as
-     * late when ANY shift started late (late minutes are summed).
+     * punches today); late/early/overtime and the status come from the day's
+     * NORMAL shift alone (the first shift worked — the main one when worked).
+     * Arriving late for an extra shift does not make the day late.
      */
     private function multiShiftSummary(array $day, array $segments): array
     {
         $lead = $segments[0]['summary'];
-        $late = array_sum(array_map(fn ($seg) => $seg['summary']['late_minutes'], $segments));
+        $late = (int) $lead['late_minutes'];
 
         $status = $lead['attendance_status'] ?? $day['attendance_status'];
         if ($late > 0 && in_array($status, ['present', null], true)) {

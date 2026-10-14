@@ -1017,12 +1017,29 @@
                                                 @endforelse
                                             </td>
                                             <td>
+                                                @if (($member->shift_sessions ?? collect())->isNotEmpty())
+                                                    {{-- 2+ shifts: each shift's own status, in line with its clock in / out. --}}
+                                                    @foreach ($member->shift_sessions as $session)
+                                                        @php
+                                                            [$sessionClass, $sessionDot, $sessionLabel] = match ($session->state) {
+                                                                'present' => ['badge-present', 'present', 'Present'],
+                                                                'checked_in' => ['badge-checked_in_only', 'checked_in_only', 'Checked In'],
+                                                                default => ['badge-secondary', 'absent', 'Not started'],
+                                                            };
+                                                        @endphp
+                                                        <div class="text-nowrap">
+                                                            <span class="text-muted fs-11">{{ $session->name }}:</span>
+                                                            @if ($session->is_extra ?? false)
+                                                                <span class="badge bg-light text-primary border fs-10" title="Paid as overtime / extra working day per company policy">Extra</span>
+                                                            @endif
+                                                            <span class="badge {{ $sessionClass }}"><span class="status-dot {{ $sessionDot }}"></span>{{ $sessionLabel }}</span>
+                                                        </div>
+                                                    @endforeach
+                                                @else
                                                 <span class="badge {{ $statusClass }}">
                                                     <span class="status-dot {{ $statusDot }}"></span>
                                                     {{ $statusLabel }}
                                                 </span>
-                                                @if ($member->open_shift ?? null)
-                                                    <div class="text-muted fs-11 mt-1">{{ $member->open_shift }}</div>
                                                 @endif
                                             </td>
                                             @if (($member->shift_sessions ?? collect())->isNotEmpty())

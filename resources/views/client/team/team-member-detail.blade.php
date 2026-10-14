@@ -1046,6 +1046,13 @@
                 if (record.total_hours) {
                     totalHours = record.total_hours;
                 }
+                // Multi-shift: "Present ×2" / "×1.5" (extra shifts paid as extra working days),
+                // and each shift's own in / out in the hover text.
+                if (record.day_label) {
+                    title = record.day_label;
+                }
+                const shiftLines = (record.shifts || []).map(s => (s.is_extra ? '+ ' : '') + s.name + ': '
+                    + (s.in ? moment(s.in).format('hh:mm A') : '--:--') + ' – ' + (s.out ? moment(s.out).format('hh:mm A') : 'ongoing')).join('<br>');
 
                 events.push({
                     id: 'attendance_' + dateStr,
@@ -1067,7 +1074,7 @@
                         leave_type: record.leave_type,
                         leave_reason: record.leave_reason,
                         encrypted_user_id: encryptedUserId,
-                        description: `${status}<br>${record.clock_in ? 'In: ' + clockInTime : ''}${record.clock_out ? '<br>Out: ' + clockOutTime : ''}${record.total_hours ? '<br>Hours: ' + totalHours : ''}${taskCount > 0 ? '<br> Tasks: ' + taskCount : ''}`
+                        description: shiftLines ? `${title}<br>${shiftLines}${taskCount > 0 ? '<br> Tasks: ' + taskCount : ''}` : `${status}<br>${record.clock_in ? 'In: ' + clockInTime : ''}${record.clock_out ? '<br>Out: ' + clockOutTime : ''}${record.total_hours ? '<br>Hours: ' + totalHours : ''}${taskCount > 0 ? '<br> Tasks: ' + taskCount : ''}`
                     }
                 });
             });

@@ -1175,7 +1175,7 @@
                                                 @if (!empty($record['shifts']))
                                                     @foreach ($record['shifts'] as $sg)
                                                         <span class="shift-badge d-block mb-1" title="{{ round($sg['worked_minutes'] / 60, 2) }} hrs worked">
-                                                            {{ $sg['is_additional'] ? '+ ' : '' }}{{ $sg['name'] ?? 'Shift' }}
+                                                            {{ $sg['is_additional'] ? '+ ' : '' }}{{ $sg['name'] ?? 'Shift' }}@if (! empty($sg['is_extra'])) <span class="badge bg-light text-primary border" style="font-size: 9px;" title="Paid as overtime / extra working day per company policy">Extra</span>@endif
                                                             {{ \Carbon\Carbon::parse($sg['start'])->format('h:i A') }} - {{ \Carbon\Carbon::parse($sg['end'])->format('h:i A') }}
                                                         </span>
                                                     @endforeach

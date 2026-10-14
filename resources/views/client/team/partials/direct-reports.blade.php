@@ -43,7 +43,7 @@
                                         {{-- 2+ shifts worked: one in/out pair per shift. --}}
                                         <span class="text-muted fs-11">
                                             @foreach ($report->shift_sessions as $session)
-                                                <span class="text-nowrap {{ $loop->first ? '' : 'ms-2' }}">{{ $session->name }}:
+                                                <span class="text-nowrap {{ $loop->first ? '' : 'ms-2' }}">{{ $session->name }}{{ ($session->is_extra ?? false) ? ' (Extra)' : '' }}:
                                                     {{ $session->in ? $session->in->format('h:i A') : '--:--' }} –
                                                     {{ $session->out ? $session->out->format('h:i A') : ($session->in ? 'ongoing' : '--:--') }}</span>
                                             @endforeach

@@ -42,6 +42,12 @@ trait TeamAttendanceStatus
             }
         }
 
+        // Multi-shift day: the normal shift alone decides (extra shifts are paid separately).
+        if ($attendance) {
+            $totalHours = app(\App\Services\Attendance\AttendanceCalculator::class)
+                ->primaryWorkedSeconds($attendance, (int) round(((float) $totalHours) * 3600)) / 3600;
+        }
+
         // Scheduled shift length from the attendance record (0 => the policy's
         // absolute-hours fallback).
         $expectedSeconds = 0;
@@ -213,7 +219,7 @@ trait TeamAttendanceStatus
             ->get()
             ->keyBy('user_id');
 
-        $shiftSessions = $this->shiftSessionsByAttendance($attendanceRecords);
+        $shiftSegments = \App\Models\AttendanceShiftSegment::whereIn('attendance_id', $attendanceRecords->pluck('id'))->get()->groupBy('attendance_id');
 
         // COALESCE(end_date, start_date) so legacy one-row-per-day records
         // (created before leave requests were collapsed to a single row and
@@ -267,8 +273,8 @@ trait TeamAttendanceStatus
             $member->punch_in = $attendance ? $attendance->clock_in : null;
             $member->punch_out = $attendance ? $attendance->clock_out : null;
             $member->total_hours = $attendance ? $attendance->total_hours : null;
-            $member->shift_sessions = $attendance ? $shiftSessions->get($attendance->id, collect()) : collect();
             $member->shifts = $dayShifts->get($user->id, collect());
+            $member->shift_sessions = $this->shiftSessions($member->shifts, $attendance ? $shiftSegments->get($attendance->id) : null);
             $member->open_shift = $member->shift_sessions->first(fn ($s) => $s->in && ! $s->out)?->name;
             $member->status = $status;
 
@@ -279,20 +285,24 @@ trait TeamAttendanceStatus
     }
 
     /**
-     * Multi-shift days: [{name, in, out}] per shift worked (out null while open),
-     * keyed by attendance id — only days with 2+ shifts.
+     * An employee with 2+ shifts that day: one {name, in, out, state} per assigned shift —
+     * its own clock-in / clock-out (out null while open) and state present | checked_in |
+     * not_started. Empty for a one-shift day (the row keeps its single day status).
      */
-    private function shiftSessionsByAttendance($attendanceRecords)
+    private function shiftSessions($shifts, $segments)
     {
-        return \App\Models\AttendanceShiftSegment::with('shift:id,name')
-            ->whereIn('attendance_id', $attendanceRecords->where('shift_count', '>', 1)->pluck('id'))
-            ->orderBy('first_in')
-            ->get()
-            ->groupBy('attendance_id')
-            ->filter(fn ($segments) => $segments->count() > 1)
-            ->map(fn ($segments) => $segments->map(fn ($s) => (object) [
-                'name' => $s->shift->name ?? 'Shift', 'in' => $s->first_in, 'out' => $s->is_open ? null : $s->last_out,
-            ])->values());
+        if ($shifts->count() < 2) {
+            return collect();
+        }
+
+        return $shifts->map(function ($shift) use ($segments) {
+            // Untagged segments belong to the main shift.
+            $seg = collect($segments)->first(fn ($s) => $s->user_shift_id === null ? ! $shift->extra : (int) $s->user_shift_id === $shift->id);
+            $out = $seg && ! $seg->is_open ? $seg->last_out : null;
+
+            return (object) ['name' => $shift->name, 'in' => $seg?->first_in, 'out' => $out, 'is_extra' => (bool) ($seg->is_extra ?? false),
+                'state' => ! $seg ? 'not_started' : ($out ? 'present' : 'checked_in')];
+        })->values();
     }
 
     /**
@@ -301,7 +311,7 @@ trait TeamAttendanceStatus
      */
     private function shiftsByUser($userIds, string $date, int $tenantId)
     {
-        $label = fn ($shift, bool $extra = false) => (object) ['name' => $shift->name, 'color' => $shift->color_code ?: '#4f46e5', 'extra' => $extra,
+        $label = fn ($shift, bool $extra = false, ?int $id = null) => (object) ['id' => $id, 'name' => $shift->name, 'color' => $shift->color_code ?: '#4f46e5', 'extra' => $extra,
             'time' => Carbon::parse($shift->start_time)->format('h:i A') . '–' . Carbon::parse($shift->end_time)->format('h:i A')];
         $resolver = app(\App\Services\Attendance\TenantShiftResolver::class);
         if (! $resolver->isCustomShifts($tenantId)) {
@@ -314,7 +324,7 @@ trait TeamAttendanceStatus
             ->filter(fn ($row) => $row->shift)
             ->sortBy(fn ($row) => [(int) $row->is_additional, $row->shift->start_time])
             ->groupBy('user_id')
-            ->map(fn ($rows) => $rows->map(fn ($row) => $label($row->shift, (bool) $row->is_additional))->values());
+            ->map(fn ($rows) => $rows->map(fn ($row) => $label($row->shift, (bool) $row->is_additional, (int) $row->id))->values());
     }
 
     private function getMonthOptions()
