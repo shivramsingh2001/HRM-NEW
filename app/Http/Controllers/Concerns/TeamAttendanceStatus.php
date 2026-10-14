@@ -231,23 +231,12 @@ trait TeamAttendanceStatus
             ->get()
             ->keyBy('user_id');
 
-        $holiday = Holiday::whereDate('start_date', '<=', $currentDate)->whereDate('start_date', '>=', $currentDate)->first();
+        $holiday = Holiday::where('status', 1)->whereDate('start_date', '<=', $currentDate)->whereDate('start_date', '>=', $currentDate)->first();
         $dayShifts = $this->shiftsByUser($users->pluck('id'), $currentDate, (int) $authUser->tenant_id);
 
-        $weekoffs = UserWeekoffs::where('status', 1)
-            ->whereIn('user_id', $users->pluck('id'))
-            ->where(function ($query) use ($currentDate) {
-                $query->where(function ($q) use ($currentDate) {
-                    $q->where('off_type', 'date_based')
-                        ->whereDate('start_date', '<=', $currentDate)
-                        ->whereDate('end_date', '>=', $currentDate);
-                })->orWhere(function ($q) use ($currentDate) {
-                    $q->where('off_type', 'day_based')
-                        ->where('day_name', Carbon::parse($currentDate)->format('l'));
-                });
-            })
-            ->get()
-            ->keyBy('user_id');
+        // Week-offs that make $currentDate a day off (weekly ones may have no dates — every week).
+        $weekoffs = UserWeekoffs::where('status', 1)->whereIn('user_id', $users->pluck('id'))->get()->groupBy('user_id')
+            ->map(fn ($rows) => \App\Support\WeekOffPredicate::match($rows, Carbon::parse($currentDate)))->filter();
 
         // Process each user to add status and attendance info
         $teamData = collect();
@@ -320,11 +309,15 @@ trait TeamAttendanceStatus
             return collect($userIds)->mapWithKeys(fn ($id) => [$id => $default ? collect([$label($default)]) : collect()]);
         }
 
-        return \App\Models\UserShift::with('shift')->whereIn('user_id', $userIds)->whereDate('date', $date)->get()
-            ->filter(fn ($row) => $row->shift)
-            ->sortBy(fn ($row) => [(int) $row->is_additional, $row->shift->start_time])
+        $rows = \App\Models\UserShift::whereIn('user_id', $userIds)->whereDate('date', $date)->get();
+        $shifts = \App\Models\Shift::whereIn('id', $rows->pluck('shift_id'))->get()->keyBy('id');
+
+        return $rows->map(fn ($row) => (object) ['id' => (int) $row->getAttribute('id'), 'user_id' => $row->getAttribute('user_id'),
+                'extra' => (bool) $row->getAttribute('is_additional'), 'shift' => $shifts->get($row->getAttribute('shift_id'))])
+            ->filter(fn ($row) => $row->shift !== null)
+            ->sortBy(fn ($row) => [(int) $row->extra, $row->shift->getAttribute('start_time')])
             ->groupBy('user_id')
-            ->map(fn ($rows) => $rows->map(fn ($row) => $label($row->shift, (bool) $row->is_additional, (int) $row->id))->values());
+            ->map(fn ($rows) => $rows->map(fn ($row) => $label($row->shift, $row->extra, $row->id))->values());
     }
 
     private function getMonthOptions()

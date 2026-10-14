@@ -54,14 +54,14 @@ class TeamMemberAttendance
             ->whereRaw('COALESCE(end_date, start_date) >= ?', [$startDate])
             ->get();
 
-        $holidays = Holiday::where('start_date', '<=', $endDate)
+        $holidays = Holiday::where('status', 1)
+            ->where('start_date', '<=', $endDate)
             ->where('start_date', '>=', $startDate)
             ->get();
 
+        // All active weekoffs: a weekly one may have no dates (every week).
         $weekoffs = UserWeekoffs::where('user_id', $userId)
             ->where('status', 1)
-            ->where('start_date', '<=', $endDate)
-            ->where('end_date', '>=', $startDate)
             ->get();
 
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
@@ -104,20 +104,7 @@ class TeamMemberAttendance
             }
 
             // Check weekoff
-            $weekoff = null;
-            foreach ($weekoffs as $w) {
-                $weekoffStart = Carbon::parse($w->start_date)->startOfDay();
-                $weekoffEnd = Carbon::parse($w->end_date)->endOfDay();
-                if ($currentDate->between($weekoffStart, $weekoffEnd)) {
-                    if ($w->off_type == 'date_based') {
-                        $weekoff = $w;
-                        break;
-                    } elseif ($w->off_type == 'day_based' && $w->day_name == $date->format('l')) {
-                        $weekoff = $w;
-                        break;
-                    }
-                }
-            }
+            $weekoff = \App\Support\WeekOffPredicate::match($weekoffs, $currentDate);
 
             // Determine status - WITH SHIFT-BASED LOGIC
             $status = 'Absent';
