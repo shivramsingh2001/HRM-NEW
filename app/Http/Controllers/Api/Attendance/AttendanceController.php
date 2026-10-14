@@ -155,7 +155,7 @@ class AttendanceController extends Controller
                 ON a.user_id = u.id AND a.date = d.date
             LEFT JOIN leaves l 
                 ON l.user_id = u.id 
-                AND d.date BETWEEN l.start_date AND l.start_date
+                AND d.date BETWEEN l.start_date AND COALESCE(l.end_date, l.start_date)
                 AND l.status = 'approved'
             LEFT JOIN holidays h
                 ON h.start_date = d.date
@@ -164,12 +164,10 @@ class AttendanceController extends Controller
             LEFT JOIN user_weekoffs wo
                 ON wo.user_id = u.id
                 AND wo.status = 1
-                AND d.date BETWEEN wo.start_date AND wo.end_date
-                AND (
-                    (wo.off_type = 'date_based')
-                    OR
-                    (wo.off_type = 'day_based' AND wo.day_name = DAYNAME(d.date))
-                )
+                -- Weekly offs saved without dates apply every week (as WeekOffPredicate).
+                AND ((wo.off_type = 'date_based' AND d.date BETWEEN wo.start_date AND wo.end_date)
+                    OR (wo.off_type = 'day_based' AND wo.day_name = DAYNAME(d.date)
+                        AND d.date BETWEEN COALESCE(wo.start_date, d.date) AND COALESCE(wo.end_date, d.date)))
             WHERE u.status = 1
             AND u.id = ?
             ORDER BY d.date DESC

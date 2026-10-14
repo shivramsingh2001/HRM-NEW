@@ -253,18 +253,18 @@ class UserController extends Controller
                 $isWeekOff = DB::table('user_weekoffs')
                     ->where('user_id', $member->id)
                     ->where('status', 1)
-                    ->whereDate('start_date', '<=', $currentDate)
-                    ->whereDate('end_date', '>=', $currentDate)
                     ->where(function ($query) use ($dayName, $currentDate) {
                         $query->where(function ($q) use ($currentDate) {
                             // Date based week off
                             $q->where('off_type', 'date_based')
                                 ->whereDate('start_date', '<=', $currentDate)
                                 ->whereDate('end_date', '>=', $currentDate);
-                        })->orWhere(function ($q) use ($dayName) {
-                            // Day based week off
+                        })->orWhere(function ($q) use ($dayName, $currentDate) {
+                            // Day based week off — no dates = every week (fixed company shift)
                             $q->where('off_type', 'day_based')
-                                ->where('day_name', $dayName);
+                                ->where('day_name', $dayName)
+                                ->where(fn ($d) => $d->whereNull('start_date')->orWhereDate('start_date', '<=', $currentDate))
+                                ->where(fn ($d) => $d->whereNull('end_date')->orWhereDate('end_date', '>=', $currentDate));
                         });
                     })
                     ->exists();
@@ -534,14 +534,10 @@ class UserController extends Controller
             $userWeekoffs = DB::table('user_weekoffs')
                 ->where('user_id', $id)
                 ->where('status', 1)
-                ->where(function ($query) use ($currentMonthStart, $currentMonthEnd) {
-                    $query->whereBetween('start_date', [$currentMonthStart, $currentMonthEnd])
-                        ->orWhereBetween('end_date', [$currentMonthStart, $currentMonthEnd])
-                        ->orWhere(function ($q) use ($currentMonthStart, $currentMonthEnd) {
-                            $q->where('start_date', '<=', $currentMonthStart)
-                                ->where('end_date', '>=', $currentMonthEnd);
-                        });
-                })
+                // Any row overlapping the month; a NULL start/end (weekly offs of a
+                // fixed company shift) means open-ended.
+                ->where(fn ($q) => $q->whereNull('start_date')->orWhere('start_date', '<=', $currentMonthEnd))
+                ->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $currentMonthStart))
                 ->get();
 
             // Generate date range
@@ -586,22 +582,7 @@ class UserController extends Controller
                 $taskCountValue = $taskCount ? (int)$taskCount->count : 0;
 
                 // CHANGED: Check weekoff from user_weekoffs table instead of hardcoded Saturday/Sunday
-                $isWeekoff = false;
-                foreach ($userWeekoffs as $weekoff) {
-                    if ($weekoff->off_type == 'date_based') {
-                        // Date-based weekoff
-                        if ($dateStr >= $weekoff->start_date && $dateStr <= $weekoff->end_date) {
-                            $isWeekoff = true;
-                            break;
-                        }
-                    } else if ($weekoff->off_type == 'day_based') {
-                        // Day-based weekoff (recurring)
-                        if ($weekoff->day_name == $dayName) {
-                            $isWeekoff = true;
-                            break;
-                        }
-                    }
-                }
+                $isWeekoff = \App\Support\WeekOffPredicate::isWeekOff($userWeekoffs, $currentDate);
 
                 $attendance = $attendances[$dateStr] ?? null;
                 $isHoliday = isset($holidays[$dateStr]);
