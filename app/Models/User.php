@@ -192,6 +192,30 @@ class User extends Authenticatable implements JWTSubject
             $q->where('reporting_head_id', $headId);
         });
     }
+
+    /**
+     * Does $userId report to $headId directly OR through other managers
+     * (Pragya → Sakshi → head)? Walks up user_reporting_heads level by level;
+     * every reporting head counts, loops are ignored, at most $maxDepth levels.
+     */
+    public static function reportsUpTo(int $userId, int $headId, int $maxDepth = 10): bool
+    {
+        $level = [$userId];
+        $seen = [$userId => true];
+        for ($depth = 0; $level !== [] && $depth < $maxDepth; $depth++) {
+            $heads = \Illuminate\Support\Facades\DB::table('user_reporting_heads')
+                ->whereIn('user_id', $level)->pluck('reporting_head_id')->map(fn ($h) => (int) $h)->unique()->all();
+            if (in_array($headId, $heads, true)) {
+                return true;
+            }
+            $level = array_values(array_filter($heads, fn ($h) => ! isset($seen[$h])));
+            foreach ($level as $h) {
+                $seen[$h] = true;
+            }
+        }
+
+        return false;
+    }
     public function UserPayrolls()
     {
         return $this->hasMany(UserPayroll::class, 'user_id');
