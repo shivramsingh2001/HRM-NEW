@@ -357,9 +357,9 @@ class UserController extends Controller
         try {
             $authUser = Auth::user();
 
-            // Authorization check (was "any manager", inconsistent with
-            // team()'s team-only listing — now consistently team-scoped).
-            if (!$this->scopeCoversOwner($authUser, 'team', 'view', (int) $id)) {
+            // Team-scoped: a manager may open anyone below them in the reporting
+            // chain — direct reports and their reports (clicked from a teammate's profile).
+            if (!$this->scopeCoversOwner($authUser, 'team', 'view', (int) $id) && !(app(RbacService::class)->scopeFor($authUser, 'team', 'view') === 'team' && User::reportsUpTo((int) $id, (int) $authUser->id))) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access. Only managers and Hr can view this page.'

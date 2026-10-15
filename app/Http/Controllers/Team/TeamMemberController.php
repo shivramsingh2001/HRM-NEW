@@ -460,7 +460,10 @@ class TeamMemberController extends Controller
      */
     private function canViewUserProfile($authUser, $targetUser)
     {
-        return $this->scopeCoversOwner($authUser, 'team', 'view', $targetUser->id);
+        // A team-scoped manager may also open people below them in the chain
+        // (head → Sakshi → Pragya), as on the mobile team profile.
+        return $this->scopeCoversOwner($authUser, 'team', 'view', $targetUser->id)
+            || (app(\App\Services\RbacService::class)->scopeFor($authUser, 'team', 'view') === 'team' && User::reportsUpTo((int) $targetUser->id, (int) $authUser->id));
     }
 
     /**
