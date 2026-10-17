@@ -38,6 +38,9 @@ class AttendanceEntryService
         'attendance_type', 'status', 'remarks',
     ];
 
+    /** user|tenant|month => args, while withDeferredMonthRefresh() runs; null = refresh at once. */
+    private ?array $deferredMonths = null;
+
     public function __construct(
         private AttendanceCalculator $calc,
         private LatePolicyService $latePolicy,
@@ -45,6 +48,32 @@ class AttendanceEntryService
         private LeaveService $leaveService,
         private AttendanceDayResolver $resolver,
     ) {
+    }
+
+    /**
+     * Run $write (many record() calls) and refresh each touched user-month once
+     * at the end instead of after every day — re-grading 30 days of one month
+     * then costs one late-policy pass, not 30.
+     */
+    public function withDeferredMonthRefresh(callable $write)
+    {
+        $this->deferredMonths = [];
+        try {
+            return $write();
+        } finally {
+            foreach ($this->takeDeferredMonths() as [$userId, $tenantId, $ym]) {
+                $this->refreshMonth($userId, $tenantId, $ym);
+            }
+        }
+    }
+
+    /** The months collected while deferring (filled by refreshMonth()); stops deferring. */
+    private function takeDeferredMonths(): array
+    {
+        $months = $this->deferredMonths ?? [];
+        $this->deferredMonths = null;
+
+        return $months;
     }
 
     /**
@@ -856,6 +885,12 @@ class AttendanceEntryService
      */
     private function refreshMonth(int $userId, int $tenantId, string $ym): void
     {
+        if ($this->deferredMonths !== null) {
+            $this->deferredMonths["$userId|$tenantId|$ym"] = [$userId, $tenantId, $ym];
+
+            return;
+        }
+
         if (config('attendance.async_recompute')) {
             DB::table('attendance_summaries')
                 ->where('tenant_id', $tenantId)

@@ -32,6 +32,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(FeatureService::class);
         // Leave-year anchor per tenant — read once per request / command run.
         $this->app->scoped(\App\Services\LeaveYearService::class);
+        // Collects the past days whose shift changed during a request, re-graded once after the response.
+        $this->app->scoped(\App\Services\Attendance\ShiftChangeRegrader::class);
     }
 
     /**

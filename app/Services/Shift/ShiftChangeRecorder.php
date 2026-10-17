@@ -110,6 +110,10 @@ class ShiftChangeRecorder
         foreach (array_chunk($rows, 500) as $chunk) {
             DB::table('shift_change_logs')->insert($chunk);
         }
+        // Days already worked are re-graded with their new shift (after the response).
+        foreach ($rows as $row) {
+            app(\App\Services\Attendance\ShiftChangeRegrader::class)->queue($tenantId, $row['user_id'], $row['date']);
+        }
         $this->lastRows = array_merge($this->lastRows, $rows);
 
         return count($rows);
