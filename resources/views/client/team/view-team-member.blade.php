@@ -236,6 +236,12 @@
             border-color: #fde68a;
         }
 
+        .badge-not_started {
+            background: #f1f5f9 !important;
+            color: #475569;
+            border-color: #e2e8f0;
+        }
+
         .badge-halfday {
             background: #fef3c7 !important;
             color: #92400e;
@@ -268,6 +274,10 @@
 
         .status-dot.absent {
             background: #ef4444;
+        }
+
+        .status-dot.not_started {
+            background: #94a3b8;
         }
 
         .status-dot.on_leave {
@@ -1016,19 +1026,24 @@
                                                     <span class="chip-unassigned">&mdash;</span>
                                                 @endforelse
                                             </td>
+                                            @php
+                                                // Per-shift lines only once a shift was punched; otherwise the day badge (Absent / Leave / Holiday ...).
+                                                $multiShiftWorked = ($member->shift_sessions ?? collect())->contains(fn ($s) => $s->in);
+                                            @endphp
                                             <td>
-                                                @if (($member->shift_sessions ?? collect())->isNotEmpty())
+                                                @if ($multiShiftWorked)
                                                     {{-- 2+ shifts: each shift's own status, in line with its clock in / out. --}}
                                                     @foreach ($member->shift_sessions as $session)
                                                         @php
                                                             [$sessionClass, $sessionDot, $sessionLabel] = match ($session->state) {
                                                                 'present' => ['badge-present', 'present', 'Present'],
                                                                 'checked_in' => ['badge-checked_in_only', 'checked_in_only', 'Checked In'],
-                                                                default => ['badge-secondary', 'absent', 'Not started'],
+                                                                default => $currentDate < now()->toDateString()
+                                                                    ? ['badge-absent', 'absent', 'Absent']
+                                                                    : ['badge-not_started', 'not_started', 'Not started'],
                                                             };
                                                         @endphp
-                                                        <div class="text-nowrap">
-                                                            <span class="text-muted fs-11">{{ $session->name }}:</span>
+                                                        <div class="text-nowrap {{ $loop->first ? 'mb-1' : 'mt-2' }}">
                                                             @if ($session->is_extra ?? false)
                                                                 <span class="badge bg-light text-primary border fs-10" title="Paid as overtime / extra working day per company policy">Extra</span>
                                                             @endif
@@ -1042,15 +1057,14 @@
                                                 </span>
                                                 @endif
                                             </td>
-                                            @if (($member->shift_sessions ?? collect())->isNotEmpty())
+                                            @if ($multiShiftWorked)
                                                 {{-- 2+ shifts worked: one line per shift. --}}
                                                 @foreach (['in', 'out'] as $side)
                                                     <td>
                                                         @foreach ($member->shift_sessions as $session)
-                                                            <div class="text-nowrap">
-                                                                <span class="text-muted fs-11">{{ $session->name }}:</span>
+                                                            <div class="text-nowrap {{ $loop->first ? 'mb-1' : 'mt-2' }}">
                                                                 @if ($session->{$side})
-                                                                    <span style="font-weight: 500; color: #0f172a;">{{ $session->{$side}->format('h:i A') }}</span>
+                                                                    <span style="font-weight: 500; color: #0f172a;">{{ $session->{$side}->format('d M Y, h:i A') }}</span>
                                                                 @else
                                                                     <span class="text-muted">{{ $side === 'out' && $session->in ? 'ongoing' : '—' }}</span>
                                                                 @endif
@@ -1062,7 +1076,7 @@
                                             <td>
                                                 @if ($member->punch_in)
                                                     <span style="font-weight: 500; color: #0f172a;">
-                                                        {{ \Carbon\Carbon::parse($member->punch_in)->format('h:i A') }}
+                                                        {{ \Carbon\Carbon::parse($member->punch_in)->format('d M Y, h:i A') }}
                                                     </span>
                                                 @else
                                                     <span class="text-muted">—</span>
@@ -1071,7 +1085,7 @@
                                             <td>
                                                 @if ($member->punch_out)
                                                     <span style="font-weight: 500; color: #0f172a;">
-                                                        {{ \Carbon\Carbon::parse($member->punch_out)->format('h:i A') }}
+                                                        {{ \Carbon\Carbon::parse($member->punch_out)->format('d M Y, h:i A') }}
                                                     </span>
                                                 @else
                                                     <span class="text-muted">—</span>

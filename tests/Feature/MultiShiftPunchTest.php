@@ -313,7 +313,10 @@ class MultiShiftPunchTest extends TestCase
         $this->assertSame(["present", "checked_in"], $member->shift_sessions->pluck("state")->all());
         $html = $this->get(route("team.index", ["date" => $d, "search" => $name]))->assertOk()->getContent();
         $this->assertStringContainsString('>Extra</span>', $html);   // the Night (extra) shift's tag
-        $this->assertMatchesRegularExpression("/General:<\/span>\s*<span class=\"badge badge-present\">.*Present/s", $html);
+        // Status / punch columns carry no shift-name label (the Shift column has it); punches show the date.
+        $this->assertStringNotContainsString('General:</span>', $html);
+        $this->assertMatchesRegularExpression("/<span class=\"badge badge-present\">.*Present/s", $html);
+        $this->assertStringContainsString(\Carbon\Carbon::parse("$d 09:30")->format("d M Y, h:i A"), $html);
         $this->assertSame([[$this->tag . " General", "09:30 AM–05:00 PM", false], [$this->tag . " Night", "05:15 PM–02:15 AM", true]],
             $member->shifts->map(fn ($s) => [$s->name, $s->time, $s->extra])->all());
 
