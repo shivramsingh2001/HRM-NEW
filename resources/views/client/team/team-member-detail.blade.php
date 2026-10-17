@@ -899,6 +899,12 @@
 
             window.handleCalendarMonthChange = function(selectedMonth) {
                 if (selectedMonth === window.currentCalendarMonth) {
+                    // Same month, but a Week/Month view can show days of the next or
+                    // previous month too — load those events if they are missing.
+                    const vis = window.calendarVisibleRange, loaded = window.calendarLoadedRange;
+                    if (vis && loaded && (vis.start < loaded.start || vis.end > loaded.end)) {
+                        updateAttendanceCalendar(selectedMonth, '{{ encrypt($userInfo->id) }}');
+                    }
                     return;
                 }
 
@@ -1080,7 +1086,16 @@
             });
 
             const selectedMonth = '{{ $selectedMonth }}';
-            const initialDate = selectedMonth ? selectedMonth + '-01' : moment().format('YYYY-MM-DD');
+            // Re-opening the tab rebuilds the calendar: stay on the month being viewed;
+            // the events above are only the page's own month, so mark just that as loaded.
+            const viewMonth = window.currentCalendarMonth || selectedMonth;
+            const initialDate = viewMonth ? viewMonth + '-01' : moment().format('YYYY-MM-DD');
+            if (selectedMonth) {
+                window.calendarLoadedRange = {
+                    start: moment(selectedMonth + '-01').format('YYYY-MM-DD'),
+                    end: moment(selectedMonth + '-01').endOf('month').format('YYYY-MM-DD'),
+                };
+            }
 
             calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
@@ -1093,7 +1108,14 @@
                     // Native prev/next/today navigation replaces the old
                     // Apply/Reset month filter — fetch the newly-visible
                     // month's data as soon as the calendar moves.
-                    const visibleMonth = moment(info.view.currentStart).format('YYYY-MM');
+                    // Month = the date being looked at, not the first visible day: in
+                    // Week view that day is often the previous month (week of 27 Sep
+                    // for 1 Oct), which used to walk the calendar back month by month.
+                    const visibleMonth = moment(info.view.calendar.getDate()).format('YYYY-MM');
+                    window.calendarVisibleRange = {
+                        start: moment(info.start).format('YYYY-MM-DD'),
+                        end: moment(info.end).subtract(1, 'day').format('YYYY-MM-DD'),
+                    };
                     $('#currentMonthDisplay').text(moment(visibleMonth + '-01').format('MMMM YYYY'));
                     if (window.handleCalendarMonthChange) {
                         window.handleCalendarMonthChange(visibleMonth);
@@ -1171,6 +1193,8 @@
                     $('.cal-nav-btn').prop('disabled', true);
                 },
                 success: function(response) {
+                    // The user already moved on to another month: drop this answer.
+                    if (selectedMonth !== window.currentCalendarMonth) return;
                     if (response.status) {
                         $('#stat-present').text(response.summary.present);
                         $('#stat-absent').text(response.summary.absent);
@@ -1238,15 +1262,23 @@
         }
 
         function updateAttendanceCalendar(selectedMonth, encryptedId) {
-    const startDate = moment(selectedMonth + '-01').format('YYYY-MM-DD');
-    const endDate = moment(selectedMonth + '-01').endOf('month').format('YYYY-MM-DD');
+    // The whole month plus any other-month days the current view shows.
+    const vis = window.calendarVisibleRange || {};
+    let startDate = moment(selectedMonth + '-01').format('YYYY-MM-DD');
+    let endDate = moment(selectedMonth + '-01').endOf('month').format('YYYY-MM-DD');
+    if (vis.start && vis.start < startDate) startDate = vis.start;
+    if (vis.end && vis.end > endDate) endDate = vis.end;
 
     $.ajax({
         url: '/team/user/' + encryptedId + '/attendance/calendar',
         type: 'GET',
         data: { start_date: startDate, end_date: endDate, _token: '{{ csrf_token() }}' },
         success: function(response) {
+            // A late answer for a month the user already left must not move the
+            // calendar (that ping-ponged Month view between June and July).
+            if (selectedMonth !== window.currentCalendarMonth) return;
             if (response.status && calendar) {
+                window.calendarLoadedRange = { start: startDate, end: endDate };
                 // Clear all existing events
                 calendar.removeAllEvents();
                 
@@ -1281,12 +1313,8 @@
                         });
                     });
                 }
-                
-                // Navigate to the selected month
-                calendar.gotoDate(startDate);
-                
-                // Force calendar to re-render
-                calendar.render();
+                // No gotoDate()/render() here: the calendar is already on the date the
+                // user navigated to, and jumping to the 1st re-triggered datesSet (loop).
             } else if (!response.status) {
                 console.error('Failed to fetch calendar data:', response.message);
                 showToast(response.message || 'Failed to load calendar data', 'error');
