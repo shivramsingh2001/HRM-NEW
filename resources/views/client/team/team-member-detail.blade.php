@@ -944,6 +944,49 @@
             return String(status || '').toLowerCase() === 'absent' ? '#172554' : '#0D6EFD';
         }
 
+        // Week / Day view: one timed block per worked span (clock-in → clock-out,
+        // or each shift's own in → out on a multi-shift day). Month / List views
+        // keep only the one-line day status.
+        window.workEvents = [];
+
+        function buildWorkEvents(date, clockIn, clockOut, shifts, encryptedUserId) {
+            const spans = (shifts && shifts.length)
+                ? shifts.map(s => ({ in: s.in, out: s.out, name: (s.is_extra ? '+ ' : '') + s.name }))
+                : (clockIn ? [{ in: clockIn, out: clockOut, name: '' }] : []);
+            return spans.filter(s => s.in).map(function(s, i) {
+                const start = moment(s.in);
+                let end = s.out ? moment(s.out) : null, open = !end;
+                if (open) {
+                    // Still working (today) → up to now; a past day with no clock-out → a short marker.
+                    end = start.isSame(moment(), 'day') ? moment() : start.clone().add(30, 'minutes');
+                }
+                if (!end.isAfter(start)) end = start.clone().add(15, 'minutes');
+                const hrs = s.out ? ' · ' + (moment(s.out).diff(start, 'minutes') / 60).toFixed(1) + 'h' : '';
+                const label = (s.name ? s.name + ': ' : '') + start.format('hh:mm A') + ' – '
+                    + (s.out ? moment(s.out).format('hh:mm A') : (start.isSame(moment(), 'day') ? 'ongoing' : 'no clock-out')) + hrs;
+                return {
+                    id: 'work_' + date + '_' + i,
+                    title: label,
+                    start: start.format('YYYY-MM-DDTHH:mm:ss'),
+                    end: end.format('YYYY-MM-DDTHH:mm:ss'),
+                    allDay: false,
+                    backgroundColor: open ? '#60a5fa' : '#0D6EFD',
+                    borderColor: '#0B5ED7',
+                    textColor: '#ffffff',
+                    extendedProps: { kind: 'work', date: date, encrypted_user_id: encryptedUserId }
+                };
+            });
+        }
+
+        function syncWorkEvents(viewType) {
+            if (!calendar) return;
+            const src = calendar.getEventSourceById('work');
+            if (src) src.remove();
+            if (String(viewType || calendar.view.type).indexOf('timeGrid') === 0) {
+                calendar.addEventSource({ id: 'work', events: window.workEvents });
+            }
+        }
+
         function calendarPrev() { if (calendar) calendar.prev(); }
         function calendarNext() { if (calendar) calendar.next(); }
         function calendarToday() { if (calendar) calendar.today(); }
@@ -1085,6 +1128,12 @@
                 });
             });
 
+            window.workEvents = [];
+            attendanceData.forEach(function(record) {
+                const d = record.formatted_date || record.date;
+                if (d) window.workEvents.push(...buildWorkEvents(d, record.clock_in, record.clock_out, record.shifts, encryptedUserId));
+            });
+
             const selectedMonth = '{{ $selectedMonth }}';
             // Re-opening the tab rebuilds the calendar: stay on the month being viewed;
             // the events above are only the page's own month, so mark just that as loaded.
@@ -1117,6 +1166,7 @@
                         end: moment(info.end).subtract(1, 'day').format('YYYY-MM-DD'),
                     };
                     $('#currentMonthDisplay').text(moment(visibleMonth + '-01').format('MMMM YYYY'));
+                    if (calendar) syncWorkEvents(info.view.type);
                     if (window.handleCalendarMonthChange) {
                         window.handleCalendarMonthChange(visibleMonth);
                     }
@@ -1129,6 +1179,9 @@
                                           "&user_id=" + encodeURIComponent(encryptedUserId);
                 },
                 eventContent: function(arg) {
+                    if (arg.event.extendedProps.kind === 'work') {
+                        return { html: `<div style="padding: 2px 4px; font-size: 11px; line-height: 1.3; color: #ffffff; white-space: normal;">${arg.event.title}</div>` };
+                    }
                     let taskCount = arg.event.extendedProps.task_count || 0;
                     let taskBadge = '';
 
@@ -1155,6 +1208,10 @@
                 dayMaxEvents: 3,
                 height: 580,
                 contentHeight: 'auto',
+                // Week / Day: an hour grid so each clock-in → clock-out block shows its real length.
+                slotDuration: '01:00:00',
+                scrollTime: '07:00:00',
+                nowIndicator: true,
                 dayCellContent: function(arg) {
                     return { html: '<div class="fc-daygrid-day-number">' + arg.dayNumberText + '</div>' };
                 }
@@ -1312,7 +1369,9 @@
                             }
                         });
                     });
+                    window.workEvents = response.events.flatMap(e => buildWorkEvents(e.start, e.clock_in_at, e.clock_out_at, e.shifts, encryptedId));
                 }
+                syncWorkEvents();
                 // No gotoDate()/render() here: the calendar is already on the date the
                 // user navigated to, and jumping to the 1st re-triggered datesSet (loop).
             } else if (!response.status) {

@@ -337,8 +337,7 @@ class TeamMemberController extends Controller
                         break;
                 }
 
-                $clockInTime = '--:--';
-                $clockOutTime = '--:--';
+                $clockInTime = $clockOutTime = '--:--';
                 $totalHours = '--';
 
                 if ($record->clock_in) {
@@ -364,6 +363,7 @@ class TeamMemberController extends Controller
                     'total_hours' => $totalHours,
                     'task_count' => $taskCount,
                     'holiday_name' => $record->holiday_name ?? null,
+                    'clock_in_at' => $record->clock_in, 'clock_out_at' => $record->clock_out, 'shifts' => $record->shifts ?? [], // Week/Day view blocks
                 ];
             }
 
