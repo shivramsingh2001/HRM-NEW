@@ -75,7 +75,7 @@ class AttendanceController extends Controller
                 a.total_hours,
                 a.worked_hours,
                 a.scheduled_shift_start,
-                a.scheduled_shift_end,
+                a.scheduled_shift_end, a.effective_status AS _eff, a.attendance_status AS _att, a.attendance_type AS _type, a.marked_by AS _marked,
                 l.leave_type,
                 l.reason AS leave_reason,
                 l.start_session AS leave_session,
@@ -482,6 +482,14 @@ class AttendanceController extends Controller
         $days = app(\App\Services\Attendance\MultiShiftDay::class)->forAttendances($tenantId, array_column($rows, 'attendance_id'));
         foreach ($rows as $row) {
             $day = $days[$row->attendance_id ?? 0] ?? null;
+            // A clocked-out day takes its policy-graded status (present ratio, late / early allowances); the
+            // SQL's hours rule stays only for rows not graded yet. The helper columns never reach the response.
+            if (property_exists($row, '_eff')) {   // history rows only (getAttendance() shares this method)
+                if ($row->clock_in && $row->clock_out && $row->is_future_date == 0) {
+                    $row->day_status = \App\Support\AttendanceDayStatus::label($row->_eff, $row->_att, $row->_type, $row->_marked) ?? $row->day_status;
+                }
+                unset($row->_eff, $row->_att, $row->_type, $row->_marked);
+            }
             if ($day && $day['normal_closed'] && $row->day_status === 'Checked In Only') {
                 $row->day_status = 'Present';
             }
