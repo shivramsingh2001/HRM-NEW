@@ -702,11 +702,11 @@ class LoanController extends Controller
         try {
             $loan = Loan::findOrFail($id);
 
+            if (\App\Support\SelfApproval::blocks(auth()->user(), (int) $loan->user_id)) {
+                return response()->json(['success' => false, 'message' => \App\Support\SelfApproval::MESSAGE], 403);
+            }
             if (!$loan->canBeApproved()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Loan cannot be approved. Current status: ' . $loan->status
-                ], 400);
+                return response()->json(['success' => false, 'message' => 'Loan cannot be approved. Current status: ' . $loan->status], 400);
             }
 
             DB::beginTransaction();

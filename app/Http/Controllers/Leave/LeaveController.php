@@ -638,7 +638,7 @@ class LeaveController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'You are not authorized to update this leave request. Only the reporting head (or an admin/HR user) can process it.'
+                    'message' => \App\Support\SelfApproval::blocks($authUser, (int) $leave->getAttribute('user_id')) ? \App\Support\SelfApproval::MESSAGE : 'You are not authorized to update this leave request. Only the reporting head (or an admin/HR user) can process it.'
                 ], 403);
             }
 

@@ -69,6 +69,11 @@ trait AuthorizesByScope
      */
     protected function scopeCoversOwner(User $user, string $module, string $action, int $ownerUserId): bool
     {
+        // Approving: your own request is never in scope (App\Support\SelfApproval).
+        if ($action === 'approve' && \App\Support\SelfApproval::blocks($user, $ownerUserId)) {
+            return false;
+        }
+
         $rbac = app(RbacService::class);
         $scope = $rbac->scopeFor($user, $module, $action);
 

@@ -571,24 +571,21 @@ class OvertimeController extends Controller
                 ->first();
 
             if (!$overtimeRequest) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Request not found'
-                ], 200);
+                return response()->json(['success' => false, 'message' => 'Request not found'], 200);
             }
-
+            $ownerId = (int) $overtimeRequest->user_id; // own request never; a manager only for their own team (as the web page)
+            if (! $this->scopeCoversOwner(auth()->user(), 'overtime', 'approve', $ownerId)) {
+                return response()->json(['success' => false, 'message' => \App\Support\SelfApproval::blocks(auth()->user(), $ownerId) ? \App\Support\SelfApproval::MESSAGE : 'You are not authorized to approve this request.'], 403);
+            }
             if ($overtimeRequest->status != 'pending') {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Request is already {$overtimeRequest->status}"
-                ], 200);
+                return response()->json(['success' => false, 'message' => "Request is already {$overtimeRequest->status}"], 200);
             }
 
             $approvedHours = $request->approved_hours ?? $overtimeRequest->overtime_hours;
 
             // Company Policies → Overtime limits (min / per day / per month) + Employee 360 overrides.
             if ($refusal = app(\App\Services\Attendance\OvertimePolicyService::class)->refusal(
-                (int) $tenantId, (int) $overtimeRequest->user_id, (string) \Carbon\Carbon::parse($overtimeRequest->date)->toDateString(),
+                (int) $tenantId, $ownerId, (string) \Carbon\Carbon::parse($overtimeRequest->date)->toDateString(),
                 (float) $approvedHours, (int) $overtimeRequest->id, false)) {
                 return response()->json(['success' => false, 'message' => $refusal], 200);
             }

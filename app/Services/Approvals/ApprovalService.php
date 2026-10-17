@@ -116,6 +116,11 @@ class ApprovalService
         if ($request->status !== 'pending') {
             throw new RuntimeException("Request is already {$request->status}.");
         }
+        $subject = $this->subjectOf($request);
+        $ownerId = $subject->user_id ?? ($subject instanceof \App\Models\OffboardingRequest ? $subject->employee_id : null);
+        if ($action === 'approved' && \App\Support\SelfApproval::blocks($actor, $ownerId !== null ? (int) $ownerId : null)) {
+            throw new RuntimeException(\App\Support\SelfApproval::MESSAGE);
+        }
         if (! $this->currentApprovers($request)->contains($actor->id)) {
             throw new RuntimeException('You are not an approver for the current level.');
         }

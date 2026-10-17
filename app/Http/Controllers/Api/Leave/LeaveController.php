@@ -362,7 +362,7 @@ class LeaveController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'You are not authorized to update this leave.'
+                    'message' => \App\Support\SelfApproval::blocks($authUser, (int) $leave->getAttribute('user_id')) ? \App\Support\SelfApproval::MESSAGE : 'You are not authorized to update this leave.'
                 ], 403);
             }
 

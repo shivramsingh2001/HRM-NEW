@@ -41,6 +41,10 @@ class OvertimeApprovalService
             ->whereIn('id', $requestIds)
             ->where('status', 'pending');
 
+        if (\App\Support\SelfApproval::blocks($actor, (int) $actor->id)) {
+            $query->where('user_id', '!=', $actor->id); // never your own (App\Support\SelfApproval)
+        }
+
         // Managers may only bulk-approve their own reportees (any reporting head).
         if ($this->rbac->scopeFor($actor, 'overtime', 'approve') === 'team') {
             $query->whereIn('user_id', function ($q) use ($actor, $tenantId) {
