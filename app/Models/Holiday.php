@@ -67,4 +67,22 @@ class Holiday extends Model
             set: fn ($value) => $value ? Carbon::parse($value)->format('Y-m-d') : null,
         );
     }
+
+    /**
+     * JSON (GET /api/holiday, the AI holiday API, …) gets the stored 'Y-m-d'
+     * text, as the mobile app has always received it. Without this the Carbon
+     * from the accessors above was serialized in UTC — a 21 Oct holiday came out
+     * as "2026-10-20T18:30:00.000000Z" and the app showed it on 20 Oct.
+     */
+    public function attributesToArray()
+    {
+        $array = parent::attributesToArray();
+        foreach (['start_date', 'end_date'] as $key) {
+            if (array_key_exists($key, $array)) {
+                $array[$key] = $this->getAttributes()[$key] ?? null;
+            }
+        }
+
+        return $array;
+    }
 }

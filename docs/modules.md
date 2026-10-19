@@ -336,6 +336,7 @@ Functional/business-logic reference for the Laravel HRMS app at `D:\HRMNEW\hrm (
 `App\Http\Controllers\Holiday\HolidayController` (web) / `Api\Holiday\HolidayController` (mobile, read-only list). Simple CRUD + a `PATCH .../status` toggle; no approval workflow.
 
 - **Subscription feature gating (added 2026-09-22)**: `holiday.*` routes and its sidebar entry require `feature:holiday`.
+- **Dates in JSON (fixed 2026-10-19)**: `Holiday::attributesToArray()` returns the stored `start_date`/`end_date` text ("2026-10-21") — `GET /api/holiday` and the AI holiday API had been sending the accessors' Carbon serialized in UTC ("2026-10-20T18:30:00.000000Z"), so the app showed every holiday a day early. Code still reads `->start_date` as Carbon. Test `HolidayApiDateTest`.
 
 ## Payroll
 
