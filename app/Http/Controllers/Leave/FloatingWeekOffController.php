@@ -20,9 +20,7 @@ class FloatingWeekOffController extends Controller
 {
     use AuthorizesByScope;
 
-    public function __construct(private FloatingWeekOffRequestService $planner)
-    {
-    }
+    public function __construct(private FloatingWeekOffRequestService $planner) {}
 
     public function index(Request $request)
     {

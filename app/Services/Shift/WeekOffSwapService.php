@@ -36,8 +36,7 @@ class WeekOffSwapService
     public function __construct(
         private ShiftMaterializer $materializer,
         private ShiftChangeRecorder $recorder,
-    ) {
-    }
+    ) {}
 
     /**
      * Employees whose week-off falls on $workedDate, each with whether they
@@ -113,7 +112,7 @@ class WeekOffSwapService
                         $off = UserWeekoffs::withoutGlobalScopes()->create([
                             'tenant_id' => $tenantId, 'user_id' => $userId, 'off_type' => 'date_based',
                             'start_date' => $day, 'end_date' => $day, 'status' => 1, 'created_by' => $actorId,
-                            'description' => 'Week-off swap: worked ' . Carbon::parse($workedDate)->format('d M Y'),
+                            'description' => 'Week-off swap: worked '.Carbon::parse($workedDate)->format('d M Y'),
                         ]);
                         WeekoffSwapEmployee::withoutGlobalScopes()->create([
                             'tenant_id' => $tenantId, 'weekoff_swap_id' => $swap->id, 'user_id' => $userId,
@@ -192,17 +191,17 @@ class WeekOffSwapService
             return 'The day off must differ from the worked day';
         }
         if (WeekOffPredicate::isWeekOff($weekoffs, Carbon::parse($replacementDate))) {
-            return 'Already a week-off on ' . Carbon::parse($replacementDate)->format('d M');
+            return 'Already a week-off on '.Carbon::parse($replacementDate)->format('d M');
         }
         $holiday = DB::table('holidays')->where('tenant_id', $tenantId)->where('status', 1)
             ->where('start_date', '<=', $replacementDate)->whereRaw('COALESCE(NULLIF(end_date, \'\'), start_date) >= ?', [$replacementDate])->exists();
         if ($holiday) {
-            return 'A holiday on ' . Carbon::parse($replacementDate)->format('d M');
+            return 'A holiday on '.Carbon::parse($replacementDate)->format('d M');
         }
         $onLeave = DB::table('leaves')->where('tenant_id', $tenantId)->where('user_id', $userId)->where('status', 'approved')
             ->where('start_date', '<=', $replacementDate)->whereRaw('COALESCE(end_date, start_date) >= ?', [$replacementDate])->exists();
         if ($onLeave) {
-            return 'On approved leave on ' . Carbon::parse($replacementDate)->format('d M');
+            return 'On approved leave on '.Carbon::parse($replacementDate)->format('d M');
         }
         $already = DB::table('weekoff_swap_employees')->where('tenant_id', $tenantId)->where('user_id', $userId)
             ->where('worked_date', $workedDate)->where('status', 'active')->exists();
@@ -210,7 +209,7 @@ class WeekOffSwapService
             return 'Already swapped for this worked day';
         }
         if (app(PeriodLockService::class)->isLocked($tenantId, Carbon::parse($replacementDate)->format('Y-m'))) {
-            return 'Payroll for ' . Carbon::parse($replacementDate)->format('M Y') . ' is locked';
+            return 'Payroll for '.Carbon::parse($replacementDate)->format('M Y').' is locked';
         }
 
         return null;

@@ -26,10 +26,15 @@ use Tests\TestCase;
 class FloatingWeekOffPlanTest extends TestCase
 {
     private User $admin;
+
     private User $emp;
+
     private int $tenantId;
+
     private string $tag;
+
     private int $originalCustom;
+
     /** @var string[] four non-holiday weekdays of next month, two in the same week */
     private array $days = [];
 
@@ -37,16 +42,16 @@ class FloatingWeekOffPlanTest extends TestCase
     {
         parent::setUp();
         $this->withoutMiddleware([EnsureFeatureEnabled::class]);
-        $this->tag = 'PHPUnit FWP ' . uniqid();
+        $this->tag = 'PHPUnit FWP '.uniqid();
         $this->admin = User::withoutGlobalScopes()->where('role', 'admin')->where('status', 1)->whereNotNull('tenant_id')->orderBy('id')->firstOrFail();
         $this->tenantId = (int) $this->admin->tenant_id;
         $this->originalCustom = (int) DB::table('tenants')->where('id', $this->tenantId)->value('custom_shifts_enabled');
         DB::table('tenants')->where('id', $this->tenantId)->update(['custom_shifts_enabled' => 1]);
         $this->emp = User::withoutGlobalScopes()->forceCreate([
-            'name' => $this->tag . ' Emp', 'email' => 'fwp.' . uniqid() . '@phpunit.test', 'employee_id' => 'FP' . random_int(100000, 999999),
+            'name' => $this->tag.' Emp', 'email' => 'fwp.'.uniqid().'@phpunit.test', 'employee_id' => 'FP'.random_int(100000, 999999),
             'password' => bcrypt('secret'), 'role' => 'employee', 'status' => 1, 'tenant_id' => $this->tenantId,
         ]);
-        $shift = Shift::withoutGlobalScopes()->create(['tenant_id' => $this->tenantId, 'name' => $this->tag . ' Day', 'start_time' => '10:00', 'end_time' => '19:00',
+        $shift = Shift::withoutGlobalScopes()->create(['tenant_id' => $this->tenantId, 'name' => $this->tag.' Day', 'start_time' => '10:00', 'end_time' => '19:00',
             'is_overnight' => false, 'total_hours' => 9, 'grace_minutes' => 15, 'break_time' => 0, 'status' => 1, 'created_by' => $this->admin->id]);
         app(ShiftAssignmentService::class)->assignPermanent($this->tenantId, $this->emp->id, $shift->id, Carbon::today(), $this->admin->id, null, null, null);
         $this->policy(['floating_weekoffs_enabled' => 1, 'floating_weekoffs_per_month' => 3]);
@@ -69,7 +74,7 @@ class FloatingWeekOffPlanTest extends TestCase
             DB::table($t)->where('user_id', $uid)->delete();
         }
         UserShift::withoutGlobalScopes()->where('user_id', $uid)->delete();
-        Shift::withoutGlobalScopes()->where('name', 'like', $this->tag . '%')->delete();
+        Shift::withoutGlobalScopes()->where('name', 'like', $this->tag.'%')->delete();
         User::withoutGlobalScopes()->where('id', $uid)->forceDelete();
         DB::table('tenants')->where('id', $this->tenantId)->update(['custom_shifts_enabled' => $this->originalCustom]);
         app(EmployeePolicyService::class)->forget();
@@ -135,7 +140,7 @@ class FloatingWeekOffPlanTest extends TestCase
             $this->ask($d)->assertOk();
         }
         $this->ask($this->days[3])->assertStatus(422)->assertJsonPath('message',
-            'All 3 floating week-off(s) of ' . Carbon::parse($this->days[3])->format('M Y') . ' are used or asked for');
+            'All 3 floating week-off(s) of '.Carbon::parse($this->days[3])->format('M Y').' are used or asked for');
 
         // Cap 1 a week: the first two asks above fell in one week (Mon, Tue).
         DB::table('floating_weekoff_days')->where('user_id', $this->emp->id)->delete();
@@ -151,7 +156,7 @@ class FloatingWeekOffPlanTest extends TestCase
     {
         // A past month: two approved planned days, five missed days, count 3 → only one missed day is filled.
         $ym = Carbon::today()->subMonthsNoOverflow(2)->format('Y-m');
-        $start = Carbon::parse($ym . '-01');
+        $start = Carbon::parse($ym.'-01');
         $days = [];
         for ($d = $start->copy(); $d->month === $start->month; $d->addDay()) {
             $holiday = DB::table('holidays')->where('tenant_id', $this->tenantId)->where('status', 1)->where('start_date', '<=', $d->toDateString())

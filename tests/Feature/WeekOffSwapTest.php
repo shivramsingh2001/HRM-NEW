@@ -27,20 +27,28 @@ use Tests\TestCase;
 class WeekOffSwapTest extends TestCase
 {
     private User $admin;
+
     private User $a;
+
     private User $b;
+
     private int $tenantId;
+
     private string $tag;
+
     private int $originalCustom;
+
     private Shift $shift;
+
     private string $saturday;
+
     private string $monday;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->withoutMiddleware([EnsureCustomShiftsEnabled::class, EnsureFeatureEnabled::class]);
-        $this->tag = 'PHPUnit WOS ' . uniqid();
+        $this->tag = 'PHPUnit WOS '.uniqid();
         $this->admin = User::withoutGlobalScopes()->where('role', 'admin')->where('status', 1)->whereNotNull('tenant_id')->orderBy('id')->firstOrFail();
         $this->tenantId = (int) $this->admin->tenant_id;
         $this->originalCustom = (int) DB::table('tenants')->where('id', $this->tenantId)->value('custom_shifts_enabled');
@@ -49,7 +57,7 @@ class WeekOffSwapTest extends TestCase
         $this->saturday = Carbon::today()->addWeeks(2)->next(Carbon::SATURDAY)->toDateString();
         $this->monday = Carbon::parse($this->saturday)->addDays(2)->toDateString();
         $this->shift = Shift::withoutGlobalScopes()->create([
-            'tenant_id' => $this->tenantId, 'name' => $this->tag . ' Day', 'start_time' => '10:00', 'end_time' => '19:00',
+            'tenant_id' => $this->tenantId, 'name' => $this->tag.' Day', 'start_time' => '10:00', 'end_time' => '19:00',
             'is_overnight' => false, 'total_hours' => 9, 'grace_minutes' => 15, 'break_time' => 0, 'status' => 1, 'created_by' => $this->admin->id,
         ]);
         $this->a = $this->employee('Alpha');
@@ -67,7 +75,7 @@ class WeekOffSwapTest extends TestCase
             DB::table($table)->whereIn('user_id', $ids)->delete();
         }
         UserShift::withoutGlobalScopes()->whereIn('user_id', $ids)->delete();
-        Shift::withoutGlobalScopes()->where('name', 'like', $this->tag . '%')->delete();
+        Shift::withoutGlobalScopes()->where('name', 'like', $this->tag.'%')->delete();
         User::withoutGlobalScopes()->whereIn('id', $ids)->forceDelete();
         DB::table('tenants')->where('id', $this->tenantId)->update(['custom_shifts_enabled' => $this->originalCustom]);
         Auth::logout();
@@ -78,7 +86,7 @@ class WeekOffSwapTest extends TestCase
     private function employee(string $name): User
     {
         $u = User::withoutGlobalScopes()->forceCreate([
-            'name' => "{$this->tag} {$name}", 'email' => 'wos.' . uniqid() . '@phpunit.test', 'employee_id' => 'WS' . random_int(100000, 999999),
+            'name' => "{$this->tag} {$name}", 'email' => 'wos.'.uniqid().'@phpunit.test', 'employee_id' => 'WS'.random_int(100000, 999999),
             'password' => bcrypt('secret'), 'role' => 'employee', 'status' => 1, 'tenant_id' => $this->tenantId,
         ]);
         foreach (['Saturday', 'Sunday'] as $day) {
@@ -147,12 +155,12 @@ class WeekOffSwapTest extends TestCase
     public function test_employees_who_cannot_take_the_day_are_skipped_with_a_reason(): void
     {
         $sunday = Carbon::parse($this->saturday)->addDay()->toDateString();
-        DB::table('leaves')->insert(['tenant_id' => $this->tenantId, 'leave_id' => 'PHPU-' . random_int(1000, 9999), 'user_id' => $this->b->id,
+        DB::table('leaves')->insert(['tenant_id' => $this->tenantId, 'leave_id' => 'PHPU-'.random_int(1000, 9999), 'user_id' => $this->b->id,
             'leave_type' => 1, 'start_date' => $this->monday, 'start_session' => 'fullday', 'end_date' => $this->monday, 'end_session' => 'fullday',
             'status' => 'approved', 'created_at' => now()]);
 
         // Sunday is already their week-off.
-        $this->save([['user_id' => $this->a->id]], $sunday)->assertStatus(422)->assertJsonPath('skipped.0.reason', 'Already a week-off on ' . Carbon::parse($sunday)->format('d M'));
+        $this->save([['user_id' => $this->a->id]], $sunday)->assertStatus(422)->assertJsonPath('skipped.0.reason', 'Already a week-off on '.Carbon::parse($sunday)->format('d M'));
 
         // Bravo is on leave on Monday; Alpha goes through.
         $r = $this->save([['user_id' => $this->a->id], ['user_id' => $this->b->id]])->assertOk();

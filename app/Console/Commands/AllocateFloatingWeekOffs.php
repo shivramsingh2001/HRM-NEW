@@ -41,7 +41,7 @@ class AllocateFloatingWeekOffs extends Command
                         $added += count($r['added']);
                         $removed += count($r['removed']);
                         if ($r['added'] || $r['removed']) {
-                            $this->line("{$ym} tenant {$tenantId} user {$userId}: +" . implode(',', $r['added']) . ' -' . implode(',', $r['removed']));
+                            $this->line("{$ym} tenant {$tenantId} user {$userId}: +".implode(',', $r['added']).' -'.implode(',', $r['removed']));
                         }
                     } catch (\Throwable $e) {
                         report($e);
@@ -51,7 +51,7 @@ class AllocateFloatingWeekOffs extends Command
             }
         }
 
-        $this->info('Floating week-offs: ' . implode(', ', $months) . " — {$added} added, {$removed} removed.");
+        $this->info('Floating week-offs: '.implode(', ', $months)." — {$added} added, {$removed} removed.");
 
         return self::SUCCESS;
     }

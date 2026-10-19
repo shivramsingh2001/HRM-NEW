@@ -30,9 +30,7 @@ use Illuminate\Support\Facades\DB;
  */
 class FloatingWeekOffAllocator
 {
-    public function __construct(private PolicyResolver $policies)
-    {
-    }
+    public function __construct(private PolicyResolver $policies) {}
 
     /**
      * @return array{added: string[], removed: string[], skipped: ?string}
@@ -46,7 +44,7 @@ class FloatingWeekOffAllocator
             return $result;
         }
 
-        $monthRange = [$yearMonth . '-01', Carbon::parse($yearMonth . '-01')->endOfMonth()->toDateString()];
+        $monthRange = [$yearMonth.'-01', Carbon::parse($yearMonth.'-01')->endOfMonth()->toDateString()];
         $result['removed'] = $this->releaseWorkedPlannedDays($tenantId, $userId, $monthRange);
         $existing = DB::table('floating_weekoff_days')->where('tenant_id', $tenantId)->where('user_id', $userId)
             ->where('source', 'auto')->whereBetween('date', $monthRange)
@@ -132,7 +130,7 @@ class FloatingWeekOffAllocator
     /** The month's count, pro-rated for the days employed (joining / leaving date), rounded. */
     public function quota(int $perMonth, string $yearMonth, int $tenantId, int $userId): int
     {
-        $start = Carbon::parse($yearMonth . '-01');
+        $start = Carbon::parse($yearMonth.'-01');
         $end = $start->copy()->endOfMonth();
         [$joined, $left] = $this->employment($tenantId, $userId);
         $first = $joined && $joined->gt($start) ? $joined : $start;
@@ -148,7 +146,7 @@ class FloatingWeekOffAllocator
     /** [first, last] day that can be judged: within employment and before today. @return array{0:?string,1:?string} */
     private function window(int $tenantId, int $userId, string $yearMonth): array
     {
-        $start = Carbon::parse($yearMonth . '-01');
+        $start = Carbon::parse($yearMonth.'-01');
         $end = Carbon::yesterday()->min($start->copy()->endOfMonth());
         [$joined, $left] = $this->employment($tenantId, $userId);
         $from = $joined && $joined->gt($start) ? $joined : $start;
@@ -264,7 +262,7 @@ class FloatingWeekOffAllocator
     {
         $active = DB::table('users')->where('tenant_id', $tenantId)->where('status', 1)->where('role', '!=', 'admin')->pluck('id');
         $holding = DB::table('floating_weekoff_days')->where('tenant_id', $tenantId)
-            ->whereBetween('date', [$yearMonth . '-01', Carbon::parse($yearMonth . '-01')->endOfMonth()->toDateString()])->distinct()->pluck('user_id');
+            ->whereBetween('date', [$yearMonth.'-01', Carbon::parse($yearMonth.'-01')->endOfMonth()->toDateString()])->distinct()->pluck('user_id');
 
         return $active->merge($holding)->unique()->values()
             ->filter(fn ($id) => $holding->contains($id) || $this->policies->forUserMonth($tenantId, (int) $id, $yearMonth)->floatingWeekoffsEnabled);

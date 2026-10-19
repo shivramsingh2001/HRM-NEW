@@ -19,9 +19,7 @@ class CompOffController extends Controller
 {
     use AuthorizesByScope;
 
-    public function __construct(private CompOffService $compOff)
-    {
-    }
+    public function __construct(private CompOffService $compOff) {}
 
     public function index(Request $request)
     {

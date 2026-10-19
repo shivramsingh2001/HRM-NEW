@@ -33,8 +33,7 @@ class FloatingWeekOffRequestService
     public function __construct(
         private PolicyResolver $policies,
         private FloatingWeekOffAllocator $allocator,
-    ) {
-    }
+    ) {}
 
     /**
      * The month's count and how much of it is used.
@@ -72,10 +71,9 @@ class FloatingWeekOffRequestService
             $this->isHoliday($tenantId, $date) => 'A holiday',
             $this->onLeave($tenantId, $userId, $date) => 'On approved leave',
             $this->clockedIn($tenantId, $userId, $date) => 'Already clocked in that day',
-            $taken->count() >= $status['quota'] => "All {$status['quota']} floating week-off(s) of " . $day->format('M Y') . ' are used or asked for',
-            $status['per_week'] > 0 && $taken->filter(fn ($r) => $r->date->format('o-W') === $day->format('o-W'))->count() >= $status['per_week']
-                => "At most {$status['per_week']} floating week-off(s) in one week",
-            app(PeriodLockService::class)->isLocked($tenantId, $ym) => 'Payroll for ' . $day->format('M Y') . ' is locked',
+            $taken->count() >= $status['quota'] => "All {$status['quota']} floating week-off(s) of ".$day->format('M Y').' are used or asked for',
+            $status['per_week'] > 0 && $taken->filter(fn ($r) => $r->date->format('o-W') === $day->format('o-W'))->count() >= $status['per_week'] => "At most {$status['per_week']} floating week-off(s) in one week",
+            app(PeriodLockService::class)->isLocked($tenantId, $ym) => 'Payroll for '.$day->format('M Y').' is locked',
             default => null,
         };
     }
@@ -127,7 +125,7 @@ class FloatingWeekOffRequestService
         $date = $row->date->toDateString();
 
         DB::transaction(fn () => app(ShiftChangeRecorder::class)->track($tenantId, [$userId], $date, $date,
-            ['source' => 'floating_weekoff', 'reason' => 'Floating week-off planned' . ($row->reason ? ": {$row->reason}" : '')],
+            ['source' => 'floating_weekoff', 'reason' => 'Floating week-off planned'.($row->reason ? ": {$row->reason}" : '')],
             function () use ($row, $tenantId, $userId, $date, $actorId, $remarks) {
                 $off = UserWeekoffs::withoutGlobalScopes()->create([
                     'tenant_id' => $tenantId, 'user_id' => $userId, 'off_type' => 'date_based', 'start_date' => $date, 'end_date' => $date,
@@ -181,7 +179,7 @@ class FloatingWeekOffRequestService
     private function monthRows(int $tenantId, int $userId, string $yearMonth)
     {
         return FloatingWeekoffDay::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('user_id', $userId)
-            ->whereBetween('date', [$yearMonth . '-01', Carbon::parse($yearMonth . '-01')->endOfMonth()->toDateString()])->get();
+            ->whereBetween('date', [$yearMonth.'-01', Carbon::parse($yearMonth.'-01')->endOfMonth()->toDateString()])->get();
     }
 
     /** A past / today's day changed: let the month's automatic days re-balance and refresh the summary. */

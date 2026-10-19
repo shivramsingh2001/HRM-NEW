@@ -23,9 +23,13 @@ use Tests\TestCase;
 class FloatingWeekOffTest extends TestCase
 {
     private User $admin;
+
     private User $emp;
+
     private int $tenantId;
+
     private string $month;
+
     /** @var array<string,bool> */
     private array $holidays = [];
 
@@ -36,7 +40,7 @@ class FloatingWeekOffTest extends TestCase
         $this->tenantId = (int) $this->admin->tenant_id;
         $this->month = Carbon::today()->subMonthsNoOverflow(2)->format('Y-m');
         $this->emp = User::withoutGlobalScopes()->forceCreate([
-            'name' => 'PHPUnit FWO ' . uniqid(), 'email' => 'fwo.' . uniqid() . '@phpunit.test', 'employee_id' => 'FW' . random_int(100000, 999999),
+            'name' => 'PHPUnit FWO '.uniqid(), 'email' => 'fwo.'.uniqid().'@phpunit.test', 'employee_id' => 'FW'.random_int(100000, 999999),
             'password' => bcrypt('secret'), 'role' => 'employee', 'status' => 1, 'tenant_id' => $this->tenantId,
         ]);
         // Real holidays on the dev DB are never floating days — leave them out of the expectations.
@@ -72,7 +76,7 @@ class FloatingWeekOffTest extends TestCase
     /** Clock in every working day of the month except $missed (days of month). */
     private function workAllBut(array $missed): array
     {
-        $start = Carbon::parse($this->month . '-01');
+        $start = Carbon::parse($this->month.'-01');
         $missedDates = [];
         for ($d = $start->copy(); $d->month === $start->month; $d->addDay()) {
             $ds = $d->toDateString();
@@ -81,6 +85,7 @@ class FloatingWeekOffTest extends TestCase
             }
             if (in_array($d->day, $missed, true)) {
                 $missedDates[] = $ds;
+
                 continue;
             }
             DB::table('attendances')->insert(['tenant_id' => $this->tenantId, 'user_id' => $this->emp->id, 'date' => $ds,
@@ -125,7 +130,7 @@ class FloatingWeekOffTest extends TestCase
         $missed = $this->workAllBut([3, 9, 15, 21, 27]);
         app(FloatingWeekOffAllocator::class)->allocateMonth($this->tenantId, $this->emp->id, $this->month);
 
-        DB::table('leaves')->insert(['tenant_id' => $this->tenantId, 'leave_id' => 'PHPU-' . random_int(1000, 9999), 'user_id' => $this->emp->id,
+        DB::table('leaves')->insert(['tenant_id' => $this->tenantId, 'leave_id' => 'PHPU-'.random_int(1000, 9999), 'user_id' => $this->emp->id,
             'leave_type' => 1, 'start_date' => $missed[1], 'start_session' => 'fullday', 'end_date' => $missed[1], 'end_session' => 'fullday',
             'status' => 'approved', 'created_at' => now()]);
         $r = app(FloatingWeekOffAllocator::class)->allocateMonth($this->tenantId, $this->emp->id, $this->month);
@@ -139,7 +144,7 @@ class FloatingWeekOffTest extends TestCase
     public function test_per_week_cap_pro_rating_and_switching_off(): void
     {
         // Three missed days in one week, cap 1 per week → only the first of them.
-        $start = Carbon::parse($this->month . '-01')->next(Carbon::MONDAY);
+        $start = Carbon::parse($this->month.'-01')->next(Carbon::MONDAY);
         $days = [$start->day, $start->copy()->addDay()->day, $start->copy()->addDays(2)->day, $start->copy()->addDays(9)->day];
         $missed = $this->workAllBut($days);
         $this->floating(['floating_weekoffs_enabled' => 1, 'floating_weekoffs_per_month' => 4, 'floating_weekoffs_max_per_week' => 1]);
@@ -149,8 +154,8 @@ class FloatingWeekOffTest extends TestCase
 
         // Joined on the 16th of a 30/31-day month → about half the count.
         DB::table('user_job_details')->insert(['tenant_id' => $this->tenantId, 'user_id' => $this->emp->id,
-            'joining_date' => $this->month . '-16', 'created_at' => now(), 'updated_at' => now()]);
-        $daysInMonth = Carbon::parse($this->month . '-01')->daysInMonth;
+            'joining_date' => $this->month.'-16', 'created_at' => now(), 'updated_at' => now()]);
+        $daysInMonth = Carbon::parse($this->month.'-01')->daysInMonth;
         $this->assertSame((int) round(4 * ($daysInMonth - 15) / $daysInMonth), app(FloatingWeekOffAllocator::class)->quota(4, $this->month, $this->tenantId, $this->emp->id));
 
         // Switched off for this employee: next run removes the floating days.
@@ -174,7 +179,7 @@ class FloatingWeekOffTest extends TestCase
         app(FloatingWeekOffAllocator::class)->allocateMonth($this->tenantId, $this->emp->id, $this->month);
         $this->assertSame([$missed[1]], $this->floatingDays(), "an admin's absent mark stands");
 
-        $this->assertSame([$missed[1]], AlwaysPaidOffDays::dates($this->tenantId, $this->emp->id, $this->month . '-01', $this->month . '-28'));
+        $this->assertSame([$missed[1]], AlwaysPaidOffDays::dates($this->tenantId, $this->emp->id, $this->month.'-01', $this->month.'-28'));
         $prev = Carbon::parse($missed[1])->subDay()->toDateString();
         $next = Carbon::parse($missed[1])->addDay()->toDateString();
         $this->assertSame([$missed[1] => true], SandwichRule::offDayPay([$prev => 'absent', $missed[1] => 'weekoff', $next => 'absent'], fn () => true, [$missed[1]]));

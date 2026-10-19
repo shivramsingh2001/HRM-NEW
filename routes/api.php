@@ -185,6 +185,25 @@ Route::middleware('tenant')->group(function () {
             Route::post('/manager/shift/requests/{id}/decision', 'decide')->whereNumber('id');
         });
 
+        // Comp-off and floating week-offs (new endpoints; same rules as the web Leave pages)
+        Route::middleware('feature:leave_management')->group(function () {
+            Route::controller(\App\Http\Controllers\Api\Leave\CompOffController::class)->group(function () {
+                Route::get('/comp-off', 'index');
+                Route::post('/comp-off', 'store');
+                Route::post('/comp-off/{id}/cancel', 'cancel')->whereNumber('id');
+                Route::get('/manager/comp-off', 'approvals');
+                Route::post('/manager/comp-off/{id}/decision', 'decide')->whereNumber('id');
+            });
+            Route::controller(\App\Http\Controllers\Api\Leave\FloatingWeekOffController::class)->group(function () {
+                Route::get('/floating-weekoffs', 'index');
+                Route::get('/floating-weekoffs/check', 'check');
+                Route::post('/floating-weekoffs', 'store');
+                Route::post('/floating-weekoffs/{id}/cancel', 'cancel')->whereNumber('id');
+                Route::get('/manager/floating-weekoffs', 'approvals');
+                Route::post('/manager/floating-weekoffs/{id}/decision', 'decide')->whereNumber('id');
+            });
+        });
+
         //Payslip plan
         Route::middleware('feature:payroll')->group(function () {
             Route::get('/payslips', [PayrollController::class, 'getMyPayslips'])

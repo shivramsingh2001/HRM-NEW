@@ -24,10 +24,15 @@ use Tests\TestCase;
 class CompOffTest extends TestCase
 {
     private User $admin;
+
     private User $emp;
+
     private int $tenantId;
+
     private string $sat1;
+
     private string $sat2;
+
     private bool $hadCompOffType;
 
     protected function setUp(): void
@@ -38,7 +43,7 @@ class CompOffTest extends TestCase
         $this->tenantId = (int) $this->admin->tenant_id;
         $this->hadCompOffType = DB::table('leave_types')->where('tenant_id', $this->tenantId)->where('code', 'comp_off')->exists();
         $this->emp = User::withoutGlobalScopes()->forceCreate([
-            'name' => 'PHPUnit COF ' . uniqid(), 'email' => 'cof.' . uniqid() . '@phpunit.test', 'employee_id' => 'CO' . random_int(100000, 999999),
+            'name' => 'PHPUnit COF '.uniqid(), 'email' => 'cof.'.uniqid().'@phpunit.test', 'employee_id' => 'CO'.random_int(100000, 999999),
             'password' => bcrypt('secret'), 'role' => 'employee', 'status' => 1, 'tenant_id' => $this->tenantId,
         ]);
         DB::table('user_weekoffs')->insert(['tenant_id' => $this->tenantId, 'user_id' => $this->emp->id, 'off_type' => 'day_based', 'day_name' => 'Saturday',

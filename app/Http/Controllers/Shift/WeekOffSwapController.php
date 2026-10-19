@@ -15,9 +15,7 @@ use Illuminate\Support\Facades\Auth;
  */
 class WeekOffSwapController extends Controller
 {
-    public function __construct(private WeekOffSwapService $swaps)
-    {
-    }
+    public function __construct(private WeekOffSwapService $swaps) {}
 
     public function index()
     {
@@ -46,10 +44,10 @@ class WeekOffSwapController extends Controller
         $result = $this->swaps->create((int) Auth::user()->tenant_id, (int) Auth::id(), $data['worked_date'],
             $data['replacement_date'], $data['reason'] ?? null, $data['employees']);
 
-        $message = $result['applied'] . ' employee(s) get their day off instead.';
+        $message = $result['applied'].' employee(s) get their day off instead.';
         if ($result['skipped']) {
-            $message .= ' Skipped ' . count($result['skipped']) . ': '
-                . collect($result['skipped'])->map(fn ($s) => "{$s['name']} ({$s['reason']})")->implode('; ') . '.';
+            $message .= ' Skipped '.count($result['skipped']).': '
+                .collect($result['skipped'])->map(fn ($s) => "{$s['name']} ({$s['reason']})")->implode('; ').'.';
         }
 
         return response()->json(['status' => $result['applied'] > 0, 'message' => $message, 'skipped' => $result['skipped']],

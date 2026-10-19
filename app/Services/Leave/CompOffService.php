@@ -40,9 +40,7 @@ class CompOffService
 {
     public const CODE = 'comp_off';
 
-    public function __construct(private PolicyResolver $policies)
-    {
-    }
+    public function __construct(private PolicyResolver $policies) {}
 
     /** The company's "Comp Off" leave type, created on first use. */
     public function leaveType(int $tenantId): LeaveType
@@ -169,7 +167,7 @@ class CompOffService
                 'tenant_id' => $tenantId, 'user_id' => $credit->user_id, 'leave_type' => $type->id, 'transaction_type' => 'add',
                 'total_leaves' => $credit->days, 'leaves_count' => $credit->days, 'before_leaves' => $before, 'after_leaves' => $before + $credit->days,
                 'transaction_date' => now(), 'status' => 1,
-                'remarks' => 'Comp-off earned: worked ' . $credit->worked_date->format('d M Y') . ($credit->day_type === 'holiday' ? ' (holiday)' : ' (week-off)'),
+                'remarks' => 'Comp-off earned: worked '.$credit->worked_date->format('d M Y').($credit->day_type === 'holiday' ? ' (holiday)' : ' (week-off)'),
             ]);
 
             $credit->update([
@@ -254,7 +252,7 @@ class CompOffService
                         'tenant_id' => $tenantId, 'user_id' => $credit->user_id, 'leave_type' => $credit->leave_type_id, 'transaction_type' => 'sub',
                         'total_leaves' => $lapse, 'leaves_count' => $lapse, 'before_leaves' => $current, 'after_leaves' => $current - $lapse,
                         'transaction_date' => now(), 'status' => 1,
-                        'remarks' => 'Comp-off expired: worked ' . $credit->worked_date->format('d M Y') . ", {$lapse} day(s) unused",
+                        'remarks' => 'Comp-off expired: worked '.$credit->worked_date->format('d M Y').", {$lapse} day(s) unused",
                     ]);
                 }
                 $credit->update(['status' => 'expired', 'lapsed_days' => $lapse]);
