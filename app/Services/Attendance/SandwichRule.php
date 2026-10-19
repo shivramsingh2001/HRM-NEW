@@ -28,9 +28,24 @@ class SandwichRule
      * @param  array<string,string>  $days  Y-m-d => day token (present / absent / paid_leave / holiday / weekoff …).
      *                                      A holiday / week-off actually worked must be passed as a worked token.
      * @param  callable(string):bool  $enabledOn  is the sandwich rule on for this date?
+     * @param  string[]  $alwaysPaid  off days paid whatever their neighbours (week-off swap replacement days —
+     *                                the employee worked a week-off for them)
      * @return array<string,bool>  every off day => paid?
      */
-    public static function offDayPay(array $days, callable $enabledOn): array
+    public static function offDayPay(array $days, callable $enabledOn, array $alwaysPaid = []): array
+    {
+        $pay = self::sandwiched($days, $enabledOn);
+        foreach ($alwaysPaid as $date) {
+            if (isset($pay[$date])) {
+                $pay[$date] = true;
+            }
+        }
+
+        return $pay;
+    }
+
+    /** @return array<string,bool> */
+    private static function sandwiched(array $days, callable $enabledOn): array
     {
         ksort($days);
         $dates = array_keys($days);

@@ -505,7 +505,7 @@ class ShiftAssignmentController extends Controller
 
         // If overriding existing, delete all existing week-offs for this user
         if ($request->override_existing) {
-            UserWeekoffs::where('user_id', $userId)->delete();
+            UserWeekoffs::where('user_id', $userId)->exceptSwapDays()->delete();
         }
 
         // Handle DAY-BASED week-offs (recurring weekly)

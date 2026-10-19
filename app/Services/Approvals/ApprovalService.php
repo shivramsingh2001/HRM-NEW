@@ -37,6 +37,8 @@ class ApprovalService
         'offboarding' => OffboardingApprovalHandler::class,
         'shift_request' => ShiftRequestApprovalHandler::class,
         'offboarding_termination' => OffboardingApprovalHandler::class,
+        'comp_off' => CompOffApprovalHandler::class,
+        'floating_weekoff' => FloatingWeekOffApprovalHandler::class,
     ];
 
     /**

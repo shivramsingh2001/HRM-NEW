@@ -146,7 +146,8 @@ class PayrollDaysService
         }
 
         $policies = app(PolicyResolver::class);
-        $pay = SandwichRule::offDayPay($days, fn (string $date) => $policies->forUserDate($tenantId, $userId, $date)->sandwichLeave);
+        $swapDays = \App\Support\AlwaysPaidOffDays::dates($tenantId, $userId, min(array_keys($days)), max(array_keys($days)));
+        $pay = SandwichRule::offDayPay($days, fn (string $date) => $policies->forUserDate($tenantId, $userId, $date)->sandwichLeave, $swapDays);
 
         $holidays = 0;
         $weekOffs = 0;

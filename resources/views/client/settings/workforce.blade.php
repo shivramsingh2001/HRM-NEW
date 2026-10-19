@@ -549,6 +549,80 @@
                 </div>
             </div>
 
+            <div class="col-md-4">
+                <div class="wf-card">
+                    <div class="wf-card__head">
+                        <h5 class="wf-card__title">
+                            <i class="feather-shuffle"></i>
+                            Floating week-offs
+                        </h5>
+                        <p class="wf-card__desc">
+                            A number of days off a month on any day, instead of fixed days. Missed days become week-offs each night until the count is used.
+                        </p>
+                    </div>
+                    <div class="wf-card__body">
+                        <div class="info-list">
+                            <div class="info-row">
+                                <span class="info-row__label">Status</span>
+                                <span class="info-row__value">{{ $policy->floatingWeekoffsEnabled ? 'Enabled' : 'Disabled' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Week-offs per month</span>
+                                <span class="info-row__value">{{ $policy->floatingWeekoffsPerMonth }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Most in one week</span>
+                                <span class="info-row__value">{{ $policy->floatingWeekoffsMaxPerWeek ?: 'No limit' }}</span>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#floatingWeekoffsModal">
+                            <i class="feather-edit-2"></i> Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @feature('leave_management')
+            <div class="col-md-4">
+                <div class="wf-card">
+                    <div class="wf-card__head">
+                        <h5 class="wf-card__title">
+                            <i class="feather-gift"></i>
+                            Comp-off
+                        </h5>
+                        <p class="wf-card__desc">
+                            Working a week-off or holiday earns a day off to take later, added to a "Comp Off" leave balance.
+                        </p>
+                    </div>
+                    <div class="wf-card__body">
+                        <div class="info-list">
+                            <div class="info-row">
+                                <span class="info-row__label">Status</span>
+                                <span class="info-row__value">{{ $policy->compOffEnabled ? ($policy->compOffMode === 'auto' ? 'Credited automatically' : 'Requested & approved') : 'Disabled' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Full / half day from</span>
+                                <span class="info-row__value">{{ $policy->compOffFullDayHours + 0 }} h / {{ $policy->compOffHalfDayHours + 0 }} h</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Expires after</span>
+                                <span class="info-row__value">{{ $policy->compOffExpiryDays ? $policy->compOffExpiryDays . ' days' : 'Never' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row__label">Per month at most</span>
+                                <span class="info-row__value">{{ $policy->compOffMonthlyCap ? $policy->compOffMonthlyCap . ' day(s)' : 'No cap' }}</span>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-update" data-bs-toggle="modal" data-bs-target="#compOffModal">
+                            <i class="feather-edit-2"></i> Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @endfeature
+
             @php $limit = fn ($v, string $unit) => (int) $v > 0 ? $v . ' ' . $unit : 'No limit'; @endphp
             <div class="col-md-4">
                 <div class="wf-card">
@@ -1408,6 +1482,108 @@
                 </div>
             </form>
         </x-ui.modal>
+
+        {{-- Floating week-offs (FloatingWeekoffsSettingsController) --}}
+        <x-ui.modal id="floatingWeekoffsModal" title="Floating week-offs" size="md">
+            <form action="{{ route('floating-weekoffs-settings.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="floating_weekoffs_enabled" name="floating_weekoffs_enabled" value="1"
+                           {{ old('floating_weekoffs_enabled', $policy->floatingWeekoffsEnabled) ? 'checked' : '' }}>
+                    <label class="form-check-label field-label mb-0" for="floating_weekoffs_enabled">Use floating week-offs</label>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="field-label">Week-offs per month</label>
+                        <input type="number" min="0" max="15" class="field-input" name="floating_weekoffs_per_month"
+                               value="{{ old('floating_weekoffs_per_month', $policy->floatingWeekoffsPerMonth) }}">
+                        <div class="field-hint">Pro-rated for someone who joins or leaves mid-month.</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Most in one week</label>
+                        <input type="number" min="0" max="7" class="field-input" name="floating_weekoffs_max_per_week"
+                               value="{{ old('floating_weekoffs_max_per_week', $policy->floatingWeekoffsMaxPerWeek) }}">
+                        <div class="field-hint">0 = no limit.</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="field-hint">
+                            Every night, the days an employee did not come (no clock-in, not a holiday, not on leave, not marked by hand)
+                            become week-offs in date order until the month's count is used; after that a missed day is Absent.
+                            A leave approved later frees its slot for the next missed day. Floating week-offs are always paid.
+                            Employees on floating week-offs should have no fixed weekly off. It can be changed per employee on Employee 360 → Policies.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn-save">
+                        <i class="feather-check"></i> Save
+                    </button>
+                </div>
+            </form>
+        </x-ui.modal>
+
+        {{-- Comp-off (CompOffSettingsController) --}}
+        @feature('leave_management')
+        <x-ui.modal id="compOffModal" title="Comp-off" size="md">
+            <form action="{{ route('comp-off-settings.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="comp_off_enabled" name="comp_off_enabled" value="1"
+                           {{ old('comp_off_enabled', $policy->compOffEnabled) ? 'checked' : '' }}>
+                    <label class="form-check-label field-label mb-0" for="comp_off_enabled">Give comp-off for working a week-off or holiday</label>
+                </div>
+                <div class="row g-2">
+                    <div class="col-12">
+                        <label class="field-label">How it is given</label>
+                        <select class="field-input" name="comp_off_mode">
+                            <option value="request" @selected(old('comp_off_mode', $policy->compOffMode) === 'request')>Employee requests, manager / HR approves</option>
+                            <option value="auto" @selected(old('comp_off_mode', $policy->compOffMode) === 'auto')>Credited automatically every night</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Hours for a full day</label>
+                        <input type="number" step="0.25" min="0.5" max="24" class="field-input" name="comp_off_full_day_hours"
+                               value="{{ old('comp_off_full_day_hours', $policy->compOffFullDayHours + 0) }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Hours for a half day</label>
+                        <input type="number" step="0.25" min="0" max="24" class="field-input" name="comp_off_half_day_hours"
+                               value="{{ old('comp_off_half_day_hours', $policy->compOffHalfDayHours + 0) }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Expires after (days)</label>
+                        <input type="number" min="0" max="365" class="field-input" name="comp_off_expiry_days"
+                               value="{{ old('comp_off_expiry_days', $policy->compOffExpiryDays) }}">
+                        <div class="field-hint">Counted from the day worked. 0 = never.</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="field-label">Days earned per month — at most</label>
+                        <input type="number" min="0" max="31" class="field-input" name="comp_off_monthly_cap"
+                               value="{{ old('comp_off_monthly_cap', $policy->compOffMonthlyCap) }}">
+                        <div class="field-hint">0 = no cap.</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="field-hint">
+                            An approved comp-off is added to the employee's "Comp Off" leave balance and taken with Apply Leave. A day already paid as
+                            overtime cannot be claimed, and approving comp-off rejects that day's pending overtime. A week-off worked under a
+                            week-off swap cannot be claimed (the swap already gave another day off). Unused days lapse at the expiry, oldest first.
+                            Uses the "comp_off" approval workflow when one is set up in Settings → Approvals.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn-save"><i class="feather-check"></i> Save</button>
+                </div>
+            </form>
+        </x-ui.modal>
+        @endfeature
 
         {{-- Request limits (RequestLimitsSettingsController) --}}
         <x-ui.modal id="requestLimitsModal" title="Request limits" size="md">

@@ -227,6 +227,19 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::post('/update-status/{id}', [LeaveController::class, 'updateStatus'])->name('update-status')->middleware('permission:leave,approve');
             // Admin / HR applies a leave for an employee — created approved (see RaisesOnBehalf).
             Route::post('/on-behalf', [LeaveController::class, 'storeOnBehalf'])->name('on-behalf')->middleware('role:admin,hr');
+
+            // Comp-off: claim a worked week-off / holiday as a day off to take later.
+            Route::get('/comp-off', [\App\Http\Controllers\Leave\CompOffController::class, 'index'])->name('comp-off.index');
+            Route::post('/comp-off', [\App\Http\Controllers\Leave\CompOffController::class, 'store'])->name('comp-off.store');
+            Route::post('/comp-off/{id}/decide', [\App\Http\Controllers\Leave\CompOffController::class, 'decide'])->whereNumber('id')->name('comp-off.decide')->middleware('permission:leave,approve');
+            Route::post('/comp-off/{id}/cancel', [\App\Http\Controllers\Leave\CompOffController::class, 'cancel'])->whereNumber('id')->name('comp-off.cancel');
+
+            // Floating week-offs: see the month's count, plan a day off ahead.
+            Route::get('/floating-weekoffs', [\App\Http\Controllers\Leave\FloatingWeekOffController::class, 'index'])->name('floating-weekoffs.index');
+            Route::get('/floating-weekoffs/check', [\App\Http\Controllers\Leave\FloatingWeekOffController::class, 'check'])->name('floating-weekoffs.check');
+            Route::post('/floating-weekoffs', [\App\Http\Controllers\Leave\FloatingWeekOffController::class, 'store'])->name('floating-weekoffs.store');
+            Route::post('/floating-weekoffs/{id}/decide', [\App\Http\Controllers\Leave\FloatingWeekOffController::class, 'decide'])->whereNumber('id')->name('floating-weekoffs.decide')->middleware('permission:leave,approve');
+            Route::post('/floating-weekoffs/{id}/cancel', [\App\Http\Controllers\Leave\FloatingWeekOffController::class, 'cancel'])->whereNumber('id')->name('floating-weekoffs.cancel');
         });
 
         //Designation Route
@@ -603,6 +616,12 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::post('/rotations/assign', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'assign'])->name('rotations.assign');
                 Route::put('/rotations/{id}', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'update'])->whereNumber('id')->name('rotations.update');
                 Route::delete('/rotations/{id}', [\App\Http\Controllers\Shift\ShiftRotationController::class, 'destroy'])->whereNumber('id')->name('rotations.destroy');
+
+                // Week-off swaps: work a week-off, get another day off instead
+                Route::get('/weekoff-swaps', [\App\Http\Controllers\Shift\WeekOffSwapController::class, 'index'])->name('weekoff-swaps.index');
+                Route::get('/weekoff-swaps/candidates', [\App\Http\Controllers\Shift\WeekOffSwapController::class, 'candidates'])->name('weekoff-swaps.candidates');
+                Route::post('/weekoff-swaps', [\App\Http\Controllers\Shift\WeekOffSwapController::class, 'store'])->name('weekoff-swaps.store');
+                Route::post('/weekoff-swaps/{id}/cancel', [\App\Http\Controllers\Shift\WeekOffSwapController::class, 'cancel'])->whereNumber('id')->name('weekoff-swaps.cancel');
             });
         });
         Route::prefix('my-payroll')->name('my-payroll.')->middleware(['feature:payroll', 'permission:payroll,view'])->group(function () {
@@ -881,6 +900,10 @@ Route::group(['middleware' => ['tenant']], function () {
         // Working-time thresholds (advisory-only, not yet enforced) standalone
         // card on the Company Policies page — writes a versioned
         // attendance_policies row, carrying forward the rest unchanged.
+        Route::middleware('role:admin,hr')->put('floating-weekoffs-settings', [\App\Http\Controllers\Settings\FloatingWeekoffsSettingsController::class, 'update'])
+            ->name('floating-weekoffs-settings.update');
+        Route::middleware(['role:admin,hr', 'feature:leave_management'])->put('comp-off-settings', [\App\Http\Controllers\Settings\CompOffSettingsController::class, 'update'])
+            ->name('comp-off-settings.update');
         Route::middleware('role:admin,hr')->prefix('working-time-thresholds-settings')->name('working-time-thresholds-settings.')->group(function () {
             Route::put('/', [\App\Http\Controllers\Settings\WorkingTimeThresholdsSettingsController::class, 'update'])->name('update');
         });

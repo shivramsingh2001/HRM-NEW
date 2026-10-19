@@ -734,7 +734,9 @@ class LegacyPayrollCalculator
         $sandwichEnabled = $policies->forUserDate((int) $tenantId, (int) $userId, Carbon::parse($startDate)->toDateString())->sandwichLeave;
         $offDayPay = \App\Services\Attendance\SandwichRule::offDayPay(
             $allDates,
-            fn (string $date) => $policies->forUserDate((int) $tenantId, (int) $userId, $date)->sandwichLeave
+            fn (string $date) => $policies->forUserDate((int) $tenantId, (int) $userId, $date)->sandwichLeave,
+            // Week-off swap replacement days and floating week-offs are always paid.
+            $allDates ? \App\Support\AlwaysPaidOffDays::dates((int) $tenantId, (int) $userId, min(array_keys($allDates)), max(array_keys($allDates))) : []
         );
 
         $paidHolidayDates = [];

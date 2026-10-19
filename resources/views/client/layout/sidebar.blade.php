@@ -114,6 +114,9 @@
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.rotations.index') }}">
                                         Rotation Patterns</a>
                                 </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.weekoff-swaps.index') }}">
+                                        Week-off Swaps</a>
+                                </li>
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.index') }}">
                                         Manage Shifts</a>
                                 </li>
@@ -282,6 +285,12 @@
                                     <li class="nxl-item"><a class="nxl-link" href="{{ route('leave-credit.index') }}">
                                             Leave Credit</a>
                                     </li>
+                                    <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.comp-off.index') }}">
+                                            Comp-off</a>
+                                    </li>
+                                    <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.floating-weekoffs.index') }}">
+                                            Floating Week-offs</a>
+                                    </li>
                                 @endfeature
                                 @feature('expense_management')
                                     <li class="nxl-item"><a class="nxl-link" href="{{ route('expense-type.index') }}">
@@ -391,6 +400,12 @@
                                 </li>
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('leave-credit.index') }}">Leave
                                         Credit</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.comp-off.index') }}">
+                                        Comp-off</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.floating-weekoffs.index') }}">
+                                        Floating Week-offs</a>
                                 </li>
                             </ul>
                         </li>
@@ -672,6 +687,9 @@
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.rotations.index') }}">
                                         Rotation Patterns</a>
                                 </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.weekoff-swaps.index') }}">
+                                        Week-off Swaps</a>
+                                </li>
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('shift.index') }}">
                                         Manage Shifts</a>
                                 </li>
@@ -742,6 +760,12 @@
                                 @if (in_array($role, ['manager']))
                                     <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.view-all') }}">
                                             Leave</a>
+                                    </li>
+                                    <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.comp-off.index') }}">
+                                            Comp-off</a>
+                                    </li>
+                                    <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.floating-weekoffs.index') }}">
+                                            Floating Week-offs</a>
                                     </li>
                                 @endif
                             @endfeature
@@ -829,6 +853,12 @@
                                 </li>
                                 <li class="nxl-item"><a class="nxl-link" href="{{ route('leave-credit.index') }}">
                                         Leave Credit</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.comp-off.index') }}">
+                                        Comp-off</a>
+                                </li>
+                                <li class="nxl-item"><a class="nxl-link" href="{{ route('leave.floating-weekoffs.index') }}">
+                                        Floating Week-offs</a>
                                 </li>
                             @endfeature
                             @feature('expense_management')

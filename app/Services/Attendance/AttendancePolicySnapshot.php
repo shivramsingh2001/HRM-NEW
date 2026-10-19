@@ -44,6 +44,17 @@ final class AttendancePolicySnapshot
         public readonly string $earlyDeductionMode = 'custom_multiplier',
         public readonly ?float $earlyDeductionAmount = null,
         public readonly bool $dayClassificationEnabled = true,
+        // Floating week-offs (plan C1): N days off a month on any day, filled from missed days.
+        public readonly bool $floatingWeekoffsEnabled = false,
+        public readonly int $floatingWeekoffsPerMonth = 4,
+        public readonly int $floatingWeekoffsMaxPerWeek = 0,
+        // Comp-off (plan B): working a week-off / holiday earns a day off later.
+        public readonly bool $compOffEnabled = false,
+        public readonly string $compOffMode = 'request',
+        public readonly float $compOffFullDayHours = 8.0,
+        public readonly float $compOffHalfDayHours = 4.0,
+        public readonly int $compOffExpiryDays = 60,
+        public readonly int $compOffMonthlyCap = 0,
     ) {
     }
 
@@ -102,6 +113,15 @@ final class AttendancePolicySnapshot
             earlyDeductionMode: (string) $get('early_deduction_mode', 'custom_multiplier'),
             earlyDeductionAmount: ($r['early_deduction_amount'] ?? null) !== null ? (float) $r['early_deduction_amount'] : null,
             dayClassificationEnabled: (bool) $get('day_classification_enabled', true),
+            floatingWeekoffsEnabled: (bool) $get('floating_weekoffs_enabled', false),
+            floatingWeekoffsPerMonth: (int) $get('floating_weekoffs_per_month', 4),
+            floatingWeekoffsMaxPerWeek: (int) $get('floating_weekoffs_max_per_week', 0),
+            compOffEnabled: (bool) $get('comp_off_enabled', false),
+            compOffMode: (string) $get('comp_off_mode', 'request'),
+            compOffFullDayHours: (float) $get('comp_off_full_day_hours', 8),
+            compOffHalfDayHours: (float) $get('comp_off_half_day_hours', 4),
+            compOffExpiryDays: (int) $get('comp_off_expiry_days', 60),
+            compOffMonthlyCap: (int) $get('comp_off_monthly_cap', 0),
         );
     }
 
@@ -158,6 +178,15 @@ final class AttendancePolicySnapshot
             'early_deduction_multiplier' => $this->earlyDeductionMultiplier,
             'early_deduction_mode' => $this->earlyDeductionMode,
             'early_deduction_amount' => $this->earlyDeductionAmount,
+            'floating_weekoffs_enabled' => $this->floatingWeekoffsEnabled,
+            'floating_weekoffs_per_month' => $this->floatingWeekoffsPerMonth,
+            'floating_weekoffs_max_per_week' => $this->floatingWeekoffsMaxPerWeek,
+            'comp_off_enabled' => $this->compOffEnabled,
+            'comp_off_mode' => $this->compOffMode,
+            'comp_off_full_day_hours' => $this->compOffFullDayHours,
+            'comp_off_half_day_hours' => $this->compOffHalfDayHours,
+            'comp_off_expiry_days' => $this->compOffExpiryDays,
+            'comp_off_monthly_cap' => $this->compOffMonthlyCap,
         ];
     }
 

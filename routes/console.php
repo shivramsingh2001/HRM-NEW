@@ -106,6 +106,26 @@ Schedule::command('projects:check-deadlines')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/project-deadline-reminders.log'));
 
+// Floating week-offs: turn yesterday's (and the month's) missed days into
+// week-offs up to each employee's monthly count — before the summaries below.
+Schedule::command('weekoffs:allocate-floating')
+    ->dailyAt('00:40')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/weekoffs-allocate-floating.log'));
+
+// Comp-off: lapse expired credits, then credit auto-mode employees' worked off-days.
+Schedule::command('comp-off:expire')
+    ->dailyAt('00:45')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/comp-off.log'));
+Schedule::command('comp-off:auto-credit')
+    ->dailyAt('00:50')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/comp-off.log'));
+
 // Rebuild the current month's attendance summaries nightly, and on the 1st also
 // finalise the month that just ended.
 Schedule::command('attendance:update-summaries')
