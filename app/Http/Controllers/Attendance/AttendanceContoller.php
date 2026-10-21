@@ -208,7 +208,7 @@ class AttendanceContoller extends Controller
 
                     if ($attendance) {
                         if ($attendance->clock_in && $attendance->clock_out) {
-                            $primaryStatus = 'Present';
+                            [$primaryStatus, $fallbackStatus] = ($graded = \App\Support\AttendanceDayStatus::forRowOrHours($attendance)) === 'Absent' ? [null, 'Absent'] : [$graded, null]; // company-policy grade, as Team page / mobile API
                         } elseif ($attendance->clock_in) {
                             $primaryStatus = ($shiftDays[$attendance->id]['normal_closed'] ?? false) ? 'Present' : 'Checked In Only'; // 2nd shift open, normal shift done = present
                         } else {

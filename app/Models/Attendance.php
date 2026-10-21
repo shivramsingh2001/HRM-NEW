@@ -9,6 +9,7 @@ use App\Traits\TenantTrait;
 
 /**
  * @property mixed $date Carbon or Y-m-d string depending on how it was loaded
+ * @property string|null $clock_out
  * @property int|null $regularized_by
  * @property int|null $marked_by
  */

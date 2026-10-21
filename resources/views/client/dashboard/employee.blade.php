@@ -183,10 +183,11 @@
 
         .cal-day-present { background: #bfdbfe; color: #0D6EFD; }
         .cal-day-absent { background: #eef1f7; color: var(--d-text-muted); }
+        .cal-day-halfday { background: #ecfccb; color: #4d7c0f; }
         .cal-day-holiday { background: #dbeafe; color: var(--primary); border: 1px dashed var(--primary-mid); }
         .cal-day-leave { background: #dbeafe; color: var(--primary-mid); border: 1px dashed #93c5fd; }
         .cal-day-weekoff { background: #f2f6fd; color: var(--d-text-muted); opacity: .75; }
-        .cal-day-today.cal-day-present, .cal-day-today.cal-day-holiday,
+        .cal-day-today.cal-day-present, .cal-day-today.cal-day-halfday, .cal-day-today.cal-day-holiday,
         .cal-day-today.cal-day-leave, .cal-day-today.cal-day-weekoff {
             background: var(--primary); color: #fff; border-color: #fff;
         }
@@ -581,6 +582,7 @@
                         <div class="cal-grid" id="dash-cal-grid"></div>
                         <div class="cal-legend">
                             <span><i class="cal-legend-dot cal-day-present"></i>P Present</span>
+                            <span><i class="cal-legend-dot cal-day-halfday"></i>HD Half Day</span>
                             <span><i class="cal-legend-dot cal-day-absent"></i>A Absent</span>
                             <span><i class="cal-legend-dot cal-day-holiday"></i>H Holiday</span>
                             <span><i class="cal-legend-dot cal-day-leave"></i>L Leave</span>
@@ -859,7 +861,7 @@
             btn.textContent = showingTable ? 'View as table' : 'View as chart';
         }
 
-        // Attendance Calendar — per-day P/A/H/L/W status badge, same nav anatomy as
+        // Attendance Calendar — per-day P/HD/A/H/L/W status badge, same nav anatomy as
         // the Admin Dashboard's Attendance Calendar (prev/current/next month shipped
         // from the server; navigating further shows plain, un-coded day cells).
         (function () {
@@ -900,7 +902,7 @@
                         cell.classList.add('cal-day-today');
                     }
                     if (status) {
-                        var codeClass = { P: 'cal-day-present', A: 'cal-day-absent', H: 'cal-day-holiday', L: 'cal-day-leave', W: 'cal-day-weekoff' }[status.code];
+                        var codeClass = { P: 'cal-day-present', HD: 'cal-day-halfday', A: 'cal-day-absent', H: 'cal-day-holiday', L: 'cal-day-leave', W: 'cal-day-weekoff' }[status.code];
                         if (codeClass) cell.classList.add(codeClass);
                         cell.title = status.title || '';
                         var badge = document.createElement('sup');

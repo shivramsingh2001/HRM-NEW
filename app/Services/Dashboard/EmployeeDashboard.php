@@ -584,7 +584,11 @@ class EmployeeDashboard
             // Attendance first: a holiday / week-off the employee came in on (e.g. a
             // swapped Saturday) is a worked day, as on the Team and /attendance calendars.
             if ($calAttendanceRows->has($dateKey)) {
-                $calendarStatusMap[$dateKey] = ['code' => 'P', 'title' => $holidayName ? 'Worked on Holiday (' . $holidayName . ')' : ($isWeekoffDay ? 'Worked on Week Off' : 'Present')];
+                // Completed day: company-policy grade (Half Day / Absent too), as /attendance and the mobile API.
+                $row = $calAttendanceRows->get($dateKey);
+                $graded = $row->clock_out ? \App\Support\AttendanceDayStatus::forRowOrHours($row) : 'Present';
+                $code = match ($graded) { 'Half Day' => 'HD', 'Absent' => 'A', 'Present' => 'P', default => 'L' };
+                $calendarStatusMap[$dateKey] = ['code' => $code, 'title' => $holidayName ? $graded . ' · worked on Holiday (' . $holidayName . ')' : ($isWeekoffDay ? $graded . ' · worked on Week Off' : $graded)];
             } elseif ($holidayName) {
                 $calendarStatusMap[$dateKey] = ['code' => 'H', 'title' => $holidayName];
             } elseif ($isWeekoffDay) {
