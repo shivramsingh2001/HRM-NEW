@@ -152,26 +152,25 @@
 
 
     /* ==================== STATS CARDS (kpi5, as Leave Credit → My Transactions) ==================== */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    /* Available Balance · Leave Requested · Balance Summary by Leave Type (double width).
+       Icons keep the default kpi5 blue — one colour theme for the row. */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; margin-bottom: 14px; }
 
-    /* Balance Summary by Leave Type: available days per type */
-    .lv-balance-card { background: #fff; border: 1px solid var(--lv-border); border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
-    .lv-balance-head { display: flex; align-items: center; gap: 10px; background: #f7f8fb; padding: 9px 14px; border-bottom: 1px solid var(--lv-border); }
-    .lv-balance-head > i { width: 28px; height: 28px; border-radius: 8px; background: #0D6EFD; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; flex: none; }
-    .lv-balance-head h5 { margin: 0; font-size: 11.5px; font-weight: 700; color: var(--lv-text); }
-    .lv-balance-head p { margin: 1px 0 0; font-size: 10.5px; color: var(--lv-text-soft); }
-    .lv-balance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; padding: 10px 14px; }
-    .lv-balance-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--lv-border); border-left: 3px solid #16a34a; border-radius: 8px; padding: 7px 10px; background: #fff; }
-    .lv-balance-item.is-zero { border-left-color: #cbd5e1; }
-    .lv-balance-item.is-neg { border-left-color: #dc2626; }
-    .lv-balance-name { font-size: 11.5px; font-weight: 600; color: var(--lv-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lv-balance-value { font-size: 14px; font-weight: 800; color: #16a34a; white-space: nowrap; }
+    /* Balance Summary by Leave Type: available days per type, inside the cards row */
+    .lv-balance-card { display: flex; flex-direction: column; }
+    .lv-balance-card .kpi5-label { margin-top: 0; }
+    .lv-balance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 6px; max-height: 92px; overflow-y: auto; }
+    .lv-balance-item { display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 1px solid #eaeef5; border-radius: 7px; padding: 4px 8px; background: #f8fafc; }
+    .lv-balance-name { font-size: 10.5px; font-weight: 600; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lv-balance-value { font-size: 12px; font-weight: 800; color: #0D6EFD; white-space: nowrap; }
     .lv-balance-item.is-zero .lv-balance-value { color: #94a3b8; }
     .lv-balance-item.is-neg .lv-balance-value { color: #dc2626; }
-    .lv-balance-value small { font-size: 9.5px; font-weight: 600; color: var(--lv-text-soft); }
+    table td.lv-code { font-size: 11px; font-weight: 700; color: #0D6EFD !important; white-space: nowrap; }
+    .lv-balance-value small { font-size: 9px; font-weight: 600; color: #9aa1b1; }
 
     @media (max-width: 992px) {
-        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .stats-grid { grid-template-columns: 1fr 1fr; }
+        .stats-grid .lv-balance-card { grid-column: 1 / -1; }
     }
 
     @media (max-width: 768px) {
@@ -218,7 +217,7 @@
             $bs = $balanceSummary;
         @endphp
         <div class="stats-grid">
-            <div class="kpi5-card kpi5-card--success">
+            <div class="kpi5-card">
                 <div class="kpi5-top">
                     <span class="kpi5-icon"><i class="feather-pie-chart"></i></span>
                     <span class="kpi5-pill">{{ $bs['by_type']->count() }} {{ \Illuminate\Support\Str::plural('type', $bs['by_type']->count()) }}</span>
@@ -229,38 +228,11 @@
                 <div class="kpi5-foot">
                     <div class="kpi5-stat"><span class="n">{{ $fmt($bs['credited']) }}</span><span class="l">Credited</span></div>
                     <div class="kpi5-stat"><span class="n">{{ $fmt($bs['used']) }}</span><span class="l">Used</span></div>
-                </div>
-            </div>
-
-            <div class="kpi5-card kpi5-card--warning">
-                <div class="kpi5-top">
-                    <span class="kpi5-icon"><i class="feather-arrow-up-right"></i></span>
-                    <span class="kpi5-pill">Taken</span>
-                </div>
-                <div class="kpi5-value">{{ $fmt($bs['used']) }}</div>
-                <div class="kpi5-label">Used (days)</div>
-                <div class="kpi5-divider"></div>
-                <div class="kpi5-foot">
-                    <div class="kpi5-stat"><span class="n">{{ $fmt($bs['credited']) }}</span><span class="l">Credited</span></div>
-                    <div class="kpi5-stat"><span class="n">{{ $fmt($balanceLeave) }}</span><span class="l">Available</span></div>
-                </div>
-            </div>
-
-            <div class="kpi5-card">
-                <div class="kpi5-top">
-                    <span class="kpi5-icon"><i class="feather-arrow-down-left"></i></span>
-                    <span class="kpi5-pill">Earned</span>
-                </div>
-                <div class="kpi5-value">{{ $fmt($bs['credited']) }}</div>
-                <div class="kpi5-label">Credited (days)</div>
-                <div class="kpi5-divider"></div>
-                <div class="kpi5-foot">
-                    <div class="kpi5-stat"><span class="n">{{ $fmt($bs['used']) }}</span><span class="l">Used</span></div>
                     <div class="kpi5-stat"><span class="n">{{ $fmt($unpaidLeave) }}</span><span class="l">Unpaid</span></div>
                 </div>
             </div>
 
-            <div class="kpi5-card kpi5-card--purple">
+            <div class="kpi5-card">
                 <div class="kpi5-top">
                     <span class="kpi5-icon"><i class="feather-calendar"></i></span>
                     <span class="kpi5-pill">{{ $fmt($pendingLeave) }} pending</span>
@@ -271,28 +243,29 @@
                 <div class="kpi5-foot">
                     <div class="kpi5-stat"><span class="n">{{ $fmt($approvedLeave) }}</span><span class="l">Approved</span></div>
                     <div class="kpi5-stat"><span class="n">{{ $fmt($rejectLeave) }}</span><span class="l">Rejected</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($pendingLeave) }}</span><span class="l">Pending</span></div>
                 </div>
             </div>
-        </div>
 
-        <!-- Balance Summary by Leave Type — available balance only -->
-        <div class="lv-balance-card">
-            <div class="lv-balance-head">
-                <i class="feather-layers"></i>
-                <div>
-                    <h5>Balance Summary by Leave Type</h5>
-                    <p>Days you can still apply for, per leave type</p>
+            <!-- Balance Summary by Leave Type — available balance only -->
+            <div class="kpi5-card lv-balance-card">
+                <div class="kpi5-top">
+                    <span class="d-flex align-items-center gap-2">
+                        <span class="kpi5-icon"><i class="feather-layers"></i></span>
+                        <span class="kpi5-label">Balance Summary by Leave Type</span>
+                    </span>
+                    <span class="kpi5-pill">Available</span>
                 </div>
-            </div>
-            <div class="lv-balance-grid">
-                @forelse ($bs['by_type'] as $type)
-                    <div class="lv-balance-item {{ $type['balance'] > 0 ? 'is-on' : ($type['balance'] < 0 ? 'is-neg' : 'is-zero') }}">
-                        <span class="lv-balance-name" title="{{ $type['name'] }}">{{ $type['name'] }}</span>
-                        <span class="lv-balance-value">{{ $fmt($type['balance']) }} <small>days</small></span>
-                    </div>
-                @empty
-                    <div class="text-muted small px-1">No leave balance has been credited to you yet.</div>
-                @endforelse
+                <div class="lv-balance-grid">
+                    @forelse ($bs['by_type'] as $type)
+                        <div class="lv-balance-item {{ $type['balance'] > 0 ? 'is-on' : ($type['balance'] < 0 ? 'is-neg' : 'is-zero') }}">
+                            <span class="lv-balance-name" title="{{ $type['name'] }}">{{ $type['name'] }}</span>
+                            <span class="lv-balance-value">{{ $fmt($type['balance']) }} <small>days</small></span>
+                        </div>
+                    @empty
+                        <div class="text-muted small">No leave balance has been credited to you yet.</div>
+                    @endforelse
+                </div>
             </div>
         </div>
 
@@ -303,7 +276,7 @@
                     <i class="feather-filter"></i>
                     Filter Leave Applications
                     @php
-                        $activeFilterCount = collect(request()->only(['status', 'leave_type', 'from_date', 'to_date']))
+                        $activeFilterCount = collect(request()->only(['search', 'status', 'leave_type', 'from_date', 'to_date']))
                             ->filter()
                             ->count();
                     @endphp
@@ -311,7 +284,7 @@
                         <span>{{ $activeFilterCount }} active</span>
                     @endif
                 </div>
-                @if (request()->hasAny(['status', 'leave_type', 'from_date', 'to_date']))
+                @if (request()->hasAny(['search', 'status', 'leave_type', 'from_date', 'to_date']))
                     <a href="{{ route('leave.view') }}" class="clear-all-link">
                         <i class="feather-x"></i>
                         Clear All
@@ -321,6 +294,12 @@
 
             <form method="GET" action="{{ route('leave.view') }}" id="filterForm">
                 <div class="filter-row">
+                    <div class="filter-item search">
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" name="search" class="form-control" placeholder="Search leave ID, type, reason..." value="{{ request('search') }}" autocomplete="off">
+                        </div>
+                    </div>
                     <div class="filter-item">
                         <select name="status" class="filter-select">
                             <option value="">All Status</option>
@@ -356,9 +335,19 @@
                 </div>
             </form>
 
-            @if (request()->hasAny(['status', 'leave_type', 'from_date', 'to_date']))
+            @if (request()->hasAny(['search', 'status', 'leave_type', 'from_date', 'to_date']))
                 <div class="active-filters">
                     <span class="active-filters-label">Active:</span>
+
+                    @if (request('search'))
+                        <span class="filter-tag">
+                            <i class="feather-search"></i>
+                            Search: {{ request('search') }}
+                            <a href="{{ route('leave.view', request()->except(['search', 'page'])) }}" class="remove-tag">
+                                <i class="feather-x"></i>
+                            </a>
+                        </span>
+                    @endif
 
                     @if (request('status'))
                         <span class="filter-tag">
@@ -420,6 +409,7 @@
                                 <thead>
                                     <tr class="text-center">
                                         <th>S. No.</th>
+                                        <th>Leave ID</th>
                                         <th>Leave Type</th>
                                         <th>Date Range</th>
                                         <th>Days</th>
@@ -434,6 +424,7 @@
                                     @foreach ($leaves as $leave)
                                         <tr class="text-center">
                                             <td>{{ $loop->iteration }}</td>
+                                            <td class="lv-code">{{ $leave->leave_id ?: '—' }}</td>
                                             <td>{{ $leave->leaveType->name ?? '' }}</td>
                                             <td>
                                                 {{ date('d M Y', strtotime($leave->start_date)) }}
@@ -509,7 +500,7 @@
                                     @endforeach
                                     @if ($leaves->isEmpty())
                                         <tr>
-                                            <td colspan="9" class="text-center">No leave applications found.</td>
+                                            <td colspan="10" class="text-center">No leave applications found.</td>
                                         </tr>
                                     @endif
                                 </tbody>
@@ -532,6 +523,13 @@
             // Auto-submit on filter select change
             $('.filter-select').on('change', function() {
                 $('#filterForm').submit();
+            });
+
+            // Search: submit after typing stops (Enter submits at once)
+            let searchTimeout;
+            $('input[name="search"]').on('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => $('#filterForm').submit(), 600);
             });
 
             // Date range validation, then auto-submit (no Apply button in this filter bar)

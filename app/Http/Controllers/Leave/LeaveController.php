@@ -73,7 +73,7 @@ class LeaveController extends Controller
 
             // Base query for leave applications using models
             $leaveQuery = Leave::with('leaveType')
-                ->where('user_id', $userId);
+                ->where('user_id', $userId)->searchText($request->input('search'));
 
             // Apply status filter if provided
             if ($request->filled('status')) {
@@ -104,7 +104,7 @@ class LeaveController extends Controller
 
             // Get counts based on filters — one conditional-SUM query instead
             // of four separate sum() round trips over the same filtered set.
-            $statsQuery = Leave::where('user_id', $userId);
+            $statsQuery = Leave::where('user_id', $userId)->searchText($request->input('search'));
             if ($request->filled('status')) {
                 $statsQuery->where('status', $request->status);
             }
@@ -451,7 +451,7 @@ class LeaveController extends Controller
         $isTeamScoped = $scope === 'team';
 
         // Build query using Eloquent relationships
-        $leaveQuery = Leave::with(['user', 'user.jobDetails', 'leaveType'])
+        $leaveQuery = Leave::with(['user', 'user.jobDetails.departmentRel:id,name', 'user.jobDetails.designationRel:id,name', 'leaveType', 'statusUpdater:id,name'])
             ->join('users', 'leaves.user_id', '=', 'users.id')
             ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id')
             ->leftJoin('leave_types', 'leaves.leave_type', '=', 'leave_types.id')
@@ -499,7 +499,7 @@ class LeaveController extends Controller
         if ($request->filled('search')) {
             $searchTerm = '%' . $request->search . '%';
             $leaveQuery->where(function ($q) use ($searchTerm) {
-                $q->where('users.name', 'LIKE', $searchTerm)
+                $q->where('users.name', 'LIKE', $searchTerm)->orWhere('users.employee_id', 'LIKE', $searchTerm)->orWhere('leaves.leave_id', 'LIKE', $searchTerm)
                     ->orWhere('users.email', 'LIKE', $searchTerm)
                     ->orWhere('leave_types.name', 'LIKE', $searchTerm)
                     ->orWhere('leaves.reason', 'LIKE', $searchTerm);

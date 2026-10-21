@@ -452,6 +452,25 @@
                 font-size: 11.5px;
             }
 
+            /* Leave ID (leaves.leave_id, e.g. LV-000001) under the type badge */
+            .leave-code { margin-top: 3px; font-size: 10.5px; font-weight: 700; color: #0D6EFD; white-space: nowrap; }
+
+            /* View Details modal — compact, small font */
+            #viewDetailsModal .modal-title { font-size: 14px; }
+            .ld-view { font-size: 11.5px; padding: 14px 16px; }
+            .ld-view-head { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
+            .ld-view-avatar { width: 36px; height: 36px; border-radius: 50%; background: #0D6EFD; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex: none; }
+            .ld-view-name { font-size: 13px; font-weight: 700; color: #1e293b; }
+            .ld-view-name small { font-size: 10.5px; font-weight: 600; color: #64748b; }
+            .ld-view-sub { font-size: 10.5px; color: #64748b; }
+            .ld-view-section { margin: 12px 0 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #0D6EFD; }
+            .ld-view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+            .ld-view-grid > div { display: flex; flex-direction: column; min-width: 0; }
+            .ld-view-grid span { font-size: 10px; color: #94a3b8; }
+            .ld-view-grid strong { font-size: 11.5px; font-weight: 600; color: #1e293b; }
+            .ld-view .reason-box { font-size: 11.5px; padding: 8px 10px; }
+            .ld-view .badge { font-size: 10px; }
+
             /* ==================== MODAL STYLES ==================== */
             .modal-content {
                 border-radius: 16px;
@@ -642,7 +661,7 @@
                         <i class="feather-filter"></i>
                         Filter Leave Applications
                         @php
-                            $activeFilterCount = collect(request()->only(['status', 'from_date', 'to_date']))
+                            $activeFilterCount = collect(request()->only(['search', 'status', 'from_date', 'to_date']))
                                 ->filter()
                                 ->count();
                         @endphp
@@ -650,7 +669,7 @@
                             <span>{{ $activeFilterCount }} active</span>
                         @endif
                     </div>
-                    @if (request()->hasAny(['status', 'from_date', 'to_date']))
+                    @if (request()->hasAny(['search', 'status', 'from_date', 'to_date']))
                         <a href="{{ route('leave.view-all') }}" class="clear-all-link">
                             <i class="feather-x"></i>
                             Clear All
@@ -660,6 +679,12 @@
 
                 <form action="{{ route('leave.view-all') }}" method="GET" id="filterForm">
                     <div class="filter-row">
+                        <div class="filter-item search">
+                            <div class="search-wrapper">
+                                <i class="feather-search"></i>
+                                <input type="text" name="search" class="form-control" placeholder="Search employee, leave ID, type, reason..." value="{{ request('search') }}" autocomplete="off">
+                            </div>
+                        </div>
                         <!-- Custom Employee Dropdown with Initials -->
                         <div class="filter-item" style="min-width: 220px;">
 
@@ -751,9 +776,20 @@
                 </form>
 
                 <!-- Active Filter Tags -->
-                @if (request()->hasAny(['status', 'from_date', 'to_date']))
+                @if (request()->hasAny(['search', 'status', 'from_date', 'to_date']))
                     <div class="active-filters">
                         <span class="active-filters-label">Active:</span>
+
+                        @if (request('search'))
+                            <span class="filter-tag">
+                                <i class="feather-search"></i>
+                                Search: {{ request('search') }}
+                                <a href="{{ route('leave.view-all', request()->except(['search', 'page'])) }}"
+                                    class="remove-tag">
+                                    <i class="feather-x"></i>
+                                </a>
+                            </span>
+                        @endif
 
                         @if (request('status'))
                             <span class="filter-tag">
@@ -848,6 +884,7 @@
                                                 <td>
                                                     <span
                                                         class="badge bg-primary">{{ $leave->leaveType->name ?? '' }}</span>
+                                                    <div class="leave-code">{{ $leave->leave_id }}</div>
                                                 </td>
                                                 <td>
                                                     <div>
@@ -918,8 +955,32 @@
                                                                 </li>
                                                             @endif
                                                             <li>
-                                                                <a class="dropdown-item" href="javascript:void(0)"
-                                                                    onclick="viewLeaveDetails({{ $leave->id }}, '{{ addslashes($leave->user_name) }}', '{{ $leave->user_email }}', '{{ $leave->leaveType->name }}', '{{ $leave->start_date }}', '{{ $leave->start_session }}', '{{ addslashes($leave->reason) }}', '{{ $leave->status }}', '{{ $leave->file }}')">
+                                                                @php
+                                                                    $jd = $leave->user?->jobDetails;
+                                                                    $sessionText = fn ($v) => ['fullday' => 'Full Day', 'session1' => 'Session 1 (First half)', 'session2' => 'Session 2 (Second half)'][$v] ?? ucfirst((string) $v);
+                                                                    $detail = [
+                                                                        'leave_id' => $leave->leave_id ?: '—',
+                                                                        'name' => $leave->user_name,
+                                                                        'employee_id' => $leave->employee_id,
+                                                                        'email' => $leave->user_email,
+                                                                        'department' => $jd?->departmentRel?->name,
+                                                                        'designation' => $jd?->designationRel?->name,
+                                                                        'leave_type' => $leave->leaveType->name ?? null,
+                                                                        'from' => date('d M Y', strtotime($leave->start_date)) . ' · ' . $sessionText($leave->start_session),
+                                                                        'to' => date('d M Y', strtotime($leave->end_date ?: $leave->start_date)) . ' · ' . $sessionText($leave->end_session ?: $leave->start_session),
+                                                                        'days' => rtrim(rtrim(number_format((float) ($leave->total_days ?? $leave->leave_count), 2), '0'), '.'),
+                                                                        'paid' => $leave->deduct_balance === null ? null : ((int) $leave->deduct_balance === 1 ? 'Deducted from balance' : 'Not deducted'),
+                                                                        'applied_on' => $leave->created_at ? date('d M Y, h:i A', strtotime($leave->created_at)) : null,
+                                                                        'source' => ($leave->source ?? null) === 'on_behalf' ? 'Applied by Admin / HR on behalf' : 'Applied by employee',
+                                                                        'status' => $leave->status,
+                                                                        'updated_by' => $leave->statusUpdater?->name,
+                                                                        'updated_on' => $leave->status !== 'pending' && $leave->updated_at ? date('d M Y, h:i A', strtotime($leave->updated_at)) : null,
+                                                                        'remarks' => $leave->status_update_remarks,
+                                                                        'reason' => $leave->reason,
+                                                                        'file' => $leave->file ? file_url($leave->file, 'leave') : null,
+                                                                    ];
+                                                                @endphp
+                                                                <a class="dropdown-item js-view-leave" href="javascript:void(0)" data-detail="{{ json_encode($detail) }}">
                                                                     <i class="feather-eye"></i>
                                                                     <span>View Details</span>
                                                                 </a>
@@ -987,46 +1048,48 @@
 
         <!-- View Details Modal (No AJAX, uses same data) -->
         <div class="modal fade" id="viewDetailsModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-md">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-md">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Leave Application Details</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="detail-row">
-                            <div class="detail-label">Employee Name:</div>
-                            <div class="detail-value" id="detail_name"></div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Email:</div>
-                            <div class="detail-value" id="detail_email"></div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Leave Type:</div>
-                            <div class="detail-value" id="detail_leave_type"></div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Start Date:</div>
-                            <div class="detail-value" id="detail_start_date"></div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Session:</div>
-                            <div class="detail-value" id="detail_session"></div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Status:</div>
-                            <div class="detail-value" id="detail_status"></div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Reason:</div>
-                            <div class="detail-value">
-                                <div class="reason-box" id="detail_reason"></div>
+                    <div class="modal-body ld-view">
+                        <div class="ld-view-head">
+                            <div class="ld-view-avatar" id="detail_avatar"></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="ld-view-name"><span id="detail_name"></span> <small id="detail_emp_id"></small></div>
+                                <div class="ld-view-sub" id="detail_email"></div>
+                                <div class="ld-view-sub" id="detail_job"></div>
                             </div>
+                            <div id="detail_status"></div>
                         </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Attachment:</div>
-                            <div class="detail-value" id="detail_file"></div>
+
+                        <div class="ld-view-section">Leave</div>
+                        <div class="ld-view-grid">
+                            <div><span>Leave ID</span><strong id="detail_leave_id"></strong></div>
+                            <div><span>Leave Type</span><strong id="detail_leave_type"></strong></div>
+                            <div><span>From</span><strong id="detail_from"></strong></div>
+                            <div><span>To</span><strong id="detail_to"></strong></div>
+                            <div><span>Days</span><strong id="detail_days"></strong></div>
+                            <div><span>Balance</span><strong id="detail_paid"></strong></div>
+                            <div><span>Applied On</span><strong id="detail_applied_on"></strong></div>
+                            <div><span>Applied By</span><strong id="detail_source"></strong></div>
+                        </div>
+
+                        <div class="ld-view-section">Reason</div>
+                        <div class="reason-box" id="detail_reason"></div>
+
+                        <div class="ld-view-section">Attachment</div>
+                        <div id="detail_file"></div>
+
+                        <div id="detail_decision_wrap">
+                            <div class="ld-view-section">Decision</div>
+                            <div class="ld-view-grid">
+                                <div><span>Updated By</span><strong id="detail_updated_by"></strong></div>
+                                <div><span>Updated On</span><strong id="detail_updated_on"></strong></div>
+                            </div>
+                            <div class="reason-box mt-2" id="detail_remarks"></div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -1060,9 +1123,9 @@
                     $('#filterForm').submit();
                 });
 
-                // Debounce search input (if added later)
+                // Search: submit after typing stops
                 let searchTimeout;
-                $('input[name="search"]').on('keyup', function() {
+                $('input[name="search"]').on('input', function() {
                     clearTimeout(searchTimeout);
                     searchTimeout = setTimeout(() => {
                         $('#filterForm').submit();
@@ -1125,71 +1188,47 @@
                 $('#statusModal').modal('show');
             }
 
-            // View details modal - using data passed from the row (no AJAX)
-            // View details modal - using data passed from the row (no AJAX)
-            function viewLeaveDetails(id, name, email, leaveType, startDate, session, reason, status, file) {
+            // View details modal — everything comes from the link's data-detail JSON (no AJAX).
+            $(document).on('click', '.js-view-leave', function (e) {
+                e.preventDefault();
+                let d = $(this).data('detail') || {};
+                let txt = (v) => (v === null || v === undefined || v === '') ? '—' : v;
 
-                // Set the values in the modal
-                $('#detail_name').text(name || 'N/A');
-                $('#detail_email').text(email || 'N/A');
-                $('#detail_leave_type').text(leaveType || 'N/A');
+                $('#detail_avatar').text(String(d.name || 'U').substring(0, 2).toUpperCase());
+                $('#detail_name').text(txt(d.name));
+                $('#detail_emp_id').text(d.employee_id ? '(' + d.employee_id + ')' : '');
+                $('#detail_email').text(d.email || '');
+                $('#detail_job').text([d.designation, d.department].filter(Boolean).join(' · '));
+                $('#detail_leave_id').text(txt(d.leave_id));
+                $('#detail_leave_type').text(txt(d.leave_type));
+                $('#detail_from').text(txt(d.from));
+                $('#detail_to').text(txt(d.to));
+                $('#detail_days').text(d.days ? d.days + ' day(s)' : '—');
+                $('#detail_paid').text(txt(d.paid));
+                $('#detail_applied_on').text(txt(d.applied_on));
+                $('#detail_source').text(txt(d.source));
 
-                // Format date
-                if (startDate) {
-                    let date = new Date(startDate);
-                    let formattedDate = date.getDate() + ' ' +
-                        date.toLocaleString('default', {
-                            month: 'short'
-                        }) + ' ' +
-                        date.getFullYear();
-                    $('#detail_start_date').text(formattedDate);
-                } else {
-                    $('#detail_start_date').text('N/A');
-                }
+                let badge = {approved: 'bg-success', pending: 'bg-warning', cancelled: 'bg-danger'}[d.status] || 'bg-secondary';
+                $('#detail_status').html($('<span>').addClass('badge ' + badge).text(d.status ? d.status.charAt(0).toUpperCase() + d.status.slice(1) : 'N/A'));
 
-                $('#detail_session').text(session ? session.charAt(0).toUpperCase() + session.slice(1) : 'N/A');
+                $('#detail_reason').text(d.reason || 'No reason provided');
 
-                // Status with badge
-                let statusClass = '';
-                if (status === 'approved') statusClass = 'badge bg-success';
-                else if (status === 'pending') statusClass = 'badge bg-warning';
-                else if (status === 'cancelled') statusClass = 'badge bg-danger';
-                else statusClass = 'badge bg-secondary';
-
-                $('#detail_status').html('<span class="' + statusClass + '">' + (status ? status.charAt(0).toUpperCase() +
-                    status.slice(1) : 'N/A') + '</span>');
-
-                $('#detail_reason').text(reason || 'No reason provided');
-
-                // Handle file attachment - FIXED URL ISSUE
-                if (file && file !== 'null' && file !== '') {
-                    let fileUrl = file;
-
-                    // Check if the URL already has 'uploads' in it to avoid duplication
-                    // If the file path starts with 'uploads/', use asset() to generate correct URL
-                    if (fileUrl.startsWith('uploads/')) {
-                        let baseUrl = $('meta[name="base-url"]').attr('content') || '';
-                        fileUrl = baseUrl + '/' + fileUrl;
-                    }
-
-                    // Signed URLs carry a query string: read the extension from the path only.
-                    let extension = file.split('?')[0].split('.').pop().toLowerCase();
-                    let imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-
-                    if (imageExtensions.includes(extension)) {
-                        $('#detail_file').html('<a href="' + fileUrl +
-                            '" target="_blank" class="file-preview"><i class="feather-image"></i> View Image</a>');
-                    } else {
-                        $('#detail_file').html('<a href="' + fileUrl +
-                            '" download class="file-preview"><i class="feather-download"></i> Download File</a>');
-                    }
+                if (d.file) {
+                    let isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(d.file.split('?')[0].split('.').pop().toLowerCase());
+                    $('#detail_file').html($('<a target="_blank" rel="noopener" class="file-preview">').attr('href', d.file)
+                        .html(isImage ? '<i class="feather-image"></i> View Image' : '<i class="feather-download"></i> Download File'));
                 } else {
                     $('#detail_file').html('<span class="text-muted">No attachment</span>');
                 }
 
-                $('#viewDetailsModal').modal('show');
-            }
+                let decided = d.status && d.status !== 'pending';
+                $('#detail_decision_wrap').toggle(decided);
+                $('#detail_updated_by').text(txt(d.updated_by));
+                $('#detail_updated_on').text(txt(d.updated_on));
+                $('#detail_remarks').text(d.remarks || 'No remarks').toggleClass('text-muted', !d.remarks);
 
+                $('#viewDetailsModal').modal('show');
+            });
             // Export to CSV
             // Export to CSV using data attributes
             function exportToCSV() {

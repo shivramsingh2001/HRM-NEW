@@ -71,6 +71,20 @@ class LeaveDrawerTest extends TestCase
             ->assertSee('value="2026-10-23"', false);
     }
 
+    public function test_my_leaves_search_matches_leave_id(): void
+    {
+        $leave = DB::table('leaves')->where('user_id', $this->employee->id)->whereNotNull('leave_id')->first();
+
+        $this->actingAs($this->employee)->get(route('leave.view', ['search' => $leave->leave_id]))
+            ->assertOk()
+            ->assertSee('<td class="lv-code">'.$leave->leave_id.'</td>', false)
+            ->assertSee('name="search"', false);
+
+        $this->actingAs($this->employee)->get(route('leave.view', ['search' => 'no-such-leave-zzz']))
+            ->assertOk()
+            ->assertDontSee('<td class="lv-code">', false);
+    }
+
     public function test_a_refused_submit_comes_back_with_the_drawer_mode(): void
     {
         $typeId = DB::table('leave_types')->where('tenant_id', $this->employee->tenant_id)->where('status', 1)->value('id');
