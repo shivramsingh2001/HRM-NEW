@@ -151,59 +151,24 @@
 
 
 
-    /* ==================== STATS CARDS (matches Team Leave Applications) ==================== */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: .75rem;
-        margin-bottom: 1rem;
-    }
+    /* ==================== STATS CARDS (kpi5, as Leave Credit → My Transactions) ==================== */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
 
-    .stats-card {
-        background: white;
-        border: 1px solid var(--lv-border);
-        border-radius: 10px;
-        padding: 12px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        transition: all 0.2s;
-        box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
-    }
-
-    .stats-card:hover {
-        box-shadow: 0 4px 12px -4px rgba(30, 50, 110, .12);
-        border-color: #dfe5f0;
-        transform: translateY(-1px);
-    }
-
-    .stats-icon {
-        width: 32px;
-        height: 32px;
-        background: var(--lv-soft);
-        border-radius: 9px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex: none;
-    }
-
-    .stats-icon i { font-size: 12px; color: var(--icon-color, #0D6EFD); }
-
-    .stats-info h3 {
-        font-size: 15px;
-        font-weight: 800;
-        margin: 0 0 1px 0;
-        color: var(--lv-text);
-        line-height: 1.2;
-    }
-
-    .stats-info p {
-        font-size: 9.5px;
-        font-weight: 600;
-        color: var(--lv-text-soft);
-        margin: 0;
-    }
+    /* Balance Summary by Leave Type: available days per type */
+    .lv-balance-card { background: #fff; border: 1px solid var(--lv-border); border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+    .lv-balance-head { display: flex; align-items: center; gap: 10px; background: #f7f8fb; padding: 9px 14px; border-bottom: 1px solid var(--lv-border); }
+    .lv-balance-head > i { width: 28px; height: 28px; border-radius: 8px; background: #0D6EFD; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; flex: none; }
+    .lv-balance-head h5 { margin: 0; font-size: 11.5px; font-weight: 700; color: var(--lv-text); }
+    .lv-balance-head p { margin: 1px 0 0; font-size: 10.5px; color: var(--lv-text-soft); }
+    .lv-balance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; padding: 10px 14px; }
+    .lv-balance-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--lv-border); border-left: 3px solid #16a34a; border-radius: 8px; padding: 7px 10px; background: #fff; }
+    .lv-balance-item.is-zero { border-left-color: #cbd5e1; }
+    .lv-balance-item.is-neg { border-left-color: #dc2626; }
+    .lv-balance-name { font-size: 11.5px; font-weight: 600; color: var(--lv-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lv-balance-value { font-size: 14px; font-weight: 800; color: #16a34a; white-space: nowrap; }
+    .lv-balance-item.is-zero .lv-balance-value { color: #94a3b8; }
+    .lv-balance-item.is-neg .lv-balance-value { color: #dc2626; }
+    .lv-balance-value small { font-size: 9.5px; font-weight: 600; color: var(--lv-text-soft); }
 
     @media (max-width: 992px) {
         .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -227,7 +192,7 @@
                 <i class="feather-file-text me-2"></i>
                 <span>My Leave Report</span>
             </a>
-            <a href="{{ route('leave.apply') }}" class="btn btn-primary">
+            <a href="{{ route('leave.apply') }}" class="btn btn-primary js-apply-leave">
                 <i class="feather-plus me-2"></i>
                 <span>Apply Leave</span>
             </a>
@@ -236,43 +201,98 @@
     <!-- [ page-header ] end -->
     <!-- [ Main Content ] start -->
     <div class="main-content" style="padding: 20px !important;">
-        <!-- Stats Cards -->
+        @if (session('success'))
+            <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+                <i class="feather-check-circle me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @elseif (session('error') && ! old('_leave_mode'))
+            <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
+                <i class="feather-alert-circle me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        <!-- Stats Cards — same anatomy as Leave Credit → My Transactions -->
+        @php
+            $fmt = fn ($n) => rtrim(rtrim(number_format((float) $n, 2), '0'), '.') ?: '0';
+            $bs = $balanceSummary;
+        @endphp
         <div class="stats-grid">
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="feather-users"></i>
+            <div class="kpi5-card kpi5-card--success">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="feather-pie-chart"></i></span>
+                    <span class="kpi5-pill">{{ $bs['by_type']->count() }} {{ \Illuminate\Support\Str::plural('type', $bs['by_type']->count()) }}</span>
                 </div>
-                <div class="stats-info">
-                    <h3>{{ $balanceLeave }}</h3>
-                    <p>Balance Leave</p>
-                </div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-icon" style="background: rgba(96, 165, 250, 0.15);">
-                    <i class="feather-calendar" style="color: #60a5fa;"></i>
-                </div>
-                <div class="stats-info">
-                    <h3>{{ $totalLeave }}</h3>
-                    <p>Leave Request</p>
+                <div class="kpi5-value">{{ $fmt($balanceLeave) }}</div>
+                <div class="kpi5-label">Available Balance (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($bs['credited']) }}</span><span class="l">Credited</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($bs['used']) }}</span><span class="l">Used</span></div>
                 </div>
             </div>
-            <div class="stats-card">
-                <div class="stats-icon" style="background: rgba(59, 130, 246, 0.15);">
-                    <i class="feather-user-check" style="color: var(--icon-color, #0D6EFD);"></i>
+
+            <div class="kpi5-card kpi5-card--warning">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="feather-arrow-up-right"></i></span>
+                    <span class="kpi5-pill">Taken</span>
                 </div>
-                <div class="stats-info">
-                    <h3>{{ $approvedLeave }}</h3>
-                    <p>Approved Leave</p>
+                <div class="kpi5-value">{{ $fmt($bs['used']) }}</div>
+                <div class="kpi5-label">Used (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($bs['credited']) }}</span><span class="l">Credited</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($balanceLeave) }}</span><span class="l">Available</span></div>
                 </div>
             </div>
-            <div class="stats-card">
-                <div class="stats-icon" style="background: rgba(13, 110, 253, 0.15);">
-                    <i class="feather-user-plus" style="color: var(--icon-color, #0D6EFD);"></i>
+
+            <div class="kpi5-card">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="feather-arrow-down-left"></i></span>
+                    <span class="kpi5-pill">Earned</span>
                 </div>
-                <div class="stats-info">
-                    <h3>{{ $unpaidLeave }}</h3>
-                    <p>Unpaid Leave</p>
+                <div class="kpi5-value">{{ $fmt($bs['credited']) }}</div>
+                <div class="kpi5-label">Credited (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($bs['used']) }}</span><span class="l">Used</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($unpaidLeave) }}</span><span class="l">Unpaid</span></div>
                 </div>
+            </div>
+
+            <div class="kpi5-card kpi5-card--purple">
+                <div class="kpi5-top">
+                    <span class="kpi5-icon"><i class="feather-calendar"></i></span>
+                    <span class="kpi5-pill">{{ $fmt($pendingLeave) }} pending</span>
+                </div>
+                <div class="kpi5-value">{{ $fmt($totalLeave) }}</div>
+                <div class="kpi5-label">Leave Requested (days)</div>
+                <div class="kpi5-divider"></div>
+                <div class="kpi5-foot">
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($approvedLeave) }}</span><span class="l">Approved</span></div>
+                    <div class="kpi5-stat"><span class="n">{{ $fmt($rejectLeave) }}</span><span class="l">Rejected</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Balance Summary by Leave Type — available balance only -->
+        <div class="lv-balance-card">
+            <div class="lv-balance-head">
+                <i class="feather-layers"></i>
+                <div>
+                    <h5>Balance Summary by Leave Type</h5>
+                    <p>Days you can still apply for, per leave type</p>
+                </div>
+            </div>
+            <div class="lv-balance-grid">
+                @forelse ($bs['by_type'] as $type)
+                    <div class="lv-balance-item {{ $type['balance'] > 0 ? 'is-on' : ($type['balance'] < 0 ? 'is-neg' : 'is-zero') }}">
+                        <span class="lv-balance-name" title="{{ $type['name'] }}">{{ $type['name'] }}</span>
+                        <span class="lv-balance-value">{{ $fmt($type['balance']) }} <small>days</small></span>
+                    </div>
+                @empty
+                    <div class="text-muted small px-1">No leave balance has been credited to you yet.</div>
+                @endforelse
             </div>
         </div>
 
@@ -468,7 +488,11 @@
                                                 @if ($leave->status == 'pending')
                                                     <div class="d-flex justify-content-center gap-2">
                                                         <a href="{{ route('leave.update', ['id' => encrypt($leave->id)]) }}"
-                                                            class="action-btn" title="Edit">
+                                                            class="action-btn js-edit-leave" title="Edit" data-id="{{ $leave->id }}"
+                                                            data-action="{{ route('leave.update-store', ['id' => encrypt($leave->id)]) }}"
+                                                            data-leave-type="{{ $leave->leave_type }}" data-reason="{{ $leave->reason }}" data-file="{{ $leave->file }}"
+                                                            data-start-date="{{ substr((string) $leave->start_date, 0, 10) }}" data-start-session="{{ $leave->start_session }}"
+                                                            data-end-date="{{ substr((string) ($leave->end_date ?: $leave->start_date), 0, 10) }}" data-end-session="{{ $leave->end_session }}">
                                                             <i class="feather-edit-3"></i>
                                                         </a>
                                                         <a href="{{ route('leave.delete', ['id' => encrypt($leave->id)]) }}"
@@ -499,6 +523,7 @@
     <!-- [ Main Content ] end -->
 @endsection
 @section('create-modal')
+    @include('client.leave.partials.leave-form-drawer')
 @endsection
 
 @section('script-area')

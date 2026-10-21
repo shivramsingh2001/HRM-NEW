@@ -67,13 +67,9 @@ class LeaveController extends Controller
         try {
             $userId = Auth::id();
 
-            // Get leave summary calculations using models
-            $balanceByType = LeaveBalance::with('leaveType')
-                ->where('user_id', $userId)
-                ->get();
-
-            // Calculate total available balance (sum of all leave types)
-            $available = $balanceByType->sum('balance');
+            // Available / credited / used + per-type balance for the cards (and the Apply drawer).
+            $balance = app(\App\Services\Leave\LeaveBalanceSummary::class)->forUser($userId);
+            $available = $balance['available'];
 
             // Base query for leave applications using models
             $leaveQuery = Leave::with('leaveType')
@@ -139,6 +135,9 @@ class LeaveController extends Controller
                 'rejectLeave' => $stats->reject_leave,
                 'leaves' => $leaves,
                 'leaveTypes' => LeaveType::where('status', 1)->where('tenant_id', Auth::user()->tenant_id)->get(),
+                'leaveBalances' => $balance['by_type']->pluck('balance', 'id'), // Apply / Edit drawer
+                'balanceSummary' => $balance,
+                'prefillLeaveDate' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->query('date')) ? $request->query('date') : null,
                 'filters' => [
                     'status' => $request->status,
                     'from_date' => $request->from_date,
@@ -157,27 +156,13 @@ class LeaveController extends Controller
         }
     }
 
+    /**
+     * Apply Leave is a side drawer on My Leaves (leave.view); this URL only opens it.
+     * ?date=YYYY-MM-DD pre-fills the dates (the Employee Dashboard's "Apply Leave" on an absent day).
+     */
     public function create()
     {
-        $user = Auth::user();
-        $userId = $user->id;
-        // Explicit tenant_id filter as defense-in-depth alongside the
-        // TenantTrait global scope, which silently no-ops outside a request
-        // context (console commands/queued jobs).
-        $data['leaveTypes'] = LeaveType::where('status', 1)->where('tenant_id', $user->tenant_id)->get();
-        $balances = LeaveBalance::where('user_id', $userId)
-                    ->get()
-                    ->keyBy('leave_type_id');
-        
-        foreach ($data['leaveTypes'] as $type) {
-            $type->available_balance = isset($balances[$type->id]) ? (float) $balances[$type->id]->balance : 0;
-        }
-
-        // ?date=YYYY-MM-DD pre-fills the dates (the Employee Dashboard's "Apply Leave" on an absent day).
-        $date = (string) request()->query('date', '');
-        $data['prefillLeaveDate'] = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && strtotime($date) ? $date : null;
-
-        return view('client.leave.apply-leave', $data);
+        return redirect()->route('leave.view', array_filter(['apply' => 1, 'date' => request()->query('date')]));
     }
 
     public function store(Request $request)
@@ -294,26 +279,19 @@ class LeaveController extends Controller
             : null;
     }
 
+    /** Edit Leave is the same side drawer on My Leaves; this URL opens it for one of the employee's own leaves. */
     public function update(Request $request, $id)
     {
         try {
-            $id = decrypt($id);
-            $userId = Auth::id();
-
-            $data['leave'] = Leave::where('id', $id)
-                ->where('user_id', $userId)
-                ->first();
-
-            if (!$data['leave']) {
-                return redirect()->route('leave.view')->with('error', 'Leave application not found.');
-            }
-
-            $data['leaveTypes'] = LeaveType::all();
-            return view('client.leave.update-leave', $data);
+            $leave = Leave::where('id', decrypt($id))->where('user_id', Auth::id())->first();
         } catch (Exception $e) {
             report($e);
-            return back()->withErrors('error', 'Something went wrong. ' . $e->getMessage());
+            $leave = null;
         }
+
+        return $leave
+            ? redirect()->route('leave.view', ['edit' => $leave->id])
+            : redirect()->route('leave.view')->with('error', 'Leave application not found.');
     }
 
     public function update_store(Request $request, $id)

@@ -68,7 +68,7 @@ class ControllerSizeGuardTest extends TestCase
         'app/Http/Controllers/Concerns/TeamAttendanceStatus.php' => [323, 103],
         'app/Http/Controllers/Expense/ExpenseController.php' => [790, 149],
         'app/Http/Controllers/Expense/PaymentController.php' => [496, 107],
-        'app/Http/Controllers/Leave/LeaveController.php' => [754, 153],
+        'app/Http/Controllers/Leave/LeaveController.php' => [732, 153],
         'app/Http/Controllers/Leave/LeaveCreditController.php' => [782, 79],
         'app/Http/Controllers/Loan/LoanController.php' => [1414, 108],
         'app/Http/Controllers/Mom/MeetingController.php' => [737, 145],

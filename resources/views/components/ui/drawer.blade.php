@@ -10,6 +10,9 @@
         </form>
     </x-ui.drawer>
 
+    Optional subtitle="…" adds a one-line description under the title
+    (element #{id}Subtitle, so a page can change it from JS).
+
     Trigger from anywhere on the page:
         <button data-bs-toggle="offcanvas" data-bs-target="#addEmployeeDrawer">Add Employee</button>
 
@@ -19,11 +22,16 @@
     @section('create-modal') (the layout's existing slot for this — see
     master.blade.php's @yield('create-modal')), not inside the page content.
 --}}
-@props(['id', 'title' => '', 'width' => '640px'])
+@props(['id', 'title' => '', 'subtitle' => null, 'width' => '640px'])
 
 <div class="offcanvas offcanvas-end ui-drawer" tabindex="-1" id="{{ $id }}" aria-labelledby="{{ $id }}Label" style="width: {{ $width }};">
     <div class="offcanvas-header">
-        <h5 id="{{ $id }}Label">{{ $title }}</h5>
+        <div>
+            <h5 id="{{ $id }}Label">{{ $title }}</h5>
+            @if ($subtitle !== null)
+                <p class="ui-drawer-subtitle" id="{{ $id }}Subtitle">{{ $subtitle }}</p>
+            @endif
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
