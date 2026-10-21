@@ -3,14 +3,28 @@
 @section('style')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
-        .ws-page .content-area-body { padding: 10px 14px !important; }
-        .ws-emp { font-size: 11px; color: #475569; }
-        .ws-emp .chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1px 4px 1px 8px; margin: 2px 4px 2px 0; background: #fff; }
-        .ws-emp .chip.cancelled { text-decoration: line-through; color: #94a3b8; }
-        .ws-emp .chip .x { border: 0; background: none; color: #ef4444; padding: 0 3px; line-height: 1; }
+        /* "How it works" note — same look as the Shift Request Rules card */
+        .ws-info { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+        .ws-info-icon { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: var(--primary-light, #EFF6FF); color: var(--icon-color, #0D6EFD); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; }
+        .ws-info h6 { font-size: 13px; font-weight: 700; margin: 0 0 3px; color: #0f172a; }
+        .ws-info p { font-size: 12.5px; color: #475569; margin: 0; line-height: 1.5; }
+        .ws-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+        @media (max-width: 767px) { .ws-stats { grid-template-columns: 1fr; } }
+        /* Dates: weekday on top, date below */
+        .ws-date strong { display: block; color: #0f172a; }
+        .ws-date small { color: #64748b; }
+        .ws-arrow { color: #94a3b8; }
+        /* Employee chips */
+        .ws-emp { display: flex; flex-wrap: wrap; gap: 4px; }
+        .ws-emp .chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #dbeafe; border-radius: 20px; padding: 2px 4px 2px 10px; background: var(--primary-light, #EFF6FF); color: #1e293b; }
+        .ws-emp .chip.cancelled { text-decoration: line-through; color: #94a3b8; background: #f8fafc; border-color: #e2e8f0; padding-right: 10px; }
+        .ws-emp .chip .x { border: 0; background: #fff; color: #dc2626; width: 18px; height: 18px; border-radius: 50%; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+        .ws-emp .chip .x:hover { background: #fee2e2; }
+        /* New Swap modal */
         #ws_list { max-height: 340px; overflow: auto; }
-        #ws_list td, #ws_list th { font-size: 12px; vertical-align: middle; }
-        #ws_list input[type=date] { font-size: 11px; padding: 2px 4px; height: auto; width: 130px; }
+        #ws_list td, #ws_list th { vertical-align: middle; }
+        #ws_list input[type=date] { width: 150px; }
+        .ws-hint { color: #64748b; }
     </style>
 @endsection
 
@@ -19,28 +33,43 @@
         <x-ui.page-header class="content-area-header sticky-top" title="Week-off Swaps" :crumbs="[['label' => 'Shift']]">
             <x-slot:actions>
                 <div class="hstack gap-2">
-                    <a href="{{ route('shift.roster') }}" class="btn-reset"><i class="feather-grid"></i>Roster</a>
-                    <a href="#" class="btn-grad" id="newBtn"><i class="feather-plus"></i>New Swap</a>
+                    <a href="{{ route('shift.roster') }}" class="btn btn-light-brand btn-sm"><i class="feather-grid me-1"></i>Roster</a>
+                    <a href="#" class="btn btn-primary btn-sm" id="newBtn"><i class="feather-plus me-1"></i>New Swap</a>
                 </div>
             </x-slot:actions>
         </x-ui.page-header>
 
         <div class="content-area-body">
-            <p class="text-muted mb-2" style="font-size:12px">
-                When employees work one of their week-offs, give them another day off instead — e.g. worked Saturday, off on Monday.
-                The day off shows as a week-off everywhere (roster, attendance, reports, app, payroll) and is always paid. Cancelling gives them their shift back.
-            </p>
+            <div class="ws-info">
+                <span class="ws-info-icon"><i class="feather-repeat"></i></span>
+                <div>
+                    <h6>How week-off swaps work</h6>
+                    <p>When employees work one of their week-offs, give them another day off instead — e.g. worked Saturday, off on Monday.
+                        The day off shows as a week-off everywhere (roster, attendance, reports, app, payroll) and is always paid. Cancelling gives them their shift back.</p>
+                </div>
+            </div>
+
+            @php
+                $activeSwaps = $swaps->where('status', 'active');
+                $employeesOff = $activeSwaps->sum(fn ($s) => $s->employees->where('status', 'active')->count());
+            @endphp
+            <div class="ws-stats">
+                <x-ui.stat-card icon="repeat" label="Total Swaps" :value="$swaps->count()" />
+                <x-ui.stat-card icon="check-circle" label="Active Swaps" :value="$activeSwaps->count()" />
+                <x-ui.stat-card icon="users" label="Employees with a Day Off" :value="$employeesOff" />
+            </div>
 
             <x-ui.card title="Swaps" :bodyClass="'p-0'">
                 <x-ui.data-table>
-                    <thead><tr><th>Worked day</th><th>Day off</th><th>Employees</th><th>Reason</th><th>By</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+                    <thead><tr><th>Worked Day</th><th></th><th>Day Off</th><th>Employees</th><th>Reason</th><th>Created By</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
                     <tbody>
                         @forelse ($swaps as $s)
                             @php $active = $s->employees->where('status', 'active'); @endphp
                             <tr>
-                                <td class="text-nowrap">{{ $s->worked_date->format('D, d M Y') }}</td>
-                                <td class="text-nowrap">{{ $s->replacement_date->format('D, d M Y') }}</td>
-                                <td class="ws-emp">
+                                <td class="text-nowrap ws-date"><strong>{{ $s->worked_date->format('l') }}</strong><small>{{ $s->worked_date->format('d M Y') }}</small></td>
+                                <td class="ws-arrow"><i class="feather-arrow-right"></i></td>
+                                <td class="text-nowrap ws-date"><strong>{{ $s->replacement_date->format('l') }}</strong><small>{{ $s->replacement_date->format('d M Y') }}</small></td>
+                                <td><div class="ws-emp">
                                     @foreach ($s->employees as $e)
                                         <span class="chip {{ $e->status === 'cancelled' ? 'cancelled' : '' }}" title="{{ $e->status === 'cancelled' ? 'Cancelled' : 'Day off ' . $e->replacement_date->format('d M') }}">
                                             {{ $e->user->name ?? '#' . $e->user_id }}
@@ -50,9 +79,9 @@
                                             @endif
                                         </span>
                                     @endforeach
-                                </td>
-                                <td style="font-size:12px">{{ $s->reason ?: '—' }}</td>
-                                <td style="font-size:12px">{{ $s->creator->name ?? '—' }}</td>
+                                </div></td>
+                                <td>{{ $s->reason ?: '—' }}</td>
+                                <td>{{ $s->creator->name ?? '—' }}</td>
                                 <td>
                                     @if ($s->status === 'active')
                                         <span class="badge bg-soft-success text-success">Active · {{ $active->count() }}</span>
@@ -67,7 +96,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7"><x-ui.empty-state icon="repeat" title="No week-off swaps yet" subtitle="Use “New Swap” when employees work a week-off." /></td></tr>
+                            <tr><td colspan="8"><x-ui.empty-state icon="repeat" title="No week-off swaps yet" subtitle="Use “New Swap” when employees work a week-off." /></td></tr>
                         @endforelse
                     </tbody>
                 </x-ui.data-table>
@@ -80,7 +109,7 @@
     <div class="modal fade modal-custom" id="swapModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header py-2"><h5 class="modal-title" style="font-size:15px">New Week-off Swap</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header"><h5 class="modal-title"><i class="feather-repeat me-2"></i>New Week-off Swap</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <form id="swapForm" autocomplete="off">
                         <div class="row g-2">
@@ -88,9 +117,9 @@
                             <div class="col-md-3"><label class="form-label">Day off instead</label><input type="date" class="form-control" id="ws_day" required></div>
                             <div class="col-md-6"><label class="form-label">Reason <span class="text-muted">(optional)</span></label><input type="text" class="form-control" id="ws_reason" maxlength="500" placeholder="e.g. Saturday stock audit"></div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-3 mb-1">
-                            <div style="font-size:12px" class="text-muted" id="ws_hint">Pick the week-off worked to list the employees who had it off.</div>
-                            <div class="form-check mb-0" style="font-size:12px"><input class="form-check-input" type="checkbox" id="ws_all"><label class="form-check-label" for="ws_all">Select all</label></div>
+                        <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+                            <div class="ws-hint" id="ws_hint"><i class="feather-info me-1"></i>Pick the week-off worked to list the employees who had it off.</div>
+                            <div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="ws_all"><label class="form-check-label" for="ws_all">Select all</label></div>
                         </div>
                         <div id="ws_list" class="border rounded">
                             <table class="table table-sm mb-0">
@@ -98,12 +127,12 @@
                                 <tbody id="ws_rows"><tr><td colspan="5" class="text-center text-muted py-3">—</td></tr></tbody>
                             </table>
                         </div>
-                        <p class="text-muted mt-2 mb-0" style="font-size:11px">Employees who clocked in on the worked day are ticked. The day off can be changed per employee.</p>
+                        <p class="ws-hint mt-2 mb-0">Employees who clocked in on the worked day are ticked. The day off can be changed per employee.</p>
                     </form>
                 </div>
-                <div class="modal-footer py-2">
+                <div class="modal-footer">
                     <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" form="swapForm" class="btn btn-primary btn-sm">Save Swap</button>
+                    <button type="submit" form="swapForm" class="btn btn-primary btn-sm"><i class="feather-check me-1"></i>Save Swap</button>
                 </div>
             </div>
         </div>
