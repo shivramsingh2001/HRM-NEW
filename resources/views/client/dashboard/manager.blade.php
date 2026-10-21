@@ -167,25 +167,10 @@
 
     <div class="main-content" style="padding: 16px !important;">
 
-        <!-- Welcome Banner -->
-        <div class="row g-compact mb-2">
-            <div class="col-12">
-                <div class="card welcome-banner text-white">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                            <div>
-                                <h5 class="text-white mb-1 fw-bold">Welcome back, {{ $user->name }}!</h5>
-                                <p class="text-white-50 mb-0 fs-12">You're managing {{ $team_size }} team member{{ $team_size == 1 ? '' : 's' }} today.</p>
-                            </div>
-                            <div class="text-end">
-                                <p class="text-white-50 mb-1 fs-12"><i class="feather-calendar me-1"></i>{{ now()->format('l, d F Y') }}</p>
-                                <p class="text-white-50 mb-0 fs-12"><i class="feather-clock me-1"></i>{{ now()->format('h:i A') }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Profile Header (same as the Team member profile) -->
+        <x-ui.profile-header :profile="$profile_header"
+            greeting="Welcome back! You're managing {{ $team_size }} team member{{ $team_size == 1 ? '' : 's' }} today."
+            class="mb-2" />
 
         <!-- KPI Cards -->
         <div class="row row-cols-1 row-cols-md-3 row-cols-xxl-5 g-compact mb-2">

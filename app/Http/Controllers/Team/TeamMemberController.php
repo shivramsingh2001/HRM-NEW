@@ -140,6 +140,8 @@ class TeamMemberController extends Controller
             // Format documents
             $documents = $this->getUserDocuments($userInfo);
 
+            $profileHeader = \App\Services\Dashboard\ProfileHeaderData::fromProfile($userInfo, $profileImage, $todayAttendance);
+
             // Calculate age from DOB
             $age = null;
             if ($userInfo->dob) {
@@ -157,6 +159,7 @@ class TeamMemberController extends Controller
                 'todayAttendance',
                 'directReports',
                 'profileImage',
+                'profileHeader',
                 'documents',
                 'age',
                 'months',
@@ -363,7 +366,7 @@ class TeamMemberController extends Controller
                     'total_hours' => $totalHours,
                     'task_count' => $taskCount,
                     'holiday_name' => $record->holiday_name ?? null,
-                    'clock_in_at' => $record->clock_in, 'clock_out_at' => $record->clock_out, 'shifts' => $record->shifts ?? [], // Week/Day view blocks
+                    'clock_in_at' => $record->clock_in, 'clock_out_at' => $record->clock_out, 'shifts' => $record->shifts ?? [], 'details' => $record->details ?? null, // Week/Day blocks + hover card
                 ];
             }
 

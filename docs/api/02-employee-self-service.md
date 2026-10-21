@@ -685,6 +685,8 @@ The `tasks` block is independent of attendance/tracks and is computed via a raw 
 
 **Purpose:** Manager/HR/Admin dashboard: today's attendance/leave/week-off status for the caller's team (or the whole company).
 
+**Day status follows company policy (2026-10-21):** a clocked-out member's `status` is the policy-graded one (`App\Support\AttendanceDayStatus` — same as `/user/attendance/history`): `Present`, `Half Day` or `Absent` (present ratio, late / early-leaving allowances; hand-marked days use the marked status). Days never graded (e.g. old merged data) are classified from worked hours against the company policy (present / half-day thresholds), same as the web Team page. `count` gains a `half_day` key when anyone is on a half day (additive). `On Leave` now covers every day of a multi-day leave (it used to match only the first day).
+
 **Auth:** JWT bearer + singleLogin.
 
 **Tenant scope:** `User`/`Attendance`/`Leave`/`Holiday` all tenant-scoped via `TenantTrait`.
@@ -768,6 +770,8 @@ Note: this endpoint's top-level success key is **`status`**, not `success` — d
 ## GET /user/team-profile/{id}
 
 **Purpose:** Detailed drill-down into one team member's profile plus a rolling ~2-month attendance/leave/holiday calendar and (if that member is themselves a manager) their own sub-team's today-status.
+
+**Day status follows company policy (2026-10-21):** in `attendance_details.attendances[].day_status` (and `attendance_summary.today`, `teams[].status`) a clocked-out day is the policy-graded status — `Present`, `Half Day` or `Absent` — exactly as `/user/attendance/history` (`App\Support\AttendanceDayStatus`); days never graded (e.g. old merged data) are classified from worked hours against the company policy (`AttendanceDayStatus::forRowOrHours()`), same as the web Team page. `attendance_summary.counts` gains **`half_day`** (half days are no longer counted in `present`; policy-absent days count in `absent`). Each day adds **`leave_type_name`** (the leave type's name; `leave_type` stays the id). Leaves now cover every day of a multi-day leave and leaves that started before the window.
 
 **Auth:** JWT bearer + singleLogin.
 

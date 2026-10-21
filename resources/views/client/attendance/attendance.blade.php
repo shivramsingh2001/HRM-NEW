@@ -41,10 +41,6 @@
 
         /* Calendar Header Enhancements */
         .fc .fc-toolbar {
-            padding: 24px 24px 16px;
-            margin-bottom: 0;
-            background: linear-gradient(135deg, #0D6EFD, #0D6EFD);
-            color: white;
             border-radius: 10px 12px 0 0;
         }
 
@@ -108,6 +104,7 @@
 
         .fc .fc-daygrid-day:hover {
             background: #f9fafb;
+            cursor: pointer;
         }
 
         .fc .fc-daygrid-day.fc-day-today {
@@ -584,50 +581,14 @@
                 <!-- Calendar Container -->
                 <div id="calendar"></div>
 
-                <!-- Calendar Legend (single-blue theme — darker = needs attention, lighter = less urgent) -->
+                <!-- Calendar Legend: same colours as AttendanceContoller::getEventColor() -->
                 <div class="d-flex justify-content-center gap-4 mt-4 flex-wrap">
-                    <div class="d-flex align-items-center gap-2">
-                        <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #172554 0%, #0f172a 100%);">
+                    @foreach (['Present' => '#16a34a', 'Checked In Only' => '#d97706', 'Half Day' => '#65a30d', 'Absent' => '#dc2626', 'Leave' => '#7c3aed', 'Half Day Leave' => '#a855f7', 'Holiday' => '#0D6EFD', 'Week Off' => '#64748b', 'Upcoming' => '#e2e8f0'] as $legendLabel => $legendColor)
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 16px; height: 16px; border-radius: 4px; background: {{ $legendColor }};{{ $legendLabel === 'Upcoming' ? ' border: 1px solid #cbd5e1;' : '' }}"></div>
+                            <span class="text-muted small fw-500">{{ $legendLabel }}</span>
                         </div>
-                        <span class="text-muted small fw-500">Absent</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #0D6EFD, #0D6EFD);">
-                        </div>
-                        <span class="text-muted small fw-500">Present</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #0D6EFD, #0D6EFD);">
-                        </div>
-                        <span class="text-muted small fw-500">Checked In Only</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #0D6EFD, #0D6EFD);">
-                        </div>
-                        <span class="text-muted small fw-500">Holiday</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #0D6EFD, #0D6EFD);">
-                        </div>
-                        <span class="text-muted small fw-500">Leave</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #0D6EFD, #0D6EFD);">
-                        </div>
-                        <span class="text-muted small fw-500">Week Off</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div
-                            style="width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #0D6EFD, #0D6EFD);">
-                        </div>
-                        <span class="text-muted small fw-500">Upcoming</span>
-                    </div>
+                    @endforeach
                 </div>
             </div>
         </div>
@@ -659,8 +620,74 @@
 @section('script-area')
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/bootstrap5@5.11.3/index.global.min.js"></script>
+    @include('client.partials.calendar-day-hover')
 
     <script>
+        // Upcoming has a light background, so its text is dark; every other status is white text.
+        function statusTextColor(status) {
+            return status === 'Upcoming' ? '#475569' : '#ffffff';
+        }
+
+        // "09:00:00" / "08:43" / "8.72" → "9h" / "8h 43m".
+        function hoursLabel(total) {
+            if (!total) return '';
+            const s = String(total);
+            let mins;
+            if (s.indexOf(':') !== -1) {
+                const p = s.split(':');
+                mins = parseInt(p[0], 10) * 60 + parseInt(p[1] || 0, 10);
+            } else {
+                mins = Math.round(parseFloat(s) * 60);
+            }
+            if (!mins || isNaN(mins)) return '';
+            const h = Math.floor(mins / 60), m = mins % 60;
+            return (h ? h + 'h' : '') + (m ? (h ? ' ' : '') + m + 'm' : '');
+        }
+
+        // Week / Day view: one timed block per day (clock-in → clock-out), like the
+        // Team member calendar. Month / List views keep the one-line day status.
+        function buildWorkEvents() {
+            // A worked holiday / week-off has two status events with the same times — one block per date.
+            const seen = {};
+            return window.calendar.getEvents()
+                .filter(e => e.extendedProps.kind !== 'work' && e.extendedProps.clock_in
+                    && !seen[e.extendedProps.date] && (seen[e.extendedProps.date] = true))
+                .map(function(e) {
+                    const p = e.extendedProps, start = moment(p.clock_in);
+                    let end = p.clock_out ? moment(p.clock_out) : null, open = !end;
+                    if (!start.isValid()) return null;
+                    if (open) {
+                        // Still working (today) → up to now; a past day with no clock-out → a short marker.
+                        end = start.isSame(moment(), 'day') ? moment() : start.clone().add(30, 'minutes');
+                    }
+                    if (!end.isAfter(start)) end = start.clone().add(15, 'minutes');
+                    const hrs = p.clock_out ? hoursLabel(p.total_hours) || hoursLabel(end.diff(start, 'minutes') / 60) : '';
+                    return {
+                        id: 'work_' + p.date,
+                        title: start.format('hh:mm A') + ' – '
+                            + (p.clock_out ? end.format('hh:mm A') : (start.isSame(moment(), 'day') ? 'ongoing' : 'no clock-out'))
+                            + (hrs ? ' · ' + hrs : ''),
+                        start: start.format('YYYY-MM-DDTHH:mm:ss'),
+                        end: end.format('YYYY-MM-DDTHH:mm:ss'),
+                        allDay: false,
+                        backgroundColor: open ? '#60a5fa' : '#0D6EFD',
+                        borderColor: '#0B5ED7',
+                        textColor: '#ffffff',
+                        extendedProps: { kind: 'work', date: p.date, encrypted_user_id: p.encrypted_user_id }
+                    };
+                })
+                .filter(Boolean);
+        }
+
+        function syncWorkEvents(viewType) {
+            if (!window.calendar) return;
+            const src = window.calendar.getEventSourceById('work');
+            if (src) src.remove();
+            if (String(viewType || window.calendar.view.type).indexOf('timeGrid') === 0) {
+                window.calendar.addEventSource({ id: 'work', events: buildWorkEvents() });
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Prepare calendar events from PHP data
             var calendarEvents = [];
@@ -674,7 +701,7 @@
                         end: '{{ $event['end'] }}',
                         backgroundColor: '{{ $event['bgColor'] }}',
                         borderColor: '{{ $event['bgColor'] }}',
-                        textColor: '#ffffff',
+                        textColor: statusTextColor('{{ $event['day_status'] }}'),
                         allDay: true,
                         extendedProps: {
                             day_status: '{{ $event['day_status'] }}',
@@ -686,6 +713,7 @@
                             leave_reason: '{{ $event['leave_reason'] ?? '' }}',
                             date: '{{ $event['start'] }}',
                             task_count: {{ $event['task_count'] ?? 0 }},
+                            details: @json($event['details'] ?? null),
                             encrypted_user_id: '{{ $event['encrypted_user_id'] ?? '' }}'
                         }
                     });
@@ -703,6 +731,20 @@
                 },
                 themeSystem: 'bootstrap5',
                 events: calendarEvents,
+                // Week view: 7 days from the given start date, not aligned to Sunday/Monday.
+                views: { timeGridWeek: { duration: { days: 7 } } },
+                // Day / Week columns show the day name with its date ("Wednesday, 21 Oct 2026" / "Wed, 21 Oct").
+                dayHeaderContent: function(arg) {
+                    if (arg.view.type === 'timeGridDay') return moment(arg.date).format('dddd, DD MMM YYYY');
+                    if (arg.view.type === 'timeGridWeek') return moment(arg.date).format('ddd, DD MMM');
+                    return arg.text;
+                },
+                // Month view: clicking a date (not its status chip) opens that date in Day view.
+                dateClick: function(info) {
+                    if (info.view.type !== 'dayGridMonth') return;
+                    window.calendar.changeView('timeGridDay', info.dateStr);
+                    setViewLabel('timeGridDay');
+                },
                 eventClick: function(info) {
                     // Redirect to attendance sessions page
                     const formattedDate = info.event.startStr.split('T')[0];
@@ -712,6 +754,9 @@
                                           "&user_id=" + encodeURIComponent(encryptedUserId);
                 },
                 eventContent: function(arg) {
+                    if (arg.event.extendedProps.kind === 'work') {
+                        return { html: `<div style="padding: 2px 4px; font-size: 11px; line-height: 1.3; color: #ffffff; white-space: normal;">${arg.event.title}</div>` };
+                    }
                     let taskCount = arg.event.extendedProps.task_count || 0;
                     let taskBadge = '';
                     
@@ -721,18 +766,36 @@
                     
                     // Clean title (remove any existing task count to avoid duplication)
                     let cleanTitle = arg.event.title.replace(/Task \d+/, '').trim();
-                    
+                    const txtColor = arg.event.textColor || '#ffffff';
+                    // Worked hours next to the status, as on the Team member calendar.
+                    const hrs = hoursLabel(arg.event.extendedProps.total_hours);
+                    if (hrs && arg.event.extendedProps.clock_out) cleanTitle += ' · ' + hrs;
+
+                    // List view rows sit on a white background (no event fill), so show the
+                    // status as a coloured badge instead of white text on white.
+                    if (String(arg.view.type).indexOf('list') === 0) {
+                        return {
+                            html: `<span style="display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; background: ${arg.event.backgroundColor || '#94a3b8'}; color: ${txtColor};">${cleanTitle}</span>`
+                                + (taskCount > 0 ? `<span style="margin-left: 8px; font-size: 11px; color: #475569;">Task ${taskCount}</span>` : '')
+                        };
+                    }
+
                     return {
-                        html: `<div class="fc-event-main" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px;">
-                                    <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cleanTitle}</span>
+                        html: `<div class="fc-event-main" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; color: ${txtColor};">
+                                    <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${txtColor};">${cleanTitle}</span>
                                     ${taskBadge}
                                </div>`
                     };
                 },
                 datesSet: function(info) {
                     updateCalendarDateRange(info.start, info.end);
+                    syncWorkEvents(info.view.type);
+                    // The rolling 7-day Week view is "looking at" its last day (today).
+                    const lookedAt = info.view.type === 'timeGridWeek'
+                        ? moment(info.end).subtract(1, 'day').toDate()
+                        : window.calendar.getDate();
                     document.getElementById('currentMonthName').textContent =
-                        window.calendar.getDate().toLocaleString('default', {
+                        lookedAt.toLocaleString('default', {
                             month: 'long',
                             year: 'numeric'
                         });
@@ -752,6 +815,8 @@
                     };
                 },
                 eventDidMount: function(info) {
+                    // Tag every event with its date so the hover card also works on List-view rows.
+                    info.el.setAttribute('data-date', moment(info.event.start).format('YYYY-MM-DD'));
                     // Add hover effect
                     info.el.addEventListener('mouseenter', function() {
                         this.style.transform = 'translateY(-2px)';
@@ -766,6 +831,9 @@
             });
 
             calendar.render();
+
+            // Hover any day → shift, clock in / out with location, regularized, etc.
+            initCalendarDayHover(() => window.calendar, calendarEl);
 
             // Set initial date range
             updateCalendarDateRange(
@@ -810,12 +878,40 @@
         }
 
         function goToToday() {
-            window.calendar.today();
+            if (window.calendar.view.type === 'timeGridWeek') {
+                window.calendar.gotoDate(moment().subtract(6, 'days').format('YYYY-MM-DD'));
+            } else {
+                window.calendar.today();
+            }
             animateNavButton('.nav-button.active');
         }
 
+        // Week view = the last 7 days ending today (today and the 6 days before it).
+        // Looking at an earlier month, it ends on that month's last day instead.
+        function weekViewStart() {
+            const looked = moment(window.calendar.getDate());
+            const end = looked.isSame(moment(), 'month') ? moment() : looked.clone().endOf('month');
+            return end.clone().subtract(6, 'days').format('YYYY-MM-DD');
+        }
+
         function changeView(viewType) {
-            window.calendar.changeView(viewType);
+            const cal = window.calendar;
+            if (viewType === 'timeGridWeek') {
+                cal.changeView(viewType, weekViewStart());
+            } else if (viewType === 'timeGridDay') {
+                // Today if it is on screen; from Week view otherwise its last day.
+                const view = cal.view, today = moment().startOf('day');
+                const day = today.isSameOrAfter(moment(view.activeStart)) && today.isBefore(moment(view.activeEnd))
+                    ? today
+                    : (view.type === 'timeGridWeek' ? moment(view.activeEnd).subtract(1, 'day') : moment(cal.getDate()));
+                cal.changeView(viewType, day.format('YYYY-MM-DD'));
+            } else {
+                cal.changeView(viewType);
+            }
+            setViewLabel(viewType);
+        }
+
+        function setViewLabel(viewType) {
             var viewNames = {
                 'dayGridMonth': 'Month View',
                 'timeGridWeek': 'Week View',
@@ -915,7 +1011,7 @@
                                 end: event.end,
                                 backgroundColor: event.bgColor,
                                 borderColor: event.bgColor,
-                                textColor: '#ffffff',
+                                textColor: statusTextColor(event.day_status),
                                 allDay: true,
                                 extendedProps: {
                                     day_status: event.day_status,
@@ -925,12 +1021,15 @@
                                     leave_type: event.leave_type,
                                     holiday_name: event.holiday_name,
                                     task_count: event.task_count || 0,
+                                    details: event.details || null,
+                                    date: event.start,
                                     encrypted_user_id: event.encrypted_user_id || '{{ encrypt(Auth::id()) }}'
                                 }
                             };
                         });
 
                         window.calendar.addEventSource(events);
+                        syncWorkEvents();
 
                         if (typeof toastr !== 'undefined') {
                             toastr.success('Calendar updated successfully!', '', {

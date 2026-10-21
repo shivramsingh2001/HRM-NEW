@@ -27,45 +27,7 @@
             gap: 8px;
         }
 
-        /* Profile Header */
-        .profile-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
-            color: white;
-            border-radius: 10px;
-            padding: 10px 14px;
-            margin-bottom: 10px;
-            box-shadow: var(--shadow-md);
-        }
-
-        .profile-avatar {
-            width: 62px;
-            height: 62px;
-            border-radius: 50%;
-            border: 2px solid white;
-            object-fit: cover;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
-        }
-
-        .profile-header h4 {
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: .02em;
-        }
-
-        .profile-meta-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 11px;
-            line-height: 1.3;
-            background: rgba(255, 255, 255, .15);
-            padding: 3px 9px;
-            border-radius: 20px;
-        }
-
-        .profile-meta-item i {
-            font-size: 10.5px;
-        }
+        /* Profile header: the ui.profile-header component, styled in theme-custom.css */
 
         /* Attendance Stats — a touch more compact than the shared default,
            matching this page's overall smaller-density layout. */
@@ -189,30 +151,17 @@
             font-weight: 600;
         }
 
-        .badge-present {
-            background: #0D6EFD;
-            color: #ffffff;
-        }
-
-        .badge-absent {
-            background: #0D6EFD;
-            color: #ffffff;
-        }
-
-        .badge-leave {
-            background: #dbeafe;
-            color: #0B5ED7;
-        }
-
-        .badge-holiday {
-            background: #bfdbfe;
-            color: #0B5ED7;
-        }
-
-        .badge-week-off {
-            background: #eff6ff;
-            color: #475569;
-        }
+        /* Same colours as the calendar (CALENDAR_STATUS_STYLES) */
+        .badge-present { background: #16a34a; color: #ffffff; }
+        .badge-checked-in-only { background: #d97706; color: #ffffff; }
+        .badge-absent { background: #dc2626; color: #ffffff; }
+        .badge-leave,
+        .badge-full-day-leave { background: #7c3aed; color: #ffffff; }
+        .badge-first-half-leave,
+        .badge-second-half-leave { background: #a855f7; color: #ffffff; }
+        .badge-holiday { background: #0D6EFD; color: #ffffff; }
+        .badge-week-off { background: #64748b; color: #ffffff; }
+        .badge-upcoming { background: #e2e8f0; color: #475569; }
 
         /* Task count badge on calendar events */
         .fc-event .task-count-badge {
@@ -258,7 +207,7 @@
             transition: all 0.2s ease;
         }
 
-        #attendanceCalendar .fc-daygrid-day:hover { background: #f9fafb; }
+        #attendanceCalendar .fc-daygrid-day:hover { background: #f9fafb; cursor: pointer; }
 
         #attendanceCalendar .fc-daygrid-day.fc-day-today {
             background: rgba(13, 110, 253, 0.1) !important;
@@ -376,16 +325,6 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .profile-header {
-                padding: 14px;
-                text-align: center;
-            }
-
-            .profile-avatar {
-                width: 80px;
-                height: 80px;
-                margin: 0 auto 12px;
-            }
 
             .info-item {
                 flex-direction: column;
@@ -415,51 +354,7 @@
 
     <div class="main-content" style="padding: 20px !important;">
         <!-- Profile Header -->
-        <div class="profile-header">
-            <div class="row align-items-center">
-                <div class="col-lg-2 col-md-3 text-center text-md-start">
-                    <img src="{{ $profileImage }}" alt="{{ $userInfo->name }}" class="profile-avatar">
-                </div>
-                <div class="col-lg-10 col-md-9 mt-2 mt-md-0">
-                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                        <div>
-                            <h4 class="mb-1">{{ strtoupper($userInfo->name) }}</h4>
-                            <div class="d-flex flex-wrap gap-2 mb-1">
-                                <span class="profile-meta-item">
-                                    <i class="feather-briefcase"></i>{{ $userInfo->designation ?? 'Not Assigned' }}
-                                </span>
-                                <span class="profile-meta-item">
-                                    <i class="feather-hash"></i>ID: {{ $userInfo->employee_id ?? 'N/A' }}
-                                </span>
-                                <span class="profile-meta-item">
-                                    <i class="feather-mail"></i>{{ $userInfo->email }}
-                                </span>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2">
-                                @if ($userInfo->contact)
-                                    <span class="profile-meta-item">
-                                        <i class="feather-phone"></i>{{ $userInfo->contact }}
-                                    </span>
-                                @endif
-                                @if ($userInfo->department)
-                                    <span class="profile-meta-item">
-                                        <i class="feather-layers"></i>{{ $userInfo->department }}
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-                        <div>
-                            @if ($todayAttendance)
-                                <span
-                                    class="badge-status {{ 'badge-' . strtolower(str_replace(' ', '-', $todayAttendance['day_status'])) }}">
-                                    {{ $todayAttendance['day_status'] }}
-                                </span>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <x-ui.profile-header :profile="$profileHeader" />
 
         <!-- Attendance Stats — same .stats-grid/.stats-card family as the
              Team Attendance page (theme-custom.css centralizes it to the
@@ -687,11 +582,11 @@
                     <!-- FullCalendar Container -->
                     <div id="attendanceCalendar" class="d-block"></div>
 
-                    <!-- Legend (single-blue theme, as on the Attendance page: only Absent is darker) -->
+                    <!-- Legend: same colours as CALENDAR_STATUS_STYLES in the script below -->
                     <div class="calendar-legend">
-                        @foreach (['Absent' => '#172554', 'Present' => '#0D6EFD', 'Checked In Only' => '#0D6EFD', 'Holiday' => '#0D6EFD', 'Leave' => '#0D6EFD', 'Week Off' => '#0D6EFD', 'Upcoming' => '#0D6EFD'] as $legendLabel => $legendColor)
+                        @foreach (['Present' => '#16a34a', 'Checked In Only' => '#d97706', 'Absent' => '#dc2626', 'Leave' => '#7c3aed', 'Half Day Leave' => '#a855f7', 'Holiday' => '#0D6EFD', 'Week Off' => '#64748b', 'Upcoming' => '#e2e8f0'] as $legendLabel => $legendColor)
                             <div class="legend-item">
-                                <div class="legend-color" style="background: {{ $legendColor }};"></div><span>{{ $legendLabel }}</span>
+                                <div class="legend-color" style="background: {{ $legendColor }};{{ $legendLabel === 'Upcoming' ? ' border: 1px solid #cbd5e1;' : '' }}"></div><span>{{ $legendLabel }}</span>
                             </div>
                         @endforeach
                     </div>
@@ -874,8 +769,12 @@
 
 @section('script-area')
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    @include('client.partials.calendar-day-hover')
     <script>
         $(document).ready(function() {
+            // Hover any day → shift, clock in / out with location, regularized, etc.
+            initCalendarDayHover(() => calendar, document.getElementById('attendanceCalendar'));
+
             $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
                 localStorage.setItem('activeTab', $(e.target).attr('href'));
             });
@@ -938,10 +837,24 @@
 
         let calendar = null;
 
-        // Same colours as the employee's Attendance page: every status is the
-        // primary blue with white text, only Absent is the dark navy.
-        function calendarEventColor(status) {
-            return String(status || '').toLowerCase() === 'absent' ? '#172554' : '#0D6EFD';
+        // One colour per day status, so each day is readable at a glance.
+        // Keep in sync with the legend under the calendar.
+        const CALENDAR_STATUS_STYLES = {
+            'present':           { bg: '#16a34a', text: '#ffffff' },
+            'halfday':           { bg: '#65a30d', text: '#ffffff' },
+            'half day':          { bg: '#65a30d', text: '#ffffff' },
+            'checked in only':   { bg: '#d97706', text: '#ffffff' },
+            'absent':            { bg: '#dc2626', text: '#ffffff' },
+            'full day leave':    { bg: '#7c3aed', text: '#ffffff' },
+            'first half leave':  { bg: '#a855f7', text: '#ffffff' },
+            'second half leave': { bg: '#a855f7', text: '#ffffff' },
+            'holiday':           { bg: '#0D6EFD', text: '#ffffff' },
+            'week off':          { bg: '#64748b', text: '#ffffff' },
+            'upcoming':          { bg: '#e2e8f0', text: '#475569' },
+        };
+
+        function calendarEventStyle(status) {
+            return CALENDAR_STATUS_STYLES[String(status || '').toLowerCase()] || { bg: '#94a3b8', text: '#ffffff' };
         }
 
         // Week / Day view: one timed block per worked span (clock-in → clock-out,
@@ -989,7 +902,14 @@
 
         function calendarPrev() { if (calendar) calendar.prev(); }
         function calendarNext() { if (calendar) calendar.next(); }
-        function calendarToday() { if (calendar) calendar.today(); }
+        function calendarToday() {
+            if (!calendar) return;
+            if (calendar.view.type === 'timeGridWeek') {
+                calendar.gotoDate(moment().subtract(6, 'days').format('YYYY-MM-DD'));
+            } else {
+                calendar.today();
+            }
+        }
 
         function initializeCalendar() {
             if (calendar) {
@@ -1011,69 +931,39 @@
 
                 if (!dateStr || !status) return;
 
-                // Single-color (blue) theme, matching the app's blue-only
-                // convention (see the Team Attendance .stats-card family) —
-                // statuses are distinguished by shade/fill intensity, not hue.
-                let bgColor, title, borderColor, textColor;
-                const statusLower = status.toLowerCase();
-
-                switch (statusLower) {
+                // Colour comes from calendarEventStyle(); this only picks the title.
+                let title;
+                switch (status.toLowerCase()) {
                     case 'present':
-                        bgColor = '#0D6EFD';
-                        borderColor = '#0B5ED7';
-                        textColor = '#ffffff';
                         title = 'Present';
                         break;
                     case 'halfday':
-                        bgColor = '#60a5fa';
-                        borderColor = '#3b82f6';
-                        textColor = '#ffffff';
                         title = 'Half Day';
                         break;
                     case 'absent':
-                        bgColor = '#0D6EFD';
-                        borderColor = '#1e293b';
-                        textColor = '#ffffff';
                         title = 'Absent';
                         break;
                     case 'first half leave':
                     case 'second half leave':
                     case 'full day leave':
-                        bgColor = '#dbeafe';
-                        borderColor = '#93c5fd';
-                        textColor = '#0B5ED7';
                         title = 'Leave';
                         break;
                     case 'holiday':
-                        bgColor = '#bfdbfe';
-                        borderColor = '#93c5fd';
-                        textColor = '#0B5ED7';
                         title = record.holiday_name || 'Holiday';
                         break;
                     case 'week off':
-                        bgColor = '#eff6ff';
-                        borderColor = '#dbeafe';
-                        textColor = '#475569';
                         title = 'Week Off';
                         break;
                     case 'checked in only':
-                        bgColor = '#93c5fd';
-                        borderColor = '#60a5fa';
-                        textColor = '#0D6EFD';
                         title = 'Checked In Only';
                         break;
                     case 'upcoming':
-                        bgColor = '#f8fafc';
-                        borderColor = '#cbd5e1';
-                        textColor = '#64748b';
                         title = 'Upcoming';
                         break;
                     default:
-                        bgColor = '#eff6ff';
-                        borderColor = '#dbeafe';
-                        textColor = '#475569';
                         title = status;
                 }
+                const style = calendarEventStyle(status);
 
                 // if (taskCount > 0) {
                 //     title += ` Task ${taskCount}`;
@@ -1108,9 +998,9 @@
                     title: title,
                     start: dateStr,
                     allDay: true,
-                    backgroundColor: calendarEventColor(status),
-                    borderColor: calendarEventColor(status),
-                    textColor: '#ffffff',
+                    backgroundColor: style.bg,
+                    borderColor: style.bg,
+                    textColor: style.text,
                     extendedProps: {
                         date: dateStr,
                         day_name: record.day_name,
@@ -1122,6 +1012,7 @@
                         holiday_name: record.holiday_name,
                         leave_type: record.leave_type,
                         leave_reason: record.leave_reason,
+                        details: record.details || null,
                         encrypted_user_id: encryptedUserId,
                         description: shiftLines ? `${title}<br>${shiftLines}${taskCount > 0 ? '<br> Tasks: ' + taskCount : ''}` : `${status}<br>${record.clock_in ? 'In: ' + clockInTime : ''}${record.clock_out ? '<br>Out: ' + clockOutTime : ''}${record.total_hours ? '<br>Hours: ' + totalHours : ''}${taskCount > 0 ? '<br> Tasks: ' + taskCount : ''}`
                     }
@@ -1152,6 +1043,14 @@
                 // The page's own header row (Prev / Next / Today · month · view) replaces the toolbar.
                 headerToolbar: { left: '', center: '', right: '' },
                 themeSystem: 'standard',
+                // Week view: 7 days from the given start date, not aligned to Sunday/Monday.
+                views: { timeGridWeek: { duration: { days: 7 } } },
+                // Day / Week columns show the day name with its date ("Wednesday, 21 Oct 2026" / "Wed, 21 Oct").
+                dayHeaderContent: function(arg) {
+                    if (arg.view.type === 'timeGridDay') return moment(arg.date).format('dddd, DD MMM YYYY');
+                    if (arg.view.type === 'timeGridWeek') return moment(arg.date).format('ddd, DD MMM');
+                    return arg.text;
+                },
                 events: events,
                 datesSet: function(info) {
                     // Native prev/next/today navigation replaces the old
@@ -1160,7 +1059,11 @@
                     // Month = the date being looked at, not the first visible day: in
                     // Week view that day is often the previous month (week of 27 Sep
                     // for 1 Oct), which used to walk the calendar back month by month.
-                    const visibleMonth = moment(info.view.calendar.getDate()).format('YYYY-MM');
+                    // The rolling 7-day Week view is "looking at" its last day (today).
+                    const lookedAt = info.view.type === 'timeGridWeek'
+                        ? moment(info.end).subtract(1, 'day')
+                        : moment(info.view.calendar.getDate());
+                    const visibleMonth = lookedAt.format('YYYY-MM');
                     window.calendarVisibleRange = {
                         start: moment(info.start).format('YYYY-MM-DD'),
                         end: moment(info.end).subtract(1, 'day').format('YYYY-MM-DD'),
@@ -1177,6 +1080,12 @@
                     const sessionsUrl = "{{ route('attendance.sessions') }}";
                     window.location.href = sessionsUrl + "?date=" + encodeURIComponent(formattedDate) + 
                                           "&user_id=" + encodeURIComponent(encryptedUserId);
+                },
+                // Month view: clicking a date (not its status chip) opens that date in Day view.
+                dateClick: function(info) {
+                    if (info.view.type !== 'dayGridMonth') return;
+                    calendar.changeView('timeGridDay', info.dateStr);
+                    updateCalendarViewButtons('timeGridDay');
                 },
                 eventContent: function(arg) {
                     if (arg.event.extendedProps.kind === 'work') {
@@ -1197,12 +1106,26 @@
 
                     let cleanTitle = arg.event.title.replace(/📋 \d+/, '').trim();
 
+                    // List view rows sit on a white background (no event fill), so show the
+                    // status as a coloured badge instead of white text on white.
+                    if (String(arg.view.type).indexOf('list') === 0) {
+                        const bg = arg.event.backgroundColor || '#94a3b8';
+                        return {
+                            html: `<span style="display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; background: ${bg}; color: ${txtColor};">${cleanTitle}</span>`
+                                + (taskCount > 0 ? `<span style="margin-left: 8px; font-size: 11px; color: #475569;">Tasks ${taskCount}</span>` : '')
+                        };
+                    }
+
                     return {
                         html: `<div class="fc-event-main" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; color: ${txtColor};">
                                     <span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: ${txtColor};">${cleanTitle}</span>
                                     ${taskBadge}
                                </div>`
                     };
+                },
+                // Tag every event with its date so the hover card also works on List-view rows.
+                eventDidMount: function(info) {
+                    info.el.setAttribute('data-date', moment(info.event.start).format('YYYY-MM-DD'));
                 },
                 eventDisplay: 'block',
                 dayMaxEvents: 3,
@@ -1222,9 +1145,28 @@
             window.calendar = calendar;
         }
 
+        // Week view = the last 7 days ending today (today and the 6 days before it).
+        // Looking at an earlier month, it ends on that month's last day instead.
+        function weekViewStart() {
+            const month = window.currentCalendarMonth || moment().format('YYYY-MM');
+            const end = month === moment().format('YYYY-MM') ? moment() : moment(month + '-01').endOf('month');
+            return end.clone().subtract(6, 'days').format('YYYY-MM-DD');
+        }
+
         function changeCalendarView(viewType) {
             if (calendar) {
-                calendar.changeView(viewType);
+                if (viewType === 'timeGridWeek') {
+                    calendar.changeView(viewType, weekViewStart());
+                } else if (viewType === 'timeGridDay') {
+                    // Today if it is on screen; from Week view otherwise its last day.
+                    const view = calendar.view, today = moment().startOf('day');
+                    const day = today.isSameOrAfter(moment(view.activeStart)) && today.isBefore(moment(view.activeEnd))
+                        ? today
+                        : (view.type === 'timeGridWeek' ? moment(view.activeEnd).subtract(1, 'day') : moment(calendar.getDate()));
+                    calendar.changeView(viewType, day.format('YYYY-MM-DD'));
+                } else {
+                    calendar.changeView(viewType);
+                }
                 updateCalendarViewButtons(viewType);
             }
         }
@@ -1348,14 +1290,15 @@
                         }
                         
                         // Add event to calendar
+                        const style = calendarEventStyle(event.day_status);
                         calendar.addEvent({
                             id: event.id,
                             title: eventTitle,
                             start: event.start,
                             allDay: true,
-                            backgroundColor: calendarEventColor(event.day_status),
-                            borderColor: calendarEventColor(event.day_status),
-                            textColor: '#ffffff',
+                            backgroundColor: style.bg,
+                            borderColor: style.bg,
+                            textColor: style.text,
                             extendedProps: {
                                 date: event.start,
                                 day_name: event.day_status,
@@ -1365,6 +1308,7 @@
                                 status: event.day_status,
                                 task_count: event.task_count || 0,
                                 holiday_name: event.holiday_name,
+                                details: event.details || null,
                                 encrypted_user_id: encryptedId
                             }
                         });

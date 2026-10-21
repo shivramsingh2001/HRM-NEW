@@ -6,8 +6,20 @@
         .sr-page .content-area-body { padding: 10px 14px !important; }
         .sr-page .nav-tabs .nav-link { padding: 8px 14px; font-size: 13px; font-weight: 600; }
         .sr-page .nav-tabs .count { font-size: 10px; font-weight: 700; color: #fff; background: var(--primary, #0D6EFD); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
-        .sr-policy { font-size: 11px; color: #64748b; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 8px; }
-        .sr-policy i { color: var(--icon-color, #0D6EFD); margin-right: 3px; }
+        /* Shift Request Rules strip */
+        .sr-policy { background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+        .sr-policy-title { font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .sr-policy-title i { color: var(--icon-color, #0D6EFD); }
+        .sr-policy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+        .sr-rule { display: flex; align-items: center; gap: 8px; background: var(--primary-light, #EFF6FF); border: 1px solid #dbeafe; border-radius: 8px; padding: 7px 10px; }
+        .sr-rule-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; background: #fff; color: var(--icon-color, #0D6EFD); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+        .sr-rule-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+        .sr-rule-text strong { font-size: 13px; color: #0f172a; }
+        .sr-rule-text small { font-size: 10.5px; color: #64748b; }
+        .sr-rule.is-on { background: #f0fdf4; border-color: #bbf7d0; }
+        .sr-rule.is-on .sr-rule-icon, .sr-rule.is-on strong { color: #16a34a; }
+        .sr-rule.is-off { background: #fef2f2; border-color: #fecaca; }
+        .sr-rule.is-off .sr-rule-icon, .sr-rule.is-off strong { color: #dc2626; }
         .sr-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; border-left: 3px solid var(--c, #4f46e5); background: #f8fafc; }
         .sr-arrow { color: #94a3b8; margin: 0 4px; }
         .sr-no { font-weight: 700; color: var(--primary, #0D6EFD); cursor: pointer; }
@@ -24,6 +36,33 @@
         .sr-preview .chg { color: var(--primary, #0D6EFD); font-weight: 600; }
         .type-toggle .btn { font-size: 12px; }
         .type-toggle .btn.active { background: var(--primary, #0D6EFD); color: #fff; }
+        /* Shift Roster tab */
+        .roster-week { color: var(--primary, #0D6EFD); text-transform: uppercase; letter-spacing: .5px; font-size: 13px; }
+        .roster-search { width: 260px; }
+        .roster-search .input-group-text { background: #fff; color: var(--icon-color, #0D6EFD); }
+        @media (max-width: 576px) { .roster-search { width: 100%; } }
+        .roster-table { font-size: 12px; min-width: 760px; }
+        .roster-table th, .roster-table td { padding: 6px 8px; vertical-align: top; }
+        .roster-table thead th { background: #f8fafc; text-align: center; white-space: nowrap; font-weight: 600; }
+        .roster-table thead th .d { display: block; font-size: 10.5px; color: #64748b; font-weight: 500; }
+        .roster-table thead th.today { background: var(--primary-light, #EFF6FF); color: var(--primary, #0D6EFD); }
+        .roster-table td.today { background: #f8fbff; }
+        .roster-table .emp-col { position: sticky; left: 0; background: #fff; z-index: 1; min-width: 170px; text-align: left; }
+        .roster-table .emp-col .sr-sub { display: block; }
+        .roster-table tr.me .emp-col { box-shadow: inset 3px 0 0 var(--primary, #0D6EFD); }
+        .roster-cell { display: flex; flex-direction: column; gap: 3px; min-height: 34px; }
+        .roster-shift { border-left: 3px solid var(--c, #0D6EFD); background: #f8fafc; border-radius: 6px; padding: 3px 6px; line-height: 1.25; }
+        .roster-shift b { font-size: 11px; display: block; }
+        .roster-shift span { font-size: 10.5px; color: #475569; }
+        .roster-shift.extra { background: #fff7ed; }
+        .roster-tag { font-size: 10.5px; font-weight: 600; border-radius: 4px; padding: 2px 6px; text-align: center; }
+        .roster-tag.off { background: #f1f5f9; color: #475569; }
+        .roster-tag.hol { background: #dbeafe; color: #1d4ed8; }
+        .roster-tag.leave { background: #ede9fe; color: #6d28d9; }
+        .roster-none { color: #cbd5e1; text-align: center; font-size: 11px; }
+        .roster-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: #64748b; }
+        .roster-legend .lg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+        .lg-off { background: #e2e8f0; } .lg-hol { background: #bfdbfe; } .lg-leave { background: #ddd6fe; } .lg-extra { background: #fed7aa; }
     </style>
 @endsection
 
@@ -33,26 +72,71 @@
             <x-slot:actions>
                 <div class="hstack gap-2">
                     @if ($isApprover)
-                        <a href="{{ route('shift.roster') }}" class="btn-reset"><i class="feather-grid"></i>Roster</a>
+                        <a href="#" class="btn btn-light-brand btn-sm" id="exportBtn"><i class="feather-download me-1"></i>Export CSV</a>
+                        <a href="{{ route('shift.roster') }}" class="btn btn-light-brand btn-sm"><i class="feather-grid me-1"></i>Roster</a>
                     @endif
                     @if ($settings->swap_enabled || $settings->change_enabled)
-                        <a href="#" class="btn-grad" id="newRequestBtn"><i class="feather-plus"></i>New Request</a>
+                        <a href="#" class="btn btn-primary btn-sm" id="newRequestBtn"><i class="feather-plus me-1"></i>New Request</a>
                     @endif
                 </div>
             </x-slot:actions>
         </x-ui.page-header>
 
         <div class="content-area-body">
+            @php
+                $hrs = fn ($v) => rtrim(rtrim(number_format((float) $v, 2), '0'), '.') . ' h';
+                // [icon, value, label, state] — state: '' normal, 'on' / 'off' for the switches.
+                $rules = array_values(array_filter([
+                    ['repeat', $settings->swap_enabled ? 'On' : 'Off', 'Shift swaps', $settings->swap_enabled ? 'on' : 'off'],
+                    ['edit-2', $settings->change_enabled ? 'On' : 'Off', 'Shift changes', $settings->change_enabled ? 'on' : 'off'],
+                    ['clock', $hrs($settings->min_notice_hours), 'Minimum notice', ''],
+                    $workingTime->minRestHours ? ['moon', $hrs($workingTime->minRestHours), 'Rest between shifts', ''] : null,
+                    $workingTime->maxDailyHours ? ['sun', $hrs($workingTime->maxDailyHours), 'Max hours a day', ''] : null,
+                    $settings->max_requests_per_month ? ['hash', $settings->max_requests_per_month, 'Requests a month', ''] : null,
+                    $settings->swap_enabled ? ['user-check', $hrs($settings->peer_response_hours), 'Colleague replies within', ''] : null,
+                    ['check-circle', $settings->requires_approval ? 'Required' : 'Not needed', 'Manager / HR approval', ''],
+                ]));
+            @endphp
             <div class="sr-policy">
-                <span><i class="feather-clock"></i>At least {{ $settings->min_notice_hours }} h notice</span>
-                @if ($workingTime->minRestHours)<span><i class="feather-moon"></i>At least {{ rtrim(rtrim(number_format((float) $workingTime->minRestHours, 2), '0'), '.') }} h rest between shifts</span>@endif
-                @if ($workingTime->maxDailyHours)<span><i class="feather-sun"></i>Up to {{ rtrim(rtrim(number_format((float) $workingTime->maxDailyHours, 2), '0'), '.') }} h a day</span>@endif
-                @if ($settings->max_requests_per_month)<span><i class="feather-hash"></i>Up to {{ $settings->max_requests_per_month }} requests a month</span>@endif
-                @if ($settings->swap_enabled)<span><i class="feather-user-check"></i>Colleague answers within {{ $settings->peer_response_hours }} h</span>@endif
-                <span><i class="feather-check-circle"></i>{{ $settings->requires_approval ? 'Manager / HR approval needed' : 'No approval needed' }}</span>
-                @if (! $settings->swap_enabled)<span class="text-danger">Swaps are switched off</span>@endif
-                @if (! $settings->change_enabled)<span class="text-danger">Change requests are switched off</span>@endif
+                <div class="sr-policy-title"><i class="feather-info"></i>Shift Request Rules</div>
+                <div class="sr-policy-grid">
+                    @foreach ($rules as [$icon, $value, $label, $state])
+                        <div class="sr-rule {{ $state ? 'is-' . $state : '' }}">
+                            <span class="sr-rule-icon"><i class="feather-{{ $icon }}"></i></span>
+                            <span class="sr-rule-text"><strong>{{ $value }}</strong><small>{{ $label }}</small></span>
+                        </div>
+                    @endforeach
+                </div>
             </div>
+
+            <!-- Filters (shared filter card, same as the other list pages); hidden on the Shift Roster tab -->
+            <x-ui.filter-card title="Filter Shift Requests" id="srFilterCard">
+                <form class="filter-row" id="srFilter" onsubmit="return false">
+                    <div class="filter-item search">
+                        <div class="search-wrapper">
+                            <i class="feather-search"></i>
+                            <input type="text" id="f_search" placeholder="Search by request no, employee name or ID...">
+                        </div>
+                    </div>
+                    <div class="filter-item">
+                        <select id="f_status" aria-label="Status">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            @foreach (\App\Models\ShiftRequest::STATUS_LABELS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <select id="f_type" aria-label="Type">
+                            <option value="">All Types</option><option value="swap">Shift Swap</option><option value="change">Shift Change</option>
+                        </select>
+                    </div>
+                    <div class="filter-item date-picker"><input type="date" id="f_from" title="Shift dates from" aria-label="From"></div>
+                    <div class="filter-item date-picker"><input type="date" id="f_to" title="Shift dates to" aria-label="To"></div>
+                    <div class="filter-item">
+                        <a href="#" class="reset-btn" id="f_reset"><i class="feather-refresh-cw"></i> Reset</a>
+                    </div>
+                </form>
+            </x-ui.filter-card>
 
             <div class="card stretch stretch-full">
                 <div class="card-header p-0">
@@ -63,32 +147,46 @@
                             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#" data-tab="approvals">Approvals @if ($counts['approvals'])<span class="count">{{ $counts['approvals'] }}</span>@endif</a></li>
                             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#" data-tab="all">All Requests</a></li>
                         @endif
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#" data-tab="roster"><i class="feather-calendar me-1"></i>Shift Roster</a></li>
                     </ul>
                 </div>
                 <div class="card-body">
-                    <form class="filter-row mb-2 d-flex flex-wrap gap-2 align-items-end" id="srFilter" onsubmit="return false">
-                        <div class="filter-item search">
-                            <input type="text" class="form-control form-control-sm" id="f_search" placeholder="Request no / employee" style="width:190px">
+                    <!-- Shift Roster tab: 7-day grid (own row / team / everyone by role) -->
+                    <div id="rosterPane" class="d-none">
+                        <!-- Same Prev / Next / Today controls as the attendance calendars -->
+                        <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="rPrev"><i class="feather-chevron-left"></i> Prev</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="rNext">Next <i class="feather-chevron-right"></i></button>
+                            <button type="button" class="btn btn-primary btn-sm" id="rToday"><i class="feather-clock me-1"></i>This Week</button>
+                            <h6 class="m-0 ms-2 fw-bold roster-week" id="rWeekLabel"></h6>
+                            @if ($isApprover)
+                                <div class="input-group input-group-sm ms-auto roster-search">
+                                    <span class="input-group-text"><i class="feather-search"></i></span>
+                                    <input type="text" class="form-control" id="rSearch" placeholder="Search employee name or ID...">
+                                </div>
+                            @endif
                         </div>
-                        <div class="filter-item">
-                            <select class="form-control form-control-sm" id="f_status" aria-label="Status">
-                                <option value="">All statuses</option>
-                                <option value="pending">Pending</option>
-                                @foreach (\App\Models\ShiftRequest::STATUS_LABELS as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
-                            </select>
+                        <div class="table-responsive roster-wrap">
+                            <table class="table table-bordered roster-table mb-0">
+                                <thead id="rHead"></thead>
+                                <tbody id="rBody"><tr><td class="text-center py-3 text-muted">Loading…</td></tr></tbody>
+                            </table>
                         </div>
-                        <div class="filter-item">
-                            <select class="form-control form-control-sm" id="f_type" aria-label="Type">
-                                <option value="">All types</option><option value="swap">Shift swap</option><option value="change">Shift change</option>
-                            </select>
+                        <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+                            <div class="roster-legend">
+                                <span><i class="lg lg-off"></i>Week Off</span>
+                                <span><i class="lg lg-hol"></i>Holiday</span>
+                                <span><i class="lg lg-leave"></i>On Leave</span>
+                                <span><i class="lg lg-extra"></i>Extra shift</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted" style="font-size:11px" id="rInfo"></span>
+                                <ul class="pagination pagination-sm mb-0" id="rPager"></ul>
+                            </div>
                         </div>
-                        <div class="filter-item"><input type="date" class="form-control form-control-sm" id="f_from" title="Shift dates from" aria-label="From"></div>
-                        <div class="filter-item"><input type="date" class="form-control form-control-sm" id="f_to" title="Shift dates to" aria-label="To"></div>
-                        <a href="#" class="btn-reset" id="f_reset">Reset</a>
-                        @if ($isApprover)
-                            <a href="#" class="btn btn-sm btn-light ms-auto" id="exportBtn"><i class="feather-download me-1"></i>CSV</a>
-                        @endif
-                    </form>
+                    </div>
+
+                    <div id="requestsPane">
 
                     <div id="bulkBar" class="alert alert-secondary d-none align-items-center gap-2 py-1 px-2" style="font-size:12px">
                         <span><strong id="bulkCount">0</strong> selected</span>
@@ -108,6 +206,7 @@
                     <div class="d-flex justify-content-between align-items-center mt-2">
                         <span class="text-muted" style="font-size:11px" id="srInfo"></span>
                         <ul class="pagination pagination-sm mb-0" id="srPager"></ul>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -258,7 +357,56 @@
                     }
                 }).fail(x => $('#srBody').html('<tr><td colspan="8" class="text-center text-danger py-3">' + esc(x.responseJSON?.message || 'Failed to load requests.') + '</td></tr>'));
             }
-            $('[data-tab]').on('click', function (e) { e.preventDefault(); tab = $(this).data('tab'); page = 1; $('[data-tab]').removeClass('active'); $(this).addClass('active'); load(); });
+            $('[data-tab]').on('click', function (e) {
+                e.preventDefault(); tab = $(this).data('tab'); page = 1; $('[data-tab]').removeClass('active'); $(this).addClass('active');
+                const isRoster = tab === 'roster';
+                $('#rosterPane').toggleClass('d-none', !isRoster);
+                $('#requestsPane, #srFilterCard').toggleClass('d-none', isRoster);
+                isRoster ? loadRoster() : load();
+            });
+
+            /* ---------------- shift roster tab ---------------- */
+            const rosterUrl = "{{ route('shift.requests.roster') }}";
+            const thisMonday = () => moment().isoWeekday(1).format('YYYY-MM-DD');
+            let rStart = thisMonday(), rPage = 1;
+            function rosterCell(day) {
+                const tags = [];
+                if (day.holiday) tags.push('<div class="roster-tag hol">' + esc(day.holiday) + '</div>');
+                if (day.leave) tags.push('<div class="roster-tag leave">On Leave</div>');
+                if (day.week_off) tags.push('<div class="roster-tag off">Week Off</div>');
+                const shifts = day.shifts.map(s => '<div class="roster-shift' + (s.extra ? ' extra' : '') + '" style="--c:' + esc(s.color) + '">'
+                    + '<b>' + esc(s.name) + (s.extra ? ' <small class="text-warning">+ extra</small>' : '') + '</b>'
+                    + '<span>' + esc(s.time) + (s.overnight ? ' (+1)' : '') + '</span></div>');
+                const html = tags.concat(shifts).join('');
+                return '<div class="roster-cell">' + (html || '<div class="roster-none">—</div>') + '</div>';
+            }
+            function loadRoster() {
+                $('#rBody').html('<tr><td class="text-center py-3 text-muted">Loading…</td></tr>');
+                $.get(rosterUrl, { start: rStart, page: rPage, search: $('#rSearch').val() || '' }, r => {
+                    const first = r.dates[0], last = r.dates[r.dates.length - 1];
+                    $('#rWeekLabel').text(moment(first.date).format('DD MMM') + ' – ' + moment(last.date).format('DD MMM YYYY'));
+                    $('#rHead').html('<tr><th class="emp-col">Employee</th>' + r.dates.map(d =>
+                        '<th class="' + (d.today ? 'today' : '') + '">' + esc(d.day) + '<span class="d">' + esc(d.label) + '</span></th>').join('') + '</tr>');
+                    $('#rBody').html(r.rows.length ? r.rows.map(row => '<tr class="' + (row.is_me ? 'me' : '') + '">'
+                        + '<td class="emp-col"><strong>' + esc(row.name) + (row.is_me ? ' <span class="sr-sub d-inline">(You)</span>' : '') + '</strong><span class="sr-sub">' + esc(row.employee_id || '') + '</span></td>'
+                        + r.dates.map(d => '<td class="' + (d.today ? 'today' : '') + '">' + rosterCell(row.days[d.date]) + '</td>').join('')
+                        + '</tr>').join('')
+                        : '<tr><td colspan="8" class="text-center py-4 text-muted">No employees found.</td></tr>');
+                    const p = r.pagination;
+                    $('#rInfo').text(p.total > 1 ? 'Showing ' + p.from + '–' + p.to + ' of ' + p.total : '');
+                    const $ul = $('#rPager').empty();
+                    if (p.last_page > 1) {
+                        for (let i = 1; i <= p.last_page; i++) {
+                            if (i === 1 || i === p.last_page || Math.abs(i - p.current_page) <= 2) $ul.append('<li class="page-item ' + (i === p.current_page ? 'active' : '') + '"><a class="page-link" href="#" data-rpg="' + i + '">' + i + '</a></li>');
+                        }
+                    }
+                }).fail(x => $('#rBody').html('<tr><td class="text-center text-danger py-3">' + esc(x.responseJSON?.message || 'Failed to load the roster.') + '</td></tr>'));
+            }
+            $('#rPrev').on('click', () => { rStart = moment(rStart).subtract(7, 'days').format('YYYY-MM-DD'); loadRoster(); });
+            $('#rNext').on('click', () => { rStart = moment(rStart).add(7, 'days').format('YYYY-MM-DD'); loadRoster(); });
+            $('#rToday').on('click', () => { rStart = thisMonday(); loadRoster(); });
+            $(document).on('click', '#rPager .page-link', function (e) { e.preventDefault(); rPage = +$(this).data('rpg'); loadRoster(); });
+            let rTimer; $('#rSearch').on('input', () => { clearTimeout(rTimer); rTimer = setTimeout(() => { rPage = 1; loadRoster(); }, 400); });
             $(document).on('click', '#srPager .page-link', function (e) { e.preventDefault(); page = +$(this).data('pg'); load(); });
             $('#f_status,#f_type,#f_from,#f_to').on('change', () => { page = 1; load(); });
             let sTimer; $('#f_search').on('input', () => { clearTimeout(sTimer); sTimer = setTimeout(() => { page = 1; load(); }, 400); });

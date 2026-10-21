@@ -278,7 +278,7 @@ class UserController extends Controller
                 $onLeave = Leave::where('user_id', $member->id)
                     ->where('status', 'approved')
                     ->whereDate('start_date', '<=', $currentDate)
-                    ->whereDate('start_date', '>=', $currentDate)
+                    ->whereRaw('COALESCE(end_date, start_date) >= ?', [$currentDate]) // every day of a multi-day leave
                     ->exists();
 
                 // Determine status
@@ -292,8 +292,8 @@ class UserController extends Controller
                     $statusCount['on_leave']++;
                 } elseif ($attendance) {
                     if ($attendance->clock_in && $attendance->clock_out) {
-                        $status = 'Present';
-                        $statusCount['present']++;
+                        $status = \App\Support\AttendanceDayStatus::forRowOrHours($attendance); // company-policy grade (or policy hours), as /history
+                        $statusCount[$k = \App\Support\AttendanceDayStatus::summaryKey($status)] = ($statusCount[$k] ?? 0) + 1;
                     } elseif ($attendance->clock_in) {
                         $status = 'Present (Not Checked Out)';
                         $statusCount['present']++;
@@ -443,7 +443,7 @@ class UserController extends Controller
                     $onLeave = Leave::where('user_id', $member->id)
                         ->where('status', 'approved')
                         ->whereDate('start_date', '<=', $currentDate)
-                        ->whereDate('start_date', '>=', $currentDate)
+                        ->whereRaw('COALESCE(end_date, start_date) >= ?', [$currentDate]) // every day of a multi-day leave
                         ->exists();
 
                     // Determine status
@@ -455,7 +455,7 @@ class UserController extends Controller
                         $status = 'On Leave';
                     } elseif ($attendance) {
                         if ($attendance->clock_in && $attendance->clock_out) {
-                            $status = 'Present';
+                            $status = \App\Support\AttendanceDayStatus::forRowOrHours($attendance); // company-policy grade (or policy hours), as /history
                         } elseif ($attendance->clock_in) {
                             $status = 'Present (Not Checked Out)';
                         }
@@ -513,10 +513,10 @@ class UserController extends Controller
                 });
 
             // Get leaves for the user
-            $leaves = Leave::where('user_id', $id)
+            $leaves = Leave::with('leaveType:id,name')->where('user_id', $id)
                 ->where('status', 'approved')
                 ->whereDate('start_date', '<=', $currentMonthEnd)
-                ->whereDate('start_date', '>=', $currentMonthStart)
+                ->whereRaw('COALESCE(end_date, start_date) >= ?', [$currentMonthStart]) // also leaves that began last month
                 ->get();
 
             // Get attendances for the month
@@ -555,7 +555,7 @@ class UserController extends Controller
                 'on_leave' => 0,
                 'holiday' => 0,
                 'weekend' => 0, // Keeping the same key name for response
-                'checked_in_only' => 0,
+                'checked_in_only' => 0, 'half_day' => 0, // half_day: company-policy half days (not counted in present)
                 'work_days' => 0,
                 'upcoming' => 0,
             ];
@@ -596,9 +596,9 @@ class UserController extends Controller
                         ? $leave->start_date->format('Y-m-d')
                         : \Carbon\Carbon::parse($leave->start_date)->format('Y-m-d');
 
-                    $leaveEnd = $leave->start_date instanceof \Carbon\Carbon
-                        ? $leave->start_date->format('Y-m-d')
-                        : \Carbon\Carbon::parse($leave->start_date)->format('Y-m-d');
+                    $leaveEnd = ($leave->end_date ?: $leave->start_date) instanceof \Carbon\Carbon // was start_date: only day 1 counted
+                        ? ($leave->end_date ?: $leave->start_date)->format('Y-m-d')
+                        : \Carbon\Carbon::parse($leave->end_date ?: $leave->start_date)->format('Y-m-d');
 
                     if ($dateStr >= $leaveStart && $dateStr <= $leaveEnd) {
                         $isOnLeave = true;
@@ -658,8 +658,8 @@ class UserController extends Controller
                     $attendanceSummary['work_days']++;
                 } elseif ($attendance) {
                     if ($attendance->clock_in && $attendance->clock_out) {
-                        $dayStatus = 'Present';
-                        $attendanceSummary['present']++;
+                        $dayStatus = \App\Support\AttendanceDayStatus::forRowOrHours($attendance); // company-policy grade (or policy hours), as /history
+                        $attendanceSummary[\App\Support\AttendanceDayStatus::summaryKey($dayStatus)]++;
                         $attendanceSummary['work_days']++;
                     } elseif ($attendance->clock_in) {
                         $dayStatus = 'Checked In Only';
@@ -687,7 +687,7 @@ class UserController extends Controller
                     'clock_in' => $attendance?->clock_in,
                     'clock_out' => $attendance?->clock_out,
                     'total_hours' => $attendance?->total_hours,
-                    'leave_type' => $leaveData?->leave_type,
+                    'leave_type' => $leaveData?->leave_type, 'leave_type_name' => $leaveData?->leaveType?->name,
                     'leave_reason' => $leaveData?->reason,
                     'leave_session' => $leaveData?->start_session,
                     'holiday_name' => isset($holidays[$dateStr]) ? $holidays[$dateStr]->name : null,

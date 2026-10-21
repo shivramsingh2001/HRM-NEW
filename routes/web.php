@@ -580,6 +580,7 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::prefix('requests')->name('requests.')->controller(\App\Http\Controllers\Shift\ShiftRequestController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::get('/data', 'data')->name('data');
+                Route::get('/roster', 'roster')->name('roster');
                 Route::get('/candidates', 'candidates')->name('candidates');
                 Route::get('/export', 'export')->name('export')->middleware('role:admin,hr,manager');
                 Route::post('/preview', 'preview')->name('preview');

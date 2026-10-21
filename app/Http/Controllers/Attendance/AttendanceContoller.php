@@ -112,7 +112,7 @@ class AttendanceContoller extends Controller
             // Get all approved leaves overlapping this date range
             // (start <= range end AND end >= range start covers every overlap
             // case, including leaves that began before the range).
-            $leaves = Leave::where('user_id', $userId)
+            $leaves = Leave::with('leaveType:id,name')->where('user_id', $userId)
                 ->where('status', 'approved')
                 ->where('start_date', '<=', $endDate)
                 ->where('end_date', '>=', $startDate)
@@ -264,7 +264,7 @@ class AttendanceContoller extends Controller
                 $record->clock_out = $attendance ? $attendance->clock_out : null;
                 $record->total_hours = $attendance ? $attendance->total_hours : null;
                 $record->shift_day = $attendance ? ($shiftDays[$attendance->id] ?? null) : null;
-                $record->leave_type = $leave ? $leave->leave_type : null;
+                $record->leave_type = $leave ? ($leave->leaveType->name ?? $leave->leave_type) : null; // the leave type's name, not its id
                 $record->leave_reason = $leave ? $leave->reason : null;
                 $record->leave_session = $leave ? $leave->start_session : null;
                 $record->holiday_name = $holiday ? $holiday->name : null;
@@ -320,7 +320,7 @@ class AttendanceContoller extends Controller
                 'tenant_id' => $tenantId
             ]);
 
-            return collect($results);
+            return app(\App\Services\Attendance\CalendarDayDetails::class)->attach(collect($results), (int) $userId);
         } catch (Exception $e) {
             Log::error('Error in getAttendanceData: ' . $e->getMessage(), [
                 'user_id' => $userId,
@@ -455,7 +455,7 @@ class AttendanceContoller extends Controller
             'color' => '#ffffff',
             'clock_in' => $record->clock_in,
             'clock_out' => $record->clock_out,
-            'total_hours' => $record->total_hours,
+            'total_hours' => $record->total_hours, 'details' => $record->details ?? null, // hover card (CalendarDayDetails)
             'leave_type' => $record->leave_type,
             'holiday_name' => $record->holiday_name,
             'leave_reason' => $record->leave_reason,
@@ -501,23 +501,22 @@ class AttendanceContoller extends Controller
 
     private function getEventColor($status)
     {
-        // Single-blue theme: every status is a shade of the app's primary
-        // blue (--primary #0D6EFD / --primary-mid #0D6EFD) instead of the
-        // usual green/red/amber semantic colors, matching the rest of the app.
+        // One colour per day status (same as the Team member calendar) so each
+        // day is readable at a glance. Keep in sync with the legend in attendance.blade.php.
         $colorMap = [
-            'Absent' => '#172554',
-            'Present' => '#0D6EFD',
-            'Checked In Only' => '#0D6EFD',
-            'Half Day' => '#0D6EFD',
-            'Holiday' => '#0B5ED7',
-            'First Half Leave' => '#0D6EFD',
-            'Second Half Leave' => '#0D6EFD',
-            'Full Day Leave' => '#0D6EFD',
-            'Week Off' => '#3b82f6',
-            'Upcoming' => '#60a5fa',
+            'Absent' => '#dc2626',
+            'Present' => '#16a34a',
+            'Checked In Only' => '#d97706',
+            'Half Day' => '#65a30d',
+            'Holiday' => '#0D6EFD',
+            'First Half Leave' => '#a855f7',
+            'Second Half Leave' => '#a855f7',
+            'Full Day Leave' => '#7c3aed',
+            'Week Off' => '#64748b',
+            'Upcoming' => '#e2e8f0',
         ];
 
-        return $colorMap[$status] ?? '#0D6EFD';
+        return $colorMap[$status] ?? '#94a3b8';
     }
 
     public function calendarData(Request $request)

@@ -340,6 +340,7 @@ class ManagerDashboard
         $data = [
             'page_title' => 'Manager Dashboard',
             'user' => $user,
+            'profile_header' => app(ProfileHeaderData::class)->forUser($user),
             'team_size' => $teamSize,
             'team_present' => $teamPresent,
             'team_absent' => $teamAbsent,

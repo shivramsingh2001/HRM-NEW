@@ -101,6 +101,16 @@ class ShiftRequestController extends Controller
         ]);
     }
 
+    /** "Shift Roster" tab: 7 days from ?start (default this Monday) — own row / team / everyone by role. */
+    public function roster(Request $request): JsonResponse
+    {
+        $data = $request->validate(['start' => 'nullable|date', 'search' => 'nullable|string|max:100', 'page' => 'nullable|integer|min:1']);
+        $start = isset($data['start']) ? Carbon::parse($data['start']) : Carbon::today()->startOfWeek(Carbon::MONDAY);
+
+        return response()->json(['status' => true] + app(\App\Services\Shift\ShiftRosterView::class)
+            ->week(Auth::user(), $start, $data['search'] ?? null, (int) ($data['page'] ?? 1)));
+    }
+
     public function show($id): JsonResponse
     {
         $user = Auth::user();

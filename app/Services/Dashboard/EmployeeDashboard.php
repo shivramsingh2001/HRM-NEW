@@ -663,6 +663,7 @@ class EmployeeDashboard
         $data = [
             'page_title' => 'My Dashboard',
             'user' => $user,
+            'profile_header' => app(ProfileHeaderData::class)->forUser($user),
             'designation' => $jobDetail->designation_name ?? 'N/A',
             'department' => $jobDetail->department_name ?? 'N/A',
             'reporting_head_name' => $jobDetail->reporting_head_name ?? null,

@@ -48,7 +48,7 @@ class TeamMemberAttendance
         // Overlap check (with COALESCE fallback for legacy one-row-per-day
         // records that never had end_date set) instead of matching start_date
         // alone, so every day of a multi-day leave is picked up below.
-        $leaves = Leave::where('user_id', $userId)
+        $leaves = Leave::with('leaveType:id,name')->where('user_id', $userId)
             ->where('status', 'approved')
             ->where('start_date', '<=', $endDate)
             ->whereRaw('COALESCE(end_date, start_date) >= ?', [$startDate])
@@ -164,7 +164,7 @@ class TeamMemberAttendance
             $record->clock_in = (! $isFutureDate && $attendance) ? $attendance->clock_in : null;
             $record->clock_out = (! $isFutureDate && $attendance) ? $attendance->clock_out : null;
             $record->total_hours = (! $isFutureDate && $attendance) ? number_format($totalHours, 2) : null;
-            $record->leave_type = $leave->leave_type ?? null;
+            $record->leave_type = $leave ? ($leave->leaveType->name ?? $leave->leave_type) : null; // the leave type's name, not its id
             $record->leave_reason = $leave->reason ?? null;
             $record->leave_session = $leave->start_session ?? null;
             $record->holiday_name = $holiday->name ?? null;
@@ -187,7 +187,8 @@ class TeamMemberAttendance
             return strtotime($b->date) - strtotime($a->date);
         });
 
-        return collect($dates);
+        // Shift, late / early / OT, location, regularized / marked-by — for the calendar hover card.
+        return app(\App\Services\Attendance\CalendarDayDetails::class)->attach(collect($dates), (int) $userId);
     }
 
     /**
