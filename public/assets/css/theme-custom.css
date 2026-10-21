@@ -2016,9 +2016,26 @@ nav .small.text-muted, nav p.small { font-size: 11.5px; color: #64748b; margin: 
 .ui-profile-header .profile-today-times > div { background: #EFF6FF; border-radius: 8px; padding: 6px 4px; }
 .ui-profile-header .profile-today-times small { display: block; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
 .ui-profile-header .profile-today-times strong { font-size: 12.5px; color: #0D6EFD; }
+.ui-profile-header .profile-today-times strong { display: block; }
+.ui-profile-header .profile-today-date { display: block; font-size: 10px; color: #475569; margin-top: 1px; white-space: nowrap; }
+.ui-profile-header .profile-today.is-wide { flex: 0 1 660px; }
+.ui-profile-header .profile-today.is-wide .profile-today-body { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
+.ui-profile-header .profile-shifts { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.ui-profile-header .profile-shift { border: 1px solid #DBEAFE; border-radius: 8px; padding: 5px 8px; font-size: 11px; }
+.ui-profile-header .profile-shift-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ui-profile-header .profile-shift-name { font-weight: 600; color: #1f2937; }
+.ui-profile-header .profile-shift-tag { font-size: 9.5px; font-weight: 600; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: #EFF6FF; color: #0D6EFD; }
+.ui-profile-header .profile-shift-tag.is-extra { background: #FEF3C7; color: #B45309; }
+.ui-profile-header .profile-shift-sched { margin-left: auto; font-size: 10px; color: #64748b; }
+.ui-profile-header .profile-shift-body { display: flex; align-items: center; gap: 5px; margin-top: 2px; color: #475569; }
+.ui-profile-header .profile-shift-body i { font-size: 10px; color: #94a3b8; }
+.ui-profile-header .profile-shift-body strong { margin-left: auto; color: #0D6EFD; }
+.ui-profile-header .profile-shift-open { color: #d97706; font-weight: 600; }
+.ui-profile-header .profile-shift-note { font-size: 10px; color: #dc2626; margin-top: 1px; }
 @media (max-width: 768px) {
     .ui-profile-header { padding: 14px; }
     .ui-profile-header .profile-main { flex-direction: column; text-align: center; flex-basis: 100%; }
     .ui-profile-header .profile-main .d-flex, .ui-profile-header .profile-meta { justify-content: center; }
     .ui-profile-header .profile-today { flex-basis: 100%; }
+    .ui-profile-header .profile-today.is-wide .profile-today-body { grid-template-columns: 1fr; }
 }

@@ -11,49 +11,7 @@
         .sessions-container h4 { font-size: 15px; }
         .sessions-container h5 { font-size: 12.5px; }
         .sessions-container h6 { font-size: 12px; }
-
-        .sessions-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
-            border-radius: 8px;
-            padding: 8px 12px;
-            margin-bottom: 10px;
-            color: white;
-        }
-
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        .summary-card {
-            background: white;
-            border-radius: 8px;
-            padding: 8px 10px;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-            border-left: 3px solid var(--primary-mid);
-            transition: transform 0.2s ease;
-        }
-
-        .summary-card:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .summary-card h5, .summary-card h6 { font-size: 12.5px; }
-
-        .summary-card .icon-circle {
-            width: 34px;
-            height: 34px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            flex: none;
-        }
-
-        .summary-card .icon-circle i { font-size: 16px; }
+        .sessions-container .ui-profile-header h4 { font-size: 18px; }
 
         .info-card {
             background: white;
@@ -230,110 +188,22 @@
 
     <div class="main-content" style="padding: 20px !important;">
         <div class="sessions-container">
-            <!-- Header -->
-            <div class="sessions-header">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
-                        <h4 class="mb-2 text-white">
-                            <i class="feather-map-pin me-2"></i>
-                            Attendance Session Details
-                        </h4>
-                        <p class="mb-0 opacity-75">
-                            <i class="feather-calendar me-1"></i>
-                            {{ \Carbon\Carbon::parse($date)->format('l, F j, Y') }}
-                        </p>
-                        <p class="mb-0 mt-2 opacity-75">
-                            <i class="feather-user me-1"></i>
-                            Employee: {{ $user->name }} ({{ $user->employee_id ?? 'N/A' }})
-                        </p>
-                    </div>
-                </div>
-            </div>
+            <!-- Header: who + this day's status, check-in / check-out (with date) and tracking -->
+            @php
+                $profileHeader = app(\App\Services\Dashboard\ProfileHeaderData::class)->forUser($user, $date);
+                $sessionStats = $hasAttendance ? [
+                    ['label' => 'Locations', 'value' => $statistics['total_tracks'] ?? 0],
+                    ['label' => 'Distance', 'value' => number_format($statistics['distance_km'] ?? 0, 2) . ' km'],
+                    ['label' => 'Tracked', 'value' => isset($statistics['tracking_duration_minutes'])
+                        ? intdiv($statistics['tracking_duration_minutes'], 60) . 'h ' . ($statistics['tracking_duration_minutes'] % 60) . 'm' : '--'],
+                ] : [];
+            @endphp
+            <x-ui.profile-header :profile="$profileHeader" :date="$date" :stats="$sessionStats" />
 
             @if ($message)
                 <div class="alert alert-info mb-4">
                     <i class="feather-info me-2"></i>
                     {{ $message }}
-                </div>
-            @endif
-
-            <!-- Summary Cards -->
-            @if ($hasAttendance)
-                <div class="summary-cards">
-                    <div class="summary-card">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="text-muted mb-1">Attendance Status</div>
-                                <h5 class="mb-0">
-                                    @if ($attendance && $attendance->clock_in)
-                                        <x-ui.status-badge status="present" label="Present" />
-                                    @else
-                                        <x-ui.status-badge status="absent" label="Absent" />
-                                    @endif
-                                </h5>
-                            </div>
-                            <div class="icon-circle" style="background: var(--primary-light);">
-                                <i class="feather-check-circle" style="color: var(--icon-color, #0D6EFD);"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="summary-card">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="text-muted mb-1">Total Hours</div>
-                                <h5 class="mb-0">{{ $attendance->total_hours ?? '0:00:00' }}</h5>
-                            </div>
-                            <div class="icon-circle" style="background: var(--primary-light);">
-                                <i class="feather-clock" style="color: var(--icon-color, #0D6EFD);"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="summary-card">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="text-muted mb-1">Locations Tracked</div>
-                                <h5 class="mb-0">{{ $statistics['total_tracks'] ?? 0 }}</h5>
-                            </div>
-                            <div class="icon-circle" style="background: var(--primary-light);">
-                                <i class="feather-map-pin" style="color: var(--primary-dark);"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="summary-card">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="text-muted mb-1">Distance Travelled</div>
-                                <h5 class="mb-0">{{ number_format($statistics['distance_km'] ?? 0, 2) }} km</h5>
-                            </div>
-                            <div class="icon-circle" style="background: var(--primary-light);">
-                                <i class="feather-navigation" style="color: var(--icon-color, #0D6EFD);"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="summary-card">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="text-muted mb-1">Check In / Out</div>
-                                <h6 class="mb-0">
-                                    @if ($attendance && $attendance->clock_in)
-                                        {{ \Carbon\Carbon::parse($attendance->clock_in)->format('h:i A') }}
-                                        @if ($attendance->clock_out)
-                                            → {{ clock_out_time($attendance->clock_out, $attendance->date) }}
-                                        @endif
-                                    @else
-                                        --:--
-                                    @endif
-                                </h6>
-                            </div>
-                            <div class="icon-circle" style="background: var(--primary-light);">
-                                <i class="feather-clock" style="color: var(--icon-color, #0D6EFD);"></i>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             @endif
 

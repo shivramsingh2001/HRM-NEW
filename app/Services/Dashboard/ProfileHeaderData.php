@@ -2,6 +2,7 @@
 
 namespace App\Services\Dashboard;
 
+use App\Models\AttendanceShiftSegment;
 use App\Models\User;
 use App\Models\UserBasicDetail;
 use App\Models\UserJobDetail;
@@ -15,7 +16,8 @@ use Illuminate\Support\Carbon;
  */
 class ProfileHeaderData
 {
-    public function forUser(User $user): array
+    /** $date: the day shown in the right-hand panel (default today), e.g. the Attendance Sessions page. */
+    public function forUser(User $user, ?string $date = null): array
     {
         $job = UserJobDetail::leftJoin('designations', 'user_job_details.designation', '=', 'designations.id')
             ->leftJoin('departments', 'user_job_details.department', '=', 'departments.id')
@@ -27,9 +29,9 @@ class ProfileHeaderData
 
         $image = UserBasicDetail::where('user_id', $user->id)->value('profile_image');
 
-        $today = Carbon::today()->toDateString();
-        $record = app(TeamMemberAttendance::class)->getAttendanceDataForUser($today, $today, $user->id)
-            ->first(fn ($r) => $r->date == $today);
+        $day = $date ? Carbon::parse($date)->toDateString() : Carbon::today()->toDateString();
+        $record = app(TeamMemberAttendance::class)->getAttendanceDataForUser($day, $day, $user->id)
+            ->first(fn ($r) => $r->date == $day);
 
         return [
             'name' => $user->name,
@@ -43,7 +45,38 @@ class ProfileHeaderData
             'reporting_head' => $job->reporting_head_name ?? null,
             'joining_date' => $job->joining_date ?? null,
             'today' => $record ? self::today($record) : null,
+            'shifts' => $this->shiftRows($user->id, $day),
         ];
+    }
+
+    /**
+     * One row per shift worked that day (normal + extra), from the multi-shift
+     * segments AttendanceRollupService writes. Empty on a single-shift day — the
+     * day's In / Out / Hours already tell the whole story then.
+     */
+    public function shiftRows(int $userId, string $date): array
+    {
+        $segments = AttendanceShiftSegment::with('shift:id,name')
+            ->where('user_id', $userId)->whereDate('date', $date)
+            ->orderBy('scheduled_start')->orderBy('first_in')
+            ->get();
+
+        if ($segments->count() < 2) {
+            return [];
+        }
+
+        return $segments->map(fn ($seg) => [
+            'name' => $seg->shift->name ?? 'Shift',
+            'is_extra' => (bool) $seg->is_extra,
+            'scheduled' => $seg->scheduled_start && $seg->scheduled_end
+                ? $seg->scheduled_start->format('h:i A') . ' – ' . $seg->scheduled_end->format('h:i A') : null,
+            'clock_in' => $seg->first_in?->format('Y-m-d H:i:s'),
+            'clock_out' => $seg->last_out?->format('Y-m-d H:i:s'),
+            'is_open' => (bool) $seg->is_open,
+            'worked_minutes' => (int) $seg->worked_minutes,
+            'late_minutes' => (int) $seg->late_minutes,
+            'early_minutes' => (int) $seg->early_departure_minutes,
+        ])->all();
     }
 
     /**
@@ -64,6 +97,7 @@ class ProfileHeaderData
             'reporting_head' => $userInfo->reporting_head,
             'joining_date' => $userInfo->joining_date,
             'today' => $todayAttendance ? self::today($todayAttendance) : null,
+            'shifts' => app(self::class)->shiftRows((int) $userInfo->id, Carbon::today()->toDateString()),
         ];
     }
 
