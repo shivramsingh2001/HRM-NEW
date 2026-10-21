@@ -561,7 +561,6 @@ class EmployeeDashboard
         $calWalk = $calWindowStart->copy();
         while ($calWalk <= $calWindowEnd) {
             $dateKey = $calWalk->format('Y-m-d');
-            $dayName = $calWalk->format('l');
 
             $holidayName = null;
             foreach ($calHolidays as $h) {
@@ -571,17 +570,8 @@ class EmployeeDashboard
                 }
             }
 
-            $isWeekoffDay = false;
-            foreach ($weekoffs as $weekoff) {
-                if ($weekoff->off_type == 'date_based' && $calWalk->between($weekoff->start_date, $weekoff->end_date)) {
-                    $isWeekoffDay = true;
-                    break;
-                }
-                if ($weekoff->off_type == 'day_based' && $weekoff->day_name == $dayName) {
-                    $isWeekoffDay = true;
-                    break;
-                }
-            }
+            // Same reading as the Team / attendance calendars (honours each weekly-off row's date range).
+            $isWeekoffDay = \App\Support\WeekOffPredicate::isWeekOff($weekoffs, $calWalk);
 
             $isLeaveDay = false;
             foreach ($calLeaves as $lv) {
@@ -591,12 +581,14 @@ class EmployeeDashboard
                 }
             }
 
-            if ($holidayName) {
+            // Attendance first: a holiday / week-off the employee came in on (e.g. a
+            // swapped Saturday) is a worked day, as on the Team and /attendance calendars.
+            if ($calAttendanceRows->has($dateKey)) {
+                $calendarStatusMap[$dateKey] = ['code' => 'P', 'title' => $holidayName ? 'Worked on Holiday (' . $holidayName . ')' : ($isWeekoffDay ? 'Worked on Week Off' : 'Present')];
+            } elseif ($holidayName) {
                 $calendarStatusMap[$dateKey] = ['code' => 'H', 'title' => $holidayName];
             } elseif ($isWeekoffDay) {
                 $calendarStatusMap[$dateKey] = ['code' => 'W', 'title' => 'Week Off'];
-            } elseif ($calAttendanceRows->has($dateKey)) {
-                $calendarStatusMap[$dateKey] = ['code' => 'P', 'title' => 'Present'];
             } elseif ($isLeaveDay) {
                 $calendarStatusMap[$dateKey] = ['code' => 'L', 'title' => 'On Leave'];
             } elseif ($calWalk->lt($today)) {
