@@ -18,6 +18,7 @@ use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
  * @property string|null $email
  * @property string|null $employee_id
  * @property string $role
+ * @property-read mixed $pivot user_reporting_heads row (is_primary), set on users loaded through reportingHeads() / directReports()
  */
 class User extends Authenticatable implements JWTSubject
 {
@@ -157,8 +158,10 @@ class User extends Authenticatable implements JWTSubject
      * Full set of reporting heads (multi-head support). Kept alongside
      * user_job_details.reporting_head, which remains the denormalized
      * primary head for backward compatibility. See docs/modules.md.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<User, $this>
      */
-    public function reportingHeads()
+    public function reportingHeads(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_reporting_heads', 'user_id', 'reporting_head_id')
             ->withPivot('is_primary')

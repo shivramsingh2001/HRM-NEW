@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\TenantTrait;
 
+/**
+ * @property string $name
+ */
 class LeaveType extends Model
 {
      use TenantTrait;

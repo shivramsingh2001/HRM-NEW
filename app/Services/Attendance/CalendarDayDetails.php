@@ -19,8 +19,8 @@ class CalendarDayDetails
     /**
      * Sets ->details on every day record (objects with ->date) of one user.
      *
-     * @param  Collection<int, object>  $records
-     * @return Collection<int, object>
+     * @param  Collection<int, \stdClass>  $records
+     * @return Collection<int, \stdClass>
      */
     public function attach(Collection $records, int $userId): Collection
     {

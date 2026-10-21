@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\TenantTrait;
 
+/**
+ * @property int $user_id
+ * @property mixed $date Carbon or Y-m-d string depending on how it was loaded
+ */
 class UserShift extends Model
 {
     use TenantTrait;
@@ -28,8 +32,10 @@ class UserShift extends Model
 
     /**
      * Get the shift details
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Shift, $this>
      */
-    public function shift()
+    public function shift(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Shift::class, 'shift_id');
     }

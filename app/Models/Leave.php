@@ -3,8 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Traits\TenantTrait;
 
+/**
+ * @property int $user_id
+ * @property int|null $leave_type
+ * @property mixed $start_date
+ * @property mixed $end_date
+ */
 class Leave extends Model
 {
     use TenantTrait;
@@ -20,7 +27,8 @@ class Leave extends Model
     {
         return $this->belongsTo(User::class);
     }
-    public function leaveType()
+    /** @return BelongsTo<LeaveType, $this> */
+    public function leaveType(): BelongsTo
     {
         return $this->belongsTo(LeaveType::class, 'leave_type');
     }

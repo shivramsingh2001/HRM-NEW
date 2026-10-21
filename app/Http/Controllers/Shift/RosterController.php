@@ -92,7 +92,7 @@ class RosterController extends Controller
                 ->whereIn('user_id', $userIds)
                 ->whereIn('date', $dateStrings)
                 ->get()
-                ->filter(fn ($r) => $r->shift)
+                ->filter(fn ($r) => $r->shift !== null)
                 ->sortBy(fn ($r) => [(int) $r->is_additional, (string) $r->shift->start_time])
                 ->groupBy(fn ($r) => $r->user_id.'|'.Carbon::parse($r->date)->format('Y-m-d'));
 

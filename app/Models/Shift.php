@@ -5,6 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\TenantTrait;
 
+/**
+ * @property string $name
+ * @property string|null $start_time
+ * @property string|null $end_time
+ */
 class Shift extends Model
 {
      use TenantTrait;

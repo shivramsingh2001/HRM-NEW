@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Traits\TenantTrait;
 
+/**
+ * @property mixed $date Carbon or Y-m-d string depending on how it was loaded
+ * @property int|null $regularized_by
+ * @property int|null $marked_by
+ */
 class Attendance extends Model
 {
     use TenantTrait;

@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use App\Traits\TenantTrait;
 use Carbon\Carbon;
 
+/**
+ * @property mixed $start_date VARCHAR column; Carbon or string depending on how it was loaded
+ */
 class Holiday extends Model
 {
     use TenantTrait;
