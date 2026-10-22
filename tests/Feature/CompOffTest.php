@@ -131,8 +131,8 @@ class CompOffTest extends TestCase
         $this->actingAs($this->emp)->postJson(route('leave.comp-off.store'), ['worked_date' => $this->sat1])->assertStatus(422)
             ->assertJsonPath('message', 'Already claimed as comp-off');
 
-        $this->actingAs($this->emp)->get(route('leave.comp-off.index'))->assertOk()->assertSee('Comp Off balance');
-        $this->actingAs($this->admin)->get(route('leave.comp-off.index'))->assertOk()->assertSee('Team requests');
+        $this->actingAs($this->emp)->get(route('leave.comp-off.index'))->assertOk()->assertSee('Comp Off Balance (days)');
+        $this->actingAs($this->admin)->get(route('leave.comp-off.index'))->assertOk()->assertSee('Team Requests');
     }
 
     public function test_hours_decide_full_half_or_nothing_and_a_working_day_cannot_be_claimed(): void

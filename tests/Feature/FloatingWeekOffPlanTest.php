@@ -130,8 +130,8 @@ class FloatingWeekOffPlanTest extends TestCase
         $this->assertFalse($this->isWeekOff($day));
         $this->assertTrue($this->hasShift($day));
 
-        $this->actingAs($this->emp)->get(route('leave.floating-weekoffs.index'))->assertOk()->assertSee('left in');
-        $this->actingAs($this->admin)->get(route('leave.floating-weekoffs.index'))->assertOk()->assertSee('Team requests');
+        $this->actingAs($this->emp)->get(route('leave.floating-weekoffs.index'))->assertOk()->assertSee('Week-offs left');
+        $this->actingAs($this->admin)->get(route('leave.floating-weekoffs.index'))->assertOk()->assertSee('Team Requests');
     }
 
     public function test_the_month_count_and_the_week_cap_limit_planning(): void
