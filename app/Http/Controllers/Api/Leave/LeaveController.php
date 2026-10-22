@@ -155,7 +155,6 @@ class LeaveController extends Controller
             $start = Carbon::parse($request->start_date);
             $end = Carbon::parse($request->end_date);
             $leaveTypeId = $request->leave_type;
-            $isLWP = $this->leaveService->isLwpId($leaveTypeId);
 
             if ($end->lt($start)) {
                 DB::rollBack();
@@ -178,42 +177,9 @@ class LeaveController extends Controller
                 }
             }
 
-            // One request, one row: total_days excludes weekends/holidays,
-            // but start_date/end_date still store the full requested range.
-            $totalLeaveDays = $this->leaveService->computeLeaveDays(
-                $start->copy(),
-                $end->copy(),
-                $request->start_session,
-                $request->end_session,
-                $user->tenant_id
-            );
-
-            if ($totalLeaveDays <= 0) {
-                DB::rollBack();
-                return response()->json([
-                    'success' => false,
-                    'message' => 'The selected date range has no working days to apply leave for.'
-                ], 200);
-            }
-
-            /**----------------------------------------------------
-             * CHECK AVAILABLE BALANCE FROM leave_balances TABLE
-             *----------------------------------------------------*/
-            if (!$isLWP) {
-                $balanceRecord = LeaveBalance::where('user_id', $user->id)
-                    ->where('leave_type_id', $leaveTypeId)
-                    ->first();
-
-                $availableBalance = $balanceRecord ? (float) $balanceRecord->balance : 0;
-
-                if ($availableBalance < $totalLeaveDays) {
-                    DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Insufficient leave balance. You have {$availableBalance} days available but requested {$totalLeaveDays} days."
-                    ], 200);
-                }
-            }
+            // Day / session already taken, working days, balance (skipped for LWP).
+            $totalLeaveDays = $this->leaveService->checkApplication((int) $user->id, (int) $user->tenant_id, (int) $leaveTypeId,
+                $start, $end, $request->start_session, $request->end_session);
 
             /**----------------------------------------------------
              * FILE UPLOAD
@@ -222,7 +188,7 @@ class LeaveController extends Controller
                 ? file_storage()->upload($request->file('file'), 'leave', ['tenant' => $user->tenant_id])->path
                 : null;
 
-            $insertedLeave = Leave::create([
+            $insertedLeave = $this->leaveService->createPending([
                 'user_id' => $user->id,
                 'leave_type' => $leaveTypeId,
                 'start_date' => $start->format('Y-m-d'),
@@ -232,7 +198,6 @@ class LeaveController extends Controller
                 'leave_count' => $totalLeaveDays,
                 'total_days' => $totalLeaveDays,
                 'reason' => $request->reason,
-                'status' => 'pending',
                 'file' => $filePath,
             ]);
 
@@ -251,6 +216,9 @@ class LeaveController extends Controller
                 'message' => 'Leave request submitted successfully',
             ], 200);
 
+        } catch (\DomainException $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 200);
         } catch (Exception $e) {
             report($e);
             DB::rollBack();

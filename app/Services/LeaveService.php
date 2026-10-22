@@ -64,6 +64,15 @@ class LeaveService
         $userId = $leave->user_id;
         $isLwp = $this->isLwpId($leaveTypeId);
 
+        // Two requests for the same day/session may already be pending (applied
+        // before the apply-time check existed): approving the second one must
+        // not deduct the balance twice.
+        $refusal = $this->applyRefusal((int) $userId, Carbon::parse($leave->start_date), Carbon::parse($leave->end_date),
+            $this->normalizeSession($leave->start_session), $this->normalizeSession($leave->end_session), (int) $leave->id, ['approved']);
+        if ($refusal) {
+            return ['success' => false, 'message' => $refusal];
+        }
+
         $balanceRecord = null;
         $currentBalance = 0.0;
 
@@ -270,29 +279,161 @@ class LeaveService
             return false;
         };
 
-        $isSingleDay = $start->isSameDay($end);
         $total = 0.0;
         $current = $start->copy();
 
         while ($current->lte($end)) {
             if (!$isNonWorkingDay($current)) {
-                if ($isSingleDay) {
-                    $session = $startSession;
-                } elseif ($current->isSameDay($start)) {
-                    $session = $startSession;
-                } elseif ($current->isSameDay($end)) {
-                    $session = $endSession;
-                } else {
-                    $session = 'fullday';
-                }
-
-                $total += $session === 'fullday' ? 1 : 0.5;
+                [$firstHalf, $secondHalf] = $this->halvesOn($current, $start, $end, $startSession, $endSession);
+                $total += ($firstHalf ? 0.5 : 0) + ($secondHalf ? 0.5 : 0);
             }
 
             $current->addDay();
         }
 
         return $total;
+    }
+
+    /**
+     * Which halves of $day a leave covers, as [firstHalf, secondHalf]. The start
+     * session says where the leave begins (Session 2 = from the second half of
+     * the start day), the end session where it ends (Session 1 = up to the first
+     * half of the end day); every day in between is whole. So 23 Oct Session 1
+     * → 24 Oct Session 1 is 1.5 days, and one day Session 1 → Session 2 is a full day.
+     *
+     * @return array{0:bool, 1:bool}
+     */
+    public function halvesOn(\Carbon\CarbonInterface $day, \Carbon\CarbonInterface $start, \Carbon\CarbonInterface $end, ?string $startSession, ?string $endSession): array
+    {
+        return [
+            !$day->isSameDay($start) || $this->normalizeSession($startSession) !== 'session2',
+            !$day->isSameDay($end) || $this->normalizeSession($endSession) !== 'session1',
+        ];
+    }
+
+    /** Older rows store sessions as 1 / 2; empty means a full day. */
+    private function normalizeSession(?string $session): string
+    {
+        return match ((string) $session) {
+            'session1', '1' => 'session1',
+            'session2', '2' => 'session2',
+            default => 'fullday',
+        };
+    }
+
+    /**
+     * Why a leave for these dates/sessions cannot be applied, or null when it can:
+     * a one-day leave starting in the second half and ending in the first half,
+     * or a half of any day already taken by another leave of the employee in one
+     * of $blockingStatuses. A rejected / cancelled leave never blocks — the
+     * employee can apply for that day again. $ignoreLeaveId skips the leave being
+     * edited or approved.
+     *
+     * Callers that create a leave call it again inside their transaction after
+     * locking the employee (recheckUnderLock), so a double tap cannot get through twice.
+     */
+    public function applyRefusal(int $userId, \Carbon\CarbonInterface $start, \Carbon\CarbonInterface $end, string $startSession, string $endSession, ?int $ignoreLeaveId = null, array $blockingStatuses = ['pending', 'approved']): ?string
+    {
+        if ($start->isSameDay($end) && $this->normalizeSession($startSession) === 'session2' && $this->normalizeSession($endSession) === 'session1') {
+            return 'A one-day leave cannot start in Session 2 (second half) and end in Session 1 (first half).';
+        }
+
+        $existing = Leave::withoutGlobalScopes()
+            ->where('user_id', $userId)
+            ->whereIn('status', $blockingStatuses)
+            ->when($ignoreLeaveId, fn ($q) => $q->where('id', '!=', $ignoreLeaveId))
+            ->whereDate('start_date', '<=', $end->toDateString())
+            ->whereDate('end_date', '>=', $start->toDateString())
+            ->orderBy('start_date')
+            ->get(['id', 'leave_id', 'status', 'start_date', 'start_session', 'end_date', 'end_session']);
+
+        foreach ($existing as $leave) {
+            $leaveStart = Carbon::parse($leave->start_date)->startOfDay();
+            $leaveEnd = Carbon::parse($leave->end_date)->startOfDay();
+            $day = Carbon::instance($start)->startOfDay()->max($leaveStart)->copy();
+            $lastDay = Carbon::instance($end)->startOfDay()->min($leaveEnd)->copy();
+
+            for (; $day->lte($lastDay); $day->addDay()) {
+                [$newFirst, $newSecond] = $this->halvesOn($day, $start, $end, $startSession, $endSession);
+                [$oldFirst, $oldSecond] = $this->halvesOn($day, $leaveStart, $leaveEnd, $leave->start_session, $leave->end_session);
+                $clash = ($newFirst && $oldFirst) ? ($newSecond && $oldSecond ? 'full day' : 'first half') : (($newSecond && $oldSecond) ? 'second half' : null);
+
+                if ($clash) {
+                    $ref = $leave->leave_id ?: "#{$leave->id}";
+
+                    return "There is already {$this->article($leave->status)} {$leave->status} leave ({$ref}) on {$day->format('d M Y')} ({$clash}). A day can be applied again only after that leave is rejected or cancelled.";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function article(string $word): string
+    {
+        return in_array(strtolower($word[0] ?? ''), ['a', 'e', 'i', 'o', 'u'], true) ? 'an' : 'a';
+    }
+
+    /**
+     * Checks shared by the employee's own apply / edit forms (web and mobile):
+     * same day + session already taken, working days in the range, balance
+     * (skipped for LWP). Returns the deductible day count.
+     *
+     * @throws \DomainException with a message for the user when a check fails
+     */
+    public function checkApplication(int $userId, int $tenantId, int $leaveTypeId, \Carbon\CarbonInterface $start, \Carbon\CarbonInterface $end, string $startSession, string $endSession, ?int $ignoreLeaveId = null): float
+    {
+        if ($refusal = $this->applyRefusal($userId, $start, $end, $startSession, $endSession, $ignoreLeaveId)) {
+            throw new \DomainException($refusal);
+        }
+
+        // One request, one row: total_days excludes weekends/holidays,
+        // but start_date/end_date still store the full requested range.
+        $days = $this->computeLeaveDays($start, $end, $startSession, $endSession, $tenantId);
+        if ($days <= 0) {
+            throw new \DomainException('The selected date range has no working days to apply leave for.');
+        }
+
+        if (!$this->isLwpId($leaveTypeId)) {
+            $available = (float) LeaveBalance::where('user_id', $userId)->where('leave_type_id', $leaveTypeId)->value('balance');
+            if ($available < $days) {
+                throw new \DomainException("Insufficient leave balance. You have {$available} days available but requested {$days} days.");
+            }
+        }
+
+        return $days;
+    }
+
+    /**
+     * Save a new pending leave. The overlap check runs again under a lock on the
+     * employee, so a double-tapped submit cannot create the same leave twice.
+     *
+     * @throws \DomainException when the day / session was taken meanwhile
+     */
+    public function createPending(array $attributes): Leave
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($attributes) {
+            $this->recheckUnderLock((int) $attributes['user_id'], Carbon::parse($attributes['start_date']), Carbon::parse($attributes['end_date']),
+                $attributes['start_session'], $attributes['end_session']);
+
+            return Leave::create(['status' => 'pending'] + $attributes);
+        });
+    }
+
+    /**
+     * Lock the employee's user row until the surrounding transaction ends (so
+     * concurrent submissions for one employee run one at a time), then repeat
+     * the overlap check.
+     *
+     * @throws \DomainException
+     */
+    public function recheckUnderLock(int $userId, \Carbon\CarbonInterface $start, \Carbon\CarbonInterface $end, string $startSession, string $endSession, ?int $ignoreLeaveId = null): void
+    {
+        \App\Models\User::withoutGlobalScopes()->whereKey($userId)->lockForUpdate()->value('id');
+
+        if ($refusal = $this->applyRefusal($userId, $start, $end, $startSession, $endSession, $ignoreLeaveId)) {
+            throw new \DomainException($refusal);
+        }
     }
 
     /**
@@ -316,16 +457,13 @@ class LeaveService
             throw new \DomainException($refusal);
         }
 
+        if ($refusal = $this->applyRefusal((int) $employee->id, $start, $end, $startSession, $endSession)) {
+            throw new \DomainException($refusal);
+        }
+
         $days = $this->computeLeaveDays($start->copy(), $end->copy(), $startSession, $endSession, $tenantId);
         if ($days <= 0) {
             throw new \DomainException('The selected date range has no working days to apply leave for.');
-        }
-
-        $overlap = Leave::withoutGlobalScopes()->where('user_id', $employee->id)->whereIn('status', ['pending', 'approved'])
-            ->where('start_date', '<=', $end->toDateString())->where('end_date', '>=', $start->toDateString())
-            ->exists();
-        if ($overlap) {
-            throw new \DomainException("{$employee->name} already has a pending or approved leave on these dates.");
         }
 
         if (! $this->isLwpId((int) $leaveType->id)) {
@@ -336,6 +474,8 @@ class LeaveService
         }
 
         $leave = \Illuminate\Support\Facades\DB::transaction(function () use ($actor, $employee, $tenantId, $leaveType, $start, $end, $startSession, $endSession, $reason, $days) {
+            $this->recheckUnderLock((int) $employee->id, $start, $end, $startSession, $endSession);
+
             $leave = $this->createApproved([
                 'tenant_id' => $tenantId,
                 'user_id' => $employee->id,

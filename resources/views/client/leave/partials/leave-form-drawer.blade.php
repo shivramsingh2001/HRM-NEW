@@ -138,12 +138,13 @@
             var s = $('ld_start_date').value, e = $('ld_end_date').value;
             var ss = $('ld_start_session').value, es = $('ld_end_session').value;
             if (!s || !e || e < s) { $('ld_days').classList.add('d-none'); return; }
+            // Start Session 2 = from the second half of the first day; End Session 1 = up to the first half of the last day.
             var days = Math.round((new Date(e) - new Date(s)) / 86400000) + 1;
             if (days === 1) {
-                days = (ss === 'fullday' && es === 'fullday') ? 1 : 0.5;
+                days = (ss === 'session2' ? 0 : 0.5) + (es === 'session1' ? 0 : 0.5);
             } else {
-                if (ss !== 'fullday') days -= 0.5;
-                if (es !== 'fullday') days -= 0.5;
+                if (ss === 'session2') days -= 0.5;
+                if (es === 'session1') days -= 0.5;
             }
             $('ld_days_value').textContent = days;
             $('ld_days').classList.remove('d-none');

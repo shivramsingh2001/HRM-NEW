@@ -12,6 +12,10 @@ use App\Traits\TenantTrait;
  * @property int|null $leave_type
  * @property mixed $start_date
  * @property mixed $end_date
+ * @property string|null $start_session
+ * @property string|null $end_session
+ * @property string|null $leave_id
+ * @property string $status
  */
 class Leave extends Model
 {

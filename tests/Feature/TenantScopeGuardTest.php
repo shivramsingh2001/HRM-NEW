@@ -45,7 +45,7 @@ class TenantScopeGuardTest extends TestCase
      */
     private const KNOWN_DEBT = [
         'app/Services/Attendance/OvertimePolicyService.php' => 1,
-        'app/Services/LeaveService.php' => 2,
+        'app/Services/LeaveService.php' => 1,
         'app/Services/Loan/SalaryAdvanceService.php' => 2,
         'app/Services/Offboarding/OffboardingService.php' => 1,
         'app/Services/Payroll/PayrollArrearsCalculator.php' => 1,
