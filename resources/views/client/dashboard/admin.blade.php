@@ -1781,8 +1781,8 @@
                     deptElement.innerHTML = '';
                     var deptNames = [], deptCounts = [];
                     @foreach ($department_distribution as $dept)
-                        deptNames.push('{{ $dept->name }}');
-                        deptCounts.push({{ $dept->users_count }});
+                        deptNames.push(@json(trim((string) $dept->name)));
+                        deptCounts.push({{ (int) $dept->users_count }});
                     @endforeach
                     var departmentOptions = {
                         series: deptCounts,
@@ -1807,9 +1807,9 @@
                     var statusLabels = [], statusData = [], statusColorArray = [];
                     @foreach ($projects_by_status as $status => $count)
                         @if ($count > 0)
-                            statusLabels.push('{{ ucfirst($status) }} ({{ $count }})');
-                            statusData.push({{ $count }});
-                            statusColorArray.push(statusColors['{{ $status }}'] || '#6c757d');
+                            statusLabels.push(@json(ucfirst((string) $status) . ' (' . $count . ')'));
+                            statusData.push({{ (int) $count }});
+                            statusColorArray.push(statusColors[@json((string) $status)] || '#6c757d');
                         @endif
                     @endforeach
                     var projectStatusOptions = {
