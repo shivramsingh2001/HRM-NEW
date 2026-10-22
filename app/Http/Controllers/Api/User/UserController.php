@@ -284,20 +284,21 @@ class UserController extends Controller
                 // Determine status
                 $status = 'Absent';
 
-                if ($isHoliday) {
+                if ($attendance && $attendance->clock_in) {
+                    // Clocked in = worked, even on a holiday or an approved leave day (attendance first, as the web calendars).
+                    if ($attendance->clock_out) {
+                        $status = \App\Support\AttendanceDayStatus::forRowOrHours($attendance); // company-policy grade (or policy hours), as /history
+                        $statusCount[$k = \App\Support\AttendanceDayStatus::summaryKey($status)] = ($statusCount[$k] ?? 0) + 1;
+                    } else {
+                        $status = 'Present (Not Checked Out)';
+                        $statusCount['present']++;
+                    }
+                } elseif ($isHoliday) {
                     $status = 'Holiday';
                     $statusCount['holiday']++;
                 } elseif ($onLeave) {
                     $status = 'On Leave';
                     $statusCount['on_leave']++;
-                } elseif ($attendance) {
-                    if ($attendance->clock_in && $attendance->clock_out) {
-                        $status = \App\Support\AttendanceDayStatus::forRowOrHours($attendance); // company-policy grade (or policy hours), as /history
-                        $statusCount[$k = \App\Support\AttendanceDayStatus::summaryKey($status)] = ($statusCount[$k] ?? 0) + 1;
-                    } elseif ($attendance->clock_in) {
-                        $status = 'Present (Not Checked Out)';
-                        $statusCount['present']++;
-                    }
                 } elseif ($isWeekOff) {
                     $status = 'Week Off';
                     $statusCount['weekoff']++;
@@ -449,16 +450,15 @@ class UserController extends Controller
                     // Determine status
                     $status = 'Absent';
 
-                    if ($isHoliday) {
+                    if ($attendance && $attendance->clock_in) {
+                        // Clocked in = worked, even on a holiday or an approved leave day (attendance first).
+                        $status = $attendance->clock_out
+                            ? \App\Support\AttendanceDayStatus::forRowOrHours($attendance) // company-policy grade (or policy hours), as /history
+                            : 'Present (Not Checked Out)';
+                    } elseif ($isHoliday) {
                         $status = 'Holiday';
                     } elseif ($onLeave) {
                         $status = 'On Leave';
-                    } elseif ($attendance) {
-                        if ($attendance->clock_in && $attendance->clock_out) {
-                            $status = \App\Support\AttendanceDayStatus::forRowOrHours($attendance); // company-policy grade (or policy hours), as /history
-                        } elseif ($attendance->clock_in) {
-                            $status = 'Present (Not Checked Out)';
-                        }
                     } elseif ($isWeekOff) {
                         $status = 'Week Off';
                     }
@@ -615,18 +615,7 @@ class UserController extends Controller
                     $attendanceSummary['holiday']++;
                     $attendanceSummary['work_days']++;
                 } elseif ($isOnLeave) {
-                    // Handle leave sessions for future dates
-                    if ($leaveData->start_date == $leaveData->start_date) {
-                        if ($leaveData->start_session == 1 && $leaveData->end_session == 1) {
-                            $dayStatus = 'First Half Leave';
-                        } elseif ($leaveData->start_session == 2 && $leaveData->end_session == 2) {
-                            $dayStatus = 'Second Half Leave';
-                        } else {
-                            $dayStatus = 'Full Day Leave';
-                        }
-                    } else {
-                        $dayStatus = 'Full Day Leave';
-                    }
+                    $dayStatus = $this->leaveDayLabel($leaveData);
                     $attendanceSummary['on_leave']++;
                     $attendanceSummary['work_days']++;
                 } elseif ($isWeekoff) {
@@ -638,34 +627,23 @@ class UserController extends Controller
                     // Note: Future dates without events don't count as work days
                 }
             } else {
-                // Past or current date logic
-                if ($isHoliday) {
+                // Past or current date: a clock-in wins over holiday and leave (worked that day, as the web calendars).
+                if ($attendance && $attendance->clock_in) {
+                    if ($attendance->clock_out) {
+                        $dayStatus = \App\Support\AttendanceDayStatus::forRowOrHours($attendance); // company-policy grade (or policy hours), as /history
+                        $attendanceSummary[\App\Support\AttendanceDayStatus::summaryKey($dayStatus)]++;
+                    } else {
+                        $dayStatus = 'Checked In Only';
+                        $attendanceSummary['checked_in_only']++;
+                    }
+                    $attendanceSummary['work_days']++;
+                } elseif ($isHoliday) {
                     $dayStatus = 'Holiday';
                     $attendanceSummary['holiday']++;
                 } elseif ($isOnLeave) {
-                    if ($leaveData->start_date == $leaveData->start_date) {
-                        if ($leaveData->start_session == 1 && $leaveData->end_session == 1) {
-                            $dayStatus = 'First Half Leave';
-                        } elseif ($leaveData->start_session == 2 && $leaveData->end_session == 2) {
-                            $dayStatus = 'Second Half Leave';
-                        } else {
-                            $dayStatus = 'Full Day Leave';
-                        }
-                    } else {
-                        $dayStatus = 'Full Day Leave';
-                    }
+                    $dayStatus = $this->leaveDayLabel($leaveData);
                     $attendanceSummary['on_leave']++;
                     $attendanceSummary['work_days']++;
-                } elseif ($attendance) {
-                    if ($attendance->clock_in && $attendance->clock_out) {
-                        $dayStatus = \App\Support\AttendanceDayStatus::forRowOrHours($attendance); // company-policy grade (or policy hours), as /history
-                        $attendanceSummary[\App\Support\AttendanceDayStatus::summaryKey($dayStatus)]++;
-                        $attendanceSummary['work_days']++;
-                    } elseif ($attendance->clock_in) {
-                        $dayStatus = 'Checked In Only';
-                        $attendanceSummary['checked_in_only']++;
-                        $attendanceSummary['work_days']++;
-                    }
                 } elseif ($isWeekoff) {
                     $dayStatus = 'Weekend';
                     $attendanceSummary['weekend']++;
@@ -1360,5 +1338,22 @@ class UserController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * "First Half Leave" / "Second Half Leave" / "Full Day Leave" for a leave day, as the web
+     * /attendance calendar. Sessions are stored as session1 / session2 / fullday (the old 1 / 2
+     * comparison never matched, so every half-day leave read as a full day).
+     */
+    private function leaveDayLabel($leave): string
+    {
+        $start = (string) $leave->start_session;
+        $end = (string) ($leave->end_session ?? $start);
+
+        return match (true) {
+            in_array($start, ['session1', '1'], true) && in_array($end, ['session1', '1'], true) => 'First Half Leave',
+            in_array($start, ['session2', '2'], true) && in_array($end, ['session2', '2'], true) => 'Second Half Leave',
+            default => 'Full Day Leave',
+        };
     }
 }
