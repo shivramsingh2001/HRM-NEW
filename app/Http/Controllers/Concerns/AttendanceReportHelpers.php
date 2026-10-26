@@ -178,4 +178,35 @@ trait AttendanceReportHelpers
 
         return sprintf('%02d:%02d', $hours, $mins);
     }
+
+    /**
+     * Distance travelled (field-tracking GPS) per employee per day, or null when the
+     * company has no field tracking — the reports then hide their Distance column.
+     *
+     * @return array<int, array<string, float>>|null user_id => [Y-m-d => km]
+     */
+    private function travelKmByUserDate(int $tenantId, iterable $userIds, string $from, string $to): ?array
+    {
+        $distance = app(\App\Services\FieldTracking\TravelDistanceService::class);
+
+        return $distance->enabledFor($tenantId) ? $distance->kmByUserAndDate($tenantId, $userIds, $from, $to) : null;
+    }
+
+    /** Zeroed per-employee totals of the Monthly Summary / Employee Wise report. */
+    private function emptyMonthSummary(): array
+    {
+        return ['present' => 0, 'holiday' => 0, 'weekoff' => 0, 'halfday' => 0, 'absent' => 0,
+            'paid_days' => 0, 'work_hours' => 0, 'short_hours' => 0, 'ot_hours' => 0];
+    }
+
+    /** Daywise report status filter ("present" also covers half day + checked in only). */
+    private function matchesDayStatusFilter(string $status, string $filter): bool
+    {
+        return match ($filter) {
+            'present' => in_array($status, ['present', 'halfday', 'checked_in_only']),
+            'on_leave' => str_contains($status, 'leave'),
+            'weekoff' => $status === 'week_off',
+            default => $status === $filter,
+        };
+    }
 }

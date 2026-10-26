@@ -64,6 +64,7 @@ class AttendanceSummaryController extends Controller
                 ['path' => $request->url(), 'query' => $request->query()]
             );
             $users = $summaryPage->getCollection();
+            $travelKm = $this->travelKmByUser($authUser, $users, $monthStartDate, $attendanceEndDate); // null = no field tracking
 
             $summaryData = [];
             $totalSummary = [
@@ -88,6 +89,7 @@ class AttendanceSummaryController extends Controller
                 if ($userSummary) {
                     $userSummary['branch'] = $branches->firstWhere('id', $user->jobDetails?->branch_id)?->name;
                     $userSummary['attendance_location'] = \App\Models\AttendanceLocation::labelFor($user->jobDetails?->office_branch, $user->jobDetails?->attendanceLocation?->name);
+                    $userSummary['distance_km'] = $travelKm[$user->id] ?? 0.0;
                     $summaryData[] = $userSummary;
 
                     $totalSummary['total_users']++;
@@ -102,6 +104,7 @@ class AttendanceSummaryController extends Controller
             }
 
             $months = $this->getMonthOptions();
+            $showDistance = $travelKm !== null;
 
             return view('client.report.attendance.attendance-summary', compact(
                 'summaryData',
@@ -112,7 +115,8 @@ class AttendanceSummaryController extends Controller
                 'authUser',
                 'branchesEnabled',
                 'branches',
-                'branchId'
+                'branchId',
+                'showDistance'
             ));
         } catch (Exception $e) {
             Log::error('Error in attendanceSummary: '.$e->getMessage());
@@ -140,6 +144,7 @@ class AttendanceSummaryController extends Controller
 
             [$branchesEnabled, $branches, $branchId] = $this->summaryBranchContext($request, $authUser);
             $users = $this->getUsersForSummary($authUser, $branchId, $request->query('search'), $request);
+            $travelKm = $this->travelKmByUser($authUser, $users, $monthStartDate, $attendanceEndDate);
 
             $summaryData = [];
             foreach ($users as $user) {
@@ -152,6 +157,7 @@ class AttendanceSummaryController extends Controller
                 if ($userSummary) {
                     $userSummary['branch'] = $branches->firstWhere('id', $user->jobDetails?->branch_id)?->name;
                     $userSummary['attendance_location'] = \App\Models\AttendanceLocation::labelFor($user->jobDetails?->office_branch, $user->jobDetails?->attendanceLocation?->name);
+                    $userSummary['distance_km'] = $travelKm[$user->id] ?? 0.0;
                     $summaryData[] = $userSummary;
                 }
             }
@@ -162,7 +168,7 @@ class AttendanceSummaryController extends Controller
                 'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             ];
 
-            $callback = function () use ($summaryData, $selectedDate, $branchesEnabled) {
+            $callback = function () use ($summaryData, $selectedDate, $branchesEnabled, $travelKm) {
                 $file = fopen('php://output', 'w');
 
                 $this->writeCsvRow($file, [
@@ -181,6 +187,7 @@ class AttendanceSummaryController extends Controller
                     'Week Offs',
                     'Working Days',
                     'Attendance %',
+                    ...($travelKm !== null ? ['Distance (km)'] : []),
                 ]);
 
                 foreach ($summaryData as $row) {
@@ -200,6 +207,7 @@ class AttendanceSummaryController extends Controller
                         $row['weekoffs'],
                         $row['working_days'],
                         $row['attendance_percentage'].'%',
+                        ...($travelKm !== null ? [number_format($row['distance_km'], 2)] : []),
                     ]);
                 }
 
@@ -305,6 +313,23 @@ class AttendanceSummaryController extends Controller
                 'message' => 'Failed to get summary',
             ], 500);
         }
+    }
+
+    /**
+     * Km each employee travelled from $from to $to (field-tracking GPS, see
+     * TravelDistanceService), or null when the company has no field tracking.
+     *
+     * @return array<int, float>|null user_id => km
+     */
+    private function travelKmByUser($authUser, $users, string $from, string $to): ?array
+    {
+        $distance = app(\App\Services\FieldTracking\TravelDistanceService::class);
+        $tenantId = (int) $authUser->tenant_id;
+        if (! $distance->enabledFor($tenantId)) {
+            return null;
+        }
+
+        return array_map(fn ($days) => round(array_sum($days), 2), $distance->kmByUserAndDate($tenantId, $users->pluck('id'), $from, $to));
     }
 
     /**

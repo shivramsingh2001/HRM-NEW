@@ -150,6 +150,7 @@ class DayAttendanceReportController extends Controller
                 ->orderBy('sg.scheduled_start')
                 ->get(['sg.*', 'sh.name as shift_name'])
                 ->groupBy('attendance_id');
+            $travelKm = $this->travelKmByUserDate((int) $tenantId, $users->pluck('id'), $dayStart, $dayStart); // null = no field tracking
 
             // Fetch approved leaves for this day
             $leaveRows = DB::table('leaves')
@@ -296,6 +297,7 @@ class DayAttendanceReportController extends Controller
                     'leave_type' => $leave->leave_type ?? null,
                     'holiday_name' => $holiday->name ?? null,
                     'weekoff_type' => $weekoff->off_type ?? null,
+                    'distance_km' => $travelKm[$user->id][$dayStart] ?? null,
                 ];
             }
 
@@ -303,27 +305,7 @@ class DayAttendanceReportController extends Controller
 
             // ✅ Apply status filter - WITH COMBINED PRESENT
             if ($statusFilter) {
-                $reportCollection = $reportCollection->filter(function ($item) use ($statusFilter) {
-                    $status = $item['status'];
-                    switch ($statusFilter) {
-                        case 'present':
-                            return in_array($status, ['present', 'halfday', 'checked_in_only']);
-                        case 'halfday':
-                            return $status === 'halfday';
-                        case 'checked_in_only':
-                            return $status === 'checked_in_only';
-                        case 'absent':
-                            return $status === 'absent';
-                        case 'on_leave':
-                            return str_contains($status, 'leave');
-                        case 'holiday':
-                            return $status === 'holiday';
-                        case 'weekoff':
-                            return $status === 'week_off';
-                        default:
-                            return $status === $statusFilter;
-                    }
-                });
+                $reportCollection = $reportCollection->filter(fn ($item) => $this->matchesDayStatusFilter($item['status'], $statusFilter));
             }
 
             // ✅ Calculate stats - WITH SEPARATE COUNTS
@@ -372,6 +354,7 @@ class DayAttendanceReportController extends Controller
                 'selectedDateObj' => $dateObj,
                 'monthStart' => $dayStart,
                 'monthEnd' => $dayStart,
+                'showDistance' => $travelKm !== null,
             ]);
         } catch (Exception $e) {
 
@@ -465,6 +448,7 @@ class DayAttendanceReportController extends Controller
                 ->orderBy('sg.scheduled_start')
                 ->get(['sg.*', 'sh.name as shift_name'])
                 ->groupBy('attendance_id');
+            $travelKm = $this->travelKmByUserDate((int) $tenantId, $users->pluck('id'), $dayStart, $dayStart); // null = no field tracking
 
             // Fetch approved leaves for this day
             $leaveRows = DB::table('leaves')
@@ -561,49 +545,8 @@ class DayAttendanceReportController extends Controller
                     : collect();
 
                 // ✅ Apply status filter - WITH COMBINED PRESENT
-                if ($statusFilter) {
-                    switch ($statusFilter) {
-                        case 'present':
-                            if (! in_array($status, ['present', 'halfday', 'checked_in_only'])) {
-                                continue 2;
-                            }
-                            break;
-                        case 'halfday':
-                            if ($status !== 'halfday') {
-                                continue 2;
-                            }
-                            break;
-                        case 'checked_in_only':
-                            if ($status !== 'checked_in_only') {
-                                continue 2;
-                            }
-                            break;
-                        case 'absent':
-                            if ($status !== 'absent') {
-                                continue 2;
-                            }
-                            break;
-                        case 'on_leave':
-                            if (! str_contains($status, 'leave')) {
-                                continue 2;
-                            }
-                            break;
-                        case 'holiday':
-                            if ($status !== 'holiday') {
-                                continue 2;
-                            }
-                            break;
-                        case 'weekoff':
-                            if ($status !== 'week_off') {
-                                continue 2;
-                            }
-                            break;
-                        default:
-                            if ($status !== $statusFilter) {
-                                continue 2;
-                            }
-                            break;
-                    }
+                if ($statusFilter && ! $this->matchesDayStatusFilter($status, $statusFilter)) {
+                    continue;
                 }
 
                 $reportData[] = [
@@ -642,6 +585,7 @@ class DayAttendanceReportController extends Controller
                     'leave_type' => $leave->leave_type ?? null,
                     'holiday_name' => $holiday->name ?? null,
                     'weekoff_type' => $weekoff->off_type ?? null,
+                    'distance_km' => $travelKm[$user->id][$dayStart] ?? null,
                 ];
             }
 
@@ -680,6 +624,7 @@ class DayAttendanceReportController extends Controller
                 'OT Hours',
                 'OT Reason',
                 'Remarks',
+                ...($travelKm !== null ? ['Distance (km)'] : []),
             ]);
 
             // Data rows
@@ -752,6 +697,7 @@ class DayAttendanceReportController extends Controller
                     $row['overtime_hours'] ? number_format((float) $row['overtime_hours'], 2).' hrs' : '—',
                     $row['overtime_reason'] ?? '—',
                     $row['remarks'] ?? '—',
+                    ...($travelKm !== null ? [$row['distance_km'] !== null ? number_format($row['distance_km'], 2) : '—'] : []),
                 ]);
             }
 

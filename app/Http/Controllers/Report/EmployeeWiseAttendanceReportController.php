@@ -133,6 +133,8 @@ class EmployeeWiseAttendanceReportController extends Controller
                 ]);
             }
 
+            $travelKm = $this->travelKmByUserDate((int) $tenantId, $employees->pluck('id'), $monthStart, $monthEnd); // null = no field tracking
+
             // If single employee selected, show detail view
             if ($employeeIdFilter && $employees->count() == 1) {
                 $employee = $employees->first();
@@ -182,17 +184,7 @@ class EmployeeWiseAttendanceReportController extends Controller
 
                 // Build daily data
                 $dailyData = [];
-                $summary = [
-                    'present' => 0,
-                    'holiday' => 0,
-                    'weekoff' => 0,
-                    'halfday' => 0,
-                    'absent' => 0,
-                    'paid_days' => 0,
-                    'work_hours' => 0,
-                    'short_hours' => 0,
-                    'ot_hours' => 0,
-                ];
+                $summary = $this->emptyMonthSummary() + ['distance_km' => round(array_sum($travelKm[$employee->id] ?? []), 2)];
 
                 for ($i = 1; $i <= $daysInMonth; $i++) {
                     $date = Carbon::createFromFormat('Y-m-d', $monthStart)->addDays($i - 1);
@@ -300,6 +292,7 @@ class EmployeeWiseAttendanceReportController extends Controller
                         $summary['absent']++;
                     }
 
+                    $dayData['distance_km'] = $travelKm[$employee->id][$dateStr] ?? null;
                     $dailyData[$i] = $dayData;
                 }
 
@@ -315,6 +308,7 @@ class EmployeeWiseAttendanceReportController extends Controller
                     'monthStart' => $monthStart,
                     'employeeData' => [],
                     'employees' => $employees,
+                    'showDistance' => $travelKm !== null,
                 ]);
             }
 
@@ -366,17 +360,7 @@ class EmployeeWiseAttendanceReportController extends Controller
                     ->get();
 
                 $dailyData = [];
-                $summary = [
-                    'present' => 0,
-                    'holiday' => 0,
-                    'weekoff' => 0,
-                    'halfday' => 0,
-                    'absent' => 0,
-                    'paid_days' => 0,
-                    'work_hours' => 0,
-                    'short_hours' => 0,
-                    'ot_hours' => 0,
-                ];
+                $summary = $this->emptyMonthSummary() + ['distance_km' => round(array_sum($travelKm[$employee->id] ?? []), 2)];
 
                 for ($i = 1; $i <= $daysInMonth; $i++) {
                     $date = Carbon::createFromFormat('Y-m-d', $monthStart)->addDays($i - 1);
@@ -477,6 +461,7 @@ class EmployeeWiseAttendanceReportController extends Controller
                 'employee' => null,
                 'dailyData' => [],
                 'summary' => [],
+                'showDistance' => $travelKm !== null,
             ]);
         } catch (Exception $e) {
             Log::error('Employee Wise Attendance Error: '.$e->getMessage());
@@ -508,9 +493,11 @@ class EmployeeWiseAttendanceReportController extends Controller
         $monthStart = Carbon::parse($data['monthStart']);
         $filename = 'employee_wise_attendance_'.$data['selectedMonth'].($data['employee'] ? '_'.($data['employee']->employee_id ?: $data['employee']->id) : '').'.csv';
 
-        return response()->streamDownload(function () use ($groups, $monthStart) {
+        $withKm = ! empty($data['showDistance']);
+
+        return response()->streamDownload(function () use ($groups, $monthStart, $withKm) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Employee', 'Employee ID', 'Date', 'Day', 'Status', 'In', 'Out', 'Shift From', 'Shift To', 'Working', 'Short Hours', 'OT']);
+            fputcsv($out, ['Employee', 'Employee ID', 'Date', 'Day', 'Status', 'In', 'Out', 'Shift From', 'Shift To', 'Working', 'Short Hours', 'OT', ...($withKm ? ['Distance (km)'] : [])]);
             foreach ($groups as $g) {
                 $emp = $g['employee'];
                 foreach ($g['dailyData'] as $day => $d) {
@@ -521,6 +508,7 @@ class EmployeeWiseAttendanceReportController extends Controller
                         $emp->name, $emp->employee_id, $date->format('Y-m-d'), $date->format('D'), $d['status'] ?? '',
                         $d['in_time'] ?? '', $d['out_time'] ?? '', $d['shift_from'] ?? '', $d['shift_to'] ?? '',
                         $d['working'] ?? '', $d['short_hrs'] ?? '', $d['ot_times'] ?? '',
+                        ...($withKm ? [isset($d['distance_km']) ? number_format($d['distance_km'], 2) : ''] : []),
                     ]);
                 }
                 $s = $g['summary'];
@@ -531,6 +519,7 @@ class EmployeeWiseAttendanceReportController extends Controller
                     $this->minutesToTime((int) ($s['work_hours'] ?? 0)),
                     $this->minutesToTime((int) ($s['short_hours'] ?? 0)),
                     $this->minutesToTime((int) ($s['ot_hours'] ?? 0)),
+                    ...($withKm ? [number_format((float) ($s['distance_km'] ?? 0), 2)] : []),
                 ]);
             }
             fclose($out);

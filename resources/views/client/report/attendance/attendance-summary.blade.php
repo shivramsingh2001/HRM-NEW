@@ -78,6 +78,7 @@
                                 <th class="text-center">Week Offs</th>
                                 <th class="text-center">Working Days</th>
                                 <th class="text-center">Month Days</th>
+                                @if ($showDistance ?? false)<th class="text-center" title="Distance travelled this month till date (field tracking GPS)">Distance</th>@endif
                             </tr>
                         </thead>
                         <tbody>
@@ -109,10 +110,15 @@
                                     <td class="text-center"><span class="cnt cnt-weekoff">{{ $row['weekoffs'] }}</span></td>
                                     <td class="text-center">{{ $row['working_days'] }}</td>
                                     <td class="text-center">{{ $row['total_month_days'] }}</td>
+                                    @if ($showDistance ?? false)
+                                        <td class="text-center">
+                                            <a href="{{ route('report.attendance.monthly.summary.index', ['employee_id' => $row['user_id'], 'month' => $selectedMonth]) }}" title="Day-wise distance">{{ number_format($row['distance_km'] ?? 0, 2) }} km</a>
+                                        </td>
+                                    @endif
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="13" class="text-center py-5 text-muted" style="font-size:11px;">
+                                    <td colspan="{{ ($showDistance ?? false) ? 14 : 13 }}" class="text-center py-5 text-muted" style="font-size:11px;">
                                         No attendance records available for the selected month.
                                     </td>
                                 </tr>

@@ -1071,6 +1071,7 @@
                                         <th>Late</th>
                                         <th>Early Exit</th>
                                         <th>OT</th>
+                                        @if (! empty($showDistance))<th title="Distance travelled (field tracking GPS)">Distance</th>@endif
                                         <th>Remarks</th>
                                     </tr>
                                 </thead>
@@ -1239,6 +1240,15 @@
                                                     <span class="text-muted">0</span>
                                                 @endif
                                             </td>
+                                            @if (! empty($showDistance))
+                                                <td>
+                                                    @if ($record['distance_km'] !== null)
+                                                        <a href="{{ route('attendance.sessions', ['user_id' => encrypt($record['user_id']), 'date' => $record['date']]) }}" title="View route on map">{{ number_format($record['distance_km'], 2) }} km</a>
+                                                    @else
+                                                        <span class="text-muted">—</span>
+                                                    @endif
+                                                </td>
+                                            @endif
                                             <td>
                                                 @if ($record['remarks'])
                                                     <span class="text-truncate" title="{{ $record['remarks'] }}"
@@ -1252,7 +1262,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="19" class="text-center py-5">
+                                            <td colspan="{{ ! empty($showDistance) ? 20 : 19 }}" class="text-center py-5">
                                                 <div class="empty-state">
                                                     <i class="feather-calendar"></i>
                                                     <h4>No Attendance Records Found</h4>

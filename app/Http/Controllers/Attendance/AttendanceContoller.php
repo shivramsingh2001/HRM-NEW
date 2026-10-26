@@ -762,36 +762,12 @@ class AttendanceContoller extends Controller
     /**
      * Length of the tracked route in km: straight-line distance between each
      * pair of consecutive points. Hops under 10 m are skipped — that is GPS
-     * drift while the employee is standing still, not travel.
+     * drift while the employee is standing still, not travel. Shared with the
+     * attendance reports' Distance column (TravelDistanceService).
      */
     private function routeDistanceKm(array $tracks): float
     {
-        $metres = 0.0;
-        $previous = null;
-
-        foreach ($tracks as $track) {
-            if (! is_numeric($track['latitude']) || ! is_numeric($track['longitude'])
-                || ((float) $track['latitude'] == 0.0 && (float) $track['longitude'] == 0.0)) {
-                continue;
-            }
-
-            $point = [deg2rad((float) $track['latitude']), deg2rad((float) $track['longitude'])];
-
-            if ($previous !== null) {
-                $a = sin(($point[0] - $previous[0]) / 2) ** 2
-                    + cos($previous[0]) * cos($point[0]) * sin(($point[1] - $previous[1]) / 2) ** 2;
-                $hop = 6371000 * 2 * atan2(sqrt($a), sqrt(1 - $a));
-
-                if ($hop < 10) {
-                    continue;
-                }
-
-                $metres += $hop;
-            }
-
-            $previous = $point;
-        }
-
-        return round($metres / 1000, 2);
+        return app(\App\Services\FieldTracking\TravelDistanceService::class)
+            ->routeKm(array_map(fn ($t) => [$t['latitude'], $t['longitude']], $tracks));
     }
 }

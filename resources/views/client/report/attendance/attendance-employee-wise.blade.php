@@ -453,6 +453,9 @@
                 <span class="badge-item">WorkHrs: <strong class="num workhrs">{{ isset($summary['work_hours']) ? number_format($summary['work_hours']/60, 2) . ' hrs' : '00:00' }}</strong></span>
                 <span class="badge-item">ShortHrs: <strong class="num shorthrs">{{ isset($summary['short_hours']) ? number_format($summary['short_hours']/60, 2) . ' hrs' : '00:00' }}</strong></span>
                 <span class="badge-item">OT Hrs: <strong class="num othrs">{{ isset($summary['ot_hours']) ? number_format($summary['ot_hours']/60, 2) . ' hrs' : '00:00' }}</strong></span>
+                @if (! empty($showDistance))
+                    <span class="badge-item" title="Distance travelled this month (field tracking GPS)">Distance: <strong class="num">{{ number_format($summary['distance_km'] ?? 0, 2) }} km</strong></span>
+                @endif
             </div>
 
             <!-- Daily Detail Table -->
@@ -468,6 +471,7 @@
                             <th>Working</th>
                             <th>Short hrs.</th>
                             <th>O.Times</th>
+                            @if (! empty($showDistance))<th>Distance</th>@endif
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -482,6 +486,15 @@
                                 <td class="working-hours">{{ $data['working'] }}</td>
                                 <td class="short-hours">{{ $data['short_hrs'] }}</td>
                                 <td class="ot-hours">{{ $data['ot_times'] }}</td>
+                                @if (! empty($showDistance))
+                                    <td>
+                                        @if (isset($data['distance_km']))
+                                            <a href="{{ route('attendance.sessions', ['user_id' => encrypt($employee->id), 'date' => \Carbon\Carbon::parse($monthStart)->day((int) $day)->format('Y-m-d')]) }}" title="View route on map">{{ number_format($data['distance_km'], 2) }} km</a>
+                                        @else
+                                            --
+                                        @endif
+                                    </td>
+                                @endif
                                 <td>
                                     <span class="
                                         @if($data['status'] == 'P') status-p
@@ -499,7 +512,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-4">
+                                <td colspan="{{ ! empty($showDistance) ? 10 : 9 }}" class="text-center py-4">
                                     <div class="text-muted">No attendance data found for this month.</div>
                                 </td>
                             </tr>
@@ -552,6 +565,9 @@
                                 <span class="stat">H: <strong class="num holiday">{{ $summary['holiday'] }}</strong></span>
                                 <span class="stat">L: <strong class="num leave">{{ $summary['paid_days'] }}</strong></span>
                                 <span class="stat">WH: <strong>{{ isset($summary['work_hours']) ? number_format($summary['work_hours']/60, 1) . 'h' : '0h' }}</strong></span>
+                                @if (! empty($showDistance))
+                                    <span class="stat" title="Distance travelled (field tracking GPS)">KM: <strong>{{ number_format($summary['distance_km'] ?? 0, 1) }}</strong></span>
+                                @endif
                             </div>
                             <div class="view-btn">
                                 <a href="{{ route('report.attendance.detailed.index', ['employee_id' => $emp->id, 'month' => $selectedMonth]) }}" 
