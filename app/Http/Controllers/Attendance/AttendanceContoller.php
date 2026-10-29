@@ -706,12 +706,16 @@ class AttendanceContoller extends Controller
                     ];
                 });
 
+            // Clock In / Clock Out pins on the route map (an open clock-in blinks).
+            $punchPins = app(\App\Services\Attendance\PunchMapPins::class)->forAttendance($attendance);
+
             if ($locationTracks->isEmpty()) {
                 return view('client.attendance.sessions', [
                     'date' => $date,
                     'user' => $user,
                     'attendance' => $attendance,
                     'locationTracks' => [],
+                    'punchPins' => $punchPins,
                     'statistics' => [
                         'total_tracks' => 0,
                         'tracking_duration' => 0
@@ -738,7 +742,9 @@ class AttendanceContoller extends Controller
                 'last_track_time' => $lastTrack['track_time'],
                 'tracking_duration_hours' => round($totalMinutes / 60, 2),
                 'tracking_duration_minutes' => $totalMinutes,
-                'distance_km' => $this->routeDistanceKm($locationTracks->all()),
+                // Same maths as the attendance reports' Distance column.
+                'distance_km' => app(\App\Services\FieldTracking\TravelDistanceService::class)
+                    ->routeKm($locationTracks->map(fn ($t) => [$t['latitude'], $t['longitude']])),
             ];
 
             return view('client.attendance.sessions', [
@@ -746,6 +752,7 @@ class AttendanceContoller extends Controller
                 'user' => $user,
                 'attendance' => $attendance,
                 'locationTracks' => $locationTracks,
+                'punchPins' => $punchPins,
                 'statistics' => $statistics,
                 'tasks' => $tasks,
                 'taskCounts' => $taskCounts,
@@ -757,17 +764,5 @@ class AttendanceContoller extends Controller
             Log::error('Error in viewAttendanceSessions: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load attendance sessions. Please try again.');
         }
-    }
-
-    /**
-     * Length of the tracked route in km: straight-line distance between each
-     * pair of consecutive points. Hops under 10 m are skipped — that is GPS
-     * drift while the employee is standing still, not travel. Shared with the
-     * attendance reports' Distance column (TravelDistanceService).
-     */
-    private function routeDistanceKm(array $tracks): float
-    {
-        return app(\App\Services\FieldTracking\TravelDistanceService::class)
-            ->routeKm(array_map(fn ($t) => [$t['latitude'], $t['longitude']], $tracks));
     }
 }

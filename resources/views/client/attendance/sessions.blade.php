@@ -98,6 +98,18 @@
         .session-map-focus { position: absolute; top: 10px; right: 10px; z-index: 1000; font-size: 11.5px; padding: 3px 9px;
             border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(15, 23, 42, .15); }
 
+        /* Clock In (green) / Clock Out (red) pins; a clock-in with no clock-out yet is amber and blinks. */
+        .punch-pin { position: relative; width: 28px; height: 36px; }
+        .punch-pin svg { position: relative; display: block; filter: drop-shadow(0 1px 2px rgba(15, 23, 42, .35)); }
+        .punch-pin.is-open svg { animation: punchBlink 1s ease-in-out infinite; }
+        .punch-pin.is-open::before { content: ''; position: absolute; left: 50%; bottom: -8px; width: 22px; height: 22px; margin-left: -11px;
+            border-radius: 50%; background: rgba(245, 158, 11, .55); animation: punchPulse 1.4s ease-out infinite; }
+        @keyframes punchBlink { 50% { opacity: .35; } }
+        @keyframes punchPulse { from { transform: scale(.4); opacity: 1; } to { transform: scale(2.4); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .punch-pin.is-open svg, .punch-pin.is-open::before { animation: none; } }
+        .pin-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 10.5px; color: #64748b; }
+        .pin-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+
         .location-map {
             height: 300px;
             border-radius: 6px;
@@ -190,6 +202,9 @@
         <div class="sessions-container">
             <!-- Header: who + this day's status, check-in / check-out (with date) and tracking -->
             @php
+                $punchPins = $punchPins ?? [];
+                $hasTrackList = $hasTracks && count($locationTracks) > 0;
+                $hasMap = $hasTrackList || count($punchPins) > 0;
                 $profileHeader = app(\App\Services\Dashboard\ProfileHeaderData::class)->forUser($user, $date);
                 $sessionStats = $hasAttendance ? [
                     ['label' => 'Locations', 'value' => $statistics['total_tracks'] ?? 0],
@@ -315,12 +330,14 @@
             @endif
 
             <!-- Location Tracks Section -->
-            @if ($hasTracks && count($locationTracks) > 0)
+            @if ($hasMap)
                 <div class="info-card">
                     <h6>
                         <i class="feather-map-pin me-2"></i>
                         Location Tracking Details
-                        <span class="badge bg-info ms-2">{{ count($locationTracks) }} Records</span>
+                        @if ($hasTrackList)
+                            <span class="badge bg-info ms-2">{{ count($locationTracks) }} Records</span>
+                        @endif
                     </h6>
 
                     <!-- Route Map (all points joined by a polyline, in chronological order) -->
@@ -331,11 +348,18 @@
                             <i class="feather-crosshair me-1"></i>Focus
                         </button>
                     </div>
+                    <div class="pin-legend mb-1">
+                        <span><i style="background:#16A34A"></i>Clock In</span>
+                        <span><i style="background:#DC2626"></i>Clock Out</span>
+                        <span><i style="background:#F59E0B"></i>Clocked in, no clock-out yet (blinking)</span>
+                        @if ($hasTrackList)<span><i style="background:#0D6EFD"></i>Route</span>@endif
+                    </div>
                     <div class="mb-2" style="font-size: 10.5px; color: #64748b;">
-                        Click the route line to see the time and location at that point. Hold Ctrl and scroll to zoom.
+                        Click a pin{{ $hasTrackList ? ' or the route line' : '' }} to see the time and location. Hold Ctrl and scroll to zoom.
                     </div>
 
                     <!-- Tracks List -->
+                    @if ($hasTrackList)
                     <div class="track-list mt-3">
                         @foreach ($locationTracks as $track)
                             <div class="track-item">
@@ -366,8 +390,10 @@
                             </div>
                         @endforeach
                     </div>
+                    @endif
                 </div>
-            @elseif($hasAttendance && !$hasTracks)
+            @endif
+            @if ($hasAttendance && ! $hasTrackList)
                 <div class="alert alert-warning">
                     <i class="feather-alert-triangle me-2"></i>
                     No location tracks found for this date. The user may have disabled location tracking or didn't use the
@@ -407,6 +433,43 @@
                 track.latitude && track.longitude &&
                 !isNaN(track.latitude) && !isNaN(track.longitude)
             );
+        }
+
+        // Clock In / Clock Out punches that carry GPS (PunchMapPins).
+        function sessionPins() {
+            return @json($punchPins);
+        }
+
+        const PIN_COLORS = { in: '#16A34A', out: '#DC2626', open: '#F59E0B' };
+
+        function pinColor(pin) {
+            return pin.open ? PIN_COLORS.open : PIN_COLORS[pin.type];
+        }
+
+        function pinLabel(pin) {
+            if (pin.open) return 'Clock In (no clock-out yet)';
+
+            return pin.type === 'out' ? 'Clock Out' : 'Clock In';
+        }
+
+        // Map pin (28 x 36, tip at the bottom centre) with IN / OUT written on it.
+        function pinSvg(pin) {
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="-1 -1 28 36">
+                <path d="M13 0C5.8 0 0 5.8 0 13c0 9.6 13 21 13 21s13-11.4 13-21C26 5.8 20.2 0 13 0z" fill="${pinColor(pin)}" stroke="#fff" stroke-width="2"/>
+                <text x="13" y="16.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="${pin.type === 'out' ? 7.5 : 9}" font-weight="700" fill="#fff">${pin.type === 'out' ? 'OUT' : 'IN'}</text>
+            </svg>`;
+        }
+
+        function pinPopupHtml(pin) {
+            const span = document.createElement('span');
+            span.textContent = pin.address || '';
+
+            return `
+                <strong style="color:${pinColor(pin)}">${pinLabel(pin)}</strong><br>
+                ${pin.time ? `Time: ${moment(pin.time).format('D MMM, h:mm A')}<br>` : ''}
+                ${pin.address ? `Address: ${span.innerHTML}<br>` : ''}
+                Lat/Long: ${pin.lat.toFixed(6)}, ${pin.long.toFixed(6)}
+            `;
         }
 
         function trackLabel(index, total) {
@@ -471,7 +534,8 @@
             if (!mapContainer || sessionMapDrawn) return;
 
             const validTracks = sessionTracks();
-            if (validTracks.length === 0) {
+            const pins = sessionPins();
+            if (validTracks.length === 0 && pins.length === 0) {
                 initSessionMap();
                 return;
             }
@@ -482,9 +546,11 @@
                 lat: parseFloat(track.latitude),
                 lng: parseFloat(track.longitude),
             }));
+            const pinPoints = pins.map(pin => ({ lat: pin.lat, lng: pin.long }));
+            const allPoints = path.concat(pinPoints);
 
             const map = new google.maps.Map(mapContainer, {
-                center: path[0],
+                center: allPoints[0],
                 zoom: 15,
                 mapTypeControl: false,
                 // The page scrolls over the map; Ctrl + scroll (or two fingers) zooms it.
@@ -492,17 +558,19 @@
                 streetViewControl: false,
             });
 
-            new google.maps.Polyline({
-                path,
-                map,
-                strokeColor: '#0D6EFD',
-                strokeWeight: 4,
-                strokeOpacity: 0.85,
-            });
+            if (path.length > 0) {
+                new google.maps.Polyline({
+                    path,
+                    map,
+                    strokeColor: '#0D6EFD',
+                    strokeWeight: 4,
+                    strokeOpacity: 0.85,
+                });
+            }
 
             const infoWindow = new google.maps.InfoWindow();
             const bounds = new google.maps.LatLngBounds();
-            path.forEach(point => bounds.extend(point));
+            allPoints.forEach(point => bounds.extend(point));
 
             const showTrack = index => {
                 infoWindow.setContent(trackPopupHtml(validTracks[index], trackLabel(index, validTracks.length)));
@@ -521,7 +589,7 @@
                 }).addListener('click', event => {
                     showTrack(nearestTrackIndex(validTracks, event.latLng.lat(), event.latLng.lng()));
                 });
-            } else {
+            } else if (path.length === 1) {
                 // A single point has no line to draw, so it gets one dot.
                 new google.maps.Marker({
                     position: path[0],
@@ -537,18 +605,42 @@
                 }).addListener('click', () => showTrack(0));
             }
 
-            if (path.length > 1) {
-                map.fitBounds(bounds, 24);
-            }
+            // Clock In / Clock Out pins; an open clock-in blinks.
+            pins.forEach((pin, index) => {
+                const marker = new google.maps.Marker({
+                    position: pinPoints[index],
+                    map,
+                    title: pinLabel(pin),
+                    zIndex: pin.open ? 1000 : 500,
+                    icon: {
+                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pinSvg(pin)),
+                        scaledSize: new google.maps.Size(28, 36),
+                        anchor: new google.maps.Point(14, 36),
+                    },
+                });
+                marker.addListener('click', () => {
+                    infoWindow.setContent(pinPopupHtml(pin));
+                    infoWindow.open({ anchor: marker, map });
+                });
+                if (pin.open) {
+                    let dim = false;
+                    setInterval(() => marker.setOpacity((dim = !dim) ? 0.35 : 1), 600);
+                }
+            });
+
+            const fitAll = () => {
+                if (allPoints.length > 1) {
+                    map.fitBounds(bounds, 24);
+                } else {
+                    map.setCenter(allPoints[0]);
+                    map.setZoom(15);
+                }
+            };
+            fitAll();
 
             enableSessionMapFocus(function() {
                 infoWindow.close();
-                if (path.length > 1) {
-                    map.fitBounds(bounds, 24);
-                } else {
-                    map.setCenter(path[0]);
-                    map.setZoom(15);
-                }
+                fitAll();
             });
         }
 
@@ -568,14 +660,16 @@
 
         // Renders the full route for this session in one shot: every tracked
         // point joined chronologically by a single polyline. No dots — a click
-        // on the line shows the nearest tracked point.
+        // on the line shows the nearest tracked point. Clock In / Clock Out
+        // pins sit on top; an open clock-in blinks.
         function initSessionMap() {
             const mapContainer = document.getElementById('sessionLocationMap');
             if (!mapContainer || sessionMapDrawn) return;
 
             const validTracks = sessionTracks();
+            const pins = sessionPins();
 
-            if (validTracks.length === 0) {
+            if (validTracks.length === 0 && pins.length === 0) {
                 mapContainer.innerHTML =
                     '<div class="alert alert-warning mb-0">No valid coordinates found for map display</div>';
                 return;
@@ -604,12 +698,14 @@
             // One continuous polyline through every point, in the order they
             // were recorded — the full path the employee's location switched
             // through during this session.
-            L.polyline(latlngs, {
-                color: '#0D6EFD',
-                weight: 4,
-                opacity: 0.85,
-                lineJoin: 'round',
-            }).addTo(map);
+            if (latlngs.length > 0) {
+                L.polyline(latlngs, {
+                    color: '#0D6EFD',
+                    weight: 4,
+                    opacity: 0.85,
+                    lineJoin: 'round',
+                }).addTo(map);
+            }
 
             const showTrack = index => {
                 L.popup()
@@ -625,7 +721,7 @@
                     .on('click', event => {
                         showTrack(nearestTrackIndex(validTracks, event.latlng.lat, event.latlng.lng));
                     });
-            } else {
+            } else if (latlngs.length === 1) {
                 // A single point has no line to draw, so it gets one dot.
                 L.circleMarker(latlngs[0], {
                     radius: 6,
@@ -636,11 +732,29 @@
                 }).addTo(map).on('click', () => showTrack(0));
             }
 
-            map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
+            pins.forEach(pin => {
+                L.marker([pin.lat, pin.long], {
+                    title: pinLabel(pin),
+                    zIndexOffset: pin.open ? 1000 : 500,
+                    icon: L.divIcon({
+                        className: '',
+                        html: `<div class="punch-pin${pin.open ? ' is-open' : ''}">${pinSvg(pin)}</div>`,
+                        iconSize: [28, 36],
+                        iconAnchor: [14, 36],
+                        popupAnchor: [0, -32],
+                    }),
+                }).addTo(map).bindPopup(pinPopupHtml(pin));
+            });
+
+            const allPoints = latlngs.concat(pins.map(pin => [pin.lat, pin.long]));
+            const fitAll = () => allPoints.length > 1
+                ? map.fitBounds(L.latLngBounds(allPoints), { padding: [24, 24] })
+                : map.setView(allPoints[0], 16);
+            fitAll();
 
             enableSessionMapFocus(function() {
                 map.closePopup();
-                map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
+                fitAll();
             });
         }
 
@@ -667,7 +781,7 @@
             });
         }
 
-        @if ($googleMapsKey && $hasTracks && count($locationTracks) > 0)
+        @if ($googleMapsKey && $hasMap)
             // Google draws the map through its callback; Leaflet only steps in
             // if the script cannot be loaded at all.
             document.addEventListener('DOMContentLoaded', function() {

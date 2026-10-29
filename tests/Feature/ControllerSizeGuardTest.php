@@ -60,7 +60,7 @@ class ControllerSizeGuardTest extends TestCase
         'app/Http/Controllers/Api/Shift/ShiftController.php' => [389, 114],
         'app/Http/Controllers/Api/Task/TaskController.php' => [1072, 245],
         'app/Http/Controllers/Api/User/UserController.php' => [1360, 460],
-        'app/Http/Controllers/Attendance/AttendanceContoller.php' => [774, 258],
+        'app/Http/Controllers/Attendance/AttendanceContoller.php' => [769, 258],
         'app/Http/Controllers/Attendance/AttendanceRegularizationController.php' => [963, 123],
         'app/Http/Controllers/Attendance/OvertimeController.php' => [889, 160],
         'app/Http/Controllers/Attendance/RequestController.php' => [1059, 112],
