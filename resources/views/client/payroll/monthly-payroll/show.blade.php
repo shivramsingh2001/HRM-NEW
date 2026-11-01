@@ -194,7 +194,7 @@
         /* ==================== ATTENDANCE SUMMARY ==================== */
         .attendance-stats {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
             margin-top: 15px;
         }
@@ -701,6 +701,11 @@
                             <div class="stat-value stat-positive">{{ $monthlyPayroll->present_days }}</div>
                             <div class="stat-label">Present</div>
                         </div>
+                        {{-- Half days are inside Present at 0.5 each; shown so the boxes add up to the month. --}}
+                        <div class="stat-item">
+                            <div class="stat-value stat-warning">{{ number_format((float) ($monthlyPayroll->half_days ?? 0), 2) }}</div>
+                            <div class="stat-label">Half Days (½ paid)</div>
+                        </div>
                         <div class="stat-item">
                             <div class="stat-value">{{ $monthlyPayroll->paid_leaves }}</div>
                             <div class="stat-label">Paid Leaves</div>
@@ -721,6 +726,10 @@
                         <div class="stat-item">
                             <div class="stat-value stat-negative">{{ $monthlyPayroll->absent_days }}</div>
                             <div class="stat-label">Absent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value stat-positive">{{ number_format((float) ($monthlyPayroll->payable_days ?? 0), 2) }}</div>
+                            <div class="stat-label">Payable Days</div>
                         </div>
                     </div>
 
