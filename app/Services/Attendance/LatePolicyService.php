@@ -168,15 +168,68 @@ class LatePolicyService
      */
     private function applyRows($rows, AttendancePolicySnapshot $policy): void
     {
+        foreach ($this->outcomes($rows, $policy) as $o) {
+            DB::table('attendances')
+                ->where('id', $o['row']->id)
+                ->update([
+                    'effective_status' => $o['effective'],
+                    'day_fraction' => $o['fraction'],
+                    'policy_note' => $o['note'],
+                    'updated_at' => now(),
+                ]);
+        }
+    }
+
+    /**
+     * Pure, side-effect-free: days the Late Arrival / Early Leaving attendance
+     * action downgraded (half day / absent) while that rule's "Deduct from
+     * payroll" switch was off on the day — Y-m-d => day fraction the downgrade
+     * took away. With deduction off the action only marks the attendance, so
+     * payroll pays these days back (PayrollDaysService).
+     *
+     * @return array<string, float>
+     */
+    public function unpaidDowngrades(int $userId, int $tenantId, string $yearMonth): array
+    {
+        $policy = $this->policies->forUserMonth($tenantId, $userId, $yearMonth);
+        $waived = [];
+
+        foreach ($this->outcomes($this->monthRows($tenantId, $userId, $yearMonth), $policy) as $o) {
+            $lost = $o['paid_fraction'] - $o['fraction'];
+            if ($lost > 0) {
+                $date = substr((string) $o['row']->date, 0, 10);
+                $waived[$date] = max($waived[$date] ?? 0.0, $lost);
+            }
+        }
+
+        return $waived;
+    }
+
+    /**
+     * Each row's effective status after the monthly late / early allowances —
+     * shared by applyRows() (writes it) and unpaidDowngrades() (read-only).
+     * `paid_fraction` is what payroll pays for the day: the base fraction,
+     * lowered only by a rule in excess whose "Deduct from payroll" is on — late
+     * and early are judged separately, so a day late (deduction off) and
+     * leaving early (deduction on) is still paid at the early rule's fraction
+     * even though the late rule is the one that set its status.
+     *
+     * @param  \Illuminate\Support\Collection  $rows
+     * @return list<array{row:object, policy:AttendancePolicySnapshot, effective:string, fraction:float, paid_fraction:float, note:?string}>
+     */
+    private function outcomes($rows, AttendancePolicySnapshot $policy): array
+    {
         $classified = $this->classifyRows($rows, $policy);
         $lateSeen = 0;
         $earlySeen = 0;
+        $out = [];
 
         foreach ($classified as $c) {
             $row = $c['row'];
             $effective = $c['base'];
             $fraction = $c['fraction'];
             $note = null;
+            $paid = $c['fraction'];
             // The day's own rules; the running counts ($lateSeen / $earlySeen) stay monthly.
             $policy = $c['policy'];
 
@@ -188,6 +241,9 @@ class LatePolicyService
 
                 if ($policy->lateAttendanceAction !== 'none' && $lateSeen > $policy->monthlyLateAllowance) {
                     [$effective, $fraction] = $this->outcomeFor($policy->lateAttendanceAction);
+                    if ($policy->lateDeductionEnabled) {
+                        $paid = min($paid, $fraction);
+                    }
                     $note = "late #{$lateSeen} exceeds monthly allowance of {$policy->monthlyLateAllowance} → {$policy->lateAttendanceAction}";
                 } elseif ($policy->lateAttendanceAction !== 'none') {
                     $note = "late #{$lateSeen} within monthly allowance of {$policy->monthlyLateAllowance}";
@@ -205,6 +261,10 @@ class LatePolicyService
             if ($c['is_early']) {
                 $earlySeen++;
 
+                if ($policy->earlyAttendanceAction !== 'none' && $earlySeen > $policy->monthlyEarlyAllowance && $policy->earlyDeductionEnabled) {
+                    $paid = min($paid, $this->outcomeFor($policy->earlyAttendanceAction)[1]);
+                }
+
                 if ($effective === $c['base'] && $policy->earlyAttendanceAction !== 'none' && $earlySeen > $policy->monthlyEarlyAllowance) {
                     [$effective, $fraction] = $this->outcomeFor($policy->earlyAttendanceAction);
                     $note = ($note ? $note.' | ' : '')."early-leaving #{$earlySeen} exceeds monthly allowance of {$policy->monthlyEarlyAllowance} → {$policy->earlyAttendanceAction}";
@@ -213,15 +273,13 @@ class LatePolicyService
                 }
             }
 
-            DB::table('attendances')
-                ->where('id', $row->id)
-                ->update([
-                    'effective_status' => $effective,
-                    'day_fraction' => $fraction,
-                    'policy_note' => $note,
-                    'updated_at' => now(),
-                ]);
+            $out[] = [
+                'row' => $row, 'policy' => $policy, 'effective' => $effective, 'fraction' => $fraction,
+                'paid_fraction' => $paid, 'note' => $note,
+            ];
         }
+
+        return $out;
     }
 
     /** @return array{0:string,1:float} */

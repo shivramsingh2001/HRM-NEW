@@ -59,27 +59,17 @@ class PayrollCalendar
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
 
+        // Weekly (day_based, within its start / end) and one-off (date_based:
+        // start_date..end_date — e.g. a week-off swap's replacement day) offs,
+        // judged exactly as attendance judges them. date_based used to read a
+        // non-existent `off_date` column, so payroll marked those days absent.
+        for ($cur = $start->copy(); $cur <= $end; $cur->addDay()) {
+            if (\App\Support\WeekOffPredicate::isWeekOff($weekoffConfigs, $cur)) {
+                $weekoffDates[] = $cur->format('Y-m-d');
+            }
+        }
+
         foreach ($weekoffConfigs as $config) {
-            // Recurring weekly day (e.g. every Sunday)
-            if ($config->off_type === 'day_based' && ! empty($config->day_name)) {
-                $dayName = strtolower($config->day_name);
-                $cur = $start->copy();
-                while ($cur <= $end) {
-                    if (strtolower($cur->format('l')) === $dayName) {
-                        $weekoffDates[] = $cur->format('Y-m-d');
-                    }
-                    $cur->addDay();
-                }
-            }
-
-            // Specific single date
-            if ($config->off_type === 'date_based' && ! empty($config->off_date)) {
-                $offDate = Carbon::parse($config->off_date);
-                if ($offDate >= $start && $offDate <= $end) {
-                    $weekoffDates[] = $offDate->format('Y-m-d');
-                }
-            }
-
             // Date range (e.g. company shutdown)
             if (
                 $config->off_type === 'range_based'

@@ -58,6 +58,11 @@ class PayrollDaysService
         // plain absence are not paid.
         $payable = max(0, $present + 0.5 * $half - $workedOffDayCredit) + $paidLeave + $paidHolidays + $paidWeekOffs;
 
+        // Late Arrival / Early Leaving "Mark half day / absent" with "Deduct
+        // from payroll" off only marks the attendance — the day is paid in full.
+        $waivedDowngrade = $this->waivedDowngradeCredit($breakdown, $userId, $yearMonth, (int) ($tenantId ?? ($m['tenant_id'] ?? 0)));
+        $payable += $waivedDowngrade;
+
         return [
             'payable_days' => round($payable, 2),
             'present_days' => $present,
@@ -75,7 +80,35 @@ class PayrollDaysService
             'sandwich_unpaid_days' => $unpaidHolidays + $unpaidWeekOffs,
             // Worked holidays / week-offs already inside present_days / half_days (paid once, as the off-day).
             'worked_off_day_credit' => $workedOffDayCredit,
+            // Late / early half days (or absents) paid back because that rule's payroll deduction is off.
+            'waived_downgrade_days' => $waivedDowngrade,
         ];
+    }
+
+    /**
+     * Pay given back for days the late / early attendance action downgraded
+     * while its "Deduct from payroll" switch was off (LatePolicyService::
+     * unpaidDowngrades()). Only a day the summary counted as a working half
+     * day / absent gets it — a worked holiday / week-off is already paid in
+     * full as the off-day.
+     */
+    private function waivedDowngradeCredit(array $breakdown, int $userId, string $yearMonth, int $tenantId): float
+    {
+        if ($tenantId <= 0 || ! $breakdown) {
+            return 0.0;
+        }
+
+        $credit = 0.0;
+        foreach (app(LatePolicyService::class)->unpaidDowngrades($userId, $tenantId, $yearMonth) as $date => $lost) {
+            $unpaid = match ($breakdown[$date]['status'] ?? null) {
+                'half_day' => 0.5,
+                'absent' => 1.0,
+                default => 0.0,
+            };
+            $credit += min($lost, $unpaid);
+        }
+
+        return $credit;
     }
 
     /** Hours worked in extra shifts this month (attendances.extra_shift_minutes). */

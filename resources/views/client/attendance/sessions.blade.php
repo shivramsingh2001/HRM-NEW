@@ -98,7 +98,7 @@
         .session-map-focus { position: absolute; top: 10px; right: 10px; z-index: 1000; font-size: 11.5px; padding: 3px 9px;
             border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(15, 23, 42, .15); }
 
-        /* Clock In (green) / Clock Out (red) pins; a clock-in with no clock-out yet is amber and blinks. */
+        /* Clock In (green) / Clock Out (red) pins; the current location (still clocked in) is amber and blinks. */
         .punch-pin { position: relative; width: 28px; height: 36px; }
         .punch-pin svg { position: relative; display: block; filter: drop-shadow(0 1px 2px rgba(15, 23, 42, .35)); }
         .punch-pin.is-open svg { animation: punchBlink 1s ease-in-out infinite; }
@@ -351,7 +351,7 @@
                     <div class="pin-legend mb-1">
                         <span><i style="background:#16A34A"></i>Clock In</span>
                         <span><i style="background:#DC2626"></i>Clock Out</span>
-                        <span><i style="background:#F59E0B"></i>Clocked in, no clock-out yet (blinking)</span>
+                        <span><i style="background:#F59E0B"></i>Current location, still clocked in (blinking)</span>
                         @if ($hasTrackList)<span><i style="background:#0D6EFD"></i>Route</span>@endif
                     </div>
                     <div class="mb-2" style="font-size: 10.5px; color: #64748b;">
@@ -435,28 +435,50 @@
             );
         }
 
-        // Clock In / Clock Out punches that carry GPS (PunchMapPins).
-        function sessionPins() {
-            return @json($punchPins);
+        // Clock In / Clock Out punches that carry GPS (PunchMapPins). While the
+        // employee is still clocked in, a blinking "NOW" pin is added at the
+        // latest tracked point — their current location.
+        function sessionPins(validTracks) {
+            const pins = @json($punchPins);
+            const last = validTracks[validTracks.length - 1];
+
+            if (last && pins.some(pin => pin.open)) {
+                pins.push({
+                    type: 'now',
+                    time: last.track_time,
+                    lat: parseFloat(last.latitude),
+                    long: parseFloat(last.longitude),
+                    address: last.address,
+                    open: true,
+                });
+            }
+
+            return pins;
         }
 
-        const PIN_COLORS = { in: '#16A34A', out: '#DC2626', open: '#F59E0B' };
+        const PIN_COLORS = { in: '#16A34A', out: '#DC2626', now: '#F59E0B' };
+        const PIN_TEXT = { in: 'IN', out: 'OUT', now: 'NOW' };
 
         function pinColor(pin) {
-            return pin.open ? PIN_COLORS.open : PIN_COLORS[pin.type];
+            return PIN_COLORS[pin.type];
+        }
+
+        function isLivePin(pin) {
+            return pin.type === 'now';
         }
 
         function pinLabel(pin) {
+            if (isLivePin(pin)) return 'Current location (still clocked in)';
             if (pin.open) return 'Clock In (no clock-out yet)';
 
             return pin.type === 'out' ? 'Clock Out' : 'Clock In';
         }
 
-        // Map pin (28 x 36, tip at the bottom centre) with IN / OUT written on it.
+        // Map pin (28 x 36, tip at the bottom centre) with IN / OUT / NOW written on it.
         function pinSvg(pin) {
             return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="-1 -1 28 36">
                 <path d="M13 0C5.8 0 0 5.8 0 13c0 9.6 13 21 13 21s13-11.4 13-21C26 5.8 20.2 0 13 0z" fill="${pinColor(pin)}" stroke="#fff" stroke-width="2"/>
-                <text x="13" y="16.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="${pin.type === 'out' ? 7.5 : 9}" font-weight="700" fill="#fff">${pin.type === 'out' ? 'OUT' : 'IN'}</text>
+                <text x="13" y="16.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="${pin.type === 'in' ? 9 : 7.5}" font-weight="700" fill="#fff">${PIN_TEXT[pin.type]}</text>
             </svg>`;
         }
 
@@ -534,7 +556,7 @@
             if (!mapContainer || sessionMapDrawn) return;
 
             const validTracks = sessionTracks();
-            const pins = sessionPins();
+            const pins = sessionPins(validTracks);
             if (validTracks.length === 0 && pins.length === 0) {
                 initSessionMap();
                 return;
@@ -605,13 +627,13 @@
                 }).addListener('click', () => showTrack(0));
             }
 
-            // Clock In / Clock Out pins; an open clock-in blinks.
+            // Clock In / Clock Out pins; the current-location pin blinks.
             pins.forEach((pin, index) => {
                 const marker = new google.maps.Marker({
                     position: pinPoints[index],
                     map,
                     title: pinLabel(pin),
-                    zIndex: pin.open ? 1000 : 500,
+                    zIndex: isLivePin(pin) ? 1000 : 500,
                     icon: {
                         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pinSvg(pin)),
                         scaledSize: new google.maps.Size(28, 36),
@@ -622,7 +644,7 @@
                     infoWindow.setContent(pinPopupHtml(pin));
                     infoWindow.open({ anchor: marker, map });
                 });
-                if (pin.open) {
+                if (isLivePin(pin)) {
                     let dim = false;
                     setInterval(() => marker.setOpacity((dim = !dim) ? 0.35 : 1), 600);
                 }
@@ -661,13 +683,13 @@
         // Renders the full route for this session in one shot: every tracked
         // point joined chronologically by a single polyline. No dots — a click
         // on the line shows the nearest tracked point. Clock In / Clock Out
-        // pins sit on top; an open clock-in blinks.
+        // pins sit on top; the current-location pin blinks.
         function initSessionMap() {
             const mapContainer = document.getElementById('sessionLocationMap');
             if (!mapContainer || sessionMapDrawn) return;
 
             const validTracks = sessionTracks();
-            const pins = sessionPins();
+            const pins = sessionPins(validTracks);
 
             if (validTracks.length === 0 && pins.length === 0) {
                 mapContainer.innerHTML =
@@ -735,10 +757,10 @@
             pins.forEach(pin => {
                 L.marker([pin.lat, pin.long], {
                     title: pinLabel(pin),
-                    zIndexOffset: pin.open ? 1000 : 500,
+                    zIndexOffset: isLivePin(pin) ? 1000 : 500,
                     icon: L.divIcon({
                         className: '',
-                        html: `<div class="punch-pin${pin.open ? ' is-open' : ''}">${pinSvg(pin)}</div>`,
+                        html: `<div class="punch-pin${isLivePin(pin) ? ' is-open' : ''}">${pinSvg(pin)}</div>`,
                         iconSize: [28, 36],
                         iconAnchor: [14, 36],
                         popupAnchor: [0, -32],

@@ -8,7 +8,8 @@ use App\Models\AttendancePunch;
 /**
  * Clock In / Clock Out pins for the Attendance Sessions route map: one pin per
  * active punch that carries GPS (biometric / manual punches have none). A
- * clock-in with no clock-out after it is `open` — the map draws it blinking.
+ * clock-in with no clock-out after it is `open` — the map then adds a blinking
+ * current-location pin at the latest tracked point.
  * Days from before attendance_punches existed fall back to the day row's own
  * clock_in_* / clock_out_* coordinates.
  */
