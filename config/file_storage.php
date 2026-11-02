@@ -130,6 +130,11 @@ return [
             'ext' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip'],
             'max' => 10240,
         ],
+        'site_visit' => [
+            'folder' => 'upload_new/site_visits/{tenant}/{year}/{month}',
+            'ext' => ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx'],
+            'max' => 10240,
+        ],
         'candidate_resume' => [
             'folder' => 'upload_new/candidate_resumes/{tenant}',
             'ext' => ['pdf', 'doc', 'docx'],

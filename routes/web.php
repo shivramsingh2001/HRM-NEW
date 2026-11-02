@@ -563,6 +563,33 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::post('/assign-employees/{id}', [BranchController::class, 'assignEmployees'])->name('assign-employees')->middleware(['role:admin,hr', 'permission:branches,manage']);
         });
 
+        // Sites — company site master (admin / HR). Employees and managers only
+        // pick a site when they record a visit; they never reach these pages.
+        Route::prefix('sites')->name('sites.')->middleware(['feature:site_management', 'role:admin,hr'])->group(function () {
+            Route::get('/', [\App\Http\Controllers\Site\SiteController::class, 'index'])->name('index')->middleware('permission:sites,view');
+            Route::get('/export', [\App\Http\Controllers\Site\SiteController::class, 'export'])->name('export')->middleware('permission:sites,view');
+            Route::middleware('permission:sites,create')->prefix('import')->name('import.')->group(function () {
+                Route::get('/template', [\App\Http\Controllers\Site\SiteImportController::class, 'template'])->name('template');
+                Route::post('/preview', [\App\Http\Controllers\Site\SiteImportController::class, 'preview'])->name('preview');
+                Route::post('/confirm', [\App\Http\Controllers\Site\SiteImportController::class, 'confirm'])->name('confirm');
+                Route::get('/errors/{token}', [\App\Http\Controllers\Site\SiteImportController::class, 'errors'])->where('token', '[A-Za-z0-9]{32}')->name('errors');
+            });
+            Route::get('/{id}', [\App\Http\Controllers\Site\SiteController::class, 'show'])->whereNumber('id')->name('show')->middleware('permission:sites,view');
+            Route::post('/', [\App\Http\Controllers\Site\SiteController::class, 'store'])->name('store')->middleware('permission:sites,create');
+            Route::post('/{id}', [\App\Http\Controllers\Site\SiteController::class, 'update'])->whereNumber('id')->name('update')->middleware('permission:sites,edit');
+            Route::post('/{id}/status', [\App\Http\Controllers\Site\SiteController::class, 'status'])->whereNumber('id')->name('status')->middleware('permission:sites,edit');
+            Route::delete('/{id}', [\App\Http\Controllers\Site\SiteController::class, 'destroy'])->whereNumber('id')->name('destroy')->middleware('permission:sites,delete');
+        });
+
+        // My Site Visits — record a visit at a site (date is always today) and edit
+        // it the same day. Same rules as the mobile API (/api/site-visits).
+        Route::prefix('site-visits')->name('site-visits.')->middleware('feature:site_management')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Site\SiteVisitController::class, 'index'])->name('index')->middleware('permission:site_visits,view');
+            Route::get('/sites', [\App\Http\Controllers\Site\SiteVisitController::class, 'sites'])->name('sites')->middleware('permission:site_visits,create');
+            Route::post('/', [\App\Http\Controllers\Site\SiteVisitController::class, 'store'])->name('store')->middleware('permission:site_visits,create');
+            Route::post('/{id}', [\App\Http\Controllers\Site\SiteVisitController::class, 'update'])->whereNumber('id')->name('update')->middleware('permission:site_visits,edit');
+        });
+
         Route::middleware('shifts.custom')->prefix('shift')->name('shift.')->group(function () {
             // Read-only: roster + assignments list — admin / hr / manager
             Route::middleware('role:admin,hr,manager')->group(function () {
@@ -1205,6 +1232,15 @@ Route::group(['middleware' => ['tenant']], function () {
                 Route::get('/asset/employee-wise', [AssetReportController::class, 'employeeWise'])->name('asset.employee-wise.index');
                 Route::get('/asset/summary', [AssetReportController::class, 'summary'])->name('asset.summary.index');
                 Route::get('/asset/warranty-expiry', [AssetReportController::class, 'warrantyExpiry'])->name('asset.warranty-expiry.index');
+            });
+
+            // Site Visit Reports — coverage follows the site_visits:view scope (manager = team).
+            Route::middleware(['feature:site_management', 'permission:site_visits,view'])->group(function () {
+                Route::get('/site-visits/day-wise', [\App\Http\Controllers\Report\SiteVisitReportController::class, 'dayWise'])->name('site-visit.day-wise.index');
+                Route::get('/site-visits/day-wise/export', [\App\Http\Controllers\Report\SiteVisitReportController::class, 'dayWiseExport'])->name('site-visit.day-wise.export');
+                Route::get('/site-visits/monthly', [\App\Http\Controllers\Report\SiteVisitReportController::class, 'monthly'])->name('site-visit.monthly.index');
+                Route::get('/site-visits/monthly/export', [\App\Http\Controllers\Report\SiteVisitReportController::class, 'monthlyExport'])->name('site-visit.monthly.export');
+                Route::get('/site-visits/monthly/{userId}', [\App\Http\Controllers\Report\SiteVisitReportController::class, 'employee'])->whereNumber('userId')->name('site-visit.monthly.employee');
             });
 
             // Payroll Reports (money-sensitive — PayrollReportController itself re-checks the

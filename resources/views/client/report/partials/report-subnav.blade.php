@@ -2,7 +2,7 @@
     Sub-tabs to switch between the reports of one Reports-hub group without going
     back to the hub — same pills as the Leave / Payroll report pages.
     Usage: @include('client.report.partials.report-subnav', ['group' => 'attendance'])
-    Groups: attendance, project, task, expense, asset. Each tab respects the same
+    Groups: attendance, project, task, expense, asset, site_visit. Each tab respects the same
     feature gates as the matching card on client/report/index.blade.php.
 --}}
 @php
@@ -50,6 +50,10 @@
             ['Employee-wise Assets', 'report.asset.employee-wise.index', ['report.asset.employee-wise.*']],
             ['Asset Summary', 'report.asset.summary.index', ['report.asset.summary.*']],
             ['Warranty Expiry', 'report.asset.warranty-expiry.index', ['report.asset.warranty-expiry.*']],
+        ],
+        'site_visit' => [
+            ['Day-wise Visits', 'report.site-visit.day-wise.index', ['report.site-visit.day-wise.*']],
+            ['Monthly Visits', 'report.site-visit.monthly.index', ['report.site-visit.monthly.*']],
         ],
     ];
 @endphp

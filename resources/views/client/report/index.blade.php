@@ -425,6 +425,8 @@
             $canProjectReports = $reportFeatures->enabledForCurrentTenant('project_management');
             $canTaskReports = $reportFeatures->enabledForCurrentTenant('task_single') || $reportFeatures->enabledForCurrentTenant('task_group');
             $canAssetReports = $reportFeatures->enabledForCurrentTenant('asset_management');
+            $canSiteVisitReports = $reportFeatures->enabledForCurrentTenant('site_management')
+                && app(\App\Services\RbacService::class)->currentCan('site_visits', 'view');
             $canLeaveReports = $reportFeatures->enabledForCurrentTenant('leave_management');
             $canOvertimeReport = $reportFeatures->enabledForCurrentTenant('overtime');
             $canShiftReport = $reportFeatures->enabledForCurrentTenant('fixed_shift') || $reportFeatures->enabledForCurrentTenant('custom_shift');
@@ -468,6 +470,13 @@
                         <li class="nav-item flex-fill border-top">
                             <a class="nav-link" data-bs-toggle="tab" href="#assetReportTab">
                                 <i class="feather-hard-drive me-1"></i> Asset Reports
+                            </a>
+                        </li>
+                    @endif
+                    @if ($canSiteVisitReports)
+                        <li class="nav-item flex-fill border-top">
+                            <a class="nav-link" data-bs-toggle="tab" href="#siteVisitReportTab">
+                                <i class="feather-map-pin me-1"></i> Site Visit Reports
                             </a>
                         </li>
                     @endif
@@ -916,6 +925,42 @@
                         <div class="card-footer">
                             <span class="badge badge-warning">Warranty</span>
                             <a href="{{ route('report.asset.warranty-expiry.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- ==================== SITE VISIT REPORTS TAB ==================== --}}
+            @if ($canSiteVisitReports)
+            <div class="tab-pane fade" id="siteVisitReportTab">
+                <div class="report-cards-grid">
+                    <!-- Day-wise Visits -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-map-pin"></i>
+                        </div>
+                        <h6 class="card-title">Day-wise Visits</h6>
+                        <p class="card-description">Every site visit on a chosen day — employee, site, time, contact person, remarks, file and map location. Filter by employee or site and export to Excel.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-primary">Daily</span>
+                            <a href="{{ route('report.site-visit.day-wise.index') }}" class="btn-generate">
+                                <i class="feather-arrow-right"></i> Generate
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Monthly Visits -->
+                    <div class="report-card">
+                        <div class="card-icon primary">
+                            <i class="feather-calendar"></i>
+                        </div>
+                        <h6 class="card-title">Monthly Visits</h6>
+                        <p class="card-description">Each employee's visits in a month — total visits, different sites, days with a visit and last visit — with a day-by-day view per employee.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-success">Monthly</span>
+                            <a href="{{ route('report.site-visit.monthly.index') }}" class="btn-generate">
                                 <i class="feather-arrow-right"></i> Generate
                             </a>
                         </div>

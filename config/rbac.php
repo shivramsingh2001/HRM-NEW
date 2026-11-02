@@ -24,7 +24,7 @@ return [
         'employee', 'attendance', 'leave', 'payroll', 'tasks', 'projects', 'recruitment',
         'onboarding', 'offboarding', 'expenses', 'loans', 'meetings',
         'announcements', 'reports', 'settings', 'performance', 'performance_reviews', 'overtime', 'team',
-        'requests', 'branches', 'assets', 'broadcasts',
+        'requests', 'branches', 'assets', 'broadcasts', 'sites', 'site_visits',
     ],
 
     'actions' => ['view', 'create', 'edit', 'delete', 'approve', 'export', 'manage'],
@@ -49,7 +49,7 @@ return [
             'expenses' => 'all', 'loans' => 'all', 'meetings' => 'all', 'announcements' => 'all',
             'reports' => 'all', 'settings' => 'all', 'performance' => 'all', 'performance_reviews' => 'all',
             'overtime' => 'all', 'team' => 'all', 'requests' => 'all', 'branches' => 'all', 'assets' => 'all',
-            'broadcasts' => 'all',
+            'broadcasts' => 'all', 'sites' => 'all', 'site_visits' => 'all',
         ]],
         'hr' => ['HR', true, [
             // tasks/projects => 'all': matches the pre-RBAC
@@ -89,6 +89,7 @@ return [
             // they own Branch org-setup data.
             'assets' => 'all',
             'broadcasts' => 'all',
+            'sites' => 'all', 'site_visits' => 'all',
         ]],
         'manager' => ['Manager', true, [
             'employee' => ['view' => 'team'],
@@ -169,6 +170,11 @@ return [
             // to them (the notification center); composing/sending is
             // admin/hr only, same split as every other communication module.
             'broadcasts' => ['view'],
+            // sites => view (company): any active site can be picked for a visit.
+            // site_visits => a manager records their own visits and sees their
+            // reportees' visits / reports, never edits someone else's.
+            'sites' => ['view' => 'company'],
+            'site_visits' => ['view' => 'team', 'create' => 'own', 'edit' => 'own', 'export' => 'team'],
         ]],
         'employee' => ['Employee', true, [
             'employee' => ['view' => 'own'],
@@ -213,6 +219,9 @@ return [
             // broadcasts => view only: an employee sees broadcasts targeted
             // to them (the notification center) but can never compose/send.
             'broadcasts' => ['view'],
+            // sites/site_visits: pick any active site, record and edit own visits only.
+            'sites' => ['view' => 'company'],
+            'site_visits' => ['view' => 'own', 'create' => 'own', 'edit' => 'own'],
         ]],
     ],
 ];

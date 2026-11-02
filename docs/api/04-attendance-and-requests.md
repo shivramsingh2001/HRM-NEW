@@ -973,3 +973,72 @@ Controller: `app/Http/Controllers/Api/Attendance/OvertimeController.php` (route 
 | 200 | Not found | `{"success": false, "message": "Request not found"}` |
 | 200 | Already decided | `{"success": false, "message": "Request is already {status}"}` |
 | 500 | Unhandled | `{"success": false, "message": "An error occured.Please try again later."}` |
+
+---
+
+## Sites & Site Visits (added 2026-11-02)
+
+Controller: `app/Http/Controllers/Api/Site/SiteVisitController.php` (rules in `App\Services\Site\SiteVisitService` — the same ones the web "My Site Visits" page uses).
+**Auth:** JWT + Device-Token. **Feature:** `site_management` must be on for the company (otherwise the `feature` middleware refuses). **Permissions:** `site_visits` module — employees: own visits; managers: own visits, view their team's; HR/admin: whole company.
+**Envelope:** `{"success": true, "message": "...", "data": {...}}`. A refused request is `422 {"success": false, "message": "<reason>", "errors": ["<reason>"]}`; a validation failure is `422 {"success": false, "message": "<first error>", "errors": {field: [...]}}`.
+
+**Visit object** (used by every endpoint below):
+```json
+{
+  "id": 41, "visit_date": "2026-11-02", "visited_at": "2026-11-02 11:42:10",
+  "site": {"id": 7, "site_code": "SITE-0007", "site_name": "Sector 62 Office", "district": "Gautam Buddha Nagar", "address": "A-12, Sector 62, Noida"},
+  "contact_person_name": "Ramesh", "contact_mobile": "9876543210", "remarks": "Checked the new installation.",
+  "file_url": "https://…/upload_new/site_visits/7/2026/11/<uuid>.jpg", "file_name": "<uuid>.jpg",
+  "latitude": "28.6270000", "longitude": "77.3727000", "edited_at": null, "can_edit": true
+}
+```
+`can_edit` is true only for the caller's own visit on the day it was recorded.
+
+### GET /api/sites
+**Purpose:** Active sites to pick from when recording a visit. **Permission:** `site_visits,create`.
+**Query:** `search` (code / name / district), `page`, `per_page` (default 50, max 100).
+**Success — 200:** `data: {"sites": [{"id", "site_code", "site_name", "state", "district", "address", "location", "latitude", "longitude"}], "pagination": {"total", "current_page", "last_page", "per_page"}}`
+
+### GET /api/site-visits
+**Purpose:** My visits, newest first. **Permission:** `site_visits,view`.
+**Query:** `date` (YYYY-MM-DD) **or** `month` (YYYY-MM), `site_id`, `page`, `per_page` (default 20, max 50). Malformed filter values are ignored.
+**Success — 200:** `data: {"today": "2026-11-02", "visits": [<visit>], "pagination": {...}}`
+
+### GET /api/site-visits/{id}
+**Purpose:** One visit — my own, or one in my view scope (manager: team; HR/admin: company). **Permission:** `site_visits,view`.
+**Success — 200:** `data: <visit>`. **403:** `{"success": false, "message": "You cannot view this visit."}`. **404** when the id is not in the company.
+
+### POST /api/site-visits
+**Purpose:** Record a visit. The visit date is **always today** (server clock) — any date sent is ignored. **Permission:** `site_visits,create`.
+**Body (multipart/form-data when a file is sent, otherwise JSON is fine):**
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `site_id` | integer | Yes | An **active** site of the company (from `GET /api/sites`). |
+| `remarks` | string | Yes | Up to 2000 characters. |
+| `contact_person_name` | string | No | Up to 191 characters. |
+| `contact_mobile` | string | No | Exactly 10 digits. |
+| `file` | file | No | jpg, jpeg, png, webp, pdf, doc, docx, xls, xlsx — up to 10 MB. |
+| `latitude` / `longitude` | numeric | No | Phone location; send both or neither. |
+
+**Success — 200:** `{"success": true, "message": "Visit recorded.", "data": <visit>}`. **422:** `"Choose an active site."`, validation errors, or a file type/size problem.
+
+### POST /api/site-visits/{id} (also PUT)
+**Purpose:** Edit my own visit **on the same day only**. Site and date can't be changed. Use POST (multipart) to send a new file — PHP doesn't read multipart bodies on PUT. **Permission:** `site_visits,edit`.
+**Body:** `remarks` (required), `contact_person_name`, `contact_mobile`, `file` (replaces the current one), `remove_file` (1 = delete the current file).
+**Success — 200:** `{"success": true, "message": "Visit updated.", "data": <visit>}`. **422:** `"You can only edit your own visits."` or `"A visit can only be edited on the day it was recorded."`.
+
+### GET /api/manager/site-visits/day-wise
+**Purpose:** Every visit on one day by the people in my `site_visits:view` scope (manager: self + reportees; HR/admin: company; employee: self). **Permission:** `site_visits,view`.
+**Query:** `date` (YYYY-MM-DD, default today, never in the future), `user_id`, `site_id`, `page`, `per_page` (default 25, max 50).
+**Success — 200:** `data: {"date": "2026-11-02", "visits": [<visit> + {"employee": {"id", "name", "employee_id"}}], "pagination": {...}}`
+
+### GET /api/manager/site-visits/monthly
+**Purpose:** One row per employee (in scope) with visits in the month, busiest first. **Permission:** `site_visits,view`.
+**Query:** `month` (YYYY-MM, default this month), `user_id`.
+**Success — 200:** `data: {"month": "2026-11", "employees": [{"user_id", "name", "employee_id", "visits", "sites", "days", "last_visit"}]}` — `sites` = different sites visited, `days` = days with at least one visit.
+
+### GET /api/manager/site-visits/monthly/{userId}
+**Purpose:** One employee's month, day by day (up to today). **Permission:** `site_visits,view` and the employee must be in my scope.
+**Query:** `month` (YYYY-MM, default this month).
+**Success — 200:** `data: {"employee": {"id", "name", "employee_id"}, "month", "totals": {"visits", "sites", "days"}, "days": [{"date", "visits", "sites": ["<site name>", …]}], "visits": [<visit>]}`
+**403:** `{"success": false, "message": "You cannot see this employee's visits."}`

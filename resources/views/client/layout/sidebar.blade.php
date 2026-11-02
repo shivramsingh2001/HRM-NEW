@@ -152,6 +152,15 @@
                         </li>
                     @endfeature
 
+                    @feature('site_management')
+                        <li class="nxl-item">
+                            <a href="{{ route('sites.index') }}" class="nxl-link">
+                                <span class="nxl-micon"><i class="feather-map-pin"></i></span>
+                                <span class="nxl-mtext">Sites</span><span class="nxl-arrow"></span>
+                            </a>
+                        </li>
+                    @endfeature
+
                     @feature('payroll')
                         <li class="nxl-item nxl-hasmenu">
                             <a href="#" class="nxl-link">
@@ -600,6 +609,24 @@
                                 </a>
                             </li>
                         @endif
+                    @endif
+                @endfeature
+
+                @feature('site_management')
+                    @if ($role === 'hr')
+                        <li class="nxl-item">
+                            <a href="{{ route('sites.index') }}" class="nxl-link">
+                                <span class="nxl-micon"><i class="feather-map-pin"></i></span>
+                                <span class="nxl-mtext">Sites</span><span class="nxl-arrow"></span>
+                            </a>
+                        </li>
+                    @elseif (in_array($role, ['manager', 'employee']))
+                        <li class="nxl-item">
+                            <a href="{{ route('site-visits.index') }}" class="nxl-link">
+                                <span class="nxl-micon"><i class="feather-map-pin"></i></span>
+                                <span class="nxl-mtext">Site Visits</span><span class="nxl-arrow"></span>
+                            </a>
+                        </li>
                     @endif
                 @endfeature
 

@@ -133,6 +133,15 @@ return [
         'default' => true,
     ],
 
+    // ---- Field operations ---------------------------------------------
+    'site_management' => [
+        'name' => 'Sites & site visits',
+        'module' => 'sites',
+        'group' => 'Field operations',
+        'description' => 'Company site master (with Excel import) and employee site-visit entries with day-wise and monthly visit reports.',
+        'default' => false,
+    ],
+
     // ---- People -------------------------------------------------------
     'onboarding' => [
         'name' => 'Onboarding',

@@ -145,6 +145,7 @@ stay in the DB unchanged and keep resolving (see below). The `uploads` local dis
 | `regularization` | `upload_new/regularizations/{tenant}` | jpg jpeg png pdf doc docx | 2 MB | Regularization (web + API) |
 | `task_document` / `task_voice` / `task_attachment` | `upload_new/task/{tenant}/document` · `/voice` · `/attachments` | office/pdf/images · audio | 5 / 20 / 10 MB | Tasks (web + API), MoM |
 | `project_attachment` / `asset_attachment` | `upload_new/projects|assets/{tenant}/{id}/attachments` | office/pdf/images/zip | 10 MB | Projects, Assets |
+| `site_visit` | `upload_new/site_visits/{tenant}/{year}/{month}` | images, pdf, doc/docx, xls/xlsx | 10 MB | Site visits (web + API, `SiteVisitService`) |
 | `candidate_resume` / `candidate_document` | `upload_new/candidate_resumes/{tenant}` · `upload_new/candidate_documents/{tenant}/{id}` | pdf/doc(x) · +images | 5 MB | Recruitment, Onboarding |
 | `expense` (local fallback = private `local` disk) | `upload_new/expense/{tenant}/{year}` | jpg jpeg png pdf | 5 MB | `ExpenseAttachmentService` (signed routes unchanged) |
 | `tenant_logo` (public) | `upload_new/tenants/logos` | jpg jpeg png webp | 2 MB | hrm-superadmin; payslip PDF + emails in the app |

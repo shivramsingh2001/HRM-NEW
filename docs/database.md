@@ -237,6 +237,13 @@ Full asset lifecycle module: registration → assignment → employee acceptance
 | `asset_histories` | Unified timeline behind the Asset History UI tab — one row per lifecycle transition, written alongside the tenant-wide `audit_logs` entry. | `action` (REGISTERED/ASSIGNED/ACCEPTED/ACCEPTANCE_FORCED/RETURNED/TRANSFERRED/SENT_FOR_REPAIR/REPAIR_COMPLETED/DAMAGED/LOST/RESOLVED/RETIRED/DISPOSED/UPDATED), `old_values`/`new_values` json |
 | `asset_attachments` | File uploads (invoices, warranty cards, handover forms, damage photos) — mirrors `project_attachments`' shape with a `context` label instead of polymorphism. | `context` nullable string label |
 
+## Sites & Site Visits (2026-11-02)
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `sites` | Company site master (soft deletes). | `site_no` per-company running number + `site_code` (`SITE-0001`, system-generated, never edited) — unique `(tenant_id, site_no)` and `(tenant_id, site_code)`; `site_name`, `state_code` (unsigned bigint → `states.state_code`; the geo master only holds Indian states), `address` required; `district`, `location`, `latitude`/`longitude`, `onboarding_date` nullable; `status` enum(active/inactive) |
+| `site_visits` | One row per visit an employee/manager records at a site. | `site_id` (real FK → `sites`), `user_id`, `visit_date` (server-set day of saving), `visited_at`, `remarks` required, `contact_person_name`/`contact_mobile`/`file_path`/`latitude`/`longitude` nullable, `edited_at`; indexes `(tenant_id, visit_date)`, `(tenant_id, user_id, visit_date)`, `(tenant_id, site_id, visit_date)` |
+
 ## Recruitment / ATS
 
 | Table | Purpose | Key columns |
