@@ -72,6 +72,15 @@ class MyProfileController extends Controller
         ]);
 
         if (! Hash::check($request->current_password, $user->password)) {
+            // Header "Change Password" modal posts with AJAX → JSON; the My Profile form → redirect.
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Current password is incorrect.',
+                    'errors' => ['current_password' => ['Current password is incorrect.']],
+                ], 422);
+            }
+
             return back()->withErrors(['current_password' => 'Current password is incorrect.'])->with('open_password', true);
         }
 
@@ -79,6 +88,10 @@ class MyProfileController extends Controller
         $user->must_change_password = 0;
         $user->save();
         $this->audit->logPasswordChanged($user->id, $user->tenant_id);
+
+        if ($request->expectsJson()) {
+            return response()->json(['status' => true, 'message' => 'Password changed successfully.']);
+        }
 
         return redirect()->route('my-profile.show')->with('success', 'Password changed successfully.');
     }

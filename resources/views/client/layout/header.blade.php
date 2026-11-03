@@ -67,7 +67,7 @@
                      document.documentElement.classList.remove('app-skin-dark');
                  </script>
 
-                 {{-- Profile: hover (or click/tap) shows name, email, employee ID, My Profile + Logout --}}
+                 {{-- Profile: hover (or click/tap) shows name, email, employee ID, My Profile, Change Password + Logout --}}
                  @php
                      $me = auth()->user();
                      $meBasic = $me?->basicDetails;
@@ -103,6 +103,9 @@
                                  <i class="feather-user me-2"></i> My Profile
                              </a>
                          @endif
+                         <a href="javascript:void(0);" class="dropdown-item" onclick="openChangePassword()">
+                             <i class="feather-lock me-2"></i> Change Password
+                         </a>
                          <a href="{{ route('logout') }}" class="dropdown-item text-danger">
                              <i class="feather-log-out me-2"></i> Logout
                          </a>
@@ -113,6 +116,115 @@
          <!--! [End] Header Right !-->
      </div>
  </header>
+
+ {{-- Change Password modal (header profile menu). Posts to my-profile.password, same rules as the My Profile form. --}}
+ <x-ui.modal id="changePasswordModal" title="Change Password" size="md" bodyOnly>
+     <form id="changePasswordForm" autocomplete="off" novalidate>
+         <div id="cpSuccess" class="alert alert-success d-none" style="font-size:12px;"><i class="feather-check-circle me-1"></i> Password changed successfully.</div>
+         <div id="cpError" class="alert alert-danger d-none" style="font-size:12px;"></div>
+         <div class="mb-3">
+             <label class="fw-semibold" style="font-size:11.5px;" for="cpCurrent">Current Password <span class="text-danger">*</span></label>
+             <div class="input-group">
+                 <input type="password" class="form-control" id="cpCurrent" name="current_password" placeholder="Enter your current password" autocomplete="current-password" required>
+                 <button type="button" class="btn btn-light border cp-eye" data-target="cpCurrent" aria-label="Show password"><i class="feather-eye"></i></button>
+             </div>
+             <small class="text-danger cp-err" data-for="current_password"></small>
+         </div>
+         <div class="mb-3">
+             <label class="fw-semibold" style="font-size:11.5px;" for="cpNew">New Password <span class="text-danger">*</span></label>
+             <div class="input-group">
+                 <input type="password" class="form-control" id="cpNew" name="new_password" placeholder="Enter a new password" autocomplete="new-password" required>
+                 <button type="button" class="btn btn-light border cp-eye" data-target="cpNew" aria-label="Show password"><i class="feather-eye"></i></button>
+             </div>
+             <small class="text-muted d-block" style="font-size:10.5px;">At least 8 characters, with upper- and lower-case letters and a number.</small>
+             <small class="text-danger cp-err" data-for="new_password"></small>
+         </div>
+         <div class="mb-1">
+             <label class="fw-semibold" style="font-size:11.5px;" for="cpConfirm">Confirm New Password <span class="text-danger">*</span></label>
+             <div class="input-group">
+                 <input type="password" class="form-control" id="cpConfirm" name="confirm_password" placeholder="Re-enter the new password" autocomplete="new-password" required>
+                 <button type="button" class="btn btn-light border cp-eye" data-target="cpConfirm" aria-label="Show password"><i class="feather-eye"></i></button>
+             </div>
+             <small class="text-danger cp-err" data-for="confirm_password"></small>
+         </div>
+     </form>
+     <x-slot:footer>
+         <button type="button" class="btn btn-modal-cancel btn-sm" data-bs-dismiss="modal">Cancel</button>
+         <button type="submit" form="changePasswordForm" class="btn btn-primary btn-sm" id="cpSaveBtn"><i class="feather-check me-1"></i> Update Password</button>
+     </x-slot:footer>
+ </x-ui.modal>
+
+ <script>
+     (function () {
+         const modalEl = document.getElementById('changePasswordModal');
+         const form = document.getElementById('changePasswordForm');
+         const okBox = document.getElementById('cpSuccess');
+         const errBox = document.getElementById('cpError');
+         const btn = document.getElementById('cpSaveBtn');
+         // The header is sticky; a modal inside it could sit under the backdrop, so it lives on <body>.
+         document.body.appendChild(modalEl);
+
+         function clearMessages() {
+             okBox.classList.add('d-none');
+             errBox.classList.add('d-none');
+             errBox.textContent = '';
+             form.querySelectorAll('.cp-err').forEach(el => { el.textContent = ''; });
+             form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+         }
+
+         window.openChangePassword = function () {
+             form.reset();
+             clearMessages();
+             btn.disabled = false;
+             bootstrap.Modal.getOrCreateInstance(modalEl).show();
+         };
+
+         form.querySelectorAll('.cp-eye').forEach(eye => eye.addEventListener('click', () => {
+             const input = document.getElementById(eye.dataset.target);
+             const show = input.type === 'password';
+             input.type = show ? 'text' : 'password';
+             eye.querySelector('i').className = show ? 'feather-eye-off' : 'feather-eye';
+         }));
+
+         form.addEventListener('submit', function (e) {
+             e.preventDefault();
+             clearMessages();
+             btn.disabled = true;
+             fetch("{{ route('my-profile.password') }}", {
+                 method: 'POST',
+                 headers: {
+                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                     'Accept': 'application/json',
+                     'X-Requested-With': 'XMLHttpRequest',
+                 },
+                 body: new FormData(form),
+             }).then(async res => {
+                 const data = await res.json().catch(() => ({}));
+                 if (res.ok) {
+                     form.reset();
+                     okBox.classList.remove('d-none');
+                     setTimeout(() => bootstrap.Modal.getOrCreateInstance(modalEl).hide(), 1500);
+                     return;
+                 }
+                 if (data.errors && !Array.isArray(data.errors)) {
+                     Object.entries(data.errors).forEach(([field, messages]) => {
+                         const slot = form.querySelector('.cp-err[data-for="' + field + '"]');
+                         if (slot) slot.textContent = messages[0];
+                         if (form.elements[field]) form.elements[field].classList.add('is-invalid');
+                     });
+                 } else {
+                     errBox.textContent = res.status === 429
+                         ? 'Too many attempts. Please wait a minute and try again.'
+                         : (data.message || 'Could not change the password. Please try again.');
+                     errBox.classList.remove('d-none');
+                 }
+             }).catch(() => {
+                 errBox.textContent = 'Could not reach the server. Please try again.';
+                 errBox.classList.remove('d-none');
+             }).finally(() => { btn.disabled = false; });
+         });
+     })();
+ </script>
  <!--! ================================================================ !-->
  <!--! [End] Header !-->
  <!--! ================================================================ !-->

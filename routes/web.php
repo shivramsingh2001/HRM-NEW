@@ -160,11 +160,14 @@ Route::group(['middleware' => ['tenant']], function () {
             Route::post('/{id}/read', 'markAsRead')->name('read');
         });
 
-        // My Profile — own details (read-only) + change own password. Employee / manager / HR.
+        // My Profile — own details (read-only), employee / manager / HR.
+        // Change own password — every signed-in role (admin too): the My Profile
+        // form and the header "Change Password" modal both post here.
         Route::middleware('role:employee,manager,hr')->controller(\App\Http\Controllers\User\MyProfileController::class)->group(function () {
             Route::get('/my-profile', 'show')->name('my-profile.show');
-            Route::post('/my-profile/password', 'changePassword')->name('my-profile.password')->middleware('throttle:6,1');
         });
+        Route::post('/my-profile/password', [\App\Http\Controllers\User\MyProfileController::class, 'changePassword'])
+            ->name('my-profile.password')->middleware('throttle:6,1');
 
         Route::post('/impersonate/end', [\App\Http\Controllers\Impersonation\ImpersonationController::class, 'end'])->name('impersonate.end');
         Route::middleware(['auth', 'role:admin'])->group(function () {
