@@ -276,6 +276,27 @@ class AttendanceTrackingSessionsTest extends TestCase
         $this->assertSame(2, $count);
     }
 
+    public function test_phone_clock_a_little_fast_still_saves_into_the_open_session(): void
+    {
+        $this->punch('in', '09:00:00');
+        $ingest = app(TrackingPointIngestService::class);
+        Carbon::setTestNow(Carbon::parse($this->date . ' 09:30:00'));
+
+        // Phone clock ~2 min ahead of the server (seen live 2026-11-02): kept.
+        $ahead = $ingest->ingestBatch($this->tenantId, $this->userId, [[
+            'point_id' => 'pt-fast-clock', 'lat' => 28.6, 'long' => 77.2, 'track_time' => $this->date . ' 09:31:42',
+        ]]);
+        $this->assertSame(1, $ahead['saved']);
+        $this->assertSame(0, $ahead['rejected']);
+
+        // Beyond the 5-minute tolerance: still rejected.
+        $tooFar = $ingest->ingestBatch($this->tenantId, $this->userId, [[
+            'point_id' => 'pt-far-future', 'lat' => 28.6, 'long' => 77.2, 'track_time' => $this->date . ' 09:40:00',
+        ]]);
+        $this->assertSame(0, $tooFar['saved']);
+        $this->assertSame(1, $tooFar['rejected']);
+    }
+
     public function test_batch_with_no_open_or_recent_session_is_rejected(): void
     {
         Carbon::setTestNow(Carbon::parse($this->date . ' 09:00:00'));

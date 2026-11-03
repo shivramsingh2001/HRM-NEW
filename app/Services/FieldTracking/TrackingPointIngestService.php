@@ -59,8 +59,10 @@ class TrackingPointIngestService
                 continue;
             }
 
-            $session = $candidateSessions->first(function ($s) use ($t) {
-                $end = $s->ended_at ?? now();
+            // An open session runs until "now" — with the same tolerance as above, so a
+            // phone whose clock is a minute or two fast doesn't lose every ping.
+            $session = $candidateSessions->first(function ($s) use ($t, $upperBound) {
+                $end = $s->ended_at ?? $upperBound;
 
                 return $t->gte($s->started_at) && $t->lte($end);
             });
