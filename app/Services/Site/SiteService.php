@@ -138,7 +138,43 @@ class SiteService
             })
             ->when($filters['state_code'] ?? null, fn ($q, $v) => $q->where('state_code', $v))
             ->when($filters['district'] ?? null, fn ($q, $v) => $q->where('district', $v))
-            ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v));
+            ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
+            // Start / end filter on the onboarding date; ignored unless it's a real Y-m-d.
+            ->when(self::ymd($filters['date_from'] ?? null), fn ($q, $v) => $q->whereDate('onboarding_date', '>=', $v))
+            ->when(self::ymd($filters['date_to'] ?? null), fn ($q, $v) => $q->whereDate('onboarding_date', '<=', $v));
+    }
+
+    /**
+     * Head-of-page counts for the list, following the same filters.
+     *
+     * @param array<string,mixed> $filters
+     * @return array{total:int, active:int, inactive:int, visits:int}
+     */
+    public function summary(int $tenantId, array $filters): array
+    {
+        $row = $this->filtered($tenantId, $filters)
+            ->selectRaw("COUNT(*) AS total, SUM(status = 'active') AS active, SUM(status = 'inactive') AS inactive")
+            ->first();
+        $visits = SiteVisit::where('tenant_id', $tenantId)
+            ->whereIn('site_id', $this->filtered($tenantId, $filters)->select('id'))
+            ->count();
+
+        return [
+            'total' => (int) ($row->total ?? 0),
+            'active' => (int) ($row->active ?? 0),
+            'inactive' => (int) ($row->inactive ?? 0),
+            'visits' => $visits,
+        ];
+    }
+
+    private static function ymd(mixed $value): ?string
+    {
+        if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return null;
+        }
+        $d = \DateTime::createFromFormat('!Y-m-d', $value);
+
+        return $d && $d->format('Y-m-d') === $value ? $value : null;
     }
 
     /**

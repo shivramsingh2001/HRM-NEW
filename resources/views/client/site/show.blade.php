@@ -2,6 +2,20 @@
 
 @section('style')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <style>
+        .site-detail .card { margin-bottom: 12px; }
+        .site-detail .card-header { padding: 8px 12px; min-height: 0; }
+        .site-detail .card-header h6 { font-size: 12.5px; font-weight: 600; margin: 0; }
+        .site-detail .card-body { padding: 10px 12px; }
+        .site-detail .info-label { font-size: 10.5px; color: #64748b; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 1px; }
+        .site-detail .info-value { font-size: 12px; color: #0f172a; line-height: 1.4; word-break: break-word; }
+        .site-detail .info-grid > div { margin-bottom: 8px; }
+        .site-detail .record-line { font-size: 11.5px; line-height: 1.5; }
+        .site-detail .record-line + .record-line { margin-top: 6px; }
+        .site-detail .table th, .site-detail .table td { font-size: 11.5px; padding: 6px 10px; vertical-align: top; }
+        .site-detail .table .sub { font-size: 10.5px; color: #64748b; }
+        .site-detail .form-control-sm { font-size: 11.5px; padding: 3px 8px; height: 28px; }
+    </style>
 @endsection
 
 @php
@@ -35,25 +49,27 @@
         </x-slot:actions>
     </x-ui.page-header>
 
-    <div class="content-area-body">
-        <div class="row">
+    <div class="content-area-body site-detail">
+        <div class="row g-2">
             <div class="col-lg-8">
-                <div class="card">
+                <div class="card h-100 mb-0">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">Site Details</h6>
+                        <h6>Site Details</h6>
                         <x-ui.status-badge :status="$site->status" />
                     </div>
                     <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6"><div class="text-muted small">Site Code</div><div class="fw-semibold">{{ $site->site_code }}</div></div>
-                            <div class="col-md-6"><div class="text-muted small">Site Name</div><div class="fw-semibold">{{ $site->site_name }}</div></div>
-                            <div class="col-md-6"><div class="text-muted small">State</div><div>{{ $states[$site->state_code] ?? '—' }}</div></div>
-                            <div class="col-md-6"><div class="text-muted small">District</div><div>{{ $site->district ?: '—' }}</div></div>
-                            <div class="col-12"><div class="text-muted small">Address</div><div>{{ $site->address }}</div></div>
-                            <div class="col-md-6"><div class="text-muted small">Location</div><div>{{ $site->location ?: '—' }}</div></div>
-                            <div class="col-md-6">
-                                <div class="text-muted small">Map Pin</div>
-                                <div>
+                        <div class="row g-0 info-grid">
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Site Code</div><div class="info-value fw-semibold">{{ $site->site_code }}</div></div>
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Site Name</div><div class="info-value fw-semibold">{{ $site->site_name }}</div></div>
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Onboarding Date</div><div class="info-value">{{ $site->onboarding_date?->format('d M Y') ?? '—' }}</div></div>
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">State</div><div class="info-value">{{ $states[$site->state_code] ?? '—' }}</div></div>
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">District</div><div class="info-value">{{ $site->district ?: '—' }}</div></div>
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Total Visits</div><div class="info-value">{{ $site->visits_count }}</div></div>
+                            <div class="col-12 col-md-8 pe-2"><div class="info-label">Address</div><div class="info-value">{{ $site->address }}</div></div>
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Landmark / Area</div><div class="info-value">{{ $site->location ?: '—' }}</div></div>
+                            <div class="col-12 pe-2 mb-0">
+                                <div class="info-label">Map Pin</div>
+                                <div class="info-value">
                                     @if ($hasPin)
                                         <a href="https://www.google.com/maps?q={{ $site->latitude }},{{ $site->longitude }}" target="_blank" rel="noopener">
                                             {{ $site->latitude }}, {{ $site->longitude }} <i class="feather-external-link"></i></a>
@@ -62,26 +78,24 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="col-md-6"><div class="text-muted small">Onboarding Date</div><div>{{ $site->onboarding_date?->format('d M Y') ?? '—' }}</div></div>
-                            <div class="col-md-6"><div class="text-muted small">Total Visits</div><div>{{ $site->visits_count }}</div></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-header"><h6 class="mb-0">Record</h6></div>
-                    <div class="card-body small">
-                        <div class="mb-2"><span class="text-muted">Added by</span><br>{{ $site->createdBy->name ?? '—' }} · {{ $site->created_at?->format('d M Y, h:i A') }}</div>
-                        <div><span class="text-muted">Last updated by</span><br>{{ $site->updatedBy->name ?? '—' }} · {{ $site->updated_at?->format('d M Y, h:i A') }}</div>
+                <div class="card h-100 mb-0">
+                    <div class="card-header"><h6>Record</h6></div>
+                    <div class="card-body">
+                        <div class="record-line"><div class="info-label">Added by</div>{{ $site->createdBy->name ?? '—' }} · {{ $site->created_at?->format('d M Y, h:i A') }}</div>
+                        <div class="record-line"><div class="info-label">Last updated by</div>{{ $site->updatedBy->name ?? '—' }} · {{ $site->updated_at?->format('d M Y, h:i A') }}</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card" id="visit-history">
+        <div class="card mt-2" id="visit-history">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Visit History</h6>
+                <h6>Visit History</h6>
                 <form method="GET" action="{{ route('sites.show', $site->id) }}#visit-history" class="d-flex gap-2 align-items-center">
                     <input type="month" name="month" class="form-control form-control-sm" style="width:auto;" value="{{ $visitMonth }}" max="{{ now()->format('Y-m') }}" onchange="this.form.submit()">
                     @if ($visitMonth)
@@ -92,20 +106,21 @@
             <div class="card-body p-0">
                 <x-ui.data-table>
                     <thead>
-                        <tr><th>Date &amp; Time</th><th>Employee</th><th>Contact</th><th>Remarks</th><th>File</th></tr>
+                        <tr><th class="text-center" style="width:48px;">Sr. No.</th><th>Date &amp; Time</th><th>Employee</th><th>Contact</th><th>Remarks</th><th>File</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($visits as $v)
                             @php $fileUrl = file_url($v->file_path, \App\Services\Site\SiteVisitService::FILE_MODULE); @endphp
                             <tr>
+                                <td class="text-center text-muted">{{ $visits->firstItem() + $loop->index }}</td>
                                 <td class="text-nowrap">{{ $v->visited_at->format('d M Y, h:i A') }}</td>
-                                <td>{{ $v->user->name ?? '—' }}<div class="text-muted small">{{ $v->user->employee_id ?? '' }}</div></td>
-                                <td>{{ $v->contact_person_name ?: '—' }}@if ($v->contact_mobile)<div class="text-muted small">{{ $v->contact_mobile }}</div>@endif</td>
+                                <td>{{ $v->user->name ?? '—' }}<div class="sub">{{ $v->user->employee_id ?? '' }}</div></td>
+                                <td>{{ $v->contact_person_name ?: '—' }}@if ($v->contact_mobile)<div class="sub">{{ $v->contact_mobile }}</div>@endif</td>
                                 <td style="max-width:360px; white-space:pre-line;">{{ $v->remarks }}</td>
                                 <td>@if ($fileUrl)<a href="{{ $fileUrl }}" target="_blank" rel="noopener"><i class="feather-paperclip"></i> View</a>@else — @endif</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5"><x-ui.empty-state icon="clock" title="No visits {{ $visitMonth ? 'in ' . \Carbon\Carbon::parse($visitMonth . '-01')->format('F Y') : 'yet' }}" /></td></tr>
+                            <tr><td colspan="6"><x-ui.empty-state icon="clock" title="No visits {{ $visitMonth ? 'in ' . \Carbon\Carbon::parse($visitMonth . '-01')->format('F Y') : 'yet' }}" /></td></tr>
                         @endforelse
                     </tbody>
                 </x-ui.data-table>

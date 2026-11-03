@@ -18,16 +18,18 @@ use Illuminate\Support\Facades\Auth;
  */
 class SiteController extends Controller
 {
-    private const FILTERS = ['search', 'state_code', 'district', 'status'];
+    private const FILTERS = ['search', 'state_code', 'district', 'status', 'date_from', 'date_to'];
 
     public function __construct(private SiteService $sites, private SiteVisitReportService $reports) {}
 
     public function index(Request $request)
     {
         $tenantId = (int) Auth::user()->tenant_id;
+        $filters = $request->only(self::FILTERS);
 
         return view('client.site.index', [
-            'sites' => $this->sites->paginate($tenantId, $request->only(self::FILTERS)),
+            'sites' => $this->sites->paginate($tenantId, $filters),
+            'summary' => $this->sites->summary($tenantId, $filters),
             'states' => $this->sites->stateOptions(),
             'districts' => $this->sites->districtOptions($tenantId),
         ]);
