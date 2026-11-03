@@ -188,11 +188,14 @@ Route::middleware('tenant')->group(function () {
         // Sites & site visits (new endpoints; same rules as the web Site Visits page)
         Route::middleware('feature:site_management')->controller(\App\Http\Controllers\Api\Site\SiteVisitController::class)->group(function () {
             Route::get('/sites', 'sites')->middleware('permission:site_visits,create');
+            Route::get('/site-visits/meta', 'meta')->middleware('permission:site_visits,view');
+            Route::get('/site-visits/filter-options', 'filterOptions')->middleware('permission:site_visits,view');
             Route::get('/site-visits', 'index')->middleware('permission:site_visits,view');
             Route::get('/site-visits/{id}', 'show')->whereNumber('id')->middleware('permission:site_visits,view');
             Route::post('/site-visits', 'store')->middleware('permission:site_visits,create');
             Route::match(['post', 'put'], '/site-visits/{id}', 'update')->whereNumber('id')->middleware('permission:site_visits,edit');
             Route::middleware('permission:site_visits,view')->group(function () {
+                Route::get('/manager/site-visits', 'teamIndex');
                 Route::get('/manager/site-visits/day-wise', 'dayReport');
                 Route::get('/manager/site-visits/monthly', 'monthlyReport');
                 Route::get('/manager/site-visits/monthly/{userId}', 'employeeReport')->whereNumber('userId');

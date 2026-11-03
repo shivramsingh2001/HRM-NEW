@@ -139,9 +139,15 @@ class SiteVisitService
     {
         $ok = fn (string $key, string $pattern) => is_string($input[$key] ?? null) && preg_match($pattern, $input[$key]) ? $input[$key] : null;
 
+        $day = '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/';
+        $search = is_string($input['search'] ?? null) ? mb_substr(trim($input['search']), 0, 100) : '';
+
         return array_filter([
-            'date' => $ok('date', '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/'),
+            'date' => $ok('date', $day),
             'month' => $ok('month', '/^\d{4}-(0[1-9]|1[0-2])$/'),
+            'date_from' => $ok('date_from', $day),
+            'date_to' => $ok('date_to', $day),
+            'search' => $search !== '' ? $search : null,
             'site_id' => is_numeric($input['site_id'] ?? null) ? (int) $input['site_id'] : null,
             'user_id' => is_numeric($input['user_id'] ?? null) ? (int) $input['user_id'] : null,
         ]);
@@ -160,8 +166,47 @@ class SiteVisitService
                 [$y, $mo] = array_map('intval', explode('-', $m));
                 $q->whereYear('visit_date', $y)->whereMonth('visit_date', $mo);
             })
+            ->when($filters['date_from'] ?? null, fn ($q, $d) => $q->whereDate('visit_date', '>=', $d))
+            ->when($filters['date_to'] ?? null, fn ($q, $d) => $q->whereDate('visit_date', '<=', $d))
+            ->when($filters['search'] ?? null, function ($q, $term) {
+                $q->where(fn ($w) => $w->where('remarks', 'like', "%{$term}%")
+                    ->orWhere('contact_person_name', 'like', "%{$term}%")
+                    ->orWhere('contact_mobile', 'like', "%{$term}%")
+                    ->orWhereHas('site', fn ($s) => $s->where('site_name', 'like', "%{$term}%")->orWhere('site_code', 'like', "%{$term}%")));
+            })
             ->when($filters['site_id'] ?? null, fn ($q, $id) => $q->where('site_id', $id))
             ->when($filters['user_id'] ?? null, fn ($q, $id) => $q->where('user_id', $id));
+    }
+
+    /**
+     * Head-of-page counts for My Site Visits, following the same filters.
+     *
+     * @param array<string,mixed> $filters
+     * @return array{visits:int, sites:int, days:int, today:int}
+     */
+    public function ownSummary(User $user, array $filters): array
+    {
+        $base = fn () => SiteVisit::where('tenant_id', $user->tenant_id)->where('user_id', $user->id);
+        $row = $this->filtered($base(), $filters)
+            ->selectRaw('COUNT(*) AS visits, COUNT(DISTINCT site_id) AS sites, COUNT(DISTINCT visit_date) AS days')
+            ->first();
+
+        return [
+            'visits' => (int) ($row->visits ?? 0),
+            'sites' => (int) ($row->sites ?? 0),
+            'days' => (int) ($row->days ?? 0),
+            'today' => $base()->whereDate('visit_date', today())->count(),
+        ];
+    }
+
+    /** @return array<int,string> sites this user has visited (id => "CODE · Name"), for the filter */
+    public function ownVisitedSites(User $user): array
+    {
+        return Site::whereIn('id', SiteVisit::where('tenant_id', $user->tenant_id)->where('user_id', $user->id)->select('site_id'))
+            ->orderBy('site_name')
+            ->get(['id', 'site_code', 'site_name'])
+            ->mapWithKeys(fn ($s) => [$s->id => "{$s->site_code} · {$s->site_name}"])
+            ->all();
     }
 
     /** @return array<string,mixed> one visit as the API / web page show it */

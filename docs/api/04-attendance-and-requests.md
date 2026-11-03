@@ -994,19 +994,46 @@ Controller: `app/Http/Controllers/Api/Site/SiteVisitController.php` (rules in `A
 ```
 `can_edit` is true only for the caller's own visit on the day it was recorded.
 
+**Which endpoints each screen uses (added 2026-11-03):**
+| Screen | Employee | Manager |
+|---|---|---|
+| Open the module | `GET /api/site-visits/meta` → hide Team / Record buttons per `can_see_team` / `can_record` | same (`can_see_team: true`) |
+| My Visits list + cards | `GET /api/site-visits` (+ `filter-options`) | same |
+| Record visit | `GET /api/sites` → `POST /api/site-visits` | same |
+| Edit visit (today) | `POST /api/site-visits/{id}` when `can_edit` | same |
+| Visit detail | `GET /api/site-visits/{id}` | same, also for a team member's visit |
+| Team Visits list + cards | — (403) | `GET /api/manager/site-visits` (+ `filter-options?tab=team`) |
+| Team reports | — | `GET /api/manager/site-visits/day-wise`, `/monthly`, `/monthly/{userId}` |
+
+### GET /api/site-visits/meta
+**Purpose:** What the caller can do here, so the app shows the right tabs and buttons, plus the form rules. **Permission:** `site_visits,view`.
+**Success — 200:** `data: {"today": "2026-11-03", "role": "manager", "can_record": true, "can_edit": true, "can_see_team": true, "view_scope": "team", "rules": {"visit_date": "always today (not sent by the app)", "edit": "own visit, on the same day only", "remarks_max": 2000, "contact_person_name_max": 191, "contact_mobile_digits": 10, "file_max_kb": 10240, "file_types": ["jpg", "jpeg", "png", "webp", "pdf", "doc", "docx", "xls", "xlsx"]}}`
+`can_see_team` is true for a team (manager) or company (HR/admin) `site_visits:view` scope — show the Team Visits tab only then. `view_scope` is `own` / `team` / `company`.
+
+### GET /api/site-visits/filter-options
+**Purpose:** Dropdown data for the list filters. **Permission:** `site_visits,view`.
+**Query:** `tab=team` for the Team Visits filters (ignored — falls back to My Visits — when `can_see_team` is false).
+**Success — 200:** My Visits: `data: {"tab": "mine", "sites": [{"id": 7, "label": "SITE-0007 · Sector 62 Office"}]}` (only sites the caller has visited). Team: `data: {"tab": "team", "sites": [...], "employees": [{"id", "name", "employee_id"}]}` (sites the team visited; active team members, the caller excluded).
+
 ### GET /api/sites
 **Purpose:** Active sites to pick from when recording a visit. **Permission:** `site_visits,create`.
 **Query:** `search` (code / name / district), `page`, `per_page` (default 50, max 100).
 **Success — 200:** `data: {"sites": [{"id", "site_code", "site_name", "state", "district", "address", "location", "latitude", "longitude"}], "pagination": {"total", "current_page", "last_page", "per_page"}}`
 
 ### GET /api/site-visits
-**Purpose:** My visits, newest first. **Permission:** `site_visits,view`.
-**Query:** `date` (YYYY-MM-DD) **or** `month` (YYYY-MM), `site_id`, `page`, `per_page` (default 20, max 50). Malformed filter values are ignored.
-**Success — 200:** `data: {"today": "2026-11-02", "visits": [<visit>], "pagination": {...}}`
+**Purpose:** My visits, newest first, with summary counts. **Permission:** `site_visits,view`.
+**Query:** `date` (YYYY-MM-DD) **or** `month` (YYYY-MM) **or** `date_from` / `date_to` (YYYY-MM-DD, either or both), `search` (site name/code, contact name, mobile, remarks), `site_id`, `page`, `per_page` (default 20, max 50). Malformed filter values are ignored. No date filter = all my visits (the web page defaults to this month — send `date_from` = 1st of the month, `date_to` = today to match it).
+**Success — 200:** `data: {"today": "2026-11-03", "filters": {<the filters applied>}, "summary": {"visits": 12, "sites": 5, "days": 8, "today": 2}, "visits": [<visit>], "pagination": {...}}` — `summary` follows the filters except `today` (always today's count); `sites` = different sites, `days` = days with at least one visit. `filters` and `summary` were added 2026-11-03; older fields are unchanged.
+
+### GET /api/manager/site-visits
+**Purpose:** **Team Visits** — visits by everyone in my `site_visits:view` scope **except me** (manager: direct reportees; HR/admin: whole company), newest first. Read-only (`can_edit` is false on these). **Permission:** `site_visits,view` with a team or company scope.
+**Query:** `search`, `user_id`, `site_id`, `date_from` / `date_to`, `date`, `month`, `page`, `per_page` (default 20, max 50). **No date filter = this month so far.** A `user_id` outside my team simply returns nothing.
+**Success — 200:** `data: {"today", "filters": {...}, "summary": {"visits", "employees", "sites", "today"}, "visits": [<visit> + {"employee": {"id", "name", "employee_id"}}], "pagination": {...}}` — `employees` = team members with at least one visit in the period.
+**403:** `{"success": false, "message": "You do not have a team to view."}` (employee scope `own`).
 
 ### GET /api/site-visits/{id}
 **Purpose:** One visit — my own, or one in my view scope (manager: team; HR/admin: company). **Permission:** `site_visits,view`.
-**Success — 200:** `data: <visit>`. **403:** `{"success": false, "message": "You cannot view this visit."}`. **404** when the id is not in the company.
+**Success — 200:** `data: <visit>`. **403:** `{"success": false, "message": "You cannot view this visit."}`. **404:** `{"success": false, "message": "Visit not found."}` when the id is not in the company (also on `POST /api/site-visits/{id}`).
 
 ### POST /api/site-visits
 **Purpose:** Record a visit. The visit date is **always today** (server clock) — any date sent is ignored. **Permission:** `site_visits,create`.

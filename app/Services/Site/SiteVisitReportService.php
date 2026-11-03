@@ -2,6 +2,7 @@
 
 namespace App\Services\Site;
 
+use App\Models\Site;
 use App\Models\SiteVisit;
 use App\Models\User;
 use App\Services\RbacService;
@@ -33,6 +34,65 @@ class SiteVisitReportService
             'own' => [(int) $viewer->id],
             default => [],
         };
+    }
+
+    /** Team / company scope on site_visits:view → the Site Visits page shows a Team Visits tab. */
+    public function canSeeTeam(User $viewer): bool
+    {
+        return in_array($this->rbac->scopeFor($viewer, 'site_visits', 'view'), ['team', 'company'], true);
+    }
+
+    /**
+     * Team Visits tab: everyone the viewer may see except the viewer
+     * (filters: search, user_id, site_id, date_from/date_to, date, month).
+     *
+     * @param array<string,mixed> $filters
+     */
+    public function teamVisits(User $viewer, array $filters, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->teamQuery($viewer, $filters)
+            ->with(['user:id,name,employee_id', 'site:id,site_code,site_name,district'])
+            ->orderByDesc('visited_at')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * @param array<string,mixed> $filters
+     * @return array{visits:int, employees:int, sites:int, today:int}
+     */
+    public function teamSummary(User $viewer, array $filters): array
+    {
+        $row = $this->teamQuery($viewer, $filters)
+            ->toBase()
+            ->selectRaw('COUNT(*) AS visits, COUNT(DISTINCT user_id) AS employees, COUNT(DISTINCT site_id) AS sites')
+            ->first();
+
+        return [
+            'visits' => (int) ($row->visits ?? 0),
+            'employees' => (int) ($row->employees ?? 0),
+            'sites' => (int) ($row->sites ?? 0),
+            'today' => $this->teamQuery($viewer, [])->whereDate('visit_date', today())->count(),
+        ];
+    }
+
+    /** @return array<int,string> sites the viewer's team has visited (id => "CODE · Name"), for the filter */
+    public function teamSiteOptions(User $viewer): array
+    {
+        return Site::whereIn('id', $this->teamQuery($viewer, [])->select('site_id'))
+            ->orderBy('site_name')
+            ->get(['id', 'site_code', 'site_name'])
+            ->mapWithKeys(fn ($s) => [$s->id => "{$s->site_code} · {$s->site_name}"])
+            ->all();
+    }
+
+    /**
+     * @param array<string,mixed> $filters
+     * @return Builder<SiteVisit>
+     */
+    private function teamQuery(User $viewer, array $filters): Builder
+    {
+        return $this->scoped($viewer, $filters)->where('user_id', '!=', $viewer->id);
     }
 
     /** @return Collection<int,User> employees for the report filter */

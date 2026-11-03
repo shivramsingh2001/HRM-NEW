@@ -8,6 +8,7 @@ use App\Http\Requests\Site\StoreSiteVisitRequest;
 use App\Http\Requests\Site\UpdateSiteVisitRequest;
 use App\Models\SiteVisit;
 use App\Services\Site\SiteException;
+use App\Services\Site\SiteVisitReportService;
 use App\Services\Site\SiteVisitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,19 +19,42 @@ use Illuminate\Support\Facades\Auth;
  */
 class SiteVisitController extends Controller
 {
-    public function __construct(private SiteVisitService $visits) {}
+    public function __construct(private SiteVisitService $visits, private SiteVisitReportService $reports) {}
 
+    /** My Visits tab, plus a Team Visits tab (?tab=team) for a team / company site_visits:view scope. */
     public function index(Request $request)
     {
-        $filters = SiteVisitService::cleanFilters($request->only(['date', 'month']));
-        if (! $filters) {
-            $filters['month'] = now()->format('Y-m');
+        $user = Auth::user();
+        $canTeam = $this->reports->canSeeTeam($user);
+        $tab = $canTeam && $request->input('tab') === 'team' ? 'team' : 'mine';
+
+        $filters = SiteVisitService::cleanFilters($request->only(['date', 'month', 'date_from', 'date_to', 'search', 'site_id', 'user_id']));
+        if ($tab === 'mine') {
+            unset($filters['user_id']);
+        }
+        // No date chosen → this month so far.
+        if (empty($filters['date']) && empty($filters['month']) && empty($filters['date_from']) && empty($filters['date_to'])) {
+            $filters['date_from'] = now()->startOfMonth()->toDateString();
+            $filters['date_to'] = now()->toDateString();
         }
 
-        return view('client.site.visits', [
-            'visits' => $this->visits->ownVisits(Auth::user(), $filters),
-            'filters' => $filters,
-        ]);
+        $data = ['tab' => $tab, 'canTeam' => $canTeam, 'filters' => $filters];
+        if ($tab === 'team') {
+            $data += [
+                'visits' => $this->reports->teamVisits($user, $filters),
+                'summary' => $this->reports->teamSummary($user, $filters),
+                'visitedSites' => $this->reports->teamSiteOptions($user),
+                'employees' => $this->reports->employeeOptions($user)->where('id', '!=', $user->id),
+            ];
+        } else {
+            $data += [
+                'visits' => $this->visits->ownVisits($user, $filters),
+                'summary' => $this->visits->ownSummary($user, $filters),
+                'visitedSites' => $this->visits->ownVisitedSites($user),
+            ];
+        }
+
+        return view('client.site.visits', $data);
     }
 
     /** Active sites for the site picker (select2 AJAX: ?search=&page=). */
