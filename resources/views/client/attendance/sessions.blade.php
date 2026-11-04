@@ -358,7 +358,8 @@
                         Click a pin{{ $hasTrackList ? ' or the route line' : '' }} to see the time and location. Hold Ctrl and scroll to zoom.
                     </div>
 
-                    <!-- Tracks List -->
+                    {{-- Tracks List — hidden on request (2026-11-04); the route map above still shows the points.
+                         Remove this comment wrapper to show the list again.
                     @if ($hasTrackList)
                     <div class="track-list mt-3">
                         @foreach ($locationTracks as $track)
@@ -391,6 +392,7 @@
                         @endforeach
                     </div>
                     @endif
+                    --}}
                 </div>
             @endif
             @if ($hasAttendance && ! $hasTrackList)
