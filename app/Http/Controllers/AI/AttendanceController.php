@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\AI;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,50 +17,16 @@ class AttendanceController extends Controller
     public function view_ai_all(Request $request)
     {
         try {
-            $authUser = Auth::user();
-            $tenantId = (int) ($authUser->tenant_id ?? Session::get('tenant_id') ?? 0);
-
-            if (!$tenantId) {
-                return response()->json(['success' => false, 'message' => 'Tenant not found'], 400);
+            $result = $this->loadAttendance($request);
+            if ($result instanceof JsonResponse) {
+                return $result;
             }
-
-            // Permission-based access: the old role-string allowlist blocked
-            // any custom role (e.g. a seeded Finance/Recruiter role) even
-            // though they might hold a real attendance:view grant.
-            $attendanceScope = app(RbacService::class)->scopeFor($authUser, 'attendance', 'view');
-            if ($attendanceScope === null) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
-            }
-
-            // Get date range (validated to strict Y-m-d, capped to 366 days)
-            $startDate = $this->safeDate($request->input('start_date'), date('Y-m-01'));
-            $endDate = $this->safeDate($request->input('end_date'), date('Y-m-d'));
-            if ($startDate > $endDate) {
-                [$startDate, $endDate] = [$endDate, $startDate];
-            }
-            if ((strtotime($endDate) - strtotime($startDate)) / 86400 > 366) {
-                $endDate = date('Y-m-d', strtotime($startDate . ' +366 days'));
-            }
-
-            $includeTracks = filter_var($request->input('include_tracks', true), FILTER_VALIDATE_BOOLEAN);
-
-            // Build scope-based user filter (parameterised)
-            [$userFilterSql, $userFilterBindings] = $this->buildUserFilter($authUser, $request->input('user_id'), $attendanceScope);
-
-            // Get attendance data
-            $attendances = $this->getAttendanceData($tenantId, $startDate, $endDate, $userFilterSql, $userFilterBindings);
-
-            // Format the data
-            $processedData = $this->formatAttendanceData($attendances, $includeTracks);
-
-            // Calculate summary
-            $summary = $this->calculateSummary($processedData, $startDate, $endDate, $tenantId);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Attendance data fetched successfully',
-                'data' => $processedData,
-                'summary' => $summary
+                'data' => $result['data'],
+                'summary' => $result['summary']
             ], 200);
 
         } catch (Exception $e) {
@@ -69,6 +36,90 @@ class AttendanceController extends Controller
                 'message' => 'Unable to fetch attendance data. Please try again later.'
             ], 500);
         }
+    }
+
+    /**
+     * Counts only, for "how many are present" questions: same params, scope and
+     * status rules as view_ai_all, without the day-by-day rows.
+     */
+    public function view_ai_summary(Request $request)
+    {
+        try {
+            $result = $this->loadAttendance($request);
+            if ($result instanceof JsonResponse) {
+                return $result;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance summary fetched successfully',
+                'summary' => $result['summary']
+            ], 200);
+
+        } catch (Exception $e) {
+            \Log::error('AI attendance view_ai_summary failed', ['user_id' => Auth::id(), 'error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to fetch attendance summary. Please try again later.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Resolve tenant, scope and date range, then load the rows and summary.
+     *
+     * @return JsonResponse|array{data: array, summary: array} a JsonResponse when the request is refused
+     */
+    private function loadAttendance(Request $request)
+    {
+        $authUser = Auth::user();
+        $tenantId = (int) ($authUser->tenant_id ?? Session::get('tenant_id') ?? 0);
+
+        if (!$tenantId) {
+            return response()->json(['success' => false, 'message' => 'Tenant not found'], 400);
+        }
+
+        // Permission-based access: the old role-string allowlist blocked
+        // any custom role (e.g. a seeded Finance/Recruiter role) even
+        // though they might hold a real attendance:view grant.
+        $attendanceScope = app(RbacService::class)->scopeFor($authUser, 'attendance', 'view');
+        if ($attendanceScope === null) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access'], 403);
+        }
+
+        // Get date range (validated to strict Y-m-d, stopped at today, capped to 366 days)
+        $today = date('Y-m-d');
+        $startDate = $this->safeDate($request->input('start_date'), date('Y-m-01'));
+        $endDate = $this->safeDate($request->input('end_date'), $today);
+        if ($startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+        }
+
+        // A future day has no attendance yet; listing it would report everyone as Absent.
+        if ($startDate > $today) {
+            return ['data' => [], 'summary' => $this->calculateSummary([], $startDate, $endDate, $tenantId)];
+        }
+        $endDate = min($endDate, $today);
+
+        if ((strtotime($endDate) - strtotime($startDate)) / 86400 > 366) {
+            $endDate = date('Y-m-d', strtotime($startDate . ' +366 days'));
+        }
+
+        $includeTracks = filter_var($request->input('include_tracks', true), FILTER_VALIDATE_BOOLEAN);
+
+        // Build scope-based user filter (parameterised)
+        [$userFilterSql, $userFilterBindings] = $this->buildUserFilter($authUser, $request->input('user_id'), $attendanceScope);
+
+        // Get attendance data
+        $attendances = $this->getAttendanceData($tenantId, $startDate, $endDate, $userFilterSql, $userFilterBindings);
+
+        // Format the data
+        $processedData = $this->formatAttendanceData($attendances, $includeTracks);
+
+        // Calculate summary
+        $summary = $this->calculateSummary($processedData, $startDate, $endDate, $tenantId);
+
+        return ['data' => $processedData, 'summary' => $summary];
     }
 
     /**
@@ -160,10 +211,7 @@ class AttendanceController extends Controller
             (SELECT h.name FROM holidays h
                 WHERE h.tenant_id = ? AND h.status = 1
                   AND d.date BETWEEN DATE(h.start_date) AND DATE(h.end_date)
-                LIMIT 1) as holiday_name,
-            (SELECT COUNT(*) FROM attendance_tracking_points atp
-                INNER JOIN attendance_tracking_sessions ats ON ats.id = atp.session_id
-                WHERE ats.attendance_id = a.id) as track_count
+                LIMIT 1) as holiday_name
         FROM dates d
         CROSS JOIN users u
         LEFT JOIN attendances a ON u.id = a.user_id AND a.date = d.date AND a.tenant_id = ?

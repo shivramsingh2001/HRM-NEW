@@ -326,6 +326,7 @@ Route::middleware('tenant')->group(function () {
             Route::get('/attendance-locations', [AIAttendanceLocationController::class, 'view_ai_all'])->middleware('feature:attendance');
             Route::get('/request', [AIRequestController::class, 'view_ai_all'])->middleware('feature:wfh_travel');
             Route::get('/attendance', [AIAttendanceController::class, 'view_ai_all'])->middleware('feature:attendance');
+            Route::get('/attendance-summary', [AIAttendanceController::class, 'view_ai_summary'])->middleware('feature:attendance');
             Route::get('/my-profile', [AIProfileController::class, 'view_ai_all']);
             Route::get('/annuncement', [AIAnnoucementController::class, 'view_ai_all'])->middleware('feature:announcements');
             Route::get('/project', [AIProjectController::class, 'view_ai_all'])->middleware('feature:project_management');

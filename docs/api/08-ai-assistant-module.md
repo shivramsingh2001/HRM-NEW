@@ -179,7 +179,7 @@ When `per_page` is supplied, the body additionally includes `"pagination": {"cur
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `start_date` | string (`Y-m-d`) | No | Defaults to the 1st of the current month. Invalid/malformed values silently fall back to the default (no validation error). |
-| `end_date` | string (`Y-m-d`) | No | Defaults to today. If `start_date > end_date` they are swapped. Range is capped to 366 days (end date is clamped). |
+| `end_date` | string (`Y-m-d`) | No | Defaults to today. If `start_date > end_date` they are swapped. Stopped at today: future days are never returned, and a range entirely in the future returns empty `data`. Range is capped to 366 days (end date is clamped). |
 | `include_tracks` | boolean | No | Accepted (`filter_var(..., FILTER_VALIDATE_BOOLEAN)`, default `true`) but not currently wired into the output in this version of the controller. |
 | `user_id` | integer | No | Only applied for `team`/`company` scope (ignored — forced to self — for `own` scope). |
 
@@ -235,6 +235,28 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/attendance?start_date=2026-09-
 | 500 | Unhandled exception | `{"success": false, "message": "Unable to fetch attendance data. Please try again later."}` (logged server-side, message not leaked) |
 
 **Special behavior / notes:** emits one row per **calendar day in range per user in scope**, even days with no attendance record at all (via a recursive CTE date series `CROSS JOIN` on users), so `data` can be large for wide date ranges/`company` scope — there is no pagination.
+
+---
+
+## GET /api/ai/attendance-summary
+**Purpose:** Counts only, for "how many are present" questions. Same parameters, auth, scope, status rules and errors as `GET /api/ai/attendance`; the response is the same `summary` object with no `data` rows.
+**Controller:** `App\Http\Controllers\AI\AttendanceController::view_ai_summary`
+
+**Success response — `200`:**
+```json
+{
+  "success": true,
+  "message": "Attendance summary fetched successfully",
+  "summary": {
+    "total_records": 14,
+    "by_status": { "present": 8, "absent": 3, "weekoff": 0, "checked_in_only": 2, "leave": 1, "holiday": 0 },
+    "by_user": [
+      { "name": "Asha Rao", "total": 1, "present": 1, "absent": 0, "weekoff": 0, "checked_in_only": 0, "leave": 0, "holiday": 0 }
+    ],
+    "date_range": { "start": "2026-11-09", "end": "2026-11-09" }
+  }
+}
+```
 
 ---
 
