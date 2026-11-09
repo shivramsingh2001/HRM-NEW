@@ -385,6 +385,9 @@
         }
 
         /* Employee Info Card */
+        .employee-name-link { color: inherit; text-decoration: none; }
+        .employee-name-link:hover { color: #0D6EFD; text-decoration: underline; }
+
         .employee-info-card {
             background: #fff;
             border-radius: 10px;
@@ -1003,7 +1006,7 @@
                                                         {{ strtoupper(substr($member->name ?? 'N/A', 0, 2)) }}
                                                     </div>
                                                     <div class="employee-details">
-                                                        <div class="employee-name-text">{{ $member->name ?? 'N/A' }}
+                                                        <div class="employee-name-text"><a href="{{ route('team.member-detail', ['id' => encrypt($member->id)]) }}" class="employee-name-link" title="View Member">{{ $member->name ?? 'N/A' }}</a>
                                                             <small>( {{ $member->employee_id ?? 'N/A' }} )</small>
                                                         </div>
                                                         <div class="employee-email-text">
