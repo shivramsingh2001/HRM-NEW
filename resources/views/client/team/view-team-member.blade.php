@@ -1000,13 +1000,13 @@
                                                         data-name="{{ $member->name }}" data-emp="{{ $member->employee_id }}"></td>
                                             @endif
                                             <td>{{ $serialNumber }}</td>
-                                            <td>
+                                            <td class="position-relative">
                                                 <div class="employee-info">
                                                     <div class="employee-avatar">
                                                         {{ strtoupper(substr($member->name ?? 'N/A', 0, 2)) }}
                                                     </div>
                                                     <div class="employee-details">
-                                                        <div class="employee-name-text"><a href="{{ route('team.member-detail', ['id' => encrypt($member->id)]) }}" class="employee-name-link" title="View Member">{{ $member->name ?? 'N/A' }}</a>
+                                                        <div class="employee-name-text"><a href="{{ route('team.member-detail', ['id' => encrypt($member->id)]) }}" class="employee-name-link stretched-link" title="View Member">{{ $member->name ?? 'N/A' }}</a>
                                                             <small>( {{ $member->employee_id ?? 'N/A' }} )</small>
                                                         </div>
                                                         <div class="employee-email-text">
