@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string|null $company_name
+ * @property string $status active / trial / suspended / …
+ */
 class Tenant extends Model
 {
     use SoftDeletes;

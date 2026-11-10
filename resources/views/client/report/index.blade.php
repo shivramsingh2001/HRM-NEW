@@ -405,6 +405,11 @@
              <span class="badge badge-info-custom">
                  <i class="feather-calendar me-1"></i> {{ now()->format('F Y') }}
              </span>
+             @if (in_array(auth()->user()->role, \App\Services\Reports\ReportScheduleRunner::OWNER_ROLES, true))
+                 <a href="{{ route('report.schedules.index') }}" class="btn btn-primary btn-sm">
+                     <i class="feather-clock me-1"></i> Scheduled Reports
+                 </a>
+             @endif
          </x-slot:actions>
      </x-ui.page-header>
 

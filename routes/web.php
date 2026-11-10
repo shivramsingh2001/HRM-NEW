@@ -1153,6 +1153,20 @@ Route::group(['middleware' => ['tenant']], function () {
             // Reports hub page (all tabs) — needs only the Reports feature.
             Route::get('/attendance', [AttendanceReportController::class, 'index'])->name('attendance.index');
 
+            // Scheduled Reports (2026-11-10) — email a report's export on a schedule. Admin + HR only;
+            // each report is still checked against its own export route's feature/permission gates
+            // (App\Support\ReportCatalog). Sending is done by `reports:send-scheduled`, never here.
+            Route::prefix('schedules')->name('schedules.')->middleware('role:admin,hr')->group(function () {
+                $c = \App\Http\Controllers\Report\ReportScheduleController::class;
+                Route::get('/', [$c, 'index'])->name('index');
+                Route::post('/', [$c, 'store'])->name('store');
+                Route::post('/{id}', [$c, 'update'])->whereNumber('id')->name('update');
+                Route::post('/{id}/toggle', [$c, 'toggle'])->whereNumber('id')->name('toggle');
+                Route::post('/{id}/send-now', [$c, 'sendNow'])->whereNumber('id')->name('send-now');
+                Route::get('/{id}/runs', [$c, 'runs'])->whereNumber('id')->name('runs');
+                Route::delete('/{id}', [$c, 'destroy'])->whereNumber('id')->name('destroy');
+            });
+
             // Attendance Reports — any attendance method (manual / face / biometric) produces
             // attendance data, so they don't depend on the manual clock-in feature alone.
             Route::middleware('feature:attendance,attendance_face,attendance_biometric')->group(function () {

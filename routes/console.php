@@ -219,6 +219,15 @@ Schedule::command('broadcast:send-scheduled')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/broadcast-send-scheduled.log'));
 
+// Scheduled Reports (Reports → Scheduled Reports, 2026-11-10) — every minute so a report set for
+// 09:00 lands at ~09:00, and "Send now" goes out within a minute. Each schedule runs in its own
+// process (reports:run-schedule); claiming makes overlap safe, the lock just avoids piling up.
+Schedule::command('reports:send-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping(30)
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/reports-send-scheduled.log'));
+
 // Broadcast — flip sent broadcasts past their expires_at to expired, and refresh the list-page stat
 // snapshots (delivered/read/click counts) from the live broadcast_recipients rows.
 Schedule::command('broadcast:expire')

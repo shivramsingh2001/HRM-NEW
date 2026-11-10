@@ -244,6 +244,13 @@ Full asset lifecycle module: registration → assignment → employee acceptance
 | `sites` | Company site master (soft deletes). | `site_no` per-company running number + `site_code` (`SITE-0001`, system-generated, never edited) — unique `(tenant_id, site_no)` and `(tenant_id, site_code)`; `site_name`, `state_code` (unsigned bigint → `states.state_code`; the geo master only holds Indian states), `address` required; `district`, `location`, `latitude`/`longitude`, `onboarding_date` nullable; `status` enum(active/inactive) |
 | `site_visits` | One row per visit an employee/manager records at a site. | `site_id` (real FK → `sites`), `user_id`, `visit_date` (server-set day of saving), `visited_at`, `remarks` required, `contact_person_name`/`contact_mobile`/`file_path`/`latitude`/`longitude` nullable, `edited_at`; indexes `(tenant_id, visit_date)`, `(tenant_id, user_id, visit_date)`, `(tenant_id, site_id, visit_date)` |
 
+## Scheduled Reports (2026-11-10)
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `report_schedules` | Reports → Scheduled Reports: "email this report's export on a schedule" rules (`App\Models\ReportSchedule`, TenantTrait). Migration `2026_11_10_000001_create_report_schedules`. | `created_by` (owner — the report runs as this user; not FK-enforced), `name`, `report_key` (→ `App\Support\ReportCatalog`), `period` (today/yesterday/last_7_days/this_month/last_month, null = no date), `filters` JSON (`branch_id`, `department_id`), `frequency` enum(daily/weekly/monthly), `weekdays` JSON (0 = Sunday; null = every day), `day_of_month` (1–28, 0 = last day), `send_time` time, `recipients` JSON (emails), `subject`, `message`, `is_active`, `paused_reason`, `next_run_at`, `run_requested_at` ("Send now"), `last_run_at`/`last_status`/`last_error`; indexes `(tenant_id, created_at)`, `(is_active, next_run_at)`, `run_requested_at` |
+| `report_schedule_runs` | Delivery log, one row per send attempt (`App\Models\ReportScheduleRun`); last 50 kept per schedule. | `report_schedule_id` (real FK, cascade delete), `trigger` enum(schedule/manual), `status` enum(sent/failed), `period_label`, `file_name`, `file_size`, `recipients` JSON, `error`, `started_at`/`finished_at` |
+
 ## Recruitment / ATS
 
 | Table | Purpose | Key columns |
