@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Team\TeamMemberController;
 use App\Models\User;
 use App\Services\Team\TeamListService;
 use App\Services\Team\TeamMemberProfile;
@@ -15,8 +14,9 @@ use Illuminate\Support\Facades\Auth;
 
 /**
  * Mobile admin API — the Team page (Admin / HR): the day's list with status
- * counts, filter options, one member's profile and attendance. The list and
- * the member page use the same services as the web Team page; marking
+ * counts, filter options, one member's profile with the month's attendance (summary
+ * + one row per day) in a single call. The list and the member page use the same
+ * services as the web Team page; marking
  * attendance is routed straight to the web endpoints (same rules and audit).
  */
 class TeamController extends Controller
@@ -94,24 +94,6 @@ class TeamController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Could not load the employee. Please try again.'], 500);
         }
-    }
-
-    /** ?month=Y-m → the web member page's month summary endpoint. */
-    public function attendanceStats(Request $request, int $id): mixed
-    {
-        return app(TeamMemberController::class)->userAttendanceStats($request, encrypt($id));
-    }
-
-    /** ?start_date&end_date → one calendar event per day (web member page calendar). */
-    public function attendanceCalendar(Request $request, int $id): mixed
-    {
-        return app(TeamMemberController::class)->userAttendanceCalendarData($request, encrypt($id));
-    }
-
-    /** ?start_date&end_date → one table row per day (web member page table). */
-    public function attendanceTable(Request $request, int $id): mixed
-    {
-        return app(TeamMemberController::class)->userAttendanceTableData($request, encrypt($id));
     }
 
     /** One list row as JSON (the web row's fields; photo as a URL). */

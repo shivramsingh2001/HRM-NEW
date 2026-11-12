@@ -159,10 +159,33 @@ class MobileAdminApiTest extends TestCase
         $h = $this->headersFor($this->admin);
         $member = $this->colleague('employee') ?? $this->colleague('manager');
         if ($member) {
-            $this->getJson('/api/admin/team/'.$member->id, $h)->assertOk()
-                ->assertJsonStructure(['data' => ['header', 'personal', 'job', 'address', 'bank', 'documents', 'month_summary', 'direct_reports']]);
-            $this->getJson('/api/admin/team/'.$member->id.'/attendance-stats', $h)->assertOk()->assertJsonPath('status', true);
-            $this->getJson('/api/admin/team/'.$member->id.'/attendance-table', $h)->assertOk()->assertJsonPath('status', true);
+            $res = $this->getJson('/api/admin/team/'.$member->id, $h)->assertOk()
+                ->assertJsonStructure(['data' => ['header', 'personal', 'job', 'address', 'bank', 'documents', 'direct_reports',
+                    'attendance' => ['month', 'month_name', 'date_range', 'summary', 'days']]]);
+
+            // One call = the web page's stats + calendar + table: a row per day of the month
+            // (from the joining day, later days "Upcoming") and the summary up to today.
+            $month = Carbon::today()->format('Y-m');
+            $from = max(Carbon::today()->startOfMonth()->toDateString(), $member->created_at->format('Y-m-d'));
+            $end = Carbon::today()->endOfMonth()->toDateString();
+            $days = $res->json('data.attendance.days');
+            $this->assertSame($month, $res->json('data.attendance.month'));
+            $this->assertCount(Carbon::parse($from)->diffInDays(Carbon::parse($end)) + 1, $days);
+            $this->assertSame($from, $days[0]['date']);
+            $this->assertSame($end, end($days)['date']);
+            $svc = app(\App\Services\Team\TeamMemberAttendance::class);
+            $this->assertEquals($svc->calculateSummary($svc->getAttendanceDataForUser($from, Carbon::today()->toDateString(), $member->id)),
+                $res->json('data.attendance.summary'));
+            foreach ($days as $d) {
+                if ($d['date'] > Carbon::today()->toDateString()) {
+                    $this->assertNull($d['clock_in']);
+                }
+            }
+
+            // A past month: every day of it; the old split endpoints are gone.
+            $prev = Carbon::today()->subMonthNoOverflow()->format('Y-m');
+            $this->getJson('/api/admin/team/'.$member->id.'?month='.$prev, $h)->assertOk()->assertJsonPath('data.attendance.month', $prev);
+            $this->getJson('/api/admin/team/'.$member->id.'/attendance-stats', $h)->assertStatus(404);
         }
 
         $stranger = User::query()->where('tenant_id', '!=', $this->admin->tenant_id)->where('role', 'employee')->first();

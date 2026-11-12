@@ -332,10 +332,8 @@ Route::middleware('tenant')->group(function () {
                 Route::get('/shift', [\App\Http\Controllers\Team\TeamController::class, 'getUserShift']);
                 Route::post('/mark-attendance', [\App\Http\Controllers\Team\TeamController::class, 'markAttendance']);
                 Route::post('/mark-attendance-bulk', [\App\Http\Controllers\Team\BulkAttendanceController::class, 'store']);
+                // One member: profile + the month's attendance (summary + one row per day), ?month=YYYY-MM.
                 Route::get('/{id}', [\App\Http\Controllers\Api\Admin\TeamController::class, 'show'])->whereNumber('id');
-                Route::get('/{id}/attendance-stats', [\App\Http\Controllers\Api\Admin\TeamController::class, 'attendanceStats'])->whereNumber('id');
-                Route::get('/{id}/attendance-calendar', [\App\Http\Controllers\Api\Admin\TeamController::class, 'attendanceCalendar'])->whereNumber('id');
-                Route::get('/{id}/attendance-table', [\App\Http\Controllers\Api\Admin\TeamController::class, 'attendanceTable'])->whereNumber('id');
             });
 
             // Access per report = its web export route's role / feature / permission (ReportCatalog::denialReason).

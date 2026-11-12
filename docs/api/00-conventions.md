@@ -2,7 +2,7 @@
 
 Source of truth for this documentation set: the actual code in `routes/api.php`, `routes/api_v1.php`, their controllers, services, and middleware, as of 2026-09-28. Nothing here is invented — every endpoint, field, and response shape is read directly from the implementation. If a detail isn't shown in the code, it's called out as "not explicitly documented" rather than guessed.
 
-**Base URL:** `https://vpshrms.shurttech.com`
+**Base URL:** `https://hrms.shurttech.com`
 
 ## Two API surfaces (do not confuse them)
 
@@ -11,7 +11,7 @@ This project exposes **two separate, differently-authenticated JSON APIs**, plus
 | | Legacy / Mobile API | Public API v1 (Tier 2) |
 |---|---|---|
 | Route file | `routes/api.php` | `routes/api_v1.php` |
-| Mount | `https://vpshrms.shurttech.com/api/...` | `https://vpshrms.shurttech.com/api/v1/...` |
+| Mount | `https://hrms.shurttech.com/api/...` | `https://hrms.shurttech.com/api/v1/...` |
 | Consumer | Flutter mobile app | Third-party / server-to-server integrations, the SBXPC biometric bridge |
 | Auth | JWT bearer token (`php-open-source-saver/jwt-auth`), one human user per token | API key pair (`ApiClient` record), no human user |
 | Response envelope | **None** — every action defines its own ad hoc JSON shape | Fixed envelope (`data`/`meta` on success, `error`/`meta` on failure) |

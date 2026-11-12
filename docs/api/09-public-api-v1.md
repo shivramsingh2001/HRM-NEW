@@ -1,6 +1,6 @@
 # Public API v1 (Tier 2)
 
-Source: `routes/api_v1.php`, mounted at `/api/v1` (`bootstrap/app.php`, `Route::middleware('api')->prefix('api/v1')->name('api.v1.')`). Controllers: `app/Http/Controllers/Api/V1/*`. Base URL for every example below: `https://vpshrms.shurttech.com`.
+Source: `routes/api_v1.php`, mounted at `/api/v1` (`bootstrap/app.php`, `Route::middleware('api')->prefix('api/v1')->name('api.v1.')`). Controllers: `app/Http/Controllers/Api/V1/*`. Base URL for every example below: `https://hrms.shurttech.com`.
 
 This surface is **key-authenticated** (an `ApiClient` record — an API integration partner or the biometric bridge — not a logged-in user) and is completely separate from the mobile app's `/api/*` surface documented elsewhere in this folder: different auth mechanism, different response envelope, different error format. It is explicitly **additive-only** — breaking changes go to a future `/api/v2`.
 
@@ -97,7 +97,7 @@ Every endpoint below is scoped to `current_tenant` (the `ApiClient`'s tenant) �
 
 **Sample request:**
 ```bash
-curl https://vpshrms.shurttech.com/api/v1/ping
+curl https://hrms.shurttech.com/api/v1/ping
 ```
 
 **Success response — 200:**
@@ -135,7 +135,7 @@ curl https://vpshrms.shurttech.com/api/v1/ping
 
 **Sample request:**
 ```bash
-curl -G https://vpshrms.shurttech.com/api/v1/attendance \
+curl -G https://hrms.shurttech.com/api/v1/attendance \
   -H "Authorization: Bearer ak_live_123.s3cr3t" \
   -d user_id=42 -d from=2026-09-01 -d to=2026-09-28 -d per_page=50
 ```
@@ -193,7 +193,7 @@ curl -G https://vpshrms.shurttech.com/api/v1/attendance \
 
 **Sample request:**
 ```bash
-curl -G https://vpshrms.shurttech.com/api/v1/attendance/summary \
+curl -G https://hrms.shurttech.com/api/v1/attendance/summary \
   -H "Authorization: Bearer ak_live_123.s3cr3t" \
   -d user_id=42 -d month=2026-09
 ```
@@ -243,7 +243,7 @@ curl -G https://vpshrms.shurttech.com/api/v1/attendance/summary \
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/v1/attendance/mark \
+curl -X POST https://hrms.shurttech.com/api/v1/attendance/mark \
   -H "Authorization: Bearer ak_live_123.s3cr3t" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: mark-42-2026-09-28" \
@@ -308,7 +308,7 @@ curl -X POST https://vpshrms.shurttech.com/api/v1/attendance/mark \
 
 **Sample request:**
 ```bash
-curl -G https://vpshrms.shurttech.com/api/v1/regularizations \
+curl -G https://hrms.shurttech.com/api/v1/regularizations \
   -H "Authorization: Bearer ak_live_123.s3cr3t" \
   -d status=pending -d per_page=25
 ```
@@ -365,7 +365,7 @@ curl -G https://vpshrms.shurttech.com/api/v1/regularizations \
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/v1/regularizations/501/decision \
+curl -X POST https://hrms.shurttech.com/api/v1/regularizations/501/decision \
   -H "Authorization: Bearer ak_live_123.s3cr3t" \
   -H "Content-Type: application/json" \
   -d '{ "decision": "approved", "actor_user_id": 7, "remarks": "Confirmed with employee" }'
@@ -412,7 +412,7 @@ curl -X POST https://vpshrms.shurttech.com/api/v1/regularizations/501/decision \
 
 **Sample request:**
 ```bash
-curl https://vpshrms.shurttech.com/api/v1/analytics/present-now \
+curl https://hrms.shurttech.com/api/v1/analytics/present-now \
   -H "Authorization: Bearer ak_live_123.s3cr3t"
 ```
 
@@ -451,7 +451,7 @@ curl https://vpshrms.shurttech.com/api/v1/analytics/present-now \
 
 **Sample request:**
 ```bash
-curl -G https://vpshrms.shurttech.com/api/v1/analytics/trends \
+curl -G https://hrms.shurttech.com/api/v1/analytics/trends \
   -H "Authorization: Bearer ak_live_123.s3cr3t" \
   -d from=2026-09-01 -d to=2026-09-28
 ```
@@ -501,7 +501,7 @@ curl -G https://vpshrms.shurttech.com/api/v1/analytics/trends \
 
 **Sample request:**
 ```bash
-curl -G https://vpshrms.shurttech.com/api/v1/analytics/overtime-cost \
+curl -G https://hrms.shurttech.com/api/v1/analytics/overtime-cost \
   -H "Authorization: Bearer ak_live_123.s3cr3t" \
   -d month=2026-09
 ```
@@ -548,7 +548,7 @@ curl -G https://vpshrms.shurttech.com/api/v1/analytics/overtime-cost \
 
 **Sample request:**
 ```bash
-curl -G https://vpshrms.shurttech.com/api/v1/analytics/anomalies \
+curl -G https://hrms.shurttech.com/api/v1/analytics/anomalies \
   -H "Authorization: Bearer ak_live_123.s3cr3t" \
   -d status=open
 ```
@@ -612,7 +612,7 @@ The following five endpoints are the ingest/control surface the on-prem **SBXPC 
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/v1/biometric/punches \
+curl -X POST https://hrms.shurttech.com/api/v1/biometric/punches \
   -H "Authorization: Bearer ak_bio_1.s3cr3t" \
   -H "Content-Type: application/json" \
   -d '{
@@ -661,7 +661,7 @@ curl -X POST https://vpshrms.shurttech.com/api/v1/biometric/punches \
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/heartbeat \
+curl -X POST https://hrms.shurttech.com/api/v1/biometric/devices/SBX-0042/heartbeat \
   -H "Authorization: Bearer ak_bio_1.s3cr3t" -H "Content-Type: application/json" \
   -d '{ "model": "SBXPC-500" }'
 ```
@@ -701,7 +701,7 @@ curl -X POST https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/hea
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/enrollments \
+curl -X POST https://hrms.shurttech.com/api/v1/biometric/devices/SBX-0042/enrollments \
   -H "Authorization: Bearer ak_bio_1.s3cr3t" -H "Content-Type: application/json" \
   -d '{ "enrollments": [ { "enroll_no": "1007", "name": "Asha Rao" } ] }'
 ```
@@ -735,7 +735,7 @@ curl -X POST https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/enr
 
 **Sample request:**
 ```bash
-curl https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/enrollments \
+curl https://hrms.shurttech.com/api/v1/biometric/devices/SBX-0042/enrollments \
   -H "Authorization: Bearer ak_bio_1.s3cr3t"
 ```
 
@@ -772,7 +772,7 @@ curl https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/enrollments
 
 **Sample request:**
 ```bash
-curl https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/roster \
+curl https://hrms.shurttech.com/api/v1/biometric/devices/SBX-0042/roster \
   -H "Authorization: Bearer ak_bio_1.s3cr3t"
 ```
 
@@ -821,7 +821,7 @@ curl https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/roster \
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/v1/biometric/devices/SBX-0042/roster/ack \
+curl -X POST https://hrms.shurttech.com/api/v1/biometric/devices/SBX-0042/roster/ack \
   -H "Authorization: Bearer ak_bio_1.s3cr3t" -H "Content-Type: application/json" \
   -d '{ "applied": [ { "id": 1007, "action": "upsert", "ok": true } ] }'
 ```

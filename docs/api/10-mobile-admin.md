@@ -88,18 +88,35 @@ with 2+ shifts: `{name, in, out, is_extra, state: present|checked_in|not_started
 ### `GET /api/admin/team/filters`
 `{branches[], departments[], designations[], leave_types[], statuses[]}` — each `{id, name}`.
 
-### `GET /api/admin/team/{id}` (`?month=YYYY-MM`)
-One member (same company + your team scope, else 404 / 403):
+### `GET /api/admin/team/{id}` (`?month=YYYY-MM`, default this month)
+One member's whole screen in **one call** (same company + your team scope, else 404 / 403) — what the
+web member page loads in four calls (profile, month stats, calendar, table):
 `header` (name, role, image, designation, department, employee_id, email, contact, reporting_head,
 joining_date, `today` status, `shifts`), `personal` (… Aadhaar / PAN masked to the last 4),
-`job`, `address`, `bank` (account number masked), `documents` (links), `month`, `month_summary`,
-`direct_reports` (a manager's reportees with today's status).
+`job`, `address`, `bank` (account number masked), `documents` (links),
+`direct_reports` (a manager's reportees with today's status) and `attendance`:
 
-### Member attendance (the web member page's own JSON endpoints)
-- `GET /api/admin/team/{id}/attendance-stats?month=YYYY-MM` → `{status, summary, month_name, date_range}`
-- `GET /api/admin/team/{id}/attendance-calendar?start_date&end_date` → one calendar event per day
-- `GET /api/admin/team/{id}/attendance-table?start_date&end_date` → `{status, data: [{date, day_name, clock_in, clock_out, total_hours, day_status, badge_class}], total, date_range}`
+```json
+"attendance": {
+  "month": "2026-11", "month_name": "November 2026",
+  "date_range": {"start": "2026-11-01", "end": "2026-11-30"},
+  "summary": {"present": 8, "absent": 1, "on_leave": 0, "holiday": 0, "week_off": 2, "checked_in_only": 0, "halfday": 0, "work_days": 9, "total_days": 12},
+  "days": [{"date": "2026-11-03", "day_name": "Tuesday", "status": "Present",
+            "clock_in": "2026-11-03 09:02:11", "clock_out": "2026-11-03 18:05:40",
+            "clock_in_time": "09:02 AM", "clock_out_time": "06:05 PM", "total_hours": "9.05",
+            "day_value": 1, "day_label": "Present", "leave_type": null, "holiday_name": null,
+            "task_count": 2, "shifts": [], "details": {…}}, …]}
+```
 
+- `days` = one row per day of the month, oldest first, from the joining day (`date_range`); days after
+  today are `Upcoming` (or a planned Holiday / leave / Week Off) with no times. Use it for both the
+  calendar and the table view.
+- `summary` counts the days up to today (same numbers as the web stats cards).
+- `status` values: `Present`, `halfday`, `Absent`, `Checked In Only`, `Full Day Leave`,
+  `First Half Leave`, `Second Half Leave`, `Holiday`, `Week Off`, `Upcoming`.
+- `clock_out_time` shows `(+1 day)` for an overnight shift. `details` = the web calendar hover card
+  (shift, late / early / OT, location, regularized / marked-by), `null` when nothing to show.
+- A wrong or future `month` falls back to this month.
 ### Mark attendance (same endpoints, validation, rules and audit as the web Team page)
 - `GET /api/admin/team/shift?user_id=&date=` → the employee's shift that day + `shifts` (pick one when 2+).
 - `POST /api/admin/team/mark-attendance` — `user_id, date, end_date?, status (present|absent|half_day|on_leave|first_half_leave|second_half_leave …), clock_in?, clock_out? (HH:MM), clock_out_only?, clock_out_next_day?, leave_type_id? (leave statuses), remarks?, user_shift_id?` → `{success, message, data, is_update, leave_created, shift_details}`.

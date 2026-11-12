@@ -91,9 +91,6 @@ class TeamMemberProfile
 
         $today = Carbon::today()->toDateString();
         $start = Carbon::createFromFormat('Y-m-d', $month.'-01')->startOfMonth();
-        $from = max($start->toDateString(), $target->created_at->format('Y-m-d'));
-        $to = min($start->copy()->endOfMonth()->toDateString(), $today);
-        $days = $from <= $to ? $this->attendance->getAttendanceDataForUser($from, $to, $target->id) : [];
 
         $todayRows = $this->attendance->getAttendanceDataForUser($today, $today, $target->id);
         $todayRow = collect($todayRows)->first();
@@ -125,8 +122,7 @@ class TeamMemberProfile
                 'ifsc' => $info->ifsc, 'account_number' => $mask($info->account_number),
             ],
             'documents' => $this->documents($info),
-            'month' => $start->format('Y-m'),
-            'month_summary' => $this->attendance->calculateSummary($days),
+            'attendance' => $this->monthAttendance($target, $start, $today),
             'direct_reports' => $info->role === 'manager'
                 ? $this->getTeamMembers($viewer, $today, (int) $info->id)->map(fn ($m) => [
                     'id' => $m->id, 'employee_id' => $m->employee_id, 'name' => $m->name,
@@ -134,6 +130,45 @@ class TeamMemberProfile
                     'profile_image_url' => $m->profile_image ? file_url($m->profile_image, 'profile_photo') : null,
                 ])->values()->all()
                 : [],
+        ];
+    }
+
+    /**
+     * One month of a member's attendance for the mobile admin member screen — what
+     * the web member page loads in three calls (stats, calendar, table), in one:
+     * the summary (days up to today, as the web stats card) and one row per day of
+     * the month from the joining day (later days "Upcoming", as the web calendar).
+     */
+    private function monthAttendance(User $target, Carbon $start, string $today): array
+    {
+        $from = max($start->toDateString(), $target->created_at->format('Y-m-d'));
+        $to = $start->copy()->endOfMonth()->toDateString();
+        $records = $from <= $to ? $this->attendance->getAttendanceDataForUser($from, $to, $target->id) : collect();
+        $records = $this->attendance->addTaskCountsToAttendance(collect($records)->sortBy('date')->values(), $target->id);
+        $upToToday = $records->filter(fn ($r) => $r->date <= $today)->values();
+
+        return [
+            'month' => $start->format('Y-m'),
+            'month_name' => $start->format('F Y'),
+            'date_range' => ['start' => $from <= $to ? $from : null, 'end' => $from <= $to ? $to : null],
+            'summary' => $this->attendance->calculateSummary($upToToday),
+            'days' => $records->map(fn ($r) => [
+                'date' => $r->date,
+                'day_name' => $r->day_name,
+                'status' => $r->day_status,
+                'clock_in' => $r->clock_in ? (string) $r->clock_in : null,
+                'clock_out' => $r->clock_out ? (string) $r->clock_out : null,
+                'clock_in_time' => $r->clock_in ? Carbon::parse($r->clock_in)->format('h:i A') : null,
+                'clock_out_time' => $r->clock_out ? clock_out_time($r->clock_out, $r->date) : null, // "07:10 AM (+1 day)" for overnight
+                'total_hours' => $r->total_hours,
+                'day_value' => $r->day_value,
+                'day_label' => $r->day_label,
+                'leave_type' => $r->leave_type,
+                'holiday_name' => $r->holiday_name,
+                'task_count' => (int) ($r->task_count ?? 0),
+                'shifts' => $r->shifts,
+                'details' => $r->details ?? null,
+            ])->all(),
         ];
     }
 }

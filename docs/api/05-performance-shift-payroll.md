@@ -1,6 +1,6 @@
 # Performance, Shift & Payroll API
 
-Covers the employee's own KPI/performance dashboard, shift plan calendar, and payslips — part of the mobile/legacy JSON API (`routes/api.php`). Base URL: `https://vpshrms.shurttech.com`.
+Covers the employee's own KPI/performance dashboard, shift plan calendar, and payslips — part of the mobile/legacy JSON API (`routes/api.php`). Base URL: `https://hrms.shurttech.com`.
 
 **Auth for every endpoint in this module:** JWT bearer token + matching `Device-Token` header. Tenant resolved from the JWT user. Every endpoint here is **read-only, self-service** — there are no team/manager performance, shift, or payroll endpoints on the mobile API (those stay web-only).
 
@@ -167,7 +167,7 @@ Controller: `app/Http/Controllers/Api/Shift/ShiftController.php`
 
 **Sample request:**
 ```bash
-curl "https://vpshrms.shurttech.com/api/user/shift/plan?start_date=2026-09-01&end_date=2026-09-30" \
+curl "https://hrms.shurttech.com/api/user/shift/plan?start_date=2026-09-01&end_date=2026-09-30" \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>"
 ```
 
@@ -263,8 +263,8 @@ Controller: `app/Http/Controllers/Api/Payroll/PayrollController.php` — always 
   "data": [
     {
       "id": 501, "month": "August 2026", "month_code": "2026-08", "net_salary": "45230.00", "status": "paid",
-      "is_available": true, "download_url": "https://vpshrms.shurttech.com/payslip/501/download",
-      "view_url": "https://vpshrms.shurttech.com/payslip/501/view", "base64_url": "https://vpshrms.shurttech.com/payslip/501/base64",
+      "is_available": true, "download_url": "https://hrms.shurttech.com/payslip/501/download",
+      "view_url": "https://hrms.shurttech.com/payslip/501/view", "base64_url": "https://hrms.shurttech.com/payslip/501/base64",
       "generated_on": "02 Sep 2026", "payment_date": "05 Sep 2026"
     }
   ]
@@ -288,7 +288,7 @@ Controller: `app/Http/Controllers/Api/Payroll/PayrollController.php` — always 
   "data": {
     "id": 501, "month": "August 2026", "month_code": "2026-08", "status": "paid", "is_available": true,
     "can_download": true, "can_view": true, "message": "Payslip ready", "expected_date": null,
-    "urls": {"view": "https://vpshrms.shurttech.com/payslip/501/view", "download": "https://vpshrms.shurttech.com/payslip/501/download", "base64": "https://vpshrms.shurttech.com/payslip/501/base64"}
+    "urls": {"view": "https://hrms.shurttech.com/payslip/501/view", "download": "https://hrms.shurttech.com/payslip/501/download", "base64": "https://hrms.shurttech.com/payslip/501/base64"}
   }
 }
 ```
@@ -318,7 +318,7 @@ If not yet available: `is_available/can_download/can_view: false`, `message: "Pa
     "deductions": [{"name": "Provident Fund", "amount": 1800}],
     "totals": {"gross_earnings": 45230, "total_deductions": 1800, "net_payable": 43430},
     "status": "paid", "payment_date": "05 Sep 2026",
-    "urls": {"view": "https://vpshrms.shurttech.com/payslip/501/view", "download": "https://vpshrms.shurttech.com/payslip/501/download", "base64": "https://vpshrms.shurttech.com/payslip/501/base64"}
+    "urls": {"view": "https://hrms.shurttech.com/payslip/501/view", "download": "https://hrms.shurttech.com/payslip/501/download", "base64": "https://hrms.shurttech.com/payslip/501/base64"}
   }
 }
 ```

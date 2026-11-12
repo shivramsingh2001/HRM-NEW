@@ -1,6 +1,6 @@
 # AI Assistant Module — Mobile/Legacy API
 
-Base URL: `https://vpshrms.shurttech.com`
+Base URL: `https://hrms.shurttech.com`
 
 All endpoints below live in `routes/api.php`, nested inside `Route::middleware('tenant')` →
 `Route::middleware(['auth:api', 'singleLogin'])` → `Route::prefix('ai')`. They are a **read-only
@@ -59,7 +59,7 @@ A full Word reference with real captured responses lives at `docs/api/HRM-AI-API
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/attendance-locations?start_date=2026-09-01&end_date=2026-09-28' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/attendance-locations?start_date=2026-09-01&end_date=2026-09-28' \
   -H 'Authorization: Bearer <jwt>' \
   -H 'Device-Token: <device-token>' \
   -H 'Accept: application/json'
@@ -122,7 +122,7 @@ If no matching users: `200 {"success": true, "message": "No users found", "data"
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/request?status=PENDING&sort_by=start_date_desc&per_page=20' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/request?status=PENDING&sort_by=start_date_desc&per_page=20' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -138,7 +138,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/request?status=PENDING&sort_by
       "employee_name": "Asha Rao",
       "user_id": 42,
       "user_role": "employee",
-      "employee_profile_image": "https://vpshrms.shurttech.com/uploads/profile/42.jpg",
+      "employee_profile_image": "https://hrms.shurttech.com/uploads/profile/42.jpg",
       "request_type": "Work From Home",
       "request_type_id": 2,
       "start_date": "2026-09-25",
@@ -187,7 +187,7 @@ When `per_page` is supplied, the body additionally includes `"pagination": {"cur
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/attendance?start_date=2026-09-01&end_date=2026-09-28' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/attendance?start_date=2026-09-01&end_date=2026-09-28' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -273,7 +273,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/attendance?start_date=2026-09-
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/my-profile' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/my-profile' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -292,7 +292,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/my-profile' \
     "status": 1,
     "is_current_user": true,
     "reporting_to": "Vikram Shah",
-    "profile_image": "https://vpshrms.shurttech.com/uploads/profile/42.jpg",
+    "profile_image": "https://hrms.shurttech.com/uploads/profile/42.jpg",
     "personal_details": { "father_name": "...", "mother_name": "...", "dob": "1995-04-11", "gender": "female", "blood_group": "O+", "marital_status": "single", "nationality": "Indian", "alternate_phone": null, "personal_email": null, "aadhaar_no": "XXXX-XXXX-XXXX", "pan_no": "ABCDE1234F", "languages": ["English", "Hindi"] },
     "bank_details": { "account_number": "...", "ifsc": "...", "bank_name": "...", "branch_name": "...", "uan_no": "...", "pf_no": "...", "esi_no": "..." },
     "job_details": { "designation": "Software Engineer", "designation_id": 5, "department": "Engineering", "department_id": 2, "joining_date": "2023-01-10", "leaving_date": null, "employment_type": "full_time", "reporting_head": "Vikram Shah", "reporting_head_id": 10, "office_branch": null, "type": "permanent" },
@@ -328,7 +328,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/my-profile' \
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/annuncement' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/annuncement' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -343,7 +343,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/annuncement' \
       "title": "Office closed for Diwali",
       "description": "The office will remain closed on 2026-10-20.",
       "file_url": null,
-      "image_url": "https://vpshrms.shurttech.com/uploads/announcements/banner9.png",
+      "image_url": "https://hrms.shurttech.com/uploads/announcements/banner9.png",
       "created_by": { "id": 3, "name": "HR Team", "employee_id": "EMP0003", "role": "hr" },
       "requires_acknowledgment": true,
       "user_acknowledged": false,
@@ -378,7 +378,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/annuncement' \
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/project' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/project' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -433,7 +433,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/project' \
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/task' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/task' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -494,7 +494,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/task' \
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/expense' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/expense' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -506,12 +506,12 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/expense' \
   "data": [
     {
       "id": 77, "expense_number": "EXP-0077", "employee_id": "EMP0042", "employee_name": "Asha Rao", "user_id": 42, "user_role": "employee",
-      "employee_profile_image": "https://vpshrms.shurttech.com/uploads/profile/42.jpg",
+      "employee_profile_image": "https://hrms.shurttech.com/uploads/profile/42.jpg",
       "expense_type": "Travel", "expense_type_id": 3, "expense_date": "2026-09-15",
       "project_name": "Mobile App Revamp", "project_code": "PRJ-005", "project_id": 5,
       "requirement_type": "settlement", "amount": "2500.00", "description": "Client visit cab fare",
       "status": "pending", "is_billable": 1, "created_at": "2026-09-15T14:00:00.000000Z",
-      "file_url": "https://vpshrms.shurttech.com/uploads/expenses/receipt77.jpg"
+      "file_url": "https://hrms.shurttech.com/uploads/expenses/receipt77.jpg"
     }
   ],
   "summary": {
@@ -551,7 +551,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/expense' \
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/holiday' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/holiday' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -593,7 +593,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/holiday' \
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/shift-plan?start_date=2026-09-01&end_date=2026-09-30' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/shift-plan?start_date=2026-09-01&end_date=2026-09-30' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -653,7 +653,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/shift-plan?start_date=2026-09-
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/attendance-regularization?status=PENDING' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/attendance-regularization?status=PENDING' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -665,10 +665,10 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/attendance-regularization?stat
   "data": [
     {
       "id": 55, "date": "2026-09-22", "request_type": "missed_punch", "in_time": "09:15:00", "out_time": "18:05:00",
-      "reason": "Forgot to clock in", "file": "https://vpshrms.shurttech.com/uploads/regularization/55.jpg", "file_url": "https://vpshrms.shurttech.com/uploads/regularization/55.jpg", "status": "PENDING", "user_id": 42, "approved_by": null, "approved_date": null,
+      "reason": "Forgot to clock in", "file": "https://hrms.shurttech.com/uploads/regularization/55.jpg", "file_url": "https://hrms.shurttech.com/uploads/regularization/55.jpg", "status": "PENDING", "user_id": 42, "approved_by": null, "approved_date": null,
       "created_at": "2026-09-22T19:00:00.000000Z",
       "employee_id": "EMP0042", "user_name": "Asha Rao", "user_email": "asha.rao@example.com", "user_role": "employee",
-      "designation": "Software Engineer", "profile_image": "https://vpshrms.shurttech.com/uploads/profile/42.jpg",
+      "designation": "Software Engineer", "profile_image": "https://hrms.shurttech.com/uploads/profile/42.jpg",
       "approved_by_name": null, "approved_by_employee_id": null
     }
   ]
@@ -699,7 +699,7 @@ curl -X GET 'https://vpshrms.shurttech.com/api/ai/attendance-regularization?stat
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/team' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/team' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 
@@ -748,7 +748,7 @@ All filters apply only when the value is non-empty (`?status=` is the same as no
 
 **Sample request:**
 ```bash
-curl -X GET 'https://vpshrms.shurttech.com/api/ai/leave?year=2026&status=approved' \
+curl -X GET 'https://hrms.shurttech.com/api/ai/leave?year=2026&status=approved' \
   -H 'Authorization: Bearer <jwt>' -H 'Device-Token: <device-token>'
 ```
 

@@ -1,6 +1,6 @@
 # Expense & Loan API
 
-Covers employee expense claims (advance/settlement/reimbursement), expense approval, payment history, and employee loans — part of the mobile/legacy JSON API (`routes/api.php`). Base URL: `https://vpshrms.shurttech.com`.
+Covers employee expense claims (advance/settlement/reimbursement), expense approval, payment history, and employee loans — part of the mobile/legacy JSON API (`routes/api.php`). Base URL: `https://hrms.shurttech.com`.
 
 **Auth for every endpoint in this module:** JWT bearer token + matching `Device-Token` header. Tenant resolved from the JWT user.
 
@@ -34,7 +34,7 @@ Controller: `app/Http/Controllers/Api/Expense/ExpenseController.php`
         "id": 210, "expense_number": "EXP-000210", "expense_type": "Travel", "project_name": "Client Onboarding",
         "requirement_type": "reimbursement", "date": "2026-09-20", "amount": "1250.00", "status": "pending",
         "description": "Cab fare", "possible_duplicate_of": null, "withdrawn_at": null,
-        "file_url": "https://vpshrms.shurttech.com/expense/file/210?tenant=...&expires=...&signature=...",
+        "file_url": "https://hrms.shurttech.com/expense/file/210?tenant=...&expires=...&signature=...",
         "receipts": [{"...": "..."}], "possible_duplicate": false
       }
     ],
@@ -114,7 +114,7 @@ Limited to the most recent 200 rows. Voided payments (`status: "voided"`) are in
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/create-expense \
+curl -X POST https://hrms.shurttech.com/api/create-expense \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>" \
   -F "expense_type=1" -F "requirement_type=reimbursement" -F "amount=1250.00" -F "date=2026-09-20" \
   -F "description=Cab fare" -F "file=@receipt.jpg"
@@ -142,7 +142,7 @@ curl -X POST https://vpshrms.shurttech.com/api/create-expense \
 {
   "success": true, "message": "Data fetched successfully!",
   "data": {
-    "expenses": [{"id": 210, "expense_number": "EXP-000210", "employee_id": "EMP-101", "employee_name": "Asha Rao", "employee_email": "asha@example.com", "employee_profile_image": null, "expense_type": "Travel", "date": "2026-09-20", "project_name": "Client Onboarding", "project_code": "PRJ-01", "requirement_type": "reimbursement", "amount": "1250.00", "description": "Cab fare", "status": "pending", "created_at": "...", "file_url": "https://vpshrms.shurttech.com/expense/file/210?..."}],
+    "expenses": [{"id": 210, "expense_number": "EXP-000210", "employee_id": "EMP-101", "employee_name": "Asha Rao", "employee_email": "asha@example.com", "employee_profile_image": null, "expense_type": "Travel", "date": "2026-09-20", "project_name": "Client Onboarding", "project_code": "PRJ-01", "requirement_type": "reimbursement", "amount": "1250.00", "description": "Cab fare", "status": "pending", "created_at": "...", "file_url": "https://hrms.shurttech.com/expense/file/210?..."}],
     "team_members": [{"id": 101, "name": "Asha Rao", "email": "asha@example.com", "employee_id": "EMP-101"}],
     "team_balances": [{"user_id": 101, "user_name": "Asha Rao", "current_balance": 2500, "total_advance_taken": 5000, "total_settlement_done": 2000}],
     "statistics": {"...": "ExpenseStatsService::apiSummary()"}

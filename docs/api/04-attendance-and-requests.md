@@ -1,6 +1,6 @@
 # Attendance, Travel Requests & Overtime API
 
-Covers GPS-based clock-in/out, attendance history, live location tracking, attendance regularization, travel/WFH requests, and overtime requests — all part of the mobile/legacy JSON API (`routes/api.php`), consumed by the Flutter app. Base URL: `https://vpshrms.shurttech.com`.
+Covers GPS-based clock-in/out, attendance history, live location tracking, attendance regularization, travel/WFH requests, and overtime requests — all part of the mobile/legacy JSON API (`routes/api.php`), consumed by the Flutter app. Base URL: `https://hrms.shurttech.com`.
 
 **Auth for every endpoint in this module:** JWT bearer token AND a matching `Device-Token` header (single-device-login enforcement). Tenant is resolved solely from the JWT user's `tenant_id` — never from a client-supplied header on these routes.
 
@@ -39,7 +39,7 @@ Controller: `app/Http/Controllers/Api/Attendance/AttendanceController.php`
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-in \
+curl -X POST https://hrms.shurttech.com/api/user/attendance/clock-in \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>" \
   -H "Content-Type: application/json" \
@@ -104,7 +104,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-in \
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-out \
+curl -X POST https://hrms.shurttech.com/api/user/attendance/clock-out \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>" -H "Content-Type: application/json" \
   -d '{"lat":28.6139,"long":77.2090,"address":"Connaught Place, New Delhi","accuracy":12.5}'
 ```
@@ -155,7 +155,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/clock-out \
 
 **Sample request:**
 ```bash
-curl "https://vpshrms.shurttech.com/api/user/attendance/history?start_date=2026-09-01&end_date=2026-09-30" \
+curl "https://hrms.shurttech.com/api/user/attendance/history?start_date=2026-09-01&end_date=2026-09-30" \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>"
 ```
 
@@ -212,7 +212,7 @@ curl "https://vpshrms.shurttech.com/api/user/attendance/history?start_date=2026-
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track \
+curl -X POST https://hrms.shurttech.com/api/user/attendance/track \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>" -H "Content-Type: application/json" \
   -d '{"lat":28.6140,"long":77.2091,"address":"Near CP Metro","battery_per":75}'
 ```
@@ -254,7 +254,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track \
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track-batch \
+curl -X POST https://hrms.shurttech.com/api/user/attendance/track-batch \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>" -H "Content-Type: application/json" \
   -d '{"points":[{"lat":28.61,"long":77.20,"track_time":"2026-09-28T10:00:00Z"},{"point_id":"uuid-2","lat":28.611,"long":77.201,"track_time":"2026-09-28T10:05:00Z"}]}'
 ```
@@ -304,7 +304,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track-batch \
     "total_hours": "",
     "status": 0,
     "user_name": "Asha Rao",
-    "profile_image": "https://vpshrms.shurttech.com/uploads/profiles/asha.jpg",
+    "profile_image": "https://hrms.shurttech.com/uploads/profiles/asha.jpg",
     "attendance_type": "manual_attendance",
     "user_email": "asha@example.com",
     "designation": "Software Engineer",
@@ -424,7 +424,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/track-batch \
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/user/attendance/regularization \
+curl -X POST https://hrms.shurttech.com/api/user/attendance/regularization \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>" \
   -F "date=2026-09-25" -F "request_type=in_time" -F "in_time=09:30" -F "reason=Forgot to clock in" -F "file=@proof.jpg"
 ```
@@ -509,7 +509,7 @@ curl -X POST https://vpshrms.shurttech.com/api/user/attendance/regularization \
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/manager/attendance/update-regularization-approval \
+curl -X POST https://hrms.shurttech.com/api/manager/attendance/update-regularization-approval \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>" -H "Content-Type: application/json" \
   -d '{"id":55,"status":"approved","remarks":"Confirmed with security logs"}'
 ```
@@ -552,7 +552,7 @@ Controller: `app/Http/Controllers/Api/Attendance/LocationTrackingController.php`
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/location/status \
+curl -X POST https://hrms.shurttech.com/api/location/status \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>" -H "Content-Type: application/json" \
   -d '{"status":"off","reason":"user_disabled_gps","battery_level":54}'
 ```
@@ -626,7 +626,7 @@ Controller: `app/Http/Controllers/Api/Attendance/RequestController.php` (route p
 
 **Sample request:**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/request/store \
+curl -X POST https://hrms.shurttech.com/api/request/store \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: <device-token>" \
   -F "request_type_id=1" -F "start_date=2026-10-01" -F "end_date=2026-10-02" -F "reason=Internet installation"
 ```
@@ -757,7 +757,7 @@ curl -X POST https://vpshrms.shurttech.com/api/request/store \
   "data": {
     "employee": {"id": 101, "name": "Asha Rao", "email": "asha@example.com", "employee_id": "EMP-101", "contact": "+91...", "profile_image": null},
     "request_details": {"id": 12, "request_type_id": 1, "request_type": "Work From Home", "start_date": "2026-10-01", "end_date": "2026-10-02", "duration_days": 2, "reason": "Internet installation", "status": "PENDING", "comments": null, "applied_date": "2026-09-28", "created_at": "2026-09-28 20:00:00", "updated_at": "2026-09-28 20:00:00"},
-    "attachments": [{"file_url": "https://vpshrms.shurttech.com/uploads/requests/attachments/xyz.pdf", "file_type": "application/pdf"}],
+    "attachments": [{"file_url": "https://hrms.shurttech.com/uploads/requests/attachments/xyz.pdf", "file_type": "application/pdf"}],
     "history": [{"id": 1, "action": "CREATED", "comments": null, "action_by": {"id": 101, "name": "Asha Rao", "employee_id": "EMP-101"}, "old_values": null, "new_values": {"...":"..."}, "created_at": "2026-09-28 20:00:00"}]
   }
 }

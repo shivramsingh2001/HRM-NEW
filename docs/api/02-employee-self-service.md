@@ -2,7 +2,7 @@
 
 This module covers the mobile/legacy JSON API's core self-service surface: viewing company holidays, viewing/updating the authenticated employee's own profile, browsing the company directory and team hierarchy, applying for and reviewing leave (including manager/HR approval), and viewing/acknowledging announcements. All endpoints live in `routes/api.php` under the `tenant` middleware group and require an authenticated JWT session bound to a single device.
 
-All sample URLs use the base `https://vpshrms.shurttech.com`.
+All sample URLs use the base `https://hrms.shurttech.com`.
 
 ## Common conventions (apply to every endpoint below unless noted)
 
@@ -44,7 +44,7 @@ All sample URLs use the base `https://vpshrms.shurttech.com`.
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/holiday" \
+curl -X GET "https://hrms.shurttech.com/api/holiday" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>" \
   -H "Accept: application/json"
@@ -99,7 +99,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/holiday" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/user/celebrations/today" \
+curl -X GET "https://hrms.shurttech.com/api/user/celebrations/today" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>" \
   -H "Accept: application/json"
@@ -166,7 +166,7 @@ With nobody to celebrate: `200` with `"message": "No birthdays or work anniversa
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/fetch-all-user" \
+curl -X GET "https://hrms.shurttech.com/api/fetch-all-user" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -184,7 +184,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/fetch-all-user" \
       "employee_id": "EMP0012",
       "email": "jane.doe@example.com",
       "contact": "9876543210",
-      "profile_image": "https://vpshrms.shurttech.com/uploads/users/....jpg",
+      "profile_image": "https://hrms.shurttech.com/uploads/users/....jpg",
       "designation": "Software Engineer",
       "department": "Engineering",
       "joining_date": "2024-05-01",
@@ -234,7 +234,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/fetch-all-user" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/user/profile" \
+curl -X GET "https://hrms.shurttech.com/api/user/profile" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -258,7 +258,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/user/profile" \
       "mother_name": null,
       "dob": "1995-03-10",
       "gender": "female",
-      "profile_image": "https://vpshrms.shurttech.com/uploads/users/....jpg",
+      "profile_image": "https://hrms.shurttech.com/uploads/users/....jpg",
       "blood_group": "O+",
       "marital_status": "single",
       "nationality": "Indian",
@@ -297,7 +297,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/user/profile" \
     },
     "documents": {
       "experience_letter": null,
-      "tenth_marksheet": "https://vpshrms.shurttech.com/uploads/....pdf",
+      "tenth_marksheet": "https://hrms.shurttech.com/uploads/....pdf",
       "twelfth_marksheet": null,
       "highest_qualification_certificate": null
     },
@@ -307,7 +307,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/user/profile" \
         "document_type": "other",
         "document_type_label": "Other",
         "document_name": "Offer Letter",
-        "file_url": "https://vpshrms.shurttech.com/....pdf"
+        "file_url": "https://hrms.shurttech.com/....pdf"
       }
     ]
   }
@@ -371,7 +371,7 @@ All fields are optional; any field omitted keeps its existing stored value (`$re
 **Sample request:**
 
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/user/profile-update" \
+curl -X POST "https://hrms.shurttech.com/api/user/profile-update" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>" \
   -F "alternate_phone=9123456780" \
@@ -429,7 +429,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/user/profile-update" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/get-country" \
+curl -X GET "https://hrms.shurttech.com/api/get-country" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -488,7 +488,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/get-country" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/get-states?country_code=IN" \
+curl -X GET "https://hrms.shurttech.com/api/get-states?country_code=IN" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -548,7 +548,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/get-states?country_code=IN" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/get-cities?state_code=KA" \
+curl -X GET "https://hrms.shurttech.com/api/get-cities?state_code=KA" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -612,7 +612,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/get-cities?state_code=KA" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/user/location/tracks?date=2026-09-27&user_id=12" \
+curl -X GET "https://hrms.shurttech.com/api/user/location/tracks?date=2026-09-27&user_id=12" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -707,7 +707,7 @@ The `tasks` block is independent of attendance/tracks and is computed via a raw 
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/user/team-view" \
+curl -X GET "https://hrms.shurttech.com/api/user/team-view" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -728,7 +728,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/user/team-view" \
         "role": "employee",
         "designation": "Software Engineer",
         "department": "Engineering",
-        "profile_image": "https://vpshrms.shurttech.com/uploads/users/....jpg",
+        "profile_image": "https://hrms.shurttech.com/uploads/users/....jpg",
         "punch_in": "2026-09-27 09:05:00",
         "punch_out": null,
         "clock_in_lat": "12.9716",
@@ -797,7 +797,7 @@ Note: this endpoint's top-level success key is **`status`**, not `success` — d
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/user/team-profile/12" \
+curl -X GET "https://hrms.shurttech.com/api/user/team-profile/12" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -890,7 +890,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/user/team-profile/12" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/leave-type" \
+curl -X GET "https://hrms.shurttech.com/api/leave-type" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -958,7 +958,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/leave-type" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/view-leave" \
+curl -X GET "https://hrms.shurttech.com/api/view-leave" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -1043,7 +1043,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/view-leave" \
 **Sample request:**
 
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/apply-leave" \
+curl -X POST "https://hrms.shurttech.com/api/apply-leave" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>" \
   -F "leave_type=1" \
@@ -1112,7 +1112,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/apply-leave" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/view-team-leave" \
+curl -X GET "https://hrms.shurttech.com/api/view-team-leave" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -1191,7 +1191,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/view-team-leave" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/update-team-leave-status/101?status=approved&remarks=Approved%2C%20enjoy%20your%20leave" \
+curl -X GET "https://hrms.shurttech.com/api/update-team-leave-status/101?status=approved&remarks=Approved%2C%20enjoy%20your%20leave" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -1264,7 +1264,7 @@ Or, when the tenant has a multi-level `ApprovalService` workflow configured for 
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/view-announcement" \
+curl -X GET "https://hrms.shurttech.com/api/view-announcement" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -1285,7 +1285,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/view-announcement" \
       "acknowledged_at": null,
       "is_acknowledged": false,
       "file_url": null,
-      "image_url": "https://vpshrms.shurttech.com/uploads/announcement/image/....jpg"
+      "image_url": "https://hrms.shurttech.com/uploads/announcement/image/....jpg"
     }
   ]
 }
@@ -1341,7 +1341,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/view-announcement" \
 **Sample request:**
 
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/create-announcement" \
+curl -X POST "https://hrms.shurttech.com/api/create-announcement" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>" \
   -F "title=Office closed Oct 2" \
@@ -1399,7 +1399,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/create-announcement" \
 **Sample request:**
 
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/all-announcement" \
+curl -X GET "https://hrms.shurttech.com/api/all-announcement" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```
@@ -1420,7 +1420,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/all-announcement" \
       "acknowledged_at": "2026-09-20T10:15:00.000000Z",
       "is_acknowledged": true,
       "file_url": null,
-      "image_url": "https://vpshrms.shurttech.com/uploads/announcement/image/....jpg"
+      "image_url": "https://hrms.shurttech.com/uploads/announcement/image/....jpg"
     }
   ]
 }
@@ -1468,7 +1468,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/all-announcement" \
 **Sample request:**
 
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/acknowledge-announcement/8" \
+curl -X POST "https://hrms.shurttech.com/api/acknowledge-announcement/8" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device-token>"
 ```

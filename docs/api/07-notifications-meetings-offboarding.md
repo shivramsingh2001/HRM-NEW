@@ -2,7 +2,7 @@
 
 This module covers three self-contained legacy/mobile JSON API surfaces used by the Flutter app: **Notifications** (the generic in-app notification inbox backing `notifications` — read/unread state, delete), **Meetings / Minutes of Meeting (MoM)** (meeting scheduling, lifecycle, attendance RSVP, and the MoM-writer worklist), and **Offboarding** (employee self-service resignation submission, notice-period lookup, status timeline, and cancellation). All routes live in `routes/api.php` under the `tenant` middleware group, require a valid JWT bearer token plus a matching `Device-Token` header, and use **no fixed response envelope** — every action returns whatever shape its own controller code builds (usually `{success, message, data?}` but not guaranteed across all of them, e.g. `unread-count` uses top-level `unread_count`).
 
-Base URL for every sample below: `https://vpshrms.shurttech.com`
+Base URL for every sample below: `https://hrms.shurttech.com`
 
 ---
 
@@ -50,7 +50,7 @@ Controller: `App\Http\Controllers\Api\Notification\NotificationController`. All 
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/notifications/?status=unread&per_page=10" \
+curl -X GET "https://hrms.shurttech.com/api/notifications/?status=unread&per_page=10" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>" \
   -H "Accept: application/json"
@@ -75,11 +75,11 @@ curl -X GET "https://vpshrms.shurttech.com/api/notifications/?status=unread&per_
     "unread_count": 3,
     "total_count": 42,
     "current_page": 1,
-    "first_page_url": "https://vpshrms.shurttech.com/api/notifications/?page=1",
+    "first_page_url": "https://hrms.shurttech.com/api/notifications/?page=1",
     "last_page": 5,
     "per_page": 10,
     "prev_page_url": null,
-    "next_page_url": "https://vpshrms.shurttech.com/api/notifications/?page=2",
+    "next_page_url": "https://hrms.shurttech.com/api/notifications/?page=2",
     "total": 42
   }
 }
@@ -109,7 +109,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/notifications/?status=unread&per_
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/notifications/unread-count" \
+curl -X GET "https://hrms.shurttech.com/api/notifications/unread-count" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -151,7 +151,7 @@ Note: this action has no try/catch — an unexpected internal error would surfac
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/notifications/read/9c1b2e3a-1111-2222-3333-444455556666" \
+curl -X GET "https://hrms.shurttech.com/api/notifications/read/9c1b2e3a-1111-2222-3333-444455556666" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -185,7 +185,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/notifications/read/9c1b2e3a-1111-
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/notifications/read-all" \
+curl -X GET "https://hrms.shurttech.com/api/notifications/read-all" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -225,7 +225,7 @@ No try/catch in this action — an unexpected error surfaces as Laravel's defaul
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/notifications/destroy/9c1b2e3a-1111-2222-3333-444455556666" \
+curl -X GET "https://hrms.shurttech.com/api/notifications/destroy/9c1b2e3a-1111-2222-3333-444455556666" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -259,7 +259,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/notifications/destroy/9c1b2e3a-11
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/notifications/destroy-all" \
+curl -X GET "https://hrms.shurttech.com/api/notifications/destroy-all" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -311,7 +311,7 @@ Meeting lifecycle: `scheduled` → `completed` **or** `scheduled` → `cancelled
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/meetings/?status=scheduled&my_meetings=1&sort_by=date_asc" \
+curl -X GET "https://hrms.shurttech.com/api/meetings/?status=scheduled&my_meetings=1&sort_by=date_asc" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -355,7 +355,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/meetings/?status=scheduled&my_mee
   ],
   "pagination": {
     "current_page": 1,
-    "next_page_url": "https://vpshrms.shurttech.com/api/meetings/?page=2",
+    "next_page_url": "https://hrms.shurttech.com/api/meetings/?page=2",
     "prev_page_url": null,
     "last_page": 3,
     "per_page": 15,
@@ -393,7 +393,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/meetings/?status=scheduled&my_mee
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/meetings/detail/12" \
+curl -X GET "https://hrms.shurttech.com/api/meetings/detail/12" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -483,7 +483,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/meetings/detail/12" \
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/meetings/store" \
+curl -X POST "https://hrms.shurttech.com/api/meetings/store" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>" \
   -H "Content-Type: application/json" \
@@ -550,7 +550,7 @@ Note: the response does **not** include the created meeting's `id`/`meeting_id` 
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/meetings/update/12" \
+curl -X POST "https://hrms.shurttech.com/api/meetings/update/12" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>" \
   -H "Content-Type: application/json" \
@@ -596,7 +596,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/meetings/update/12" \
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/meetings/cancel/12" \
+curl -X POST "https://hrms.shurttech.com/api/meetings/cancel/12" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>" \
   -H "Content-Type: application/json" \
@@ -637,7 +637,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/meetings/cancel/12" \
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/meetings/complete/12" \
+curl -X POST "https://hrms.shurttech.com/api/meetings/complete/12" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -683,7 +683,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/meetings/complete/12" \
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/meetings/attendance/12" \
+curl -X POST "https://hrms.shurttech.com/api/meetings/attendance/12" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>" \
   -H "Content-Type: application/json" \
@@ -730,7 +730,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/meetings/attendance/12" \
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/meetings/mom-writer/meetings?status=scheduled" \
+curl -X GET "https://hrms.shurttech.com/api/meetings/mom-writer/meetings?status=scheduled" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -786,7 +786,7 @@ Controller: `App\Http\Controllers\Api\Offboarding\offboardingController` (file h
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/offboarding/noticePeriode" \
+curl -X GET "https://hrms.shurttech.com/api/offboarding/noticePeriode" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -825,7 +825,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/offboarding/noticePeriode" \
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/offboarding/my-requests" \
+curl -X GET "https://hrms.shurttech.com/api/offboarding/my-requests" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -888,7 +888,7 @@ curl -X GET "https://vpshrms.shurttech.com/api/offboarding/my-requests" \
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X GET "https://vpshrms.shurttech.com/api/offboarding/show" \
+curl -X GET "https://hrms.shurttech.com/api/offboarding/show" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>"
 ```
@@ -951,7 +951,7 @@ Note: `reason` is **not** a client-supplied field — the controller always hard
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/offboarding/store" \
+curl -X POST "https://hrms.shurttech.com/api/offboarding/store" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>" \
   -H "Content-Type: application/json" \
@@ -1005,7 +1005,7 @@ curl -X POST "https://vpshrms.shurttech.com/api/offboarding/store" \
 **File uploads:** None
 **Sample request:**
 ```bash
-curl -X POST "https://vpshrms.shurttech.com/api/offboarding/cancel/7" \
+curl -X POST "https://hrms.shurttech.com/api/offboarding/cancel/7" \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: <device_token>" \
   -H "Content-Type: application/json" \

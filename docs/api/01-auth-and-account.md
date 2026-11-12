@@ -2,7 +2,7 @@
 
 Covers the mobile/legacy JSON API's authentication and account-lifecycle endpoints (`routes/api.php`, `App\Http\Controllers\Api\Auth\AuthController` and `App\Http\Controllers\Api\FCM\FCMController`). This surface has **no fixed response envelope** — every action returns its own ad hoc JSON shape, almost always `{"success": bool, "message": string, ...}`, and (with the sole exception of validation-via-`abort`/middleware paths) uses HTTP `200` even for business failures such as "invalid password" or "invalid OTP" — this is a deliberate, documented convention for the Flutter client, not a bug. Login/OTP/reset actions are wrapped by `TenantMiddleware` (`tenant` alias); everything except login/forgot-password/reset-password/send-otp/login-otp additionally requires `auth:api` (JWT) + `singleLogin` (Device-Token match).
 
-All URLs below are relative to base URL `https://vpshrms.shurttech.com`.
+All URLs below are relative to base URL `https://hrms.shurttech.com`.
 
 ---
 
@@ -67,7 +67,7 @@ All URLs below are relative to base URL `https://vpshrms.shurttech.com`.
 
 **Sample request**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/login \
+curl -X POST https://hrms.shurttech.com/api/login \
   -H "X-Tenant: acme" \
   -H "Content-Type: application/json" \
   -d '{
@@ -144,7 +144,7 @@ curl -X POST https://vpshrms.shurttech.com/api/login \
 
 **Sample request**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/forgot-password \
+curl -X POST https://hrms.shurttech.com/api/forgot-password \
   -H "X-Tenant: acme" -H "Content-Type: application/json" \
   -d '{"email": "jane@acme.com"}'
 ```
@@ -191,7 +191,7 @@ This exact same body is returned whether or not the email exists — deliberate,
 
 **Sample request**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/reset-password \
+curl -X POST https://hrms.shurttech.com/api/reset-password \
   -H "X-Tenant: acme" -H "Content-Type: application/json" \
   -d '{
     "email": "jane@acme.com",
@@ -241,7 +241,7 @@ curl -X POST https://vpshrms.shurttech.com/api/reset-password \
 
 **Sample request**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/send-otp \
+curl -X POST https://hrms.shurttech.com/api/send-otp \
   -H "X-Tenant: acme" -H "Content-Type: application/json" \
   -d '{"mobile_no": "9876543210"}'
 ```
@@ -289,7 +289,7 @@ curl -X POST https://vpshrms.shurttech.com/api/send-otp \
 
 **Sample request**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/login-otp \
+curl -X POST https://hrms.shurttech.com/api/login-otp \
   -H "X-Tenant: acme" -H "Content-Type: application/json" \
   -d '{"mobile_no": "9876543210", "otp": "482913", "fcm_token": "fcm-token-abc", "platform": "android"}'
 ```
@@ -348,7 +348,7 @@ curl -X POST https://vpshrms.shurttech.com/api/login-otp \
 
 **Sample request**
 ```bash
-curl -X GET https://vpshrms.shurttech.com/api/verify-token \
+curl -X GET https://hrms.shurttech.com/api/verify-token \
   -H "Authorization: Bearer <jwt>" \
   -H "Device-Token: a1B2c3..."
 ```
@@ -385,7 +385,7 @@ curl -X GET https://vpshrms.shurttech.com/api/verify-token \
 
 **Sample request**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/logout \
+curl -X POST https://hrms.shurttech.com/api/logout \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: a1B2c3..." \
   -H "Content-Type: application/json" \
   -d '{"fcm_token": "fcm-device-token-abc"}'
@@ -420,7 +420,7 @@ curl -X POST https://vpshrms.shurttech.com/api/logout \
 
 **Sample request**
 ```bash
-curl -X GET https://vpshrms.shurttech.com/api/delete \
+curl -X GET https://hrms.shurttech.com/api/delete \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: a1B2c3..."
 ```
 
@@ -462,7 +462,7 @@ curl -X GET https://vpshrms.shurttech.com/api/delete \
 
 **Sample request**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/fcm/token \
+curl -X POST https://hrms.shurttech.com/api/fcm/token \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: a1B2c3..." -H "Content-Type: application/json" \
   -d '{"fcm_token": "fcm-device-token-abc", "device_id": "android-uuid-123", "platform": "android"}'
 ```
@@ -502,7 +502,7 @@ curl -X POST https://vpshrms.shurttech.com/api/fcm/token \
 
 **Sample request**
 ```bash
-curl -X DELETE https://vpshrms.shurttech.com/api/fcm/token \
+curl -X DELETE https://hrms.shurttech.com/api/fcm/token \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: a1B2c3..." -H "Content-Type: application/json" \
   -d '{"fcm_token": "fcm-device-token-abc"}'
 ```
@@ -533,7 +533,7 @@ curl -X DELETE https://vpshrms.shurttech.com/api/fcm/token \
 
 **Sample request**
 ```bash
-curl -X GET https://vpshrms.shurttech.com/api/user/face-registration \
+curl -X GET https://hrms.shurttech.com/api/user/face-registration \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: a1B2c3..."
 ```
 
@@ -575,7 +575,7 @@ curl -X GET https://vpshrms.shurttech.com/api/user/face-registration \
 
 **Sample request**
 ```bash
-curl -X POST https://vpshrms.shurttech.com/api/change-password \
+curl -X POST https://hrms.shurttech.com/api/change-password \
   -H "Authorization: Bearer <jwt>" -H "Device-Token: a1B2c3..." -H "Content-Type: application/json" \
   -d '{"current_password": "OldSecret1", "new_password": "NewSecret2", "confirm_password": "NewSecret2"}'
 ```

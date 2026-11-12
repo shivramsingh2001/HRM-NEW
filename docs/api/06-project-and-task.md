@@ -1,6 +1,6 @@
 # Project & Task API
 
-Covers project listings and task assignment/tracking (individual, self-assigned, and group tasks) — part of the mobile/legacy JSON API (`routes/api.php`). Base URL: `https://vpshrms.shurttech.com`.
+Covers project listings and task assignment/tracking (individual, self-assigned, and group tasks) — part of the mobile/legacy JSON API (`routes/api.php`). Base URL: `https://hrms.shurttech.com`.
 
 **Auth for every endpoint in this module:** JWT bearer token + matching `Device-Token` header. Tenant resolved from the JWT user.
 
@@ -47,7 +47,7 @@ Controller: `app/Http/Controllers/Api/Project/ProjectController.php`
   "success": true, "message": "Data fetched Successfully",
   "data": {
     "project": {"id": 5, "project_code": "PRJ-01", "name": "Client Onboarding", "start_date": "2026-08-01", "deadline_date": "2026-12-31", "description": "...", "status": "active", "project_head": "Vikram Shah", "member_count": 4},
-    "members": [{"id": 101, "employee_id": "EMP-101", "name": "Asha Rao", "email": "asha@example.com", "is_head": 0, "profile_image": "https://vpshrms.shurttech.com/uploads/users/asha.jpg", "designation": "Software Engineer", "department": "Engineering", "assigned_at": "2026-08-01T09:00:00.000000Z", "status": "active"}]
+    "members": [{"id": 101, "employee_id": "EMP-101", "name": "Asha Rao", "email": "asha@example.com", "is_head": 0, "profile_image": "https://hrms.shurttech.com/uploads/users/asha.jpg", "designation": "Software Engineer", "department": "Engineering", "assigned_at": "2026-08-01T09:00:00.000000Z", "status": "active"}]
   }
 }
 ```
