@@ -42,10 +42,10 @@ All URLs below are relative to base URL `https://vpshrms.shurttech.com`.
 
 ## POST /api/login
 
-**Purpose:** Authenticate an employee/manager with employee ID + password and issue a JWT.
+**Purpose:** Authenticate an employee / manager / HR / admin with employee ID + password and issue a JWT.
 **Auth:** None (pre-auth). Tenant-selectable route.
 **Tenant scope:** Resolved from `X-Tenant` / `X-Tenant-ID` header or `tenant_id` body field (`TenantMiddleware::TENANT_SELECTABLE_ROUTES`). Missing/unresolvable tenant → `400` before the controller runs.
-**Permission/role required:** None. Only `role` in `['employee','manager']` may log in via this endpoint (other roles get a business-rule rejection, see below).
+**Permission/role required:** None. Only `role` in `['employee','manager','hr','admin']` may log in via this endpoint (`hr` / `admin` added 2026-11-11 for the mobile admin app — `docs/api/10-mobile-admin.md`; other roles get a business-rule rejection, see below).
 **Headers**
 
 | Header | Required | Notes |
@@ -257,7 +257,7 @@ curl -X POST https://vpshrms.shurttech.com/api/send-otp \
 |---|---|---|
 | `400` | Missing/invalid tenant | Same as `/api/login` |
 | `200` | Validation failure (not 10 digits / number not in `users.contact`) | `{"success": false, "message": "<first validator error>"}` |
-| `200` | No employee/manager account with that contact | `{"success": false, "message": "Account not found. !!!"}` |
+| `200` | No employee / manager / HR / admin account with that contact | `{"success": false, "message": "Account not found. !!!"}` |
 | `200` | An OTP was already sent < 30 seconds ago | `{"success": false, "message": "Please wait before requesting another OTP."}` (note: this specific branch returns default `200` with **no explicit status code call**, same net effect) |
 | `200` | Airtel SMS API call failed | `{"success": false, "message": "Failed to Send OTP"}` |
 | `500` | Unhandled server error | `{"success": false, "message": "An error occurred while sending OTP."}` |
@@ -321,7 +321,7 @@ curl -X POST https://vpshrms.shurttech.com/api/login-otp \
 | `200` | Locked out (5 failed OTP checks, cache key `otp:{mobile_no}`) | `{"success": false, "message": "Too many failed login attempts. Please try again in N minute(s)."}` |
 | `200` | OTP doesn't match / already used | `{"success": false, "message": "Invalid OTP."}` |
 | `200` | OTP expired (> 2 minutes old) | `{"success": false, "message": "OTP has expired."}` |
-| `200` | No matching employee/manager account | `{"success": false, "message": "Account not found"}` (no explicit status code — defaults to 200) |
+| `200` | No matching employee / manager / HR / admin account | `{"success": false, "message": "Account not found"}` (no explicit status code — defaults to 200) |
 | `200` | Account inactive | `{"success": false, "message": "Account is inactive."}` |
 | `500` | Server error | `{"success": false, "message": "Login failed due to server error.<exception message appended>"}` |
 | `429` | `throttle:otp-verify` exceeded — 5/min per `mobile_no` | `{"success": false, "message": "Too many attempts. Please wait a moment and try again."}` |

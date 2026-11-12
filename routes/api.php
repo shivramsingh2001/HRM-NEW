@@ -321,6 +321,31 @@ Route::middleware('tenant')->group(function () {
             Route::post('/cancel/{id}', [OffboardingController::class, 'cancel']);
         });
         
+        // Mobile admin app (Admin / HR): dashboard, team, reports — docs/api/10-mobile-admin.md.
+        Route::prefix('admin')->middleware(['mobile.admin', 'role:admin,hr'])->group(function () {
+            Route::get('/dashboard', [\App\Http\Controllers\Api\Admin\DashboardController::class, 'index']);
+
+            Route::prefix('team')->middleware('permission:team,view')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\Admin\TeamController::class, 'index']);
+                Route::get('/filters', [\App\Http\Controllers\Api\Admin\TeamController::class, 'filters']);
+                // Same endpoints as the web Team page (user_id + date; same validation, rules and audit).
+                Route::get('/shift', [\App\Http\Controllers\Team\TeamController::class, 'getUserShift']);
+                Route::post('/mark-attendance', [\App\Http\Controllers\Team\TeamController::class, 'markAttendance']);
+                Route::post('/mark-attendance-bulk', [\App\Http\Controllers\Team\BulkAttendanceController::class, 'store']);
+                Route::get('/{id}', [\App\Http\Controllers\Api\Admin\TeamController::class, 'show'])->whereNumber('id');
+                Route::get('/{id}/attendance-stats', [\App\Http\Controllers\Api\Admin\TeamController::class, 'attendanceStats'])->whereNumber('id');
+                Route::get('/{id}/attendance-calendar', [\App\Http\Controllers\Api\Admin\TeamController::class, 'attendanceCalendar'])->whereNumber('id');
+                Route::get('/{id}/attendance-table', [\App\Http\Controllers\Api\Admin\TeamController::class, 'attendanceTable'])->whereNumber('id');
+            });
+
+            // Access per report = its web export route's role / feature / permission (ReportCatalog::denialReason).
+            Route::prefix('reports')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\Admin\ReportController::class, 'index']);
+                Route::get('/{key}', [\App\Http\Controllers\Api\Admin\ReportController::class, 'show']);
+                Route::get('/{key}/download', [\App\Http\Controllers\Api\Admin\ReportController::class, 'download']);
+            });
+        });
+
         // AI assistant data feeds: each follows its own module key (my-profile / team are core).
         Route::prefix('ai')->group(function () {
             Route::get('/attendance-locations', [AIAttendanceLocationController::class, 'view_ai_all'])->middleware('feature:attendance');

@@ -30,6 +30,7 @@ Module files in this set:
 7. [`07-notifications-meetings-offboarding.md`](07-notifications-meetings-offboarding.md) — notifications, meetings/MOM, offboarding
 8. [`08-ai-assistant-module.md`](08-ai-assistant-module.md) — read-only per-domain data feed for the AI assistant (`/api/ai/*`)
 9. [`09-public-api-v1.md`](09-public-api-v1.md) — Tier 2 public API: attendance, regularizations, analytics, biometric-terminal bridge
+10. [`10-mobile-admin.md`](10-mobile-admin.md) — mobile admin app (Admin / HR): dashboard, team + mark attendance, all reports (`/api/admin/*`, 2026-11-11)
 
 ## Legacy / Mobile API (`/api/*`) — shared conventions
 

@@ -43,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\TenantMiddleware::class,
             'singleLogin' => \App\Http\Middleware\CheckSingleDeviceLogin::class,
+            'mobile.admin' => \App\Http\Middleware\MobileAdminApi::class,
              'role' => \App\Http\Middleware\RoleMiddleware::class,
             'redirect.role' => \App\Http\Middleware\RedirectBasedOnRole::class,
             'shifts.custom' => \App\Http\Middleware\EnsureCustomShiftsEnabled::class,

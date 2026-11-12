@@ -196,15 +196,72 @@ class ReportCatalog
         if ($start === null) {
             return ['query' => [], 'label' => $label];
         }
+
+        return ['label' => $label, 'query' => self::datesQuery($start, $end)];
+    }
+
+    /**
+     * Query parameters for a date the caller picked (mobile admin API) instead of a
+     * preset: a day (`date`), a month (`month` = Y-m) or a range (`from` / `to`),
+     * by the report's period type. Null when the input does not fit the type.
+     *
+     * @param  array{date?: ?string, month?: ?string, from?: ?string, to?: ?string}  $input
+     * @return array{query: array<string, string>, label: string}|null
+     */
+    public static function pickedQuery(string $key, array $input, CarbonImmutable $now): ?array
+    {
+        $today = $now->startOfDay();
+        $parse = function (?string $value, string $format) {
+            $date = $value ? CarbonImmutable::createFromFormat('!'.$format, $value) : false;
+
+            return $date && $date->format($format) === $value ? $date : null;
+        };
+
+        switch (self::REPORTS[$key][5] ?? 'none') {
+            case 'day':
+                $day = $parse($input['date'] ?? null, 'Y-m-d');
+
+                return $day ? ['label' => $day->format('d M Y'), 'query' => self::datesQuery($day, $day)] : null;
+            case 'month':
+                $month = $parse($input['month'] ?? null, 'Y-m');
+                if (! $month) {
+                    return null;
+                }
+                $end = $month->endOfMonth()->startOfDay();
+                $end = $end->greaterThan($today) ? $today : $end;
+
+                return ['label' => $month->format('F Y'), 'query' => self::datesQuery($month, $end)];
+            case 'range':
+                $from = $parse($input['from'] ?? null, 'Y-m-d');
+                $to = $parse($input['to'] ?? ($input['from'] ?? null), 'Y-m-d');
+                if (! $from || ! $to || $to->lessThan($from)) {
+                    return null;
+                }
+
+                return ['label' => $from->equalTo($to) ? $from->format('d M Y') : $from->format('d M').' – '.$to->format('d M Y'),
+                    'query' => self::datesQuery($from, $to)];
+            default:
+                return ['query' => [], 'label' => 'As on '.$today->format('d M Y')];
+        }
+    }
+
+    /**
+     * The same dates under every parameter name the report controllers read
+     * (each report reads its own: date, report_date, month, start/end_date, date_from/to, from/to_date).
+     *
+     * @return array<string, string>
+     */
+    private static function datesQuery(CarbonImmutable $start, CarbonImmutable $end): array
+    {
         $s = $start->toDateString();
         $e = $end->toDateString();
 
-        return ['label' => $label, 'query' => [
+        return [
             'date' => $e, 'report_date' => $e, 'month' => $start->format('Y-m'),
             'start_date' => $s, 'end_date' => $e,
             'date_from' => $s, 'date_to' => $e,
             'from_date' => $s, 'to_date' => $e,
-        ]];
+        ];
     }
 
     /**

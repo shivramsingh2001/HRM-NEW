@@ -42,7 +42,7 @@ class AuthService
                 'message' => 'Employee not found.'
             ];
         }
-        if (!in_array($user->role, ['employee', 'manager'])) {
+        if (!in_array($user->role, ['employee', 'manager', 'hr', 'admin'])) {
             return [
                 'success' => false,
                 'message' => 'You are not authorized to login.'

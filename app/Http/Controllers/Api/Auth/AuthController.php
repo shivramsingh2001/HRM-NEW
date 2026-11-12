@@ -440,7 +440,7 @@ class AuthController extends Controller
         }
         try {
             $user = User::where('contact', $request->mobile_no)
-                ->whereIn('role', ['employee', 'manager'])
+                ->whereIn('role', ['employee', 'manager', 'hr', 'admin'])
                 ->first();
                 
             if(!$user){
@@ -565,7 +565,7 @@ class AuthController extends Controller
             $this->loginAttempts->clear($lockoutKey);
             $otpRecord->update(['is_used' => true]);
             $user = User::with('jobDetails')->where('contact', $request->mobile_no)
-                ->whereIn('role', ['employee', 'manager'])
+                ->whereIn('role', ['employee', 'manager', 'hr', 'admin'])
                 ->first();
 
             if (!$user) {

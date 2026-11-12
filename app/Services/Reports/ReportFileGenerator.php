@@ -28,8 +28,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * The session/CSRF/auth/tenant web middleware is replaced by setting the same
  * state by hand (logged-in user, `current_tenant`, `session('tenant_id')`).
  *
- * Meant for a dedicated CLI process (`reports:run-schedule`): it switches the
- * process's logged-in user and tenant and does not switch them back.
+ * generate() is meant for a dedicated CLI process (`reports:run-schedule`): it
+ * switches the process's logged-in user and tenant and does not switch them back.
+ * generateFor() is the in-request variant (mobile admin reports API) and restores
+ * the outer request's state afterwards.
  */
 class ReportFileGenerator
 {
@@ -40,23 +42,75 @@ class ReportFileGenerator
      */
     public function generate(ReportSchedule $schedule, User $owner, Tenant $tenant, CarbonImmutable $now): array
     {
-        $entry = ReportCatalog::get($schedule->report_key);
-        if ($entry === null) {
+        if (ReportCatalog::get($schedule->report_key) === null) {
             throw new ReportScheduleException('This report is no longer available.', true);
         }
 
         $allowed = ReportCatalog::periodsFor($schedule->report_key);
         $period = in_array($schedule->period, $allowed, true) ? $schedule->period : ($allowed[0] ?? null);
         $resolved = ReportCatalog::periodQuery($period, $now);
-        $query = $entry['query'] + $resolved['query'] + ReportCatalog::filterQuery($schedule->filters);
 
         $this->actAs($owner, $tenant);
+
+        return $this->produce($schedule->report_key, $resolved, ReportCatalog::filterQuery($schedule->filters), $tenant);
+    }
+
+    /**
+     * The same file for a live web/API request (mobile admin reports): replays the
+     * export as $user, then puts the outer request, session, URL generator, guard
+     * and tenant back exactly as they were.
+     *
+     * @param  array{query: array<string, string>, label: string}  $period  from ReportCatalog::periodQuery() / pickedQuery()
+     * @param  array<string, string>  $extraQuery  filters etc. (ReportCatalog::filterQuery() + anything the report reads)
+     * @return array{content: string, filename: string, mime: string, period_label: string}
+     */
+    public function generateFor(string $key, array $period, array $extraQuery, User $user, Tenant $tenant): array
+    {
+        if (ReportCatalog::get($key) === null) {
+            throw new ReportScheduleException('This report is no longer available.', true);
+        }
+
+        $sessions = app('session');
+        $saved = [
+            'request' => app('request'),
+            'session_driver' => $sessions->getDefaultDriver(),
+            'session_store' => app()->bound('session.store') ? app('session.store') : null,
+            'guard' => auth()->getDefaultDriver(),
+            'web_user' => auth()->guard('web')->hasUser() ? auth()->guard('web')->user() : null,
+            'tenant' => app()->bound('current_tenant') ? app('current_tenant') : null,
+        ];
+
+        try {
+            $this->actAs($user, $tenant);
+
+            return $this->produce($key, $period, $extraQuery, $tenant);
+        } finally {
+            app()->instance('request', $saved['request']);
+            RequestFacade::clearResolvedInstance('request');
+            app('url')->setRequest($saved['request']);
+            $sessions->setDefaultDriver($saved['session_driver']);
+            $saved['session_store'] ? app()->instance('session.store', $saved['session_store']) : app()->forgetInstance('session.store');
+            $saved['web_user'] ? auth()->guard('web')->setUser($saved['web_user']) : auth()->guard('web')->forgetUser();
+            auth()->shouldUse($saved['guard']);
+            $saved['tenant'] ? app()->instance('current_tenant', $saved['tenant']) : app()->forgetInstance('current_tenant');
+        }
+    }
+
+    /**
+     * @param  array{query: array<string, string>, label: string}  $period
+     * @param  array<string, string>  $extraQuery
+     * @return array{content: string, filename: string, mime: string, period_label: string}
+     */
+    private function produce(string $key, array $period, array $extraQuery, Tenant $tenant): array
+    {
+        $entry = ReportCatalog::get($key);
+        $query = $entry['query'] + $period['query'] + $extraQuery;
         $request = $this->makeRequest(route($entry['route'], $entry['params']), $query, $tenant);
 
         $response = $this->dispatch($request);
-        [$content, $filename, $mime] = $this->capture($response, $entry['label'], $resolved['label']);
+        [$content, $filename, $mime] = $this->capture($response, $entry['label'], $period['label']);
 
-        return ['content' => $content, 'filename' => $filename, 'mime' => $mime, 'period_label' => $resolved['label']];
+        return ['content' => $content, 'filename' => $filename, 'mime' => $mime, 'period_label' => $period['label']];
     }
 
     private function actAs(User $owner, Tenant $tenant): void

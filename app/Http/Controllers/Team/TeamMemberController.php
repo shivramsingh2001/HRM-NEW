@@ -458,93 +458,20 @@ class TeamMemberController extends Controller
         }
     }
 
-    /**
-     * Check if user can view another user's profile
-     */
+    /** Same rule as the mobile admin API — see TeamMemberProfile::canView(). */
     private function canViewUserProfile($authUser, $targetUser)
     {
-        // A team-scoped manager may also open people below them in the chain
-        // (head → Sakshi → Pragya), as on the mobile team profile.
-        return $this->scopeCoversOwner($authUser, 'team', 'view', $targetUser->id)
-            || (app(\App\Services\RbacService::class)->scopeFor($authUser, 'team', 'view') === 'team' && User::reportsUpTo((int) $targetUser->id, (int) $authUser->id));
+        return app(\App\Services\Team\TeamMemberProfile::class)->canView($authUser, $targetUser);
     }
 
-    /**
-     * Get user profile data with relationships
-     */
     private function getUserProfileData($userId)
     {
-        return User::where('users.id', $userId)
-            ->leftJoin('user_basic_details', 'users.id', '=', 'user_basic_details.user_id')
-            ->leftJoin('user_bank_details', 'users.id', '=', 'user_bank_details.user_id')
-            ->leftJoin('user_job_details', 'users.id', '=', 'user_job_details.user_id')
-            ->leftJoin('departments', 'user_job_details.department', '=', 'departments.id')
-            ->leftJoin('designations', 'user_job_details.designation', '=', 'designations.id')
-            ->leftJoin('users as reporting_users', 'user_job_details.reporting_head', '=', 'reporting_users.id')
-            ->leftJoin('user_locations', 'users.id', '=', 'user_locations.user_id')
-            ->leftJoin('countries', 'user_locations.country', '=', 'countries.country_code')
-            ->leftJoin('states', 'user_locations.state', '=', 'states.state_code')
-            ->leftJoin('cities', 'user_locations.city', '=', 'cities.city_code')
-            ->select([
-                'users.id',
-                'users.name',
-                'users.employee_id',
-                'users.email',
-                'users.contact',
-                'users.role',
-                'users.created_at',
-
-                'user_basic_details.father_name',
-                'user_basic_details.mother_name',
-                'user_basic_details.dob',
-                'user_basic_details.gender',
-                'user_basic_details.profile_image',
-                'user_basic_details.blood_group',
-                'user_basic_details.marital_status',
-                'user_basic_details.nationality',
-                'user_basic_details.alternate_phone',
-                'user_basic_details.personal_email',
-                'user_basic_details.aadhaar_no',
-                'user_basic_details.pan_no',
-                'user_basic_details.language',
-
-                'user_basic_details.experience_letter',
-                'user_basic_details.tenth_marksheet',
-                'user_basic_details.twelfth_marksheet',
-                'user_basic_details.highest_qualification_certificate',
-
-                'user_bank_details.account_number',
-                'user_bank_details.ifsc',
-                'user_bank_details.bank_name',
-                'user_bank_details.branch_name',
-
-                'designations.name as designation',
-                'departments.name as department',
-                'reporting_users.name as reporting_head',
-                'user_job_details.joining_date',
-                'user_job_details.employment_type',
-
-                'countries.name as country',
-                'states.name as state',
-                'cities.name as city',
-                'user_locations.address',
-                'user_locations.permanent_address',
-                'user_locations.pincode',
-            ])
-            ->first();
+        return app(\App\Services\Team\TeamMemberProfile::class)->profileData((int) $userId);
     }
 
-    /**
-     * Get user documents
-     */
     private function getUserDocuments($userInfo)
     {
-        return [
-            'experience_letter' => file_url($userInfo->experience_letter, 'employee_document'),
-            'tenth_marksheet' => file_url($userInfo->tenth_marksheet, 'employee_document'),
-            'twelfth_marksheet' => file_url($userInfo->twelfth_marksheet, 'employee_document'),
-            'highest_qualification_certificate' => file_url($userInfo->highest_qualification_certificate, 'employee_document'),
-        ];
+        return app(\App\Services\Team\TeamMemberProfile::class)->documents($userInfo);
     }
 
     /**

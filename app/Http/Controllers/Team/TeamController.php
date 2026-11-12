@@ -26,136 +26,51 @@ class TeamController extends Controller
     /**
      * Display team members based on user role
      */
-    public function team(Request $request)
+    public function team(Request $request, \App\Services\Team\TeamListService $teamList)
     {
         try {
             $authUser = Auth::user();
             $currentDate = $request->date ?? Carbon::now()->format('Y-m-d');
             $dayName = Carbon::now()->format('l');
-
-            $statusFilter = $request->get('status');
             $search = $request->get('search');
             $branchId = $request->get('branch_id');
-            $departmentId = $request->get('department_id');
-            $designationId = $request->get('designation_id');
 
-            // Get team members based on user role
-            $teamData = $this->getTeamMembers($authUser, $currentDate, null, $search, $branchId, $departmentId, $designationId);
-            if ($statusFilter && in_array($statusFilter, ['present', 'absent', 'on_leave', 'holiday', 'weekoff','halfday','checked_in_only'])) {
-                $teamData = $teamData->filter(function ($member) use ($statusFilter) {
-                    $memberStatus = strtolower($member->status ?? 'absent');
+            $list = $teamList->list($authUser, $currentDate, [
+                'status' => $request->get('status'),
+                'search' => $search,
+                'branch_id' => $branchId,
+                'department_id' => $request->get('department_id'),
+                'designation_id' => $request->get('designation_id'),
+            ]);
+            $teamData = $list['members'];
 
-                    switch ($statusFilter) {
-                      
-                        case 'present':
-                            return in_array($memberStatus, ['present', 'halfday', 'checked in only']);
-                        case 'absent':
-                            return $memberStatus === 'absent';
-                        case 'on_leave':
-                            return str_contains($memberStatus, 'leave');
-                        case 'holiday':
-                            return $memberStatus === 'holiday';
-                        case 'weekoff':
-                            return $memberStatus === 'week off';
-                        case 'halfday':
-                            return $memberStatus === 'halfday';
-                        case 'checked_in_only':
-                            return $memberStatus === 'checked in only';
-                        default:
-                            return true;
-                    }
-                })->values();
-            }
-            // Initialize status count
-            $statusCount = [
-                'present' => 0,
-                'absent' => 0,
-                'on_leave' => 0,
-                'holiday' => 0,
-                'weekoff' => 0,
-                'checked_in_only' => 0,
-                'halfday' => 0,
-                'total' => $teamData->count()
-            ];
-
-            // Count statuses
-            foreach ($teamData as $member) {
-                $status = strtolower($member->status ?? 'absent');
-
-                if ($status === 'present') {
-                    $statusCount['present']++;
-                } elseif ($status === 'halfday') {
-                    $statusCount['halfday']++;
-                    $statusCount['present']++;
-                } elseif ($status === 'checked in only') {
-                    $statusCount['checked_in_only']++;
-                    $statusCount['present']++;
-                } elseif (str_contains($status, 'leave')) {
-                    $statusCount['on_leave']++;
-                } elseif ($status === 'holiday') {
-                    $statusCount['holiday']++;
-                } elseif ($status === 'week off') {
-                    $statusCount['weekoff']++;
-                } elseif ($status === 'absent') {
-                    $statusCount['absent']++;
-                }
-            }
             $perPage = $request->get('per_page', 20);
             $currentPage = $request->get('page', 1);
-            $total = $teamData->count();
-            $paginated = $teamData->slice(($currentPage - 1) * $perPage, $perPage);
-
             $teamDataPaginated = new \Illuminate\Pagination\LengthAwarePaginator(
-                $paginated,
-                $total,
+                $teamData->slice(($currentPage - 1) * $perPage, $perPage),
+                $teamData->count(),
                 $perPage,
                 $currentPage,
                 ['path' => $request->url(), 'query' => $request->query()]
             );
 
-            // Leave types for the manual "mark attendance" modal (leave statuses)
-            $leaveTypes = \App\Models\LeaveType::where('tenant_id', $authUser->tenant_id)
-                ->where('status', 1)
-                ->orderBy('name')
-                ->get(['id', 'name']);
+            $options = $teamList->filterOptions((int) $authUser->tenant_id);
 
-            // Branches dropdown for the branch filter
-            $allBranches = DB::table('company_branches')
-                ->where('tenant_id', $authUser->tenant_id)
-                ->select('id', 'name')
-                ->orderBy('name')
-                ->get();
-
-            // Department / designation dropdowns for the filters
-            $allDepartments = DB::table('departments')
-                ->where('tenant_id', $authUser->tenant_id)
-                ->select('id', 'name')
-                ->orderBy('name')
-                ->get();
-            $allDesignations = DB::table('designations')
-                ->where('tenant_id', $authUser->tenant_id)
-                ->select('id', 'name')
-                ->orderBy('name')
-                ->get();
-
-            // Prepare data for view
-            $data = [
-                'allDepartments' => $allDepartments,
-                'allDesignations' => $allDesignations,
+            return view('client.team.view-team-member', [
+                'allDepartments' => $options['departments'],
+                'allDesignations' => $options['designations'],
                 'teamData' => $teamDataPaginated,
-                'statusCount' => $statusCount,
+                'statusCount' => $list['counts'],
                 'currentDate' => $currentDate,
                 'dayName' => $dayName,
                 'authUser' => $authUser,
-                'leaveTypes' => $leaveTypes,
-                'allBranches' => $allBranches,
+                'leaveTypes' => $options['leave_types'],
+                'allBranches' => $options['branches'],
                 'search' => $search,
                 'branchId' => $branchId,
-            ];
-
-            return view('client.team.view-team-member', $data);
+            ]);
         } catch (Exception $e) {
-            Log::error('Error in team method: ' . $e->getMessage());
+            report($e);
 
             return response()->json([
                 'status' => false,
