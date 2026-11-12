@@ -89,34 +89,53 @@ with 2+ shifts: `{name, in, out, is_extra, state: present|checked_in|not_started
 `{branches[], departments[], designations[], leave_types[], statuses[]}` — each `{id, name}`.
 
 ### `GET /api/admin/team/{id}` (`?month=YYYY-MM`, default this month)
-One member's whole screen in **one call** (same company + your team scope, else 404 / 403) — what the
-web member page loads in four calls (profile, month stats, calendar, table):
-`header` (name, role, image, designation, department, employee_id, email, contact, reporting_head,
-joining_date, `today` status, `shifts`), `personal` (… Aadhaar / PAN masked to the last 4),
-`job`, `address`, `bank` (account number masked), `documents` (links),
-`direct_reports` (a manager's reportees with today's status) and `attendance`:
+One member's whole screen in **one call** (same company + your team scope, else 404 / 403). The
+response uses **the same keys as the employee app's `GET /api/user/team-profile/{id}`**
+(`docs/api/02-employee-self-service.md`), so the app can reuse that screen:
 
 ```json
-"attendance": {
-  "month": "2026-11", "month_name": "November 2026",
-  "date_range": {"start": "2026-11-01", "end": "2026-11-30"},
-  "summary": {"present": 8, "absent": 1, "on_leave": 0, "holiday": 0, "week_off": 2, "checked_in_only": 0, "halfday": 0, "work_days": 9, "total_days": 12},
-  "days": [{"date": "2026-11-03", "day_name": "Tuesday", "status": "Present",
-            "clock_in": "2026-11-03 09:02:11", "clock_out": "2026-11-03 18:05:40",
-            "clock_in_time": "09:02 AM", "clock_out_time": "06:05 PM", "total_hours": "9.05",
-            "day_value": 1, "day_label": "Present", "leave_type": null, "holiday_name": null,
-            "task_count": 2, "shifts": [], "details": {…}}, …]}
+{"success": true, "message": "User profile and attendance data fetched successfully", "data": {
+  "personal_information": {"id": 112, "name": "…", "employee_id": "EMP1012", "email": "…", "contact": "…", "role": "employee"},
+  "teams": [{"id", "employee_id", "name", "email", "role", "designation", "department", "profile_image",
+             "punch_in", "punch_out", "clock_in_lat", "clock_in_long", "clock_in_address",
+             "clock_out_lat", "clock_out_long", "clock_out_address", "status", "is_week_off"}],
+  "basic_details": {"father_name", "mother_name", "dob", "gender", "profile_image", "blood_group", "marital_status",
+                    "nationality", "alternate_phone", "personal_email", "aadhaar_no": "XXXXXXXX4821", "pan_no": "XXXXXX912K", "languages": []},
+  "bank_details": {"account_number": "XXXXXXXX6789", "ifsc", "bank_name", "branch_name"},
+  "job_details": {"designation", "department", "joining_date", "employment_type", "reporting_head",
+                  "reporting_heads": [{"id", "name", "is_primary"}]},
+  "location": {"country", "state", "city", "country_code", "state_code", "city_code", "address", "permanent_address", "pincode"},
+  "attendance_summary": {"month": "November 2026", "month_start": "2026-11-01", "month_end": "2026-11-30",
+    "counts": {"total_days": 12, "present": 8, "absent": 1, "on_leave": 0, "holiday": 0, "weekend": 2,
+               "checked_in_only": 0, "half_day": 0, "work_days": 10, "upcoming": 18},
+    "today": {…one attendances row…, "location_tracks": [{"track_time", "latitude", "longitude", "address"}], "total_tracks": 0}},
+  "attendance_details": {"period": {"start_date": "2026-11-01", "end_date": "2026-11-30"},
+    "attendances": [{"user_id", "name", "email", "date": "2026-11-03", "day_name": "Tuesday",
+                     "clock_in": "2026-11-03 09:02:11", "clock_out": "2026-11-03 18:05:40", "total_hours": "9.05",
+                     "leave_type", "leave_type_name", "leave_reason", "leave_session", "holiday_name", "message",
+                     "day_status": "Present", "task_count": 2,
+                     "clock_in_time": "09:02 AM", "clock_out_time": "06:05 PM", "day_value": 1, "day_label": null,
+                     "shifts": [], "details": {…}}, …]},
+  "documents": {"experience_letter", "tenth_marksheet", "twelfth_marksheet", "highest_qualification_certificate"},
+  "documents_list": [{"id", "document_type", "document_type_label", "document_name", "file_url"}]}}
 ```
 
-- `days` = one row per day of the month, oldest first, from the joining day (`date_range`); days after
-  today are `Upcoming` (or a planned Holiday / leave / Week Off) with no times. Use it for both the
-  calendar and the table view.
-- `summary` counts the days up to today (same numbers as the web stats cards).
-- `status` values: `Present`, `halfday`, `Absent`, `Checked In Only`, `Full Day Leave`,
-  `First Half Leave`, `Second Half Leave`, `Holiday`, `Week Off`, `Upcoming`.
-- `clock_out_time` shows `(+1 day)` for an overnight shift. `details` = the web calendar hover card
-  (shift, late / early / OT, location, regularized / marked-by), `null` when nothing to show.
-- A wrong or future `month` falls back to this month.
+What differs from `team-profile` (the keys are the same):
+- **Month:** `?month=YYYY-MM` picks the month (a wrong or future month falls back to this month).
+  `attendances` = one row per day of that month, oldest first, from the 1st (or the joining day) to
+  the month end; days after today are `Upcoming` (or a planned Holiday / leave / Week Off) with no times.
+- **Masked:** `aadhaar_no`, `pan_no`, `account_number` show the last 4 characters only.
+- **Values as the web Team page:** `day_status` = `Present`, `halfday`, `Absent`, `Checked In Only`,
+  `Full Day Leave`, `First Half Leave`, `Second Half Leave`, `Holiday`, `Week Off`, `Upcoming`
+  (team-profile says `Weekend`). `counts` cover the days up to today (`upcoming` = days after today);
+  `present` includes checked-in-only days and 0.5 per half day. `leave_type` and `leave_type_name`
+  both carry the leave type's name.
+- **Extra keys on each day:** `clock_in_time` / `clock_out_time` (ready to show; overnight
+  `07:10 AM (+1 day)`), `day_value` / `day_label` (2-shift day worth, `Present ×2`), `shifts` (2+ shifts),
+  `details` (tap card: shift, late / early / OT minutes, regularized / marked by, locations; `null`
+  when no attendance and no rostered shift).
+- **Errors:** proper HTTP codes (403 / 404 / 500 with `success: false`), not 200.
+
 ### Mark attendance (same endpoints, validation, rules and audit as the web Team page)
 - `GET /api/admin/team/shift?user_id=&date=` → the employee's shift that day + `shifts` (pick one when 2+).
 - `POST /api/admin/team/mark-attendance` — `user_id, date, end_date?, status (present|absent|half_day|on_leave|first_half_leave|second_half_leave …), clock_in?, clock_out? (HH:MM), clock_out_only?, clock_out_next_day?, leave_type_id? (leave statuses), remarks?, user_shift_id?` → `{success, message, data, is_update, leave_created, shift_details}`.

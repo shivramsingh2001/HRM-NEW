@@ -88,7 +88,7 @@ class TeamController extends Controller
 
             return $detail === null
                 ? response()->json(['success' => false, 'message' => 'Employee information not found.'], 404)
-                : response()->json(['success' => true, 'data' => $detail]);
+                : response()->json(['success' => true, 'message' => 'User profile and attendance data fetched successfully', 'data' => $detail]);
         } catch (Exception $e) {
             report($e);
 

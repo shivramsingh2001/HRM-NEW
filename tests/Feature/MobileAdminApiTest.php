@@ -160,31 +160,46 @@ class MobileAdminApiTest extends TestCase
         $member = $this->colleague('employee') ?? $this->colleague('manager');
         if ($member) {
             $res = $this->getJson('/api/admin/team/'.$member->id, $h)->assertOk()
-                ->assertJsonStructure(['data' => ['header', 'personal', 'job', 'address', 'bank', 'documents', 'direct_reports',
-                    'attendance' => ['month', 'month_name', 'date_range', 'summary', 'days']]]);
+                ->assertJsonStructure(['data' => ['personal_information', 'teams', 'basic_details', 'bank_details', 'job_details',
+                    'location', 'attendance_summary' => ['month', 'month_start', 'month_end', 'counts', 'today'],
+                    'attendance_details' => ['period', 'attendances'], 'documents', 'documents_list']]);
 
-            // One call = the web page's stats + calendar + table: a row per day of the month
-            // (from the joining day, later days "Upcoming") and the summary up to today.
-            $month = Carbon::today()->format('Y-m');
+            // Same keys as the employee app's /api/user/team-profile/{id} (extra keys allowed).
+            $old = $this->getJson('/api/user/team-profile/'.$member->id, $h)->assertOk()->json('data');
+            $new = $res->json('data');
+            foreach (['', 'personal_information', 'basic_details', 'bank_details', 'job_details', 'location',
+                'attendance_summary', 'attendance_summary.counts', 'attendance_details', 'attendance_details.period',
+                'attendance_details.attendances.0', 'documents', 'teams.0', 'documents_list.0'] as $path) {
+                $o = $path === '' ? $old : data_get($old, $path);
+                $n = $path === '' ? $new : data_get($new, $path);
+                if (is_array($o) && $o !== [] && ! array_is_list($o)) {
+                    $this->assertIsArray($n, $path);
+                    $this->assertSame([], array_values(array_diff(array_keys($o), array_keys($n))), "missing keys in $path");
+                }
+            }
+            $this->assertMatchesRegularExpression('/^X*.{0,4}$/', (string) $res->json('data.bank_details.account_number'));
+
+            // A row per day of the month (from the joining day, later days "Upcoming"); counts up to today.
             $from = max(Carbon::today()->startOfMonth()->toDateString(), $member->created_at->format('Y-m-d'));
             $end = Carbon::today()->endOfMonth()->toDateString();
-            $days = $res->json('data.attendance.days');
-            $this->assertSame($month, $res->json('data.attendance.month'));
+            $days = $res->json('data.attendance_details.attendances');
+            $this->assertSame(Carbon::today()->format('F Y'), $res->json('data.attendance_summary.month'));
             $this->assertCount(Carbon::parse($from)->diffInDays(Carbon::parse($end)) + 1, $days);
             $this->assertSame($from, $days[0]['date']);
             $this->assertSame($end, end($days)['date']);
             $svc = app(\App\Services\Team\TeamMemberAttendance::class);
-            $this->assertEquals($svc->calculateSummary($svc->getAttendanceDataForUser($from, Carbon::today()->toDateString(), $member->id)),
-                $res->json('data.attendance.summary'));
+            $web = $svc->calculateSummary($svc->getAttendanceDataForUser($from, Carbon::today()->toDateString(), $member->id));
+            $this->assertEquals($web['week_off'], $res->json('data.attendance_summary.counts.weekend'));
+            $this->assertEquals($web['absent'], $res->json('data.attendance_summary.counts.absent'));
             foreach ($days as $d) {
                 if ($d['date'] > Carbon::today()->toDateString()) {
                     $this->assertNull($d['clock_in']);
                 }
             }
-
             // A past month: every day of it; the old split endpoints are gone.
             $prev = Carbon::today()->subMonthNoOverflow()->format('Y-m');
-            $this->getJson('/api/admin/team/'.$member->id.'?month='.$prev, $h)->assertOk()->assertJsonPath('data.attendance.month', $prev);
+            $this->getJson('/api/admin/team/'.$member->id.'?month='.$prev, $h)->assertOk()
+                ->assertJsonPath('data.attendance_summary.month', Carbon::createFromFormat('Y-m-d', $prev.'-01')->format('F Y'));
             $this->getJson('/api/admin/team/'.$member->id.'/attendance-stats', $h)->assertStatus(404);
         }
 
