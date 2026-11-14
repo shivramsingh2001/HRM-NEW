@@ -1,6 +1,36 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Relation ''basicDetails'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Concerns/TeamAttendanceStatus.php
+
+		-
+			message: '#^Relation ''jobDetails'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 8
+			path: app/Http/Controllers/Concerns/TeamAttendanceStatus.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Attendance\:\:\$clock_in\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Concerns/TeamAttendanceStatus.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Attendance\:\:\$total_hours\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Concerns/TeamAttendanceStatus.php
+
+		-
+			message: '#^Parameter \#6 \$year of function mktime expects int\|null, string given\.$#'
+			identifier: argument.type
+			count: 4
+			path: app/Http/Controllers/Concerns/TeamAttendanceStatus.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Attendance\:\:\$attendance_status\.$#'
 			identifier: property.notFound
 			count: 2
