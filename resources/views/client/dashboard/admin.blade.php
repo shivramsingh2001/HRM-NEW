@@ -448,6 +448,14 @@
             .main-content .row.dash-grid[data-n="5"] > *,
             .main-content .row.dash-grid[data-n="5"] > :nth-child(n+4) { grid-column: auto; }
         }
+        /* Top KPI row: Present Today (4 stats) gets more room, New Joinings (last card) less. */
+        @media (min-width: 1200px) {
+            .main-content .row.dash-grid.kpi-row[data-n="3"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, .75fr); }
+            .main-content .row.dash-grid.kpi-row[data-n="4"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, .75fr); }
+        }
+        @media (min-width: 1400px) {
+            .main-content .row.dash-grid.kpi-row[data-n="5"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, .75fr); }
+        }
 
         a { text-decoration: none; }
         .text-dark { color: var(--d-text) !important; }
@@ -595,7 +603,7 @@
             // Number of cards a responsive row (.dash-grid) actually shows.
             $cardsShown = fn (...$flags) => count(array_filter($flags));
         @endphp
-        <div class="row g-compact dash-grid mb-2" data-n="{{ $cardsShown(true, true, $show['tasks'] ?? false, $show['projects'] ?? false, true) }}">
+        <div class="row g-compact dash-grid kpi-row mb-2" data-n="{{ $cardsShown(true, true, $show['tasks'] ?? false, $show['projects'] ?? false, true) }}">
             <div class="col">
                 <a href="{{ route('employee.index') }}" class="text-decoration-none">
                     <div class="kpi5-card">
@@ -714,15 +722,37 @@
                             <div><span class="n">{{ $today['early_count'] ?? 0 }}</span><span class="l">Left early</span></div>
                             <div title="{{ ($rg['is_today'] ?? true) ? 'Clocked in yesterday but never clocked out' : 'Days in this period with a clock-in but no clock-out' }}"><span class="n text-danger">{{ $today['missed_clock_out'] ?? 0 }}</span><span class="l">{{ ($rg['is_today'] ?? true) ? 'No clock-out (yday)' : 'No clock-out' }}</span></div>
                         </div>
-                        <div class="ann-list">
-                            @forelse ($today['late_list'] ?? [] as $late)
-                                <div class="ann-row d-flex justify-content-between align-items-center">
-                                    <span class="ann-title">{{ $late->name }} <span class="stat-sub">({{ $late->employee_id }})</span></span>
-                                    <span class="badge bg-soft-warning text-warning">{{ $late->late_days > 1 ? $late->late_days . ' days · ' : '' }}{{ $late->late_minutes }}m late</span>
-                                </div>
-                            @empty
-                                <div class="text-center py-3 text-muted fs-12">No late arrivals today</div>
-                            @endforelse
+                        {{-- Same employee cell as the New joiners / Top 5 Performer cards --}}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead><tr><th>Employee</th><th class="text-end">Late</th></tr></thead>
+                                <tbody>
+                                    @forelse ($today['late_list'] ?? [] as $late)
+                                        <tr onclick="window.location.href='{{ route('team.member-detail', ['id' => encrypt($late->id)]) }}'">
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="tbl-avatar bg-soft-warning">
+                                                        @if ($late->profile_image)
+                                                            <img src="{{ file_url($late->profile_image, 'profile_photo') }}">
+                                                        @else
+                                                            {{ strtoupper(substr($late->name, 0, 2)) }}
+                                                        @endif
+                                                    </div>
+                                                    <div>
+                                                        <span class="d-block fw-bold">{{ $late->name }}</span>
+                                                        <span class="stat-sub">{{ $late->employee_id ?: '—' }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="badge bg-soft-warning text-warning">{{ $late->late_days > 1 ? $late->late_days . ' days · ' : '' }}{{ $late->late_minutes }}m late</span>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="2" class="text-center py-3 text-muted fs-12">No late arrivals today</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

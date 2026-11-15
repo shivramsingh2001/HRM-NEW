@@ -134,7 +134,7 @@ class AdminDashboard
             'page_title' => 'Admin Dashboard',
             'show' => $show,
             'range' => $range,
-            'total_employees' => $activeEmployees,
+            'total_employees' => $activeEmployees + $inactiveEmployees,
             'active_employees' => $activeEmployees,
             'inactive_employees' => $inactiveEmployees,
             'monthly_joinings' => $periodJoinings,
@@ -409,8 +409,9 @@ class AdminDashboard
             'late_count' => $inRange()->where('attendances.late_minutes', '>', 0)->count(),
             // most late days in the period first (for one day: the latest arrivals)
             'late_list' => $inRange()->where('attendances.late_minutes', '>', 0)
+                ->leftJoin('user_basic_details', 'user_basic_details.user_id', '=', 'users.id')
                 ->groupBy('users.id', 'users.name', 'users.employee_id')
-                ->selectRaw('users.id, users.name, users.employee_id, COUNT(*) as late_days, SUM(attendances.late_minutes) as late_minutes')
+                ->selectRaw('users.id, users.name, users.employee_id, MAX(user_basic_details.profile_image) as profile_image, COUNT(*) as late_days, SUM(attendances.late_minutes) as late_minutes')
                 ->orderByDesc('late_days')->orderByDesc('late_minutes')->limit(5)->get(),
             'early_count' => $inRange()->whereNotNull('attendances.clock_out')->where('attendances.early_departure_minutes', '>', 0)->count(),
             // clocked in but never out, on days already over (today is still open)
