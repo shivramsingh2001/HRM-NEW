@@ -8,6 +8,7 @@ use App\Models\CompanyBranch;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\User;
+use App\Services\Reports\UncountedMachinePunches;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Database\Query\Builder;
@@ -47,6 +48,7 @@ class PunchReportController extends Controller
                 "COUNT(*) as total,
                  SUM(direction = 'in') as ins,
                  SUM(direction = 'out') as outs,
+                 SUM(direction = 'extra') as extras,
                  COUNT(DISTINCT user_id) as employees,
                  SUM(location_verification = 'out_of_bounds') as out_of_bounds"
             )->first();
@@ -79,17 +81,17 @@ class PunchReportController extends Controller
                 'Date', 'Punched On', 'Time', 'Direction', 'Session', 'Employee ID', 'Employee', 'Department', 'Designation', 'Branch',
                 'Attendance Location', 'Source', 'Method', 'Terminal', 'Address', 'Latitude', 'Longitude', 'Office location', 'Radius (m)',
                 'Distance (m)', 'Location check', 'GPS accuracy (m)', 'Phone device', 'Network', 'Wi-Fi', 'IP', 'Battery %',
-                'Regularized', 'Recorded by', 'Note',
+                'Regularized', 'Recorded by', 'Note', 'Counted',
             ]);
 
             foreach ($this->query($f)->orderBy('r.punched_at')->orderBy('r.row_id')->cursor() as $r) {
                 $this->writeCsvRow($handle, [
-                    $r->date, Carbon::parse($r->punched_at)->format('Y-m-d'), Carbon::parse($r->punched_at)->format('H:i:s'), strtoupper($r->direction), $r->session_seq,
+                    $r->date, Carbon::parse($r->punched_at)->format('Y-m-d'), Carbon::parse($r->punched_at)->format('H:i:s'), ($r->direction === 'extra' ? 'EXTRA (not counted)' : strtoupper($r->direction)), $r->session_seq,
                     $r->employee_code, $r->employee_name, $r->department_name, $r->designation_name, $r->branch_name,
                     \App\Models\AttendanceLocation::labelFor($r->office_branch, $r->assigned_location_name), self::sourceLabel($r->source), $r->method, $r->terminal_name, $r->address, $r->lat, $r->lng,
                     $r->location_name, $r->radius, $r->distance_meters, $r->location_verification, $r->accuracy_meters,
                     $r->device_id, $r->network_type, $r->wifi_ssid, $r->ip_address, $r->battery_percent,
-                    $r->is_regularized ? 'Yes' : 'No', $r->actor_name, $r->reason,
+                    $r->is_regularized ? 'Yes' : 'No', $r->actor_name, $r->reason, $r->counted ? 'Yes' : 'No',
                 ]);
             }
 
@@ -148,7 +150,7 @@ class PunchReportController extends Controller
             'department_id' => $int('department_id'),
             'designation_id' => $int('designation_id'),
             'location_id' => $int('location_id'), // assigned attendance location (user_job_details.office_branch)
-            'direction' => in_array($request->query('direction'), ['in', 'out'], true) ? $request->query('direction') : null,
+            'direction' => in_array($request->query('direction'), ['in', 'out', 'extra'], true) ? $request->query('direction') : null,
             'source' => in_array($request->query('source'), ['mobile_app', 'biometric', 'web', 'manual', 'kiosk', 'api', 'backfill'], true)
                 ? $request->query('source') : null,
         ];
@@ -168,7 +170,7 @@ class PunchReportController extends Controller
                 'p.source', 'p.method', 'p.biometric_device_id', 'p.lat', 'p.long as lng', 'p.address',
                 'p.location_verification', 'p.attendance_location_id', 'p.distance_meters', 'p.accuracy_meters',
                 'p.device_id', 'p.network_type', 'p.wifi_ssid', 'p.ip_address', 'p.battery_percent',
-                'p.session_seq', 'p.is_regularized', 'p.actor_id', 'p.reason',
+                'p.session_seq', 'p.is_regularized', 'p.actor_id', 'p.reason', DB::raw('1 as counted'),
             ]);
 
         $noPunches = fn ($q) => $q->select(DB::raw(1))->from('attendance_punches as x')
@@ -195,11 +197,11 @@ class PunchReportController extends Controller
                     "a.{$c['addr']} as address", 'a.location_verification', 'a.branch_id as attendance_location_id',
                     "a.{$c['dist']} as distance_meters", DB::raw('NULL as accuracy_meters'), 'a.device_id',
                     DB::raw('NULL as network_type'), 'a.wifi_ssid', 'a.ip_address', DB::raw('NULL as battery_percent'),
-                    DB::raw('1 as session_seq'), 'a.is_regularized', 'a.marked_by as actor_id', 'a.remarks as reason',
+                    DB::raw('1 as session_seq'), 'a.is_regularized', 'a.marked_by as actor_id', 'a.remarks as reason', DB::raw('1 as counted'),
                 ]);
         };
 
-        $union = $punches->unionAll($dayRow('in'))->unionAll($dayRow('out'));
+        $union = $punches->unionAll($dayRow('in'))->unionAll($dayRow('out'))->unionAll(UncountedMachinePunches::query($tenantId, $f['start'], $f['end'])); // + uncounted machine punches
 
         $q = DB::query()->fromSub($union, 'r')
             ->join('users as u', 'u.id', '=', 'r.user_id')

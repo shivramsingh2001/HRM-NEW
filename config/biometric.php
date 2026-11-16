@@ -46,7 +46,7 @@ return [
     | biometric:prune deletes processed/skipped biometric_punches older than
     | this. The attendances they produced are never touched.
     */
-    'punch_retention_days' => (int) env('BIOMETRIC_PUNCH_RETENTION_DAYS', 180),
+    'punch_retention_days' => (int) env('BIOMETRIC_PUNCH_RETENTION_DAYS', 730),   // 2 years — the Clock In/Out Log shows these raw punches
 
     /*
     |--------------------------------------------------------------------------

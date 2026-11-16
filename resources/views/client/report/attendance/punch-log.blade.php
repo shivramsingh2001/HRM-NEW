@@ -35,6 +35,7 @@
     .dir { display: inline-block; min-width: 36px; text-align: center; padding: 2px 6px; border-radius: 6px; font-size: 9.5px; font-weight: 700; }
     .dir-in { background: #dcfce7; color: #15803d; }
     .dir-out { background: #fee2e2; color: #b91c1c; }
+    .dir-extra { background: #f1f5f9; color: #64748b; }
     .chip { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 9.5px; font-weight: 600; background: #eef3fd; color: #0D6EFD; }
     .chip.ok { background: #dcfce7; color: #15803d; }
     .chip.warn { background: #fef3c7; color: #b45309; }
@@ -87,6 +88,7 @@
                             <option value="">-- In & Out --</option>
                             <option value="in" @selected($filters['direction'] === 'in')>In only</option>
                             <option value="out" @selected($filters['direction'] === 'out')>Out only</option>
+                            <option value="extra" @selected($filters['direction'] === 'extra')>Extra (not counted)</option>
                         </select>
                     </div>
                     <div class="filter-item">
@@ -167,7 +169,7 @@
                                             <div class="sub">{{ $at->format('d M') }}</div>
                                         @endif
                                     </td>
-                                    <td><span class="dir {{ $r->direction === 'in' ? 'dir-in' : 'dir-out' }}">{{ strtoupper($r->direction) }}</span></td>
+                                    <td>@if ($r->direction === 'extra')<span class="dir dir-extra" title="Stored by the machine but not counted in attendance">EXTRA</span>@else<span class="dir {{ $r->direction === 'in' ? 'dir-in' : 'dir-out' }}">{{ strtoupper($r->direction) }}</span>@endif</td>
                                     <td>{{ $r->session_seq ? '#' . $r->session_seq : '—' }}</td>
                                     <td>
                                         <span class="chip">{{ \App\Http\Controllers\Report\PunchReportController::sourceLabel($r->source) }}</span>

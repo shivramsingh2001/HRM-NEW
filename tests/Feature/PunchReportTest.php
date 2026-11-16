@@ -58,6 +58,7 @@ class PunchReportTest extends TestCase
 
     protected function tearDown(): void
     {
+        DB::table('biometric_punches')->where('user_id', $this->employee->id)->delete();
         DB::table('attendance_punches')->where('user_id', $this->employee->id)->delete();
         DB::table('attendances')->where('user_id', $this->employee->id)->delete();
         User::withoutGlobalScopes()->where('id', $this->employee->id)->forceDelete();
@@ -95,5 +96,31 @@ class PunchReportTest extends TestCase
         $csv = $res->getContent();
         $this->assertStringContainsString('phpunit street', $csv);
         $this->assertSame(7, count(array_filter(explode("\n", trim($csv)))));  // header + 6 rows
+    }
+
+    public function test_machine_punches_not_counted_are_listed_as_extra(): void
+    {
+        $day = now()->startOfMonth()->addDay();
+        // 10:00 and 17:00 are the day's clock in / out (counted, already shown); 13:00 was skipped.
+        foreach (["10:00:00" => 'processed', "13:00:00" => 'skipped', "17:00:00" => 'processed'] as $t => $status) {
+            DB::table('biometric_punches')->insert([
+                'tenant_id' => $this->employee->tenant_id, 'biometric_device_id' => 0, 'serial_number' => 'PHPUNIT-PR',
+                'enroll_no' => (string) $this->employee->id, 'user_id' => $this->employee->id,
+                'punched_at' => $day->toDateString() . " {$t}", 'method' => 'fingerprint', 'status' => $status,
+                'error' => $status === 'skipped' ? 'already clocked out' : null, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        $res = $this->actingAs($this->admin)->get(route('report.attendance.punches.index', ['user_id' => $this->employee->id]));
+        $res->assertOk();
+        $this->assertSame(7, $res->viewData('rows')->total());          // 6 as before + the 13:00 extra
+        $this->assertSame(1, (int) $res->viewData('stats')->extras);
+        $res->assertSee('EXTRA')->assertSee('Not counted: already clocked out');
+
+        $only = $this->actingAs($this->admin)->get(route('report.attendance.punches.index', ['user_id' => $this->employee->id, 'direction' => 'extra']));
+        $this->assertSame(1, $only->viewData('rows')->total());
+
+        $csv = $this->actingAs($this->admin)->get(route('report.attendance.punches.export', ['user_id' => $this->employee->id]))->getContent();
+        $this->assertStringContainsString('EXTRA (not counted)', $csv);
     }
 }
