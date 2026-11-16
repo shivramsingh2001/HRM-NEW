@@ -56,6 +56,7 @@
                 <label class="fw-semibold" style="font-size:11.5px;">Direction mode</label>
                 <select class="form-control" name="direction_mode" id="edit_direction_mode">
                     <option value="auto">auto (first punch = in)</option>
+                    <option value="first_last">first in, last out (last punch of the day = final clock-out)</option>
                     <option value="by_verify_mode">from device verify-mode</option>
                     <option value="in">this reader is IN only</option>
                     <option value="out">this reader is OUT only</option>

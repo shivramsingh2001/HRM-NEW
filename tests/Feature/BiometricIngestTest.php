@@ -8,6 +8,7 @@ use App\Models\BiometricDevice;
 use App\Models\BiometricEnrollment;
 use App\Models\BiometricPunch;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -172,6 +173,97 @@ class BiometricIngestTest extends TestCase
         $this->assertNotNull($att->clock_in);
         $this->assertNotNull($att->clock_out);
         $this->assertGreaterThan(0, (float) $att->worked_hours);
+
+        \DB::table('attendance_logs')->where('attendance_id', $att->id)->delete();
+        $att->delete();
+    }
+
+    private function dayRow(string $date): ?Attendance
+    {
+        return Attendance::withoutGlobalScopes()
+            ->where('tenant_id', $this->tenantId)->where('user_id', $this->employee->id)->where('date', $date)->first();
+    }
+
+    private function punchAt(string $date, string $time, string $idem)
+    {
+        return $this->sendPunches([['enroll_no' => '1001', 'punched_at' => $date . 'T' . $time . '+05:30', 'raw_verify_mode' => 1]], $idem)->assertOk();
+    }
+
+    public function test_first_punch_in_last_punch_out_middle_ignored(): void
+    {
+        $this->device->update(['direction_mode' => 'first_last']);
+        $date = now()->subDays(2)->toDateString();
+        Attendance::withoutGlobalScopes()->where('tenant_id', $this->tenantId)->where('user_id', $this->employee->id)->where('date', $date)->delete();
+
+        $this->punchAt($date, '09:00:00', 'PHPU-6a');
+        $this->punchAt($date, '13:00:00', 'PHPU-6b');   // lunch: clock-out for now
+        $this->assertSame('13:00:00', Carbon::parse($this->dayRow($date)->clock_out)->format('H:i:s'));
+
+        $this->punchAt($date, '19:00:00', 'PHPU-6c');   // later punch moves the clock-out
+        $this->punchAt($date, '14:00:00', 'PHPU-6d');   // late upload, in between: ignored
+
+        $att = $this->dayRow($date);
+        $this->assertSame('09:00:00', Carbon::parse($att->clock_in)->format('H:i:s'));
+        $this->assertSame('19:00:00', Carbon::parse($att->clock_out)->format('H:i:s'));
+        $this->assertEqualsWithDelta(10.0, (float) $att->worked_hours, 0.02);
+        $this->assertSame('between clock-in and clock-out',
+            BiometricPunch::where('biometric_device_id', $this->device->id)->latest('id')->value('error'));
+
+        \DB::table('attendance_logs')->where('attendance_id', $att->id)->delete();
+        $att->delete();
+    }
+
+    public function test_late_uploaded_earlier_punch_becomes_clock_in(): void
+    {
+        $this->device->update(['direction_mode' => 'first_last']);
+        $date = now()->subDays(3)->toDateString();
+        Attendance::withoutGlobalScopes()->where('tenant_id', $this->tenantId)->where('user_id', $this->employee->id)->where('date', $date)->delete();
+
+        $this->punchAt($date, '18:00:00', 'PHPU-7a');   // machine sends the evening punch first
+        $this->punchAt($date, '09:30:00', 'PHPU-7b');   // morning punch arrives later
+
+        $att = $this->dayRow($date);
+        $this->assertSame('09:30:00', Carbon::parse($att->clock_in)->format('H:i:s'));
+        $this->assertSame('18:00:00', Carbon::parse($att->clock_out)->format('H:i:s'));
+        $this->assertEqualsWithDelta(8.5, (float) $att->worked_hours, 0.02);
+
+        \DB::table('attendance_logs')->where('attendance_id', $att->id)->delete();
+        $att->delete();
+    }
+
+    public function test_hand_set_day_keeps_its_clock_out(): void
+    {
+        $this->device->update(['direction_mode' => 'first_last']);
+        $date = now()->subDays(4)->toDateString();
+        Attendance::withoutGlobalScopes()->where('tenant_id', $this->tenantId)->where('user_id', $this->employee->id)->where('date', $date)->delete();
+
+        $this->punchAt($date, '09:00:00', 'PHPU-8a');
+        $this->punchAt($date, '17:00:00', 'PHPU-8b');
+        $att = $this->dayRow($date);
+        $att->forceFill(['attendance_type' => 'manual'])->save();
+
+        $this->punchAt($date, '20:00:00', 'PHPU-8c');
+
+        $this->assertSame('17:00:00', Carbon::parse($this->dayRow($date)->clock_out)->format('H:i:s'));
+
+        \DB::table('attendance_logs')->where('attendance_id', $att->id)->delete();
+        $att->delete();
+    }
+
+    public function test_auto_device_keeps_classic_rule(): void
+    {
+        $this->device->update(['direction_mode' => 'auto']);
+        $date = now()->subDays(5)->toDateString();
+        Attendance::withoutGlobalScopes()->where('tenant_id', $this->tenantId)->where('user_id', $this->employee->id)->where('date', $date)->delete();
+
+        $this->punchAt($date, '09:00:00', 'PHPU-9a');
+        $this->punchAt($date, '13:00:00', 'PHPU-9b');
+        $this->punchAt($date, '19:00:00', 'PHPU-9c');   // option off: ignored
+
+        $att = $this->dayRow($date);
+        $this->assertSame('13:00:00', Carbon::parse($att->clock_out)->format('H:i:s'));
+        $this->assertSame('already clocked out',
+            BiometricPunch::where('biometric_device_id', $this->device->id)->latest('id')->value('error'));
 
         \DB::table('attendance_logs')->where('attendance_id', $att->id)->delete();
         $att->delete();

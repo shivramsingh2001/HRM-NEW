@@ -90,7 +90,7 @@
                             <td>{{ $d->name }}</td>
                             <td><code>{{ $d->serial_number }}</code></td>
                             <td>{{ $d->p2p_uid ? 'P2P' : 'LAN' }}{{ $d->ip_address ? ' · '.$d->ip_address : '' }}</td>
-                            <td>{{ $d->direction_mode }}</td>
+                            <td>{{ $d->direction_mode === 'first_last' ? 'first in, last out' : $d->direction_mode }}</td>
                             <td>{{ $d->mapped_count }} / {{ $d->unmapped_count }}</td>
                             <td>{{ $d->last_seen_at?->diffForHumans() ?? '—' }}</td>
                             <td>{{ $d->last_punch_at?->diffForHumans() ?? '—' }}</td>

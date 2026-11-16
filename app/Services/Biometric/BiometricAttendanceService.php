@@ -89,9 +89,13 @@ class BiometricAttendanceService
         $branchId = UserJobDetail::where('user_id', $user->id)->where('tenant_id', $tenantId)->value('office_branch');
         $label = $device?->name ?: $punch->serial_number;
 
+        // Device option "first in, last out" (direction_mode = first_last): every
+        // later punch moves the clock-out, so the last punch of the day is the
+        // final clock-out. Other modes keep the classic in → out → ignore rule.
+        $this->firstLast = $device?->direction_mode === 'first_last';
         $columns = $direction === 'in'
-            ? $this->clockInColumns($punchLocal, $shift, $date, $branchId, $label, $punch)
-            : $this->clockOutColumns($punchLocal, $shift, $date, $existing, $label, $punch);
+            ? $this->clockInColumns($punchLocal, $shift, $date, $branchId, $label, $punch, $existing)
+            : $this->clockOutColumns($punchLocal, $shift, $date, $existing, $label, $punch, $branchId);
 
         if ($columns === null) {
             // e.g. clock-out with no prior clock-in, or already set — not an error.
@@ -147,6 +151,9 @@ class BiometricAttendanceService
     }
 
     private string $skipReason = 'skipped';
+
+    /** The punch's device uses the "first in, last out" option. */
+    private bool $firstLast = false;
 
     // ------------------------------------------------------------------
 
@@ -328,6 +335,11 @@ class BiometricAttendanceService
 
     private function resolveDirection(BiometricPunch $punch, ?BiometricDevice $device, int $tenantId, int $userId, string $date): string
     {
+        // "First in, last out": the day's state decides, never the device's In/Out keys.
+        if ($device?->direction_mode === 'first_last') {
+            return $this->fromState($tenantId, $userId, $date);
+        }
+
         foreach (config('biometric.direction_priority', ['payload', 'device_mode', 'verify_mode', 'auto']) as $src) {
             $d = match ($src) {
                 'payload' => in_array($punch->direction, ['in', 'out'], true) ? $punch->direction : null,
@@ -412,7 +424,44 @@ class BiometricAttendanceService
         return "{$how} · {$label} · #{$punch->enroll_no}";
     }
 
-    private function clockInColumns(Carbon $at, $shift, string $date, $branchId, string $label, BiometricPunch $punch): ?array
+    /**
+     * A day set by hand (manual mark, regularization, bulk mark) keeps its
+     * times: device punches may fill an empty clock-out but never move one.
+     */
+    private function isHandSet(?Attendance $row): bool
+    {
+        return $row !== null && ($row->getAttribute('attendance_type') === 'manual' || ! empty($row->regularized_by) || ! empty($row->marked_by));
+    }
+
+    /**
+     * Clock-in. On a day that already has one (an "In only" device, or a
+     * late-uploaded punch) the EARLIEST punch stays the clock-in; an earlier
+     * punch moves it back and re-derives the hours when a clock-out exists.
+     */
+    private function clockInColumns(Carbon $at, $shift, string $date, $branchId, string $label, BiometricPunch $punch, ?Attendance $existing = null): ?array
+    {
+        if ($this->firstLast && $existing && ! empty($existing->clock_in)) {
+            if ($this->isHandSet($existing)) {
+                $this->skipReason = 'manual attendance kept';
+
+                return null;
+            }
+            if ($at->gte(Carbon::parse($existing->clock_in))) {
+                $this->skipReason = 'later than clock-in';
+
+                return null;
+            }
+            $columns = $this->baseClockInColumns($at, $shift, $date, $branchId, $label, $punch);
+
+            return empty($existing->clock_out)
+                ? $columns
+                : array_merge($columns, $this->workedColumns($at, Carbon::parse($existing->clock_out), $shift, $date, $existing, (string) $existing->getAttribute('clock_out_address')));
+        }
+
+        return $this->baseClockInColumns($at, $shift, $date, $branchId, $label, $punch);
+    }
+
+    private function baseClockInColumns(Carbon $at, $shift, string $date, $branchId, string $label, BiometricPunch $punch): array
     {
         $lateMinutes = 0;
         if ($shift) {
@@ -440,20 +489,69 @@ class BiometricAttendanceService
         ];
     }
 
-    private function clockOutColumns(Carbon $at, $shift, string $date, ?Attendance $existing, string $label, BiometricPunch $punch): ?array
+    /**
+     * Clock-out: first punch in, last punch out. Every punch after the
+     * clock-in becomes the clock-out while it is the latest one, so the last
+     * punch of the day is the final clock-out; punches in between are kept in
+     * biometric_punches only. A late-uploaded punch earlier than the clock-in
+     * becomes the clock-in instead (the old clock-in then closes the day if
+     * there was no clock-out yet).
+     */
+    private function clockOutColumns(Carbon $at, $shift, string $date, ?Attendance $existing, string $label, BiometricPunch $punch, $branchId = null): ?array
     {
         if (! $existing || empty($existing->clock_in)) {
             $this->skipReason = 'no prior clock-in';
 
             return null;
         }
-        if (! empty($existing->clock_out)) {
-            $this->skipReason = 'already clocked out';
+
+        $clockIn = Carbon::parse($existing->clock_in);
+        $address = $this->addressLine($punch, $label);
+
+        if (! $this->firstLast) {
+            // Classic rule: the 2nd punch is the clock-out, later ones are ignored.
+            if (! empty($existing->clock_out)) {
+                $this->skipReason = 'already clocked out';
+
+                return null;
+            }
+
+            return $this->workedColumns($clockIn, $at, $shift, $date, $existing, $address);
+        }
+
+        if (! empty($existing->clock_out) && $this->isHandSet($existing)) {
+            $this->skipReason = 'manual attendance kept';
 
             return null;
         }
 
-        $clockIn = Carbon::parse($existing->clock_in);
+        if ($at->lt($clockIn)) {
+            if ($this->isHandSet($existing)) {
+                $this->skipReason = 'manual attendance kept';
+
+                return null;
+            }
+            $out = empty($existing->clock_out) ? $clockIn : Carbon::parse($existing->clock_out);
+            $outAddress = empty($existing->clock_out) ? (string) $existing->getAttribute('clock_in_address') : (string) $existing->getAttribute('clock_out_address');
+
+            return array_merge(
+                $this->baseClockInColumns($at, $shift, $date, $branchId, $label, $punch),
+                $this->workedColumns($at, $out, $shift, $date, $existing, $outAddress),
+            );
+        }
+
+        if (! empty($existing->clock_out) && $at->lte(Carbon::parse($existing->clock_out))) {
+            $this->skipReason = 'between clock-in and clock-out';
+
+            return null;
+        }
+
+        return $this->workedColumns($clockIn, $at, $shift, $date, $existing, $address);
+    }
+
+    /** clock_out + hours / early / overtime / day status for an in→out pair. */
+    private function workedColumns(Carbon $clockIn, Carbon $at, $shift, string $date, Attendance $existing, string $outAddress): array
+    {
         $workedSeconds = max(0, $this->calc->workedSeconds($clockIn, $at));
         $workedHours = $this->calc->decimalHours($workedSeconds);
 
@@ -481,7 +579,7 @@ class BiometricAttendanceService
 
         return [
             'clock_out' => $at->format('Y-m-d H:i:s'),
-            'clock_out_address' => $this->addressLine($punch, $label),
+            'clock_out_address' => $outAddress,
             'worked_hours' => $workedHours,
             'total_hours' => $this->calc->formatDuration($workedSeconds),
             'early_departure_minutes' => $early,
