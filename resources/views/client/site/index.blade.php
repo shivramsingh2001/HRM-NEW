@@ -33,12 +33,12 @@
 @endphp
 
 @section('content-area')
-    <x-ui.page-header class="content-area-header sticky-top" title="Sites">
+    <x-ui.page-header class="content-area-header sticky-top" title="Outlets">
         <x-slot:actions>
             <a href="{{ route('sites.export', request()->query()) }}" class="btn btn-light btn-sm"><i class="feather-download me-1"></i> Export</a>
             @permission('sites', 'create')
                 <button type="button" class="btn btn-light btn-sm" onclick="openSiteImport()"><i class="feather-upload me-1"></i> Import</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="openSiteForm()"><i class="feather-plus me-1"></i> Add Site</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openSiteForm()"><i class="feather-plus me-1"></i> Add Outlet</button>
             @endpermission
         </x-slot:actions>
     </x-ui.page-header>
@@ -53,21 +53,21 @@
                 <div class="stats-icon-wrapper"><i class="feather-map-pin"></i></div>
                 <div class="stats-content">
                     <div class="stats-amount-main">{{ $summary['total'] }}</div>
-                    <div class="stats-label">Total Sites</div>
+                    <div class="stats-label">Total Outlets</div>
                 </div>
             </div>
             <div class="stats-card present-card">
                 <div class="stats-icon-wrapper"><i class="feather-check-circle"></i></div>
                 <div class="stats-content">
                     <div class="stats-amount-main">{{ $summary['active'] }}</div>
-                    <div class="stats-label">Active Sites</div>
+                    <div class="stats-label">Active Outlets</div>
                 </div>
             </div>
             <div class="stats-card inactive-card">
                 <div class="stats-icon-wrapper"><i class="feather-pause-circle"></i></div>
                 <div class="stats-content">
                     <div class="stats-amount-main">{{ $summary['inactive'] }}</div>
-                    <div class="stats-label">Inactive Sites</div>
+                    <div class="stats-label">Inactive Outlets</div>
                 </div>
             </div>
             <div class="stats-card visits-card">
@@ -79,7 +79,7 @@
             </div>
         </div>
 
-        <x-ui.filter-card title="Filter Sites" class="site-filter" :clear-url="$isFiltered ? route('sites.index') : null">
+        <x-ui.filter-card title="Filter Outlets" class="site-filter" :clear-url="$isFiltered ? route('sites.index') : null">
             <form action="{{ route('sites.index') }}" method="GET" id="filterForm">
                 <div class="filter-row">
                     <div class="filter-item search">
@@ -129,8 +129,8 @@
                     <thead>
                         <tr>
                             <th class="text-center" style="width:56px;">Sr. No.</th>
-                            <th>Site Code</th>
-                            <th>Site Name</th>
+                            <th>Outlet Code</th>
+                            <th>Outlet Name</th>
                             <th>State / District</th>
                             <th>Address</th>
                             <th>Onboarding Date</th>
@@ -190,15 +190,15 @@
                         @empty
                             <tr>
                                 <td colspan="9">
-                                    <x-ui.empty-state icon="map-pin" title="No sites found"
-                                        :subtitle="$isFiltered ? 'Try changing or clearing the filters.' : 'Add a site to get started.'" />
+                                    <x-ui.empty-state icon="map-pin" title="No outlets found"
+                                        :subtitle="$isFiltered ? 'Try changing or clearing the filters.' : 'Add an outlet to get started.'" />
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
                 </x-ui.data-table>
             </div>
-            <x-ui.pagination-footer :paginator="$sites" label="sites" />
+            <x-ui.pagination-footer :paginator="$sites" label="outlets" />
         </div>
     </div>
 @endsection

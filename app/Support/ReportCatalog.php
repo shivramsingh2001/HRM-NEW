@@ -86,8 +86,8 @@ class ReportCatalog
 
         'asset.register' => ['Asset', 'Asset Register', 'report.asset.register.export', [], [], 'none'],
 
-        'site-visit.day-wise' => ['Site Visits', 'Day-wise Visits', 'report.site-visit.day-wise.export', [], [], 'day'],
-        'site-visit.monthly' => ['Site Visits', 'Monthly Visits', 'report.site-visit.monthly.export', [], [], 'month'],
+        'site-visit.day-wise' => ['Outlet Visits', 'Day-wise Visits', 'report.site-visit.day-wise.export', [], [], 'day'],
+        'site-visit.monthly' => ['Outlet Visits', 'Monthly Visits', 'report.site-visit.monthly.export', [], [], 'month'],
     ];
 
     public static function exists(string $key): bool

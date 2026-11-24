@@ -40,7 +40,7 @@ class SiteVisitController extends Controller
         $user = Auth::user();
         $rbac = app(\App\Services\RbacService::class);
 
-        return $this->ok('Site visit settings', [
+        return $this->ok('Outlet visit settings', [
             'today' => now()->toDateString(),
             'role' => $user->role,
             'can_record' => $rbac->can($user, 'site_visits', 'create'),
@@ -53,6 +53,8 @@ class SiteVisitController extends Controller
                 'remarks_max' => 2000,
                 'contact_person_name_max' => 191,
                 'contact_mobile_digits' => 10,
+                'current_stock' => 'optional, number >= 0',
+                'date_of_stock_received' => 'optional, Y-m-d, not in the future',
                 'file_max_kb' => 10240,
                 'file_types' => ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx'],
             ],
@@ -94,7 +96,7 @@ class SiteVisitController extends Controller
         $filters = $this->listFilters($request, ['user_id'], true);
         $page = $this->reports->teamVisits($user, $filters, min(50, max(1, (int) $request->input('per_page', 20))));
 
-        return $this->ok('Team site visits', [
+        return $this->ok('Team outlet visits', [
             'today' => now()->toDateString(),
             'filters' => $filters,
             'summary' => $this->reports->teamSummary($user, $filters),
@@ -125,7 +127,7 @@ class SiteVisitController extends Controller
             min(100, max(1, (int) $request->input('per_page', 50))));
         $states = app(SiteService::class)->stateOptions();
 
-        return $this->ok('Sites', [
+        return $this->ok('Outlets', [
             'sites' => collect($page->items())->map(fn ($s) => [
                 'id' => $s->id, 'site_code' => $s->site_code, 'site_name' => $s->site_name,
                 'state' => $states[$s->state_code] ?? null, 'district' => $s->district, 'address' => $s->address,
@@ -146,7 +148,7 @@ class SiteVisitController extends Controller
         $filters = $this->listFilters($request);
         $page = $this->visits->ownVisits($user, $filters, min(50, max(1, (int) $request->input('per_page', 20))));
 
-        return $this->ok('Site visits', [
+        return $this->ok('Outlet visits', [
             'today' => now()->toDateString(),
             'filters' => $filters,
             'summary' => $this->visits->ownSummary($user, $filters),
@@ -167,10 +169,10 @@ class SiteVisitController extends Controller
             return response()->json(['success' => false, 'message' => 'You cannot view this visit.'], 403);
         }
 
-        return $this->ok('Site visit', $this->visits->toApi($visit));
+        return $this->ok('Outlet visit', $this->visits->toApi($visit));
     }
 
-    /** POST /api/site-visits — multipart: site_id, remarks, contact_person_name?, contact_mobile?, file?, latitude?, longitude? */
+    /** POST /api/site-visits — multipart: site_id, remarks, contact_person_name?, contact_mobile?, current_stock?, date_of_stock_received?, file?, latitude?, longitude? */
     public function store(StoreSiteVisitRequest $request): JsonResponse
     {
         try {
@@ -182,7 +184,7 @@ class SiteVisitController extends Controller
         return $this->ok('Visit recorded.', $this->visits->toApi($visit->load('site')));
     }
 
-    /** POST|PUT /api/site-visits/{id} — remarks, contact_person_name?, contact_mobile?, file?, remove_file? (same day, own visit only). */
+    /** POST|PUT /api/site-visits/{id} — remarks, contact_person_name?, contact_mobile?, current_stock?, date_of_stock_received?, file?, remove_file? (same day, own visit only). */
     public function update(UpdateSiteVisitRequest $request, $id): JsonResponse
     {
         $visit = SiteVisit::with('site')->find($id);
@@ -205,7 +207,7 @@ class SiteVisitController extends Controller
         $filters['date'] = min($filters['date'] ?? now()->toDateString(), now()->toDateString());
         $page = $this->reports->dayWise(Auth::user(), $filters, min(50, max(1, (int) $request->input('per_page', 25))));
 
-        return $this->ok('Day-wise site visits', [
+        return $this->ok('Day-wise outlet visits', [
             'date' => $filters['date'],
             'visits' => array_map(fn ($v) => $this->row($v) + ['employee' => $this->employee($v)], $page->items()),
             'pagination' => $this->pagination($page),
@@ -217,7 +219,7 @@ class SiteVisitController extends Controller
     {
         $month = SiteVisitReportService::month($request->input('month'));
 
-        return $this->ok('Monthly site visits', [
+        return $this->ok('Monthly outlet visits', [
             'month' => $month,
             'employees' => $this->reports->monthlySummary(Auth::user(), $month, $request->integer('user_id') ?: null)->all(),
         ]);
@@ -232,7 +234,7 @@ class SiteVisitController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
         }
 
-        return $this->ok('Employee site visits', [
+        return $this->ok('Employee outlet visits', [
             'employee' => ['id' => $data['user']->id, 'name' => $data['user']->name, 'employee_id' => $data['user']->employee_id],
             'month' => $data['month'],
             'totals' => $data['totals'],

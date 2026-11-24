@@ -1,17 +1,17 @@
 {{-- Add / Edit site drawer + its script; shared by the Sites list and the site detail page.
      Open for a new site: openSiteForm(); for an existing one: openSiteForm(siteJson). --}}
-<x-ui.drawer id="siteDrawer" title="Add Site" subtitle="The site code is generated automatically when you save." width="480px">
+<x-ui.drawer id="siteDrawer" title="Add Outlet" subtitle="The outlet code is generated automatically when you save." width="480px">
     <form id="siteForm" autocomplete="off">
         <input type="hidden" name="id" id="siteId">
         <div id="siteFormError" class="alert alert-danger d-none" style="font-size:11.5px;"></div>
 
         <div class="row">
             <div class="col-12 mb-3 d-none" id="siteCodeRow">
-                <label class="fw-semibold" style="font-size:11.5px;">Site Code</label>
+                <label class="fw-semibold" style="font-size:11.5px;">Outlet Code</label>
                 <input type="text" class="form-control" id="siteCode" disabled>
             </div>
             <div class="col-12 mb-3">
-                <label class="fw-semibold" style="font-size:11.5px;">Site Name <span class="text-danger">*</span></label>
+                <label class="fw-semibold" style="font-size:11.5px;">Outlet Name <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" name="site_name" maxlength="191" required placeholder="e.g. Noida Sector 62 Warehouse">
                 <small class="text-danger error-text site_name_error"></small>
             </div>
@@ -66,13 +66,13 @@
                 <small class="text-danger error-text longitude_error"></small>
             </div>
             <div class="col-12 mb-2">
-                <small class="text-muted" style="font-size:11px;">Optional. Latitude and longitude pin the site on the map.</small>
+                <small class="text-muted" style="font-size:11px;">Optional. Latitude and longitude pin the outlet on the map.</small>
             </div>
         </div>
 
         <div class="d-flex gap-2 mt-3">
             <button type="submit" class="btn btn-primary btn-sm" id="siteSaveBtn">
-                <i class="feather-check me-1"></i> <span id="siteSaveLabel">Save Site</span>
+                <i class="feather-check me-1"></i> <span id="siteSaveLabel">Save Outlet</span>
             </button>
             <button type="button" class="btn btn-modal-cancel btn-sm" data-bs-dismiss="offcanvas">Cancel</button>
         </div>
@@ -131,8 +131,8 @@
                 document.getElementById('siteId').value = site ? site.id : '';
                 document.getElementById('siteCodeRow').classList.toggle('d-none', !site);
                 document.getElementById('siteCode').value = site ? site.site_code : '';
-                document.getElementById('siteDrawerLabel').textContent = site ? 'Edit Site' : 'Add Site';
-                document.getElementById('siteSaveLabel').textContent = site ? 'Update Site' : 'Save Site';
+                document.getElementById('siteDrawerLabel').textContent = site ? 'Edit Outlet' : 'Add Outlet';
+                document.getElementById('siteSaveLabel').textContent = site ? 'Update Outlet' : 'Save Outlet';
                 if (site) {
                     fields.forEach(f => { if (form.elements[f]) form.elements[f].value = site[f] ?? ''; });
                 } else {

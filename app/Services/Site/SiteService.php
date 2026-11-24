@@ -73,7 +73,7 @@ class SiteService
     public function setStatus(Site $site, string $status, User $actor): Site
     {
         if (! in_array($status, Site::STATUSES, true)) {
-            throw new SiteException('Unknown site status.');
+            throw new SiteException('Unknown outlet status.');
         }
 
         return $this->update($site, ['status' => $status], $actor);
@@ -84,7 +84,7 @@ class SiteService
     {
         $hasVisits = SiteVisit::where('tenant_id', $site->tenant_id)->where('site_id', $site->id)->exists();
         if ($hasVisits) {
-            throw new SiteException('This site already has visits, so it can\'t be deleted. Mark it inactive instead.');
+            throw new SiteException('This outlet already has visits, so it can\'t be deleted. Mark it inactive instead.');
         }
 
         $site->delete();

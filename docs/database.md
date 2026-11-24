@@ -242,7 +242,7 @@ Full asset lifecycle module: registration → assignment → employee acceptance
 | Table | Purpose | Key columns |
 |---|---|---|
 | `sites` | Company site master (soft deletes). | `site_no` per-company running number + `site_code` (`SITE-0001`, system-generated, never edited) — unique `(tenant_id, site_no)` and `(tenant_id, site_code)`; `site_name`, `state_code` (unsigned bigint → `states.state_code`; the geo master only holds Indian states), `address` required; `district`, `location`, `latitude`/`longitude`, `onboarding_date` nullable; `status` enum(active/inactive) |
-| `site_visits` | One row per visit an employee/manager records at a site. | `site_id` (real FK → `sites`), `user_id`, `visit_date` (server-set day of saving), `visited_at`, `remarks` required, `contact_person_name`/`contact_mobile`/`file_path`/`latitude`/`longitude` nullable, `edited_at`; indexes `(tenant_id, visit_date)`, `(tenant_id, user_id, visit_date)`, `(tenant_id, site_id, visit_date)` |
+| `site_visits` | One row per visit an employee/manager records at a site. | `site_id` (real FK → `sites`), `user_id`, `visit_date` (server-set day of saving), `visited_at`, `remarks` required, `contact_person_name`/`contact_mobile`/`file_path`/`latitude`/`longitude` nullable, `current_stock` decimal(12,2) + `date_of_stock_received` date nullable (migration `2026_11_24_000001_add_stock_to_site_visits`), `edited_at`; indexes `(tenant_id, visit_date)`, `(tenant_id, user_id, visit_date)`, `(tenant_id, site_id, visit_date)` |
 
 ## Scheduled Reports (2026-11-10)
 

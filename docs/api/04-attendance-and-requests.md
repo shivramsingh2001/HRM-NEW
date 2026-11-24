@@ -978,6 +978,8 @@ Controller: `app/Http/Controllers/Api/Attendance/OvertimeController.php` (route 
 
 ## Sites & Site Visits (added 2026-11-02)
 
+**Shown as "Outlets" / "Outlet Visits" (2026-11-24):** the web screens and API messages say *Outlet*; every URL, JSON key (`site`, `site_id`, `site_code`, `site_name`) and the `SITE-0001` code format are unchanged.
+
 Controller: `app/Http/Controllers/Api/Site/SiteVisitController.php` (rules in `App\Services\Site\SiteVisitService` — the same ones the web "My Site Visits" page uses).
 **Auth:** JWT + Device-Token. **Feature:** `site_management` must be on for the company (otherwise the `feature` middleware refuses). **Permissions:** `site_visits` module — employees: own visits; managers: own visits, view their team's; HR/admin: whole company.
 **Envelope:** `{"success": true, "message": "...", "data": {...}}`. A refused request is `422 {"success": false, "message": "<reason>", "errors": ["<reason>"]}`; a validation failure is `422 {"success": false, "message": "<first error>", "errors": {field: [...]}}`.
@@ -988,6 +990,7 @@ Controller: `app/Http/Controllers/Api/Site/SiteVisitController.php` (rules in `A
   "id": 41, "visit_date": "2026-11-02", "visited_at": "2026-11-02 11:42:10",
   "site": {"id": 7, "site_code": "SITE-0007", "site_name": "Sector 62 Office", "district": "Gautam Buddha Nagar", "address": "A-12, Sector 62, Noida"},
   "contact_person_name": "Ramesh", "contact_mobile": "9876543210", "remarks": "Checked the new installation.",
+  "current_stock": 120, "date_of_stock_received": "2026-11-20",
   "file_url": "https://…/upload_new/site_visits/7/2026/11/<uuid>.jpg", "file_name": "<uuid>.jpg",
   "latitude": "28.6270000", "longitude": "77.3727000", "edited_at": null, "can_edit": true
 }
@@ -1007,7 +1010,7 @@ Controller: `app/Http/Controllers/Api/Site/SiteVisitController.php` (rules in `A
 
 ### GET /api/site-visits/meta
 **Purpose:** What the caller can do here, so the app shows the right tabs and buttons, plus the form rules. **Permission:** `site_visits,view`.
-**Success — 200:** `data: {"today": "2026-11-03", "role": "manager", "can_record": true, "can_edit": true, "can_see_team": true, "view_scope": "team", "rules": {"visit_date": "always today (not sent by the app)", "edit": "own visit, on the same day only", "remarks_max": 2000, "contact_person_name_max": 191, "contact_mobile_digits": 10, "file_max_kb": 10240, "file_types": ["jpg", "jpeg", "png", "webp", "pdf", "doc", "docx", "xls", "xlsx"]}}`
+**Success — 200:** `data: {"today": "2026-11-03", "role": "manager", "can_record": true, "can_edit": true, "can_see_team": true, "view_scope": "team", "rules": {"visit_date": "always today (not sent by the app)", "edit": "own visit, on the same day only", "remarks_max": 2000, "contact_person_name_max": 191, "contact_mobile_digits": 10, "current_stock": "optional, number >= 0", "date_of_stock_received": "optional, Y-m-d, not in the future", "file_max_kb": 10240, "file_types": ["jpg", "jpeg", "png", "webp", "pdf", "doc", "docx", "xls", "xlsx"]}}`
 `can_see_team` is true for a team (manager) or company (HR/admin) `site_visits:view` scope — show the Team Visits tab only then. `view_scope` is `own` / `team` / `company`.
 
 ### GET /api/site-visits/filter-options
@@ -1044,14 +1047,16 @@ Controller: `app/Http/Controllers/Api/Site/SiteVisitController.php` (rules in `A
 | `remarks` | string | Yes | Up to 2000 characters. |
 | `contact_person_name` | string | No | Up to 191 characters. |
 | `contact_mobile` | string | No | Exactly 10 digits. |
+| `current_stock` | number | No | Stock found at the outlet, ≥ 0 (decimals allowed). Returned as a number, or `null` when not filled. |
+| `date_of_stock_received` | date `Y-m-d` | No | When that stock was received; today or earlier. |
 | `file` | file | No | jpg, jpeg, png, webp, pdf, doc, docx, xls, xlsx — up to 10 MB. |
 | `latitude` / `longitude` | numeric | No | Phone location; send both or neither. |
 
-**Success — 200:** `{"success": true, "message": "Visit recorded.", "data": <visit>}`. **422:** `"Choose an active site."`, validation errors, or a file type/size problem.
+**Success — 200:** `{"success": true, "message": "Visit recorded.", "data": <visit>}`. **422:** `"Choose an active outlet."`, validation errors, or a file type/size problem.
 
 ### POST /api/site-visits/{id} (also PUT)
 **Purpose:** Edit my own visit **on the same day only**. Site and date can't be changed. Use POST (multipart) to send a new file — PHP doesn't read multipart bodies on PUT. **Permission:** `site_visits,edit`.
-**Body:** `remarks` (required), `contact_person_name`, `contact_mobile`, `file` (replaces the current one), `remove_file` (1 = delete the current file).
+**Body:** `remarks` (required), `contact_person_name`, `contact_mobile`, `current_stock`, `date_of_stock_received` (a field left out keeps its value; sent empty clears it), `file` (replaces the current one), `remove_file` (1 = delete the current file).
 **Success — 200:** `{"success": true, "message": "Visit updated.", "data": <visit>}`. **422:** `"You can only edit your own visits."` or `"A visit can only be edited on the day it was recorded."`.
 
 ### GET /api/manager/site-visits/day-wise

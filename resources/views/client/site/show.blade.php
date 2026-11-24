@@ -31,7 +31,7 @@
 @section('content-area')
     <x-ui.page-header class="content-area-header sticky-top" :title="$site->site_code . ' · ' . $site->site_name"
         current="{{ $site->site_code }}" :back="route('sites.index')"
-        :crumbs="[['label' => 'Sites', 'url' => route('sites.index')]]">
+        :crumbs="[['label' => 'Outlets', 'url' => route('sites.index')]]">
         <x-slot:actions>
             @permission('sites', 'edit')
                 <button type="button" class="btn btn-light btn-sm"
@@ -54,13 +54,13 @@
             <div class="col-lg-8">
                 <div class="card h-100 mb-0">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6>Site Details</h6>
+                        <h6>Outlet Details</h6>
                         <x-ui.status-badge :status="$site->status" />
                     </div>
                     <div class="card-body">
                         <div class="row g-0 info-grid">
-                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Site Code</div><div class="info-value fw-semibold">{{ $site->site_code }}</div></div>
-                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Site Name</div><div class="info-value fw-semibold">{{ $site->site_name }}</div></div>
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Outlet Code</div><div class="info-value fw-semibold">{{ $site->site_code }}</div></div>
+                            <div class="col-6 col-md-4 pe-2"><div class="info-label">Outlet Name</div><div class="info-value fw-semibold">{{ $site->site_name }}</div></div>
                             <div class="col-6 col-md-4 pe-2"><div class="info-label">Onboarding Date</div><div class="info-value">{{ $site->onboarding_date?->format('d M Y') ?? '—' }}</div></div>
                             <div class="col-6 col-md-4 pe-2"><div class="info-label">State</div><div class="info-value">{{ $states[$site->state_code] ?? '—' }}</div></div>
                             <div class="col-6 col-md-4 pe-2"><div class="info-label">District</div><div class="info-value">{{ $site->district ?: '—' }}</div></div>
@@ -106,7 +106,7 @@
             <div class="card-body p-0">
                 <x-ui.data-table>
                     <thead>
-                        <tr><th class="text-center" style="width:48px;">Sr. No.</th><th>Date &amp; Time</th><th>Employee</th><th>Contact</th><th>Remarks</th><th>File</th></tr>
+                        <tr><th class="text-center" style="width:48px;">Sr. No.</th><th>Date &amp; Time</th><th>Employee</th><th>Contact</th><th>Stock</th><th>Remarks</th><th>File</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($visits as $v)
@@ -116,11 +116,12 @@
                                 <td class="text-nowrap">{{ $v->visited_at->format('d M Y, h:i A') }}</td>
                                 <td>{{ $v->user->name ?? '—' }}<div class="sub">{{ $v->user->employee_id ?? '' }}</div></td>
                                 <td>{{ $v->contact_person_name ?: '—' }}@if ($v->contact_mobile)<div class="sub">{{ $v->contact_mobile }}</div>@endif</td>
+                                @include('client.site.partials.stock-cell')
                                 <td style="max-width:360px; white-space:pre-line;">{{ $v->remarks }}</td>
                                 <td>@if ($fileUrl)<a href="{{ $fileUrl }}" target="_blank" rel="noopener"><i class="feather-paperclip"></i> View</a>@else — @endif</td>
                             </tr>
                         @empty
-                            <tr><td colspan="6"><x-ui.empty-state icon="clock" title="No visits {{ $visitMonth ? 'in ' . \Carbon\Carbon::parse($visitMonth . '-01')->format('F Y') : 'yet' }}" /></td></tr>
+                            <tr><td colspan="7"><x-ui.empty-state icon="clock" title="No visits {{ $visitMonth ? 'in ' . \Carbon\Carbon::parse($visitMonth . '-01')->format('F Y') : 'yet' }}" /></td></tr>
                         @endforelse
                     </tbody>
                 </x-ui.data-table>

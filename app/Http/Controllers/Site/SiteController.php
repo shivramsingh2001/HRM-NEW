@@ -52,14 +52,14 @@ class SiteController extends Controller
     {
         $site = $this->sites->create((int) Auth::user()->tenant_id, $request->validated(), Auth::user());
 
-        return response()->json(['status' => true, 'message' => "Site {$site->site_code} added."]);
+        return response()->json(['status' => true, 'message' => "Outlet {$site->site_code} added."]);
     }
 
     public function update(SiteRequest $request, $id)
     {
         $site = $this->sites->update(Site::findOrFail($id), $request->validated(), Auth::user());
 
-        return response()->json(['status' => true, 'message' => "Site {$site->site_code} updated."]);
+        return response()->json(['status' => true, 'message' => "Outlet {$site->site_code} updated."]);
     }
 
     public function status(Request $request, $id)
@@ -67,7 +67,7 @@ class SiteController extends Controller
         $data = $request->validate(['status' => 'required|in:active,inactive']);
         $site = $this->sites->setStatus(Site::findOrFail($id), $data['status'], Auth::user());
 
-        return response()->json(['status' => true, 'message' => "Site {$site->site_code} is now {$site->status}."]);
+        return response()->json(['status' => true, 'message' => "Outlet {$site->site_code} is now {$site->status}."]);
     }
 
     public function destroy($id)
@@ -79,7 +79,7 @@ class SiteController extends Controller
             return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['status' => true, 'message' => "Site {$site->site_code} deleted."]);
+        return response()->json(['status' => true, 'message' => "Outlet {$site->site_code} deleted."]);
     }
 
     public function export(Request $request)
@@ -90,7 +90,7 @@ class SiteController extends Controller
 
         return response()->streamDownload(function () use ($rows, $states) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Site Code', 'Site Name', 'State', 'District', 'Address', 'Location', 'Latitude', 'Longitude', 'Onboarding Date', 'Status']);
+            fputcsv($out, ['Outlet Code', 'Outlet Name', 'State', 'District', 'Address', 'Location', 'Latitude', 'Longitude', 'Onboarding Date', 'Status']);
             foreach ($rows as $site) {
                 fputcsv($out, [
                     $site->site_code, $site->site_name, $states[$site->state_code] ?? '', $site->district,
@@ -99,6 +99,6 @@ class SiteController extends Controller
                 ]);
             }
             fclose($out);
-        }, 'sites-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv']);
+        }, 'outlets-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv']);
     }
 }

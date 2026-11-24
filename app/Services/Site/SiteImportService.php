@@ -31,23 +31,23 @@ class SiteImportService
     private const CACHE_MINUTES = 30;
 
     /** Template header, in order (* = required). */
-    public const COLUMNS = ['Site Name*', 'State*', 'District', 'Address*', 'Location', 'Latitude', 'Longitude', 'Onboarding Date'];
+    public const COLUMNS = ['Outlet Name*', 'State*', 'District', 'Address*', 'Location', 'Latitude', 'Longitude', 'Onboarding Date'];
 
     /** Header aliases (lower-cased, spaces/underscores/dots/dashes/* removed) → field. */
     private const HEADERS = [
-        'sitename' => 'site_name', 'name' => 'site_name',
+        'sitename' => 'site_name', 'outletname' => 'site_name', 'name' => 'site_name',
         'state' => 'state', 'statename' => 'state',
         'district' => 'district',
-        'address' => 'address', 'siteaddress' => 'address',
+        'address' => 'address', 'siteaddress' => 'address', 'outletaddress' => 'address',
         'location' => 'location',
         'latitude' => 'latitude', 'lat' => 'latitude',
         'longitude' => 'longitude', 'long' => 'longitude', 'lng' => 'longitude',
-        'onboardingdate' => 'onboarding_date', 'onboarding' => 'onboarding_date', 'siteonboardingdate' => 'onboarding_date',
+        'onboardingdate' => 'onboarding_date', 'onboarding' => 'onboarding_date', 'siteonboardingdate' => 'onboarding_date', 'outletonboardingdate' => 'onboarding_date',
     ];
 
     private const FIELDS = ['site_name', 'state', 'district', 'address', 'location', 'latitude', 'longitude', 'onboarding_date'];
 
-    private const REQUIRED_HEADERS = ['site_name' => 'Site Name', 'state' => 'State', 'address' => 'Address'];
+    private const REQUIRED_HEADERS = ['site_name' => 'Outlet Name', 'state' => 'State', 'address' => 'Address'];
 
     /** Date formats accepted for text dates (Excel date cells arrive as serial numbers). */
     private const DATE_FORMATS = ['d-m-Y', 'd/m/Y', 'd.m.Y', 'Y-m-d', 'Y/m/d', 'd-M-Y', 'd M Y', 'j-n-Y', 'j/n/Y'];
@@ -68,10 +68,10 @@ class SiteImportService
     {
         $rows = $this->readRows($file);
         if ($rows === []) {
-            throw new SiteException('The file has no site rows.');
+            throw new SiteException('The file has no outlet rows.');
         }
         if (count($rows) > self::MAX_ROWS) {
-            throw new SiteException('Maximum '.self::MAX_ROWS.' sites per file.');
+            throw new SiteException('Maximum '.self::MAX_ROWS.' outlets per file.');
         }
 
         $states = $this->stateLookup();
@@ -87,7 +87,7 @@ class SiteImportService
             $key = $this->duplicateKey($row['site_name'], $row['address']);
             if ($row['site_name'] !== '' && $row['address'] !== '') {
                 if (isset($taken[$key])) {
-                    $messages[] = 'A site with this name and address already exists.';
+                    $messages[] = 'An outlet with this name and address already exists.';
                 } elseif (isset($seen[$key])) {
                     $messages[] = "Same name and address as row {$seen[$key]}.";
                 } else {
@@ -172,7 +172,7 @@ class SiteImportService
             $rows[] = array_merge(array_map(fn ($field) => $f['cells'][$field], self::FIELDS), [implode(' ', $f['messages'])]);
         }
 
-        return $this->writer->write(['Sites' => $rows]);
+        return $this->writer->write(['Outlets' => $rows]);
     }
 
     /** Path of a temporary .xlsx template: a "Sites" sheet to fill and a "States" sheet of accepted names. */
@@ -184,7 +184,7 @@ class SiteImportService
         }
 
         return $this->writer->write([
-            'Sites' => [
+            'Outlets' => [
                 self::COLUMNS,
                 ['Sector 62 Office', 'Uttar Pradesh', 'Gautam Buddha Nagar', 'A-12, Sector 62, Noida', 'Near Metro Station', '28.6270', '77.3727', '15-10-2026'],
             ],
@@ -246,9 +246,9 @@ class SiteImportService
         $messages = [];
 
         if ($row['site_name'] === '') {
-            $messages[] = 'Site Name is required.';
+            $messages[] = 'Outlet Name is required.';
         } elseif (mb_strlen($row['site_name']) > 191) {
-            $messages[] = 'Site Name is longer than 191 characters.';
+            $messages[] = 'Outlet Name is longer than 191 characters.';
         }
         if ($row['address'] === '') {
             $messages[] = 'Address is required.';

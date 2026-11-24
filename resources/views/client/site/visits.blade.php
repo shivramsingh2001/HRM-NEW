@@ -39,7 +39,7 @@
 @endphp
 
 @section('content-area')
-    <x-ui.page-header class="content-area-header sticky-top" :title="$canTeam ? 'Site Visits' : 'My Site Visits'">
+    <x-ui.page-header class="content-area-header sticky-top" :title="$canTeam ? 'Outlet Visits' : 'My Outlet Visits'">
         <x-slot:actions>
             @permission('site_visits', 'create')
                 <button type="button" class="btn btn-primary btn-sm" onclick="openVisitForm()"><i class="feather-plus me-1"></i> Record Visit</button>
@@ -69,7 +69,7 @@
                 <div class="stats-icon-wrapper"><i class="feather-map-pin"></i></div>
                 <div class="stats-content">
                     <div class="stats-amount-main">{{ $summary['sites'] }}</div>
-                    <div class="stats-label">Sites Covered</div>
+                    <div class="stats-label">Outlets Covered</div>
                 </div>
             </div>
             @unless ($isTeam)
@@ -98,7 +98,7 @@
                 <div class="filter-row">
                     <div class="filter-item search">
                         <div class="search-wrapper"><i class="feather-search"></i>
-                            <input type="text" name="search" placeholder="Search site, contact or remarks…" value="{{ $filters['search'] ?? '' }}">
+                            <input type="text" name="search" placeholder="Search outlet, contact or remarks…" value="{{ $filters['search'] ?? '' }}">
                         </div>
                     </div>
                     @if ($isTeam)
@@ -113,7 +113,7 @@
                     @endif
                     <div class="filter-item">
                         <select name="site_id" onchange="this.form.submit()">
-                            <option value="">All Sites</option>
+                            <option value="">All Outlets</option>
                             @foreach ($visitedSites as $id => $label)
                                 <option value="{{ $id }}" @selected((int) ($filters['site_id'] ?? 0) === (int) $id)>{{ $label }}</option>
                             @endforeach
@@ -158,8 +158,9 @@
                             @if ($isTeam)
                                 <th>Employee</th>
                             @endif
-                            <th>Site</th>
+                            <th>Outlet</th>
                             <th>Contact</th>
+                            <th>Stock</th>
                             <th>Remarks</th>
                             <th>File</th>
                             @unless ($isTeam)
@@ -177,6 +178,8 @@
                                     'site' => ($visit->site->site_code ?? '') . ' · ' . ($visit->site->site_name ?? ''),
                                     'contact_person_name' => $visit->contact_person_name, 'contact_mobile' => $visit->contact_mobile,
                                     'remarks' => $visit->remarks, 'file_url' => $fileUrl,
+                                    'current_stock' => $visit->current_stock !== null ? (float) $visit->current_stock : null,
+                                    'date_of_stock_received' => $visit->date_of_stock_received?->toDateString(),
                                 ];
                             @endphp
                             <tr>
@@ -199,6 +202,7 @@
                                     <div>{{ $visit->contact_person_name ?: '—' }}</div>
                                     @if ($visit->contact_mobile)<div class="v-sub">{{ $visit->contact_mobile }}</div>@endif
                                 </td>
+                                @include('client.site.partials.stock-cell', ['v' => $visit])
                                 <td class="v-remarks">{{ $visit->remarks }}</td>
                                 <td class="text-nowrap">
                                     @if ($fileUrl)
@@ -224,7 +228,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7">
+                                <td colspan="8">
                                     <x-ui.empty-state icon="map-pin" title="No visits found"
                                         :subtitle="$isFiltered ? 'Try changing or clearing the filters.' : ($isTeam ? 'Visits your team records this month will show here.' : 'Visits you record this month will show here.')" />
                                 </td>
@@ -248,12 +252,12 @@
 
             <div class="row">
                 <div class="col-12 mb-3" id="visitSiteRow">
-                    <label class="fw-semibold" style="font-size:11.5px;">Site <span class="text-danger">*</span></label>
+                    <label class="fw-semibold" style="font-size:11.5px;">Outlet <span class="text-danger">*</span></label>
                     <select class="form-control" name="site_id" id="visitSite" style="width:100%"></select>
                     <small class="text-danger error-text site_id_error"></small>
                 </div>
                 <div class="col-12 mb-3 d-none" id="visitSiteFixedRow">
-                    <label class="fw-semibold" style="font-size:11.5px;">Site</label>
+                    <label class="fw-semibold" style="font-size:11.5px;">Outlet</label>
                     <input type="text" class="form-control" id="visitSiteFixed" disabled>
                 </div>
                 <div class="col-12 mb-3">
@@ -270,9 +274,19 @@
                     <input type="text" class="form-control" name="contact_mobile" maxlength="10" inputmode="numeric" pattern="\d{10}" placeholder="10-digit mobile number">
                     <small class="text-danger error-text contact_mobile_error"></small>
                 </div>
+                <div class="col-md-6 mb-3">
+                    <label class="fw-semibold" style="font-size:11.5px;">Current Stock</label>
+                    <input type="number" class="form-control" name="current_stock" min="0" step="0.01" placeholder="e.g. 120">
+                    <small class="text-danger error-text current_stock_error"></small>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="fw-semibold" style="font-size:11.5px;">Date of Stock Received</label>
+                    <input type="date" class="form-control" name="date_of_stock_received" max="{{ now()->toDateString() }}">
+                    <small class="text-danger error-text date_of_stock_received_error"></small>
+                </div>
                 <div class="col-12 mb-3">
                     <label class="fw-semibold" style="font-size:11.5px;">Remarks <span class="text-danger">*</span></label>
-                    <textarea class="form-control" name="remarks" rows="4" maxlength="2000" required placeholder="What was done at the site, who you met, next steps…"></textarea>
+                    <textarea class="form-control" name="remarks" rows="4" maxlength="2000" required placeholder="What was done at the outlet, who you met, next steps…"></textarea>
                     <small class="text-danger error-text remarks_error"></small>
                 </div>
                 <div class="col-12 mb-3">
@@ -309,7 +323,7 @@
 
             $('#visitSite').select2({
                 dropdownParent: $(drawerEl),
-                placeholder: 'Search site by code, name or district',
+                placeholder: 'Search outlet by code, name or district',
                 ajax: {
                     url: "{{ route('site-visits.sites') }}", dataType: 'json', delay: 250,
                     data: p => ({ search: p.term || '', page: p.page || 1 }),
@@ -335,7 +349,7 @@
                 document.getElementById('visitCurrentFile').classList.toggle('d-none', !(visit && visit.file_url));
                 if (visit) {
                     document.getElementById('visitSiteFixed').value = visit.site;
-                    ['contact_person_name', 'contact_mobile', 'remarks'].forEach(f => { form.elements[f].value = visit[f] ?? ''; });
+                    ['contact_person_name', 'contact_mobile', 'remarks', 'current_stock', 'date_of_stock_received'].forEach(f => { form.elements[f].value = visit[f] ?? ''; });
                     if (visit.file_url) document.getElementById('visitCurrentFileLink').href = visit.file_url;
                 } else if (navigator.geolocation) {
                     // Optional: where the visit was recorded from. Ignored if the browser refuses.

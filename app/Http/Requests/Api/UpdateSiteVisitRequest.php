@@ -16,4 +16,9 @@ class UpdateSiteVisitRequest extends MobileApiRequest
     {
         return SiteVisitRules::messages();
     }
+
+    public function attributes(): array
+    {
+        return SiteVisitRules::attributes();
+    }
 }

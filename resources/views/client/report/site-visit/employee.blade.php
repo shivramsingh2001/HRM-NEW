@@ -1,8 +1,8 @@
 @extends('client.layout.master')
 
 @section('content-area')
-    <x-ui.page-header :title="$user->name . ' · Site Visits'" current="{{ $user->name }}"
-        :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')], ['label' => 'Monthly Site Visits', 'url' => route('report.site-visit.monthly.index', ['month' => $month])]]" />
+    <x-ui.page-header :title="$user->name . ' · Outlet Visits'" current="{{ $user->name }}"
+        :crumbs="[['label' => 'Reports', 'url' => route('report.attendance.index')], ['label' => 'Monthly Outlet Visits', 'url' => route('report.site-visit.monthly.index', ['month' => $month])]]" />
 
     <div class="main-content" style="padding: 20px !important;">
         @include('client.report.partials.report-subnav', ['group' => 'site_visit'])
@@ -15,7 +15,7 @@
 
         <div class="row g-2 mb-3 text-center">
             <div class="col-4"><div class="card mb-0"><div class="card-body py-2"><div class="text-muted small">Total Visits</div><div class="fs-5 fw-semibold">{{ $totals['visits'] }}</div></div></div></div>
-            <div class="col-4"><div class="card mb-0"><div class="card-body py-2"><div class="text-muted small">Different Sites</div><div class="fs-5 fw-semibold">{{ $totals['sites'] }}</div></div></div></div>
+            <div class="col-4"><div class="card mb-0"><div class="card-body py-2"><div class="text-muted small">Different Outlets</div><div class="fs-5 fw-semibold">{{ $totals['sites'] }}</div></div></div></div>
             <div class="col-4"><div class="card mb-0"><div class="card-body py-2"><div class="text-muted small">Days with a Visit</div><div class="fs-5 fw-semibold">{{ $totals['days'] }}</div></div></div></div>
         </div>
 
@@ -24,7 +24,7 @@
             <div class="card-body p-0">
                 <x-ui.data-table>
                     <thead>
-                        <tr><th style="width:160px;">Date</th><th class="text-center" style="width:90px;">Visits</th><th>Sites Visited</th></tr>
+                        <tr><th style="width:160px;">Date</th><th class="text-center" style="width:90px;">Visits</th><th>Outlets Visited</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($days as $d)
@@ -46,7 +46,7 @@
             <div class="card-body p-0">
                 <x-ui.data-table>
                     <thead>
-                        <tr><th>Date &amp; Time</th><th>Site</th><th>Contact</th><th>Remarks</th><th>File</th></tr>
+                        <tr><th>Date &amp; Time</th><th>Outlet</th><th>Contact</th><th>Stock</th><th>Remarks</th><th>File</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($visits as $v)
@@ -55,11 +55,12 @@
                                 <td class="text-nowrap">{{ $v->visited_at->format('d M Y, h:i A') }}</td>
                                 <td>{{ $v->site->site_name ?? '—' }} <div class="text-muted small">{{ $v->site->site_code ?? '' }}</div></td>
                                 <td>{{ $v->contact_person_name ?: '—' }}@if ($v->contact_mobile)<div class="text-muted small">{{ $v->contact_mobile }}</div>@endif</td>
+                                @include('client.site.partials.stock-cell')
                                 <td style="max-width:320px; white-space:pre-line;">{{ $v->remarks }}</td>
                                 <td>@if ($fileUrl)<a href="{{ $fileUrl }}" target="_blank" rel="noopener"><i class="feather-paperclip"></i> View</a>@else — @endif</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5"><x-ui.empty-state icon="map-pin" title="No visits this month" /></td></tr>
+                            <tr><td colspan="6"><x-ui.empty-state icon="map-pin" title="No visits this month" /></td></tr>
                         @endforelse
                     </tbody>
                 </x-ui.data-table>

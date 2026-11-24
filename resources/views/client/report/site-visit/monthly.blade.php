@@ -1,7 +1,7 @@
 @extends('client.layout.master')
 
 @section('content-area')
-    <x-ui.page-header title="Monthly Site Visits" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']">
+    <x-ui.page-header title="Monthly Outlet Visits" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']">
         <x-slot:actions>
             <a href="{{ route('report.site-visit.monthly.export', request()->query()) }}" class="btn btn-light btn-sm"><i class="feather-download me-1"></i> Export</a>
         </x-slot:actions>
@@ -30,7 +30,7 @@
                         <tr>
                             <th>Employee</th>
                             <th class="text-center">Total Visits</th>
-                            <th class="text-center">Different Sites</th>
+                            <th class="text-center">Different Outlets</th>
                             <th class="text-center">Days with a Visit</th>
                             <th>Last Visit</th>
                             <th class="text-end"></th>

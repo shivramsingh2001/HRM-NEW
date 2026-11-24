@@ -1,11 +1,11 @@
-{{-- Sites → Import modal: upload, preview (counts + failed rows with reasons), then import the valid rows. --}}
-<x-ui.modal id="siteImportModal" title="Import Sites" size="md" bodyOnly>
+{{-- Outlets → Import modal: upload, preview (counts + failed rows with reasons), then import the valid rows. --}}
+<x-ui.modal id="siteImportModal" title="Import Outlets" size="md" bodyOnly>
     <div style="font-size:11.5px;">
         <p class="text-muted mb-2">
-            Upload an Excel (.xlsx) or CSV file — up to {{ \App\Services\Site\SiteImportService::MAX_ROWS }} rows. Site codes are generated automatically.
+            Upload an Excel (.xlsx) or CSV file — up to {{ \App\Services\Site\SiteImportService::MAX_ROWS }} rows. Outlet codes are generated automatically.
         </p>
         <div class="d-flex justify-content-between align-items-center rounded px-2 py-2 mb-3" style="background:var(--primary-light);">
-            <span>Required: <strong>Site Name</strong>, <strong>State</strong>, <strong>Address</strong></span>
+            <span>Required: <strong>Outlet Name</strong>, <strong>State</strong>, <strong>Address</strong></span>
             <a href="{{ route('sites.import.template') }}" class="fw-semibold text-nowrap"><i class="feather-download me-1"></i>Template</a>
         </div>
 
@@ -29,7 +29,7 @@
                 </div>
                 <div class="border rounded" style="max-height:170px; overflow-y:auto;">
                     <table class="table table-sm mb-0" style="font-size:11px;">
-                        <thead><tr><th style="width:44px;">Row</th><th>Site Name</th><th>Problem</th></tr></thead>
+                        <thead><tr><th style="width:44px;">Row</th><th>Outlet Name</th><th>Problem</th></tr></thead>
                         <tbody id="impErrors"></tbody>
                     </table>
                 </div>
@@ -58,7 +58,7 @@
             let imported = false;
             modalEl.addEventListener('hidden.bs.modal', () => { if (imported) location.reload(); });
 
-            // One footer button for both steps: "Check File" before a preview, "Save N Sites" after it.
+            // One footer button for both steps: "Check File" before a preview, "Save N Outlets" after it.
             function setButton(label, icon, enabled) {
                 confirmBtn.innerHTML = '<i class="feather-' + icon + ' me-1"></i> ' + label;
                 confirmBtn.disabled = !enabled;
@@ -112,7 +112,7 @@
                 if (r.valid === 0) {
                     setButton('Nothing to Save', 'slash', false);
                 } else {
-                    setButton('Save ' + r.valid + ' Site' + (r.valid === 1 ? '' : 's'), 'check', true);
+                    setButton('Save ' + r.valid + ' Outlet' + (r.valid === 1 ? '' : 's'), 'check', true);
                 }
             }
 
@@ -132,7 +132,7 @@
                         if (document.getElementById('impInvalid').textContent === '0') setTimeout(() => location.reload(), 1500);
                     },
                     error: x => {
-                        setButton('Save ' + validCount + ' Site' + (validCount === 1 ? '' : 's'), 'check', true);
+                        setButton('Save ' + validCount + ' Outlet' + (validCount === 1 ? '' : 's'), 'check', true);
                         toastr.error(x.responseJSON?.message || 'Import failed. Please try again.');
                     },
                 });

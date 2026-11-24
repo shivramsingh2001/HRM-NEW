@@ -44,11 +44,11 @@ class SiteImportController extends Controller
             return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
         }
 
-        $message = $result['created'] === 0 ? 'No sites were imported.'
-            : ($result['created'] === 1 ? "1 site imported ({$result['first_code']})."
-                : "{$result['created']} sites imported ({$result['first_code']} to {$result['last_code']}).");
+        $message = $result['created'] === 0 ? 'No outlets were imported.'
+            : ($result['created'] === 1 ? "1 outlet imported ({$result['first_code']})."
+                : "{$result['created']} outlets imported ({$result['first_code']} to {$result['last_code']}).");
         if ($result['skipped']) {
-            $message .= " {$result['skipped']} skipped because the same site was added in the meantime.";
+            $message .= " {$result['skipped']} skipped because the same outlet was added in the meantime.";
         }
 
         return response()->json(['status' => true, 'message' => $message] + $result);

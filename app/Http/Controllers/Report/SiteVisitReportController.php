@@ -36,17 +36,18 @@ class SiteVisitReportController extends Controller
     public function dayWiseExport(Request $request, SpreadsheetWriter $writer)
     {
         $filters = $this->dayFilters($request);
-        $rows = [['Employee', 'Employee ID', 'Site Code', 'Site Name', 'District', 'Time', 'Contact Person', 'Contact Mobile', 'Remarks', 'File', 'Latitude', 'Longitude']];
+        $rows = [['Employee', 'Employee ID', 'Outlet Code', 'Outlet Name', 'District', 'Time', 'Contact Person', 'Contact Mobile', 'Current Stock', 'Date of Stock Received', 'Remarks', 'File', 'Latitude', 'Longitude']];
         foreach ($this->reports->dayWiseQuery(Auth::user(), $filters)->cursor() as $v) {
             /** @var SiteVisit $v */
             $rows[] = [
                 $v->user->name ?? '', $v->user->employee_id ?? '', $v->site->site_code ?? '', $v->site->site_name ?? '', $v->site->district ?? '',
-                $v->visited_at->format('h:i A'), $v->contact_person_name, $v->contact_mobile, $v->remarks,
+                $v->visited_at->format('h:i A'), $v->contact_person_name, $v->contact_mobile,
+                $v->current_stock !== null ? (float) $v->current_stock : '', $v->date_of_stock_received?->format('d-m-Y') ?? '', $v->remarks,
                 $v->file_path ? file_url($v->file_path, SiteVisitService::FILE_MODULE) : '', $v->latitude, $v->longitude,
             ];
         }
 
-        return $this->download($writer, ['Visits '.$filters['date'] => $rows], "site-visits-{$filters['date']}.xlsx");
+        return $this->download($writer, ['Visits '.$filters['date'] => $rows], "outlet-visits-{$filters['date']}.xlsx");
     }
 
     public function monthly(Request $request)
@@ -65,13 +66,13 @@ class SiteVisitReportController extends Controller
     public function monthlyExport(Request $request, SpreadsheetWriter $writer)
     {
         $month = SiteVisitReportService::month($request->input('month'));
-        $rows = [['Employee', 'Employee ID', 'Total Visits', 'Different Sites', 'Days with a Visit', 'Last Visit']];
+        $rows = [['Employee', 'Employee ID', 'Total Visits', 'Different Outlets', 'Days with a Visit', 'Last Visit']];
         foreach ($this->reports->monthlySummary(Auth::user(), $month, $request->integer('user_id') ?: null) as $r) {
             $rows[] = [$r['name'], $r['employee_id'], $r['visits'], $r['sites'], $r['days'],
                 $r['last_visit'] ? date('d-m-Y h:i A', strtotime($r['last_visit'])) : ''];
         }
 
-        return $this->download($writer, ['Visits '.$month => $rows], "site-visits-monthly-{$month}.xlsx");
+        return $this->download($writer, ['Visits '.$month => $rows], "outlet-visits-monthly-{$month}.xlsx");
     }
 
     public function employee(Request $request, $userId)

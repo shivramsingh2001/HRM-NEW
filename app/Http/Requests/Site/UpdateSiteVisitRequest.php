@@ -22,4 +22,9 @@ class UpdateSiteVisitRequest extends FormRequest
     {
         return SiteVisitRules::messages();
     }
+
+    public function attributes(): array
+    {
+        return SiteVisitRules::attributes();
+    }
 }

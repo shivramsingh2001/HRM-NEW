@@ -54,9 +54,14 @@ class SiteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'site_name.unique' => 'A site with this name and address already exists.',
+            'site_name.unique' => 'An outlet with this name and address already exists.',
             'state_code.required' => 'Choose a state.',
             'state_code.exists' => 'Choose a state from the list.',
         ];
+    }
+
+    public function attributes(): array
+    {
+        return ['site_name' => 'outlet name', 'site_code' => 'outlet code'];
     }
 }

@@ -97,4 +97,34 @@ class SiteVisitServiceTest extends TestCase
         $this->expectException(SiteException::class);
         app(SiteVisitService::class)->update($visit->fresh(), $owner, ['remarks' => 'Too late']);
     }
+    public function test_stock_is_saved_shown_and_editable(): void
+    {
+        [$owner] = $this->users();
+        $visit = $this->visit($owner, ['current_stock' => '120.50', 'date_of_stock_received' => now()->subDays(3)->toDateString()]);
+
+        $api = app(SiteVisitService::class)->toApi($visit->fresh());
+        $this->assertSame(120.5, $api['current_stock']);
+        $this->assertSame(now()->subDays(3)->toDateString(), $api['date_of_stock_received']);
+        $this->assertSame('120.5', $visit->fresh()->stockText());
+
+        // Edit without the stock fields keeps them; sending null clears them.
+        $kept = app(SiteVisitService::class)->update($visit->fresh(), $owner, ['remarks' => 'Recount later']);
+        $this->assertSame('120.50', (string) $kept->current_stock);
+        $cleared = app(SiteVisitService::class)->update($kept, $owner, ['remarks' => 'x', 'current_stock' => null, 'date_of_stock_received' => null]);
+        $this->assertNull($cleared->current_stock);
+        $this->assertSame('—', $cleared->stockText());
+    }
+
+    public function test_stock_rules(): void
+    {
+        $v = fn (array $in) => validator($in + ['site_id' => 1, 'remarks' => 'x'], \App\Http\Requests\Site\SiteVisitRules::rules(false),
+            \App\Http\Requests\Site\SiteVisitRules::messages(), \App\Http\Requests\Site\SiteVisitRules::attributes());
+
+        $this->assertTrue($v([])->passes());                                            // both optional
+        $this->assertTrue($v(['current_stock' => 0, 'date_of_stock_received' => now()->toDateString()])->passes());
+        $this->assertTrue($v(['current_stock' => -1])->fails());
+        $this->assertTrue($v(['current_stock' => 'ten'])->fails());
+        $this->assertTrue($v(['date_of_stock_received' => now()->addDay()->toDateString()])->fails());
+        $this->assertTrue($v(['date_of_stock_received' => '24-11-2026'])->fails());
+    }
 }

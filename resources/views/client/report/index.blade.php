@@ -481,7 +481,7 @@
                     @if ($canSiteVisitReports)
                         <li class="nav-item flex-fill border-top">
                             <a class="nav-link" data-bs-toggle="tab" href="#siteVisitReportTab">
-                                <i class="feather-map-pin me-1"></i> Site Visit Reports
+                                <i class="feather-map-pin me-1"></i> Outlet Visit Reports
                             </a>
                         </li>
                     @endif
@@ -948,7 +948,7 @@
                             <i class="feather-map-pin"></i>
                         </div>
                         <h6 class="card-title">Day-wise Visits</h6>
-                        <p class="card-description">Every site visit on a chosen day — employee, site, time, contact person, remarks, file and map location. Filter by employee or site and export to Excel.</p>
+                        <p class="card-description">Every outlet visit on a chosen day — employee, outlet, time, contact person, stock, remarks, file and map location. Filter by employee or outlet and export to Excel.</p>
                         <div class="card-footer">
                             <span class="badge badge-primary">Daily</span>
                             <a href="{{ route('report.site-visit.day-wise.index') }}" class="btn-generate">
@@ -962,7 +962,7 @@
                             <i class="feather-calendar"></i>
                         </div>
                         <h6 class="card-title">Monthly Visits</h6>
-                        <p class="card-description">Each employee's visits in a month — total visits, different sites, days with a visit and last visit — with a day-by-day view per employee.</p>
+                        <p class="card-description">Each employee's visits in a month — total visits, different outlets, days with a visit and last visit — with a day-by-day view per employee.</p>
                         <div class="card-footer">
                             <span class="badge badge-success">Monthly</span>
                             <a href="{{ route('report.site-visit.monthly.index') }}" class="btn-generate">

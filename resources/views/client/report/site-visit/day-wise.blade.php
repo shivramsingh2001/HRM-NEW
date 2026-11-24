@@ -1,7 +1,7 @@
 @extends('client.layout.master')
 
 @section('content-area')
-    <x-ui.page-header title="Day-wise Site Visits" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']">
+    <x-ui.page-header title="Day-wise Outlet Visits" :parent="['label' => 'Reports', 'route' => 'report.attendance.index']">
         <x-slot:actions>
             <a href="{{ route('report.site-visit.day-wise.export', request()->query()) }}" class="btn btn-light btn-sm"><i class="feather-download me-1"></i> Export</a>
         </x-slot:actions>
@@ -20,7 +20,7 @@
                     @endforeach
                 </select>
                 <select name="site_id" class="form-control form-control-sm" style="width:auto;" onchange="this.form.submit()">
-                    <option value="">All Sites</option>
+                    <option value="">All Outlets</option>
                     @foreach ($sites as $s)
                         <option value="{{ $s->id }}" @selected(($filters['site_id'] ?? null) == $s->id)>{{ $s->site_code }} · {{ $s->site_name }}</option>
                     @endforeach
@@ -35,9 +35,10 @@
                     <thead>
                         <tr>
                             <th>Employee</th>
-                            <th>Site</th>
+                            <th>Outlet</th>
                             <th>Time</th>
                             <th>Contact</th>
+                            <th>Stock</th>
                             <th>Remarks</th>
                             <th>File</th>
                             <th>Map</th>
@@ -60,6 +61,7 @@
                                     {{ $v->contact_person_name ?: '—' }}
                                     @if ($v->contact_mobile)<div class="text-muted small">{{ $v->contact_mobile }}</div>@endif
                                 </td>
+                                @include('client.site.partials.stock-cell')
                                 <td style="max-width:320px; white-space:pre-line;">{{ $v->remarks }}</td>
                                 <td>@if ($fileUrl)<a href="{{ $fileUrl }}" target="_blank" rel="noopener"><i class="feather-paperclip"></i> View</a>@else — @endif</td>
                                 <td>
@@ -71,7 +73,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7"><x-ui.empty-state icon="map-pin" title="No visits on {{ \Carbon\Carbon::parse($filters['date'])->format('d M Y') }}" /></td></tr>
+                            <tr><td colspan="8"><x-ui.empty-state icon="map-pin" title="No visits on {{ \Carbon\Carbon::parse($filters['date'])->format('d M Y') }}" /></td></tr>
                         @endforelse
                     </tbody>
                 </x-ui.data-table>

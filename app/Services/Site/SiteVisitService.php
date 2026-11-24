@@ -26,7 +26,7 @@ class SiteVisitService
     public const FILE_MODULE = 'site_visit';
 
     /** Fields the visitor may change on edit. */
-    private const EDITABLE = ['contact_person_name', 'contact_mobile', 'remarks'];
+    private const EDITABLE = ['contact_person_name', 'contact_mobile', 'remarks', 'current_stock', 'date_of_stock_received'];
 
     public function __construct(private AuditLogger $auditLogger)
     {
@@ -38,7 +38,7 @@ class SiteVisitService
         $tenantId = (int) $user->tenant_id;
         $site = Site::where('tenant_id', $tenantId)->find($data['site_id'] ?? 0);
         if (! $site || $site->status !== 'active') {
-            throw new SiteException('Choose an active site.');
+            throw new SiteException('Choose an active outlet.');
         }
 
         $path = $file ? file_storage()->upload($file, self::FILE_MODULE, ['tenant' => $tenantId, 'user' => $user->id])->path : null;
@@ -53,6 +53,8 @@ class SiteVisitService
                 'contact_person_name' => $data['contact_person_name'] ?? null,
                 'contact_mobile' => $data['contact_mobile'] ?? null,
                 'remarks' => $data['remarks'],
+                'current_stock' => $data['current_stock'] ?? null,
+                'date_of_stock_received' => $data['date_of_stock_received'] ?? null,
                 'file_path' => $path,
                 'latitude' => $data['latitude'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
@@ -225,6 +227,8 @@ class SiteVisitService
             'contact_person_name' => $visit->contact_person_name,
             'contact_mobile' => $visit->contact_mobile,
             'remarks' => $visit->remarks,
+            'current_stock' => $visit->current_stock !== null ? (float) $visit->current_stock : null,
+            'date_of_stock_received' => $visit->date_of_stock_received?->toDateString(),
             'file_url' => file_url($visit->file_path, self::FILE_MODULE),
             'file_name' => $visit->file_path ? basename($visit->file_path) : null,
             'latitude' => $visit->latitude,

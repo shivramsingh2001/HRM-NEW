@@ -613,6 +613,8 @@ Full asset lifecycle module — categories/types, registration with a system-gen
 
 ## Sites & Site Visits (2026-11-02)
 
+**Shown as Outlets (2026-11-24).** Every label users see says *Outlet* (sidebar "Outlets" / "Outlet Visits", page titles, forms, reports, Excel exports, the import template's "Outlet Name*" column, messages). Code, routes, tables, permissions (`sites`, `site_visits`), the feature key `site_management`, API JSON keys and the `SITE-0001` code format keep the *site* name. Import still accepts an old template's "Site Name" header. **Stock on a visit:** `site_visits.current_stock` (decimal, ≥ 0) and `date_of_stock_received` (date, not in the future), both optional, entered when recording or editing a visit (web form and mobile API, shared `SiteVisitRules`), editable with the rest of the visit on the same day; shown in a Stock column on My/Team Visits, the outlet's visit history, the Day-wise and employee reports, and in the Day-wise Excel export (`SiteVisit::stockText()`, partial `client/site/partials/stock-cell`).
+
 Company site master plus employee site-visit entries. Plan: (1) foundation, (2) admin site pages, (3) Excel import, (4) visit entry — mobile API + web, (5) day-wise and monthly visit reports. All 5 phases are built (foundation, admin site pages, Excel import, visit entry, reports).
 
 - Tables `sites` / `site_visits` (migration `2026_11_02_000001_create_sites_and_site_visits`, apply with `--path`). Models `App\Models\Site` (soft deletes, `active()` scope, `state()` via `state_code`) and `App\Models\SiteVisit`, both `TenantTrait`.
