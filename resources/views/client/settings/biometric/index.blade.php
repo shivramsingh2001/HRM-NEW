@@ -181,7 +181,7 @@
                         if (response.success) {
                             bootstrap.Offcanvas.getInstance(document.getElementById('addTerminalDrawer'))?.hide();
                             toastr.success(response.message);
-                            setTimeout(() => location.reload(), 1000);
+                            setTimeout(() => location.reload(), response.rebuilt ? 5000 : 1000);
                         }
                     },
                     error: function(xhr) {
@@ -213,7 +213,9 @@
                 $('#edit_p2p_uid').val(d.p2p_uid);
                 $('#edit_site_timezone').val(d.site_timezone);
                 $('#edit_branch_id').val(d.branch_id);
-                $('#edit_direction_mode').val(d.direction_mode);
+                $('#edit_direction_mode').val(d.direction_mode).data('saved', d.direction_mode);
+                $('#edit_apply_past_0').prop('checked', true);
+                $('#edit_apply_past_box').addClass('d-none');
                 $('#edit_is_active').prop('checked', String(d.is_active) === '1');
                 $('#edit_auto_provision').val(String(d.auto_provision));
                 $('#edit_provision_scope').val(d.provision_scope);
@@ -224,6 +226,13 @@
                 $('#editTerminalFormError').addClass('d-none').text('');
 
                 bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('editTerminalDrawer')).show();
+            });
+
+            // Changing Direction offers to re-apply it to past days.
+            $('#edit_direction_mode').on('change', function() {
+                const changed = $(this).val() !== $(this).data('saved');
+                $('#edit_apply_past_box').toggleClass('d-none', !changed);
+                if (!changed) { $('#edit_apply_past_0').prop('checked', true); }
             });
 
             $('#editTerminalForm').on('submit', function(e) {
@@ -243,7 +252,7 @@
                         if (response.success) {
                             bootstrap.Offcanvas.getInstance(document.getElementById('editTerminalDrawer'))?.hide();
                             toastr.success(response.message);
-                            setTimeout(() => location.reload(), 1000);
+                            setTimeout(() => location.reload(), response.rebuilt ? 5000 : 1000);
                         }
                     },
                     error: function(xhr) {

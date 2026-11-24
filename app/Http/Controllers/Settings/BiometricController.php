@@ -10,6 +10,7 @@ use App\Models\BiometricDevice;
 use App\Models\BiometricEnrollment;
 use App\Models\BiometricPunch;
 use App\Models\User;
+use App\Services\Biometric\BiometricDayRebuilder;
 use App\Services\Biometric\BiometricRosterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -94,8 +95,12 @@ class BiometricController extends Controller
             'provision_scope' => ['nullable', 'in:tenant,branch'],
             'default_privilege' => ['nullable', 'integer', 'in:0,1,2,3'],
             'allow_direct_onboarding' => ['nullable', 'boolean'],
+            'apply_past' => ['nullable', 'boolean'],
+            'apply_from' => ['nullable', 'required_if:apply_past,1', 'date',
+                'after_or_equal:' . now()->subDays(BiometricDayRebuilder::MAX_DAYS)->toDateString(), 'before_or_equal:today'],
         ]);
-        unset($data['provision_scope'], $data['default_privilege'], $data['allow_direct_onboarding']);
+        $modeChanged = $data['direction_mode'] !== $device->direction_mode;
+        unset($data['provision_scope'], $data['default_privilege'], $data['allow_direct_onboarding'], $data['apply_past'], $data['apply_from']);
         $device->update($data + [
             'is_active' => $request->boolean('is_active'),
             'auto_provision' => $request->boolean('auto_provision'),
@@ -104,11 +109,18 @@ class BiometricController extends Controller
             'allow_direct_onboarding' => $request->boolean('allow_direct_onboarding'),
         ]);
 
-        if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Device updated.']);
+        // "Also apply to past days": rebuild them from the machine punches with the new rule.
+        $message = 'Device updated.';
+        if ($modeChanged && $request->boolean('apply_past')) {
+            $message .= ' ' . BiometricDayRebuilder::message(app(BiometricDayRebuilder::class)
+                ->rebuild($device->refresh(), (string) $request->input('apply_from'), now()->toDateString(), false, Auth::user()?->name));
         }
 
-        return back()->with('success', 'Device updated.');
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message, 'rebuilt' => $modeChanged && $request->boolean('apply_past')]);
+        }
+
+        return back()->with('success', $message);
     }
 
     public function destroyDevice(BiometricDevice $device)

@@ -22,15 +22,20 @@ class BiometricReprocess extends Command
 
     protected $description = 'Retry unprocessed biometric punches.';
 
+    /** Skip reasons that mean "no employee yet" — the only skipped punches --remap retries. */
+    public const UNMAPPED_ERRORS = ['unmapped enroll', 'no mapped user'];
+
     public function handle(): int
     {
         $statuses = array_filter(array_map('trim', explode(',', (string) $this->option('status'))));
 
-        if ($this->option('remap')) {
-            $statuses[] = 'skipped';
-        }
-
-        $q = BiometricPunch::whereIn('status', $statuses)
+        // --remap retries only punches skipped for having no employee — never a
+        // punch skipped by a real rule ("already clocked out", debounce, …):
+        // retrying those re-applied old punches whenever the device's Direction
+        // changed. Use biometric:rebuild-days to re-apply a rule to past days.
+        $q = BiometricPunch::where(fn ($w) => $w->whereIn('status', $statuses)
+            ->when($this->option('remap'), fn ($x) => $x->orWhere(fn ($s) => $s->where('status', 'skipped')
+                ->where(fn ($u) => $u->whereNull('user_id')->orWhereIn('error', self::UNMAPPED_ERRORS)))))
             ->when($this->option('device'), fn ($x) => $x->where('biometric_device_id', $this->option('device')))
             ->when($this->option('since'), fn ($x) => $x->where('punched_at', '>=', Carbon::parse($this->option('since'))));
 

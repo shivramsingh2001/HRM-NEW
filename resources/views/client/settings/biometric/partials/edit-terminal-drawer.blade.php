@@ -63,6 +63,28 @@
                 </select>
                 <small class="text-danger error-text edit_direction_mode_error"></small>
             </div>
+            {{-- Shown only when Direction is changed (index.blade.php JS). --}}
+            <div class="col-12 mb-3 d-none" id="edit_apply_past_box">
+                <div class="p-2 rounded" style="background:#EFF6FF;border:1px solid #bfdbfe;font-size:11.5px;">
+                    <div class="fw-semibold mb-1">Apply the new direction to…</div>
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="radio" name="apply_past" id="edit_apply_past_0" value="0" checked>
+                        <label class="form-check-label" for="edit_apply_past_0">From now on only — past days stay as they are</label>
+                    </div>
+                    <div class="form-check d-flex align-items-center gap-2 flex-wrap">
+                        <input class="form-check-input" type="radio" name="apply_past" id="edit_apply_past_1" value="1">
+                        <label class="form-check-label" for="edit_apply_past_1">Also past days from</label>
+                        <input type="date" class="form-control form-control-sm" style="width:auto;" name="apply_from" id="edit_apply_from"
+                            value="{{ now()->startOfMonth()->toDateString() }}"
+                            min="{{ now()->subDays(\App\Services\Biometric\BiometricDayRebuilder::MAX_DAYS)->toDateString() }}" max="{{ now()->toDateString() }}">
+                    </div>
+                    <small class="text-danger error-text edit_apply_from_error"></small>
+                    <div class="text-muted mt-1" style="font-size:10.5px;">
+                        Past days are rebuilt from the machine's punches with the new rule (up to {{ \App\Services\Biometric\BiometricDayRebuilder::MAX_DAYS }} days back).
+                        Days in locked payroll months, days set by HR and multi-shift days are not changed.
+                    </div>
+                </div>
+            </div>
             <div class="col-md-6 mb-3">
                 <label class="fw-semibold" style="font-size:11.5px;">Default privilege</label>
                 <select class="form-control" name="default_privilege" id="edit_default_privilege">
