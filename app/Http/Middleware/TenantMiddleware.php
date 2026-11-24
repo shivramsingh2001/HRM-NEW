@@ -141,14 +141,24 @@ class TenantMiddleware
         if ($user) {
             $tenant = $user->tenant_id ? Tenant::find($user->tenant_id) : null;
 
-            if ($tenant && $tenant->status === 'active') {
-                $this->setTenantContext($tenant, $request);
-            } else {
+            // Same rule as the web side: a company suspended / pending deletion
+            // from the Super Admin Panel is closed for users who were already
+            // logged in too (attendance, leave, everything). 401 so the app
+            // drops its token and goes back to the login screen.
+            if (! $tenant || ! in_array($tenant->status, ['active', 'trial'], true)) {
                 Log::warning('🏢 Authenticated API user has no active tenant', [
                     'user_id' => $user->id ?? null,
                     'tenant_id' => $user->tenant_id ?? null,
                 ]);
+
+                return response()->json([
+                    'success' => false,
+                    'status' => false,
+                    'message' => 'Company not found or inactive.',
+                ], 401);
             }
+
+            $this->setTenantContext($tenant, $request);
 
             return $next($request);
         }
