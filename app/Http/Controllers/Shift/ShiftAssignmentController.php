@@ -514,33 +514,11 @@ class ShiftAssignmentController extends Controller
             $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date) : null;
 
             foreach ($request->week_off_days as $day) {
-                // Check if already exists
-                $exists = UserWeekoffs::where('user_id', $userId)
-                    ->where('off_type', 'day_based')
-                    ->where('day_name', $day)
-                    ->where('start_date', $startDate ? $startDate->toDateString() : null)
-                    ->where('end_date', $endDate ? $endDate->toDateString() : null)
-                    ->exists();
-
-                if (! $exists) {
-                    UserWeekoffs::create([
-                        'user_id' => $userId,
-                        'off_type' => 'day_based',
-                        'day_name' => $day,
-                        'start_date' => $startDate ? $startDate->toDateString() : null,
-                        'end_date' => $endDate ? $endDate->toDateString() : null,
-                        'status' => 1,
-                        'created_by' => Auth::id(),
-                    ]);
-                    $count++;
-
-                    Log::info('Created day-based week-off', [
-                        'user_id' => $userId,
-                        'day' => $day,
-                        'start_date' => $startDate ? $startDate->toDateString() : 'permanent',
-                        'end_date' => $endDate ? $endDate->toDateString() : 'permanent',
-                    ]);
-                }
+                // Same employee + day + start date = the same row (DB key unique_weekoff): a different
+                // end date updates it instead of a second insert the database refuses (1062).
+                $result = app(\App\Services\Shift\WeeklyOffWriter::class)->save((int) $userId, (int) Auth::user()->tenant_id, (string) $day,
+                    $startDate?->toDateString(), $endDate?->toDateString(), (int) Auth::id());
+                $count += $result === 'unchanged' ? 0 : 1;
             }
         }
 

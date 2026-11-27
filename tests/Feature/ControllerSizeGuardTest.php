@@ -91,7 +91,7 @@ class ControllerSizeGuardTest extends TestCase
         'app/Http/Controllers/Report/ShiftReportController.php' => [302, 156],
         'app/Http/Controllers/Report/TaskReportController.php' => [1234, 187],
         'app/Http/Controllers/Shift/RosterController.php' => [686, 148],
-        'app/Http/Controllers/Shift/ShiftAssignmentController.php' => [907, 193],
+        'app/Http/Controllers/Shift/ShiftAssignmentController.php' => [885, 193],
         'app/Http/Controllers/Task/TaskController.php' => [1590, 172],
         'app/Http/Controllers/Team/AttendanceSummaryController.php' => [574, 177],
         'app/Http/Controllers/Team/TeamController.php' => [248, 55],
